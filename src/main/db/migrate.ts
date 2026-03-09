@@ -1,0 +1,135 @@
+import { getSqliteDatabase } from './index'
+
+/**
+ * Creates all tables if they don't exist.
+ * Called once at startup — idempotent.
+ */
+export function runMigrations(): void {
+  const sqlite = getSqliteDatabase()
+
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS providers (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('cloud', 'local')),
+      base_url TEXT,
+      is_enabled INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS models (
+      id TEXT PRIMARY KEY,
+      provider_id TEXT NOT NULL REFERENCES providers(id),
+      name TEXT NOT NULL,
+      display_name TEXT NOT NULL,
+      context_window INTEGER NOT NULL,
+      input_price REAL,
+      output_price REAL,
+      supports_images INTEGER NOT NULL DEFAULT 0,
+      supports_streaming INTEGER NOT NULL DEFAULT 1,
+      is_enabled INTEGER NOT NULL DEFAULT 1
+    );
+
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      system_prompt TEXT,
+      default_model_id TEXT,
+      color TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS roles (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      system_prompt TEXT,
+      icon TEXT,
+      is_builtin INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS conversations (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      project_id TEXT REFERENCES projects(id),
+      model_id TEXT,
+      role_id TEXT REFERENCES roles(id),
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS messages (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL REFERENCES conversations(id),
+      parent_message_id TEXT,
+      role TEXT NOT NULL CHECK(role IN ('user', 'assistant', 'system')),
+      content TEXT NOT NULL,
+      content_data TEXT,
+      model_id TEXT,
+      provider_id TEXT,
+      tokens_in INTEGER,
+      tokens_out INTEGER,
+      cost REAL,
+      response_time_ms INTEGER,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS attachments (
+      id TEXT PRIMARY KEY,
+      message_id TEXT NOT NULL REFERENCES messages(id),
+      filename TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      path TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS prompts (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      category TEXT,
+      tags TEXT,
+      type TEXT NOT NULL CHECK(type IN ('complet', 'complement', 'system')),
+      variables TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS statistics (
+      id TEXT PRIMARY KEY,
+      date TEXT NOT NULL,
+      provider_id TEXT,
+      model_id TEXT,
+      project_id TEXT,
+      messages_count INTEGER NOT NULL DEFAULT 0,
+      tokens_in INTEGER NOT NULL DEFAULT 0,
+      tokens_out INTEGER NOT NULL DEFAULT 0,
+      total_cost REAL NOT NULL DEFAULT 0,
+      avg_response_time_ms REAL
+    );
+
+    CREATE TABLE IF NOT EXISTS images (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT REFERENCES conversations(id),
+      message_id TEXT REFERENCES messages(id),
+      prompt TEXT NOT NULL,
+      model_id TEXT,
+      width INTEGER,
+      height INTEGER,
+      path TEXT NOT NULL,
+      size INTEGER,
+      created_at INTEGER NOT NULL
+    );
+  `)
+}
