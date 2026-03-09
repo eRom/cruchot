@@ -9,8 +9,7 @@ const KEYBINDINGS: Keybinding[] = [
   { action: 'Nouvelle conversation', shortcut: 'Cmd+N' },
   { action: 'Recherche rapide', shortcut: 'Cmd+K' },
   { action: 'Ouvrir les parametres', shortcut: 'Cmd+,' },
-  { action: 'Fermer / Annuler', shortcut: 'Escape' },
-  { action: 'Recherche globale', shortcut: 'Cmd+Shift+F' }
+  { action: 'Fermer / Annuler', shortcut: 'Escape' }
 ]
 
 export function KeybindingsSettings() {

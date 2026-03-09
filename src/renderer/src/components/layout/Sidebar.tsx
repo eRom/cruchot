@@ -107,11 +107,14 @@ export function Sidebar(): React.JSX.Element {
         'select-none overflow-hidden'
       )}
     >
+      {/* ── Drag region (traffic lights macOS) ─────────── */}
+      <div className="h-[38px] shrink-0 [-webkit-app-region:drag]" />
+
       {/* ── Header ─────────────────────────────────────── */}
       <div
         className={cn(
-          'flex shrink-0 items-center border-b border-sidebar-border/50',
-          collapsed ? 'flex-col gap-1 px-1 py-2' : 'gap-2 px-3 py-2.5'
+          'flex shrink-0 items-center',
+          collapsed ? 'flex-col gap-1 px-1 py-2' : 'gap-2 px-3 py-1.5'
         )}
       >
         {/* Collapse toggle */}
@@ -128,13 +131,6 @@ export function Sidebar(): React.JSX.Element {
           )}
         </Button>
 
-        {/* Title — hidden when collapsed */}
-        {!collapsed && (
-          <span className="flex-1 truncate text-[13px] font-semibold tracking-tight text-sidebar-foreground/80">
-            Multi-LLM
-          </span>
-        )}
-
         {/* New conversation button */}
         {collapsed ? (
           <Tooltip>
@@ -148,17 +144,21 @@ export function Sidebar(): React.JSX.Element {
                 <Plus className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="right">Nouvelle conversation</TooltipContent>
+            <TooltipContent side="right">Nouvelle discussion</TooltipContent>
           </Tooltip>
         ) : (
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
             onClick={handleNewConversation}
-            className="size-8 shrink-0 text-sidebar-foreground/50 hover:text-sidebar-primary hover:bg-sidebar-accent/60"
+            className={cn(
+              'flex flex-1 items-center gap-2 rounded-lg px-2 py-1.5',
+              'text-[13px] font-medium text-sidebar-foreground/70',
+              'transition-colors duration-150',
+              'hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
+            )}
           >
-            <Plus className="size-4" />
-          </Button>
+            <Plus className="size-4 shrink-0" />
+            <span className="truncate">Nouvelle discussion</span>
+          </button>
         )}
       </div>
 
