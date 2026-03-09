@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react'
 import type { Message } from '@/stores/messages.store'
 import { MessageContent } from './MessageContent'
+import { AudioPlayer } from './AudioPlayer'
 import { cn } from '@/lib/utils'
 import { Check, Copy, Sparkles } from 'lucide-react'
 
@@ -137,6 +138,10 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
               <span>{formatTime(message.responseTimeMs)}</span>
             )}
           </div>
+          {/* TTS — read message aloud */}
+          {message.content.length > 0 && (
+            <AudioPlayer text={message.content} compact />
+          )}
         </div>
       )}
     </div>

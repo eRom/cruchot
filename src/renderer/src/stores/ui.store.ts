@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type ViewMode = 'chat' | 'settings' | 'statistics'
+export type ViewMode = 'chat' | 'settings' | 'statistics' | 'images' | 'projects' | 'prompts'
 
 interface UiState {
   currentView: ViewMode

@@ -65,6 +65,8 @@ export function useStreaming() {
           if (msgId) {
             updateMessage(msgId, {
               isStreaming: false,
+              // Set full content from server as safety net (in case chunks were lost)
+              ...(chunk.content ? { content: chunk.content } : {}),
               tokensIn: chunk.usage?.promptTokens,
               tokensOut: chunk.usage?.completionTokens,
               cost: chunk.cost,

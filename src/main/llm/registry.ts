@@ -1,4 +1,4 @@
-import type { ProviderDefinition, ModelDefinition } from './types'
+import type { ModelDefinition, ProviderDefinition } from './types'
 
 // ── Provider Definitions ──────────────────────────────────────────────────
 

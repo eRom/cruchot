@@ -1,4 +1,4 @@
-import { eq, desc } from 'drizzle-orm'
+import { eq, desc, isNull } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { getDatabase } from '../index'
 import { conversations } from '../schema'
@@ -17,7 +17,7 @@ export function getConversation(id: string) {
   return db.select().from(conversations).where(eq(conversations.id, id)).get()
 }
 
-export function createConversation(title?: string) {
+export function createConversation(title?: string, projectId?: string) {
   const db = getDatabase()
   const id = nanoid()
   const now = new Date()
@@ -26,12 +26,40 @@ export function createConversation(title?: string) {
     .values({
       id,
       title: title || 'Nouvelle conversation',
+      projectId: projectId ?? null,
       createdAt: now,
       updatedAt: now
     })
     .run()
 
   return getConversation(id)!
+}
+
+export function getConversationsByProject(projectId: string | null) {
+  const db = getDatabase()
+  if (projectId === null) {
+    // "Boite de reception" — conversations sans projet
+    return db
+      .select()
+      .from(conversations)
+      .where(isNull(conversations.projectId))
+      .orderBy(desc(conversations.updatedAt))
+      .all()
+  }
+  return db
+    .select()
+    .from(conversations)
+    .where(eq(conversations.projectId, projectId))
+    .orderBy(desc(conversations.updatedAt))
+    .all()
+}
+
+export function setConversationProject(id: string, projectId: string | null) {
+  const db = getDatabase()
+  db.update(conversations)
+    .set({ projectId, updatedAt: new Date() })
+    .where(eq(conversations.id, id))
+    .run()
 }
 
 export function renameConversation(id: string, title: string) {

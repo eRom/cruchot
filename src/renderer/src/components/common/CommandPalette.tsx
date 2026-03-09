@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MessageSquarePlus, Moon, Settings, Sun } from 'lucide-react'
+import { MessageSquarePlus, Moon, Settings, Sun, FolderOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useConversationsStore, type Conversation } from '@/stores/conversations.store'
+import { useProjectsStore, type Project } from '@/stores/projects.store'
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -18,7 +19,8 @@ interface CommandPaletteProps {
   onClose: () => void
   onNewConversation?: () => void
   onOpenSettings?: () => void
-  onSelectConversation?: (id: string) => void
+  onSelectConversation?: (id: string, projectId?: string) => void
+  onSelectProject?: (id: string) => void
 }
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -43,6 +45,7 @@ function CommandPalette({
   onNewConversation,
   onOpenSettings,
   onSelectConversation,
+  onSelectProject,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
@@ -50,6 +53,16 @@ function CommandPalette({
   const listRef = useRef<HTMLDivElement>(null)
 
   const conversations = useConversationsStore((s) => s.conversations)
+  const projects = useProjectsStore((s) => s.projects)
+
+  // Fetch ALL conversations when palette opens (store only has current project's)
+  const [allConversations, setAllConversations] = useState<Conversation[]>([])
+
+  useEffect(() => {
+    if (open) {
+      window.api.getConversations().then(setAllConversations).catch(console.error)
+    }
+  }, [open])
 
   // Build the items list
   const items = useMemo<CommandItem[]>(() => {
@@ -90,19 +103,30 @@ function CommandPalette({
       },
     ]
 
-    const recent: CommandItem[] = conversations.slice(0, 10).map((c: Conversation) => ({
-      id: `conv:${c.id}`,
-      label: c.title || 'Sans titre',
-      group: 'Conversations recentes',
-      icon: undefined,
+    const projectItems: CommandItem[] = projects.map((p: Project) => ({
+      id: `project:${p.id}`,
+      label: p.name,
+      group: 'Projets',
+      icon: <FolderOpen className="size-4" />,
       onSelect: () => {
-        onSelectConversation?.(c.id)
+        onSelectProject?.(p.id)
         onClose()
       },
     }))
 
-    return [...actions, ...recent]
-  }, [conversations, onNewConversation, onOpenSettings, onSelectConversation, onClose])
+    const recent: CommandItem[] = allConversations.slice(0, 20).map((c: Conversation) => ({
+      id: `conv:${c.id}`,
+      label: c.title || 'Sans titre',
+      group: 'Conversations',
+      icon: undefined,
+      onSelect: () => {
+        onSelectConversation?.(c.id, c.projectId)
+        onClose()
+      },
+    }))
+
+    return [...actions, ...projectItems, ...recent]
+  }, [allConversations, projects, onNewConversation, onOpenSettings, onSelectConversation, onSelectProject, onClose])
 
   // Filter items by query
   const filtered = useMemo(() => {

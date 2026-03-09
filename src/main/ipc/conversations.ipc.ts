@@ -3,17 +3,27 @@ import {
   getAllConversations,
   createConversation,
   deleteConversation,
-  renameConversation
+  renameConversation,
+  getConversationsByProject,
+  setConversationProject
 } from '../db/queries/conversations'
 import { getMessagesForConversation, deleteMessagesForConversation } from '../db/queries/messages'
 
 export function registerConversationsIpc(): void {
-  ipcMain.handle('conversations:list', async () => {
+  ipcMain.handle('conversations:list', async (_event, projectId?: string | null) => {
+    if (projectId !== undefined) {
+      return getConversationsByProject(projectId)
+    }
     return getAllConversations()
   })
 
-  ipcMain.handle('conversations:create', async (_event, title?: string) => {
-    return createConversation(title)
+  ipcMain.handle('conversations:create', async (_event, title?: string, projectId?: string) => {
+    return createConversation(title, projectId)
+  })
+
+  ipcMain.handle('conversations:setProject', async (_event, id: string, projectId: string | null) => {
+    if (!id) throw new Error('Conversation ID required')
+    setConversationProject(id, projectId)
   })
 
   ipcMain.handle('conversations:delete', async (_event, id: string) => {

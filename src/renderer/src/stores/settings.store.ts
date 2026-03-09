@@ -2,19 +2,31 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
-export type ViewMode = 'chat' | 'settings' | 'statistics'
+export type Density = 'compact' | 'normal' | 'comfortable'
 
 interface SettingsState {
   theme: ThemeMode
   language: 'fr' | 'en'
   sidebarCollapsed: boolean
   fontSize: 'small' | 'medium' | 'large'
+  fontSizePx: number
+  density: Density
+  messageWidth: number
+  temperature: number
+  maxTokens: number
+  topP: number
 
   setTheme: (theme: ThemeMode) => void
   setLanguage: (language: 'fr' | 'en') => void
   toggleSidebar: () => void
   setSidebarCollapsed: (collapsed: boolean) => void
   setFontSize: (size: 'small' | 'medium' | 'large') => void
+  setFontSizePx: (px: number) => void
+  setDensity: (density: Density) => void
+  setMessageWidth: (percent: number) => void
+  setTemperature: (value: number) => void
+  setMaxTokens: (value: number) => void
+  setTopP: (value: number) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -24,6 +36,12 @@ export const useSettingsStore = create<SettingsState>()(
       language: 'fr',
       sidebarCollapsed: false,
       fontSize: 'medium',
+      fontSizePx: 14,
+      density: 'normal',
+      messageWidth: 75,
+      temperature: 0.7,
+      maxTokens: 4096,
+      topP: 0.5,
 
       setTheme: (theme) => set({ theme }),
       setLanguage: (language) => set({ language }),
@@ -31,7 +49,13 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setSidebarCollapsed: (collapsed) =>
         set({ sidebarCollapsed: collapsed }),
-      setFontSize: (size) => set({ fontSize: size })
+      setFontSize: (size) => set({ fontSize: size }),
+      setFontSizePx: (px) => set({ fontSizePx: px }),
+      setDensity: (density) => set({ density }),
+      setMessageWidth: (percent) => set({ messageWidth: percent }),
+      setTemperature: (value) => set({ temperature: value }),
+      setMaxTokens: (value) => set({ maxTokens: value }),
+      setTopP: (value) => set({ topP: value }),
     }),
     {
       name: 'multi-llm-settings'

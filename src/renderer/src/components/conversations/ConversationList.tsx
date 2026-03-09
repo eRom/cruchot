@@ -53,13 +53,17 @@ interface ConversationListProps {
   activeConversationId: string | null
   isCollapsed: boolean
   onSelectConversation: (id: string) => void
+  onRenameConversation?: (id: string, title: string) => void
+  onDeleteConversation?: (id: string) => void
 }
 
 export function ConversationList({
   conversations,
   activeConversationId,
   isCollapsed,
-  onSelectConversation
+  onSelectConversation,
+  onRenameConversation,
+  onDeleteConversation
 }: ConversationListProps): React.JSX.Element {
   const grouped = useMemo(() => groupConversations(conversations), [conversations])
 
@@ -95,6 +99,8 @@ export function ConversationList({
                   isActive={conv.id === activeConversationId}
                   isCollapsed={isCollapsed}
                   onSelect={onSelectConversation}
+                  onRename={onRenameConversation}
+                  onDelete={onDeleteConversation}
                 />
               ))}
             </div>

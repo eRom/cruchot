@@ -91,7 +91,7 @@ export function registerChatIpc(): void {
           if (chunk.type === 'text-delta') {
             win.webContents.send('chat:chunk', {
               type: 'text-delta',
-              content: chunk.textDelta
+              content: chunk.text
             })
           }
         },

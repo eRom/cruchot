@@ -4,6 +4,7 @@ import { registerAllIpcHandlers } from './ipc'
 import { initDatabase, closeDatabase } from './db'
 import { runMigrations } from './db/migrate'
 import { getDbPath } from './utils/paths'
+import { initAutoUpdater, stopAutoUpdater } from './services/updater.service'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -14,6 +15,11 @@ app.whenReady().then(() => {
 
   registerAllIpcHandlers()
   mainWindow = createMainWindow()
+
+  // Auto-updater — only in packaged builds
+  if (app.isPackaged) {
+    initAutoUpdater()
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -29,6 +35,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  stopAutoUpdater()
   closeDatabase()
 })
 

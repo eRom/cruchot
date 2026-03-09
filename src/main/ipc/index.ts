@@ -12,6 +12,12 @@ import { registerSearchIpc } from './search.ipc'
 import { registerExportIpc } from './export.ipc'
 import { registerImportIpc } from './import.ipc'
 import { registerStatisticsIpc } from './statistics.ipc'
+import { registerNotificationIpc } from './notification.ipc'
+import { registerBackupIpc } from './backup.ipc'
+import { registerNetworkIpc } from './network.ipc'
+import { registerFilesIpc } from './files.ipc'
+import { registerImagesIpc } from './images.ipc'
+import { registerUpdaterIpc } from './updater.ipc'
 
 /**
  * Registre central des IPC handlers.
@@ -47,6 +53,24 @@ export function registerAllIpcHandlers(): void {
 
   // ── Statistics ─────────────────────────────────────
   registerStatisticsIpc()
+
+  // ── Notifications ─────────────────────────────────
+  registerNotificationIpc()
+
+  // ── Backup ───────────────────────────────────────
+  registerBackupIpc()
+
+  // ── Network ──────────────────────────────────────
+  registerNetworkIpc()
+
+  // ── Files (attachments) ──────────────────────────
+  registerFilesIpc()
+
+  // ── Images (generation) ──────────────────────────
+  registerImagesIpc()
+
+  // ── Updater (auto-update) ──────────────────────
+  registerUpdaterIpc()
 
   // ── Settings ────────────────────────────────────────
   ipcMain.handle('settings:get', async (_event, key: string) => {

@@ -4,9 +4,12 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ModelSelector } from '@/components/chat/ModelSelector'
 import { ContextWindowIndicator } from '@/components/chat/ContextWindowIndicator'
+import { VoiceInput } from '@/components/chat/VoiceInput'
 import { useProvidersStore } from '@/stores/providers.store'
 import { useConversationsStore } from '@/stores/conversations.store'
+import { useProjectsStore } from '@/stores/projects.store'
 import { useMessagesStore } from '@/stores/messages.store'
+import { useSettingsStore } from '@/stores/settings.store'
 import { useUiStore } from '@/stores/ui.store'
 import { useContextWindow } from '@/hooks/useContextWindow'
 import { cn } from '@/lib/utils'
@@ -43,9 +46,13 @@ export function InputZone({
 
   // ── Stores ───────────────────────────────────────────────
   const { selectedModelId, selectedProviderId, models } = useProvidersStore()
-  const { activeConversationId } = useConversationsStore()
+  const { activeConversationId, addConversation, setActiveConversation } = useConversationsStore()
+  const activeProjectId = useProjectsStore((s) => s.activeProjectId)
   const { messages, addMessage } = useMessagesStore()
   const { isStreaming } = useUiStore()
+  const temperature = useSettingsStore((s) => s.temperature)
+  const settingsMaxTokens = useSettingsStore((s) => s.maxTokens)
+  const topP = useSettingsStore((s) => s.topP)
 
   // ── Context window ────────────────────────────────────────
   const conversationMessages = useMemo(
@@ -109,10 +116,11 @@ export function InputZone({
       conversationId = activeConversationId
     } else {
       try {
-        const conv = await window.api.createConversation()
+        const conv = await window.api.createConversation(undefined, activeProjectId ?? undefined)
         conversationId = conv.id
+        addConversation(conv)
+        setActiveConversation(conv.id)
       } catch {
-        // La creation de conversation sera geree par le main process
         return
       }
     }
@@ -143,7 +151,10 @@ export function InputZone({
         conversationId,
         content: trimmed,
         modelId: selectedModelId,
-        providerId: selectedProviderId
+        providerId: selectedProviderId,
+        temperature,
+        maxTokens: settingsMaxTokens,
+        topP,
       })
     } catch {
       // Erreur geree par le stream handler dans le main
@@ -155,8 +166,14 @@ export function InputZone({
     selectedModelId,
     selectedProviderId,
     activeConversationId,
+    activeProjectId,
     isStreaming,
     addMessage,
+    addConversation,
+    setActiveConversation,
+    temperature,
+    settingsMaxTokens,
+    topP,
     onMessageSent
   ])
 
@@ -259,9 +276,13 @@ export function InputZone({
 
           {/* Barre d'outils en bas du textarea */}
           <div className="flex items-center justify-between gap-2 px-2 pb-2 pt-1">
-            {/* Cote gauche — ModelSelector + futures actions */}
+            {/* Cote gauche — ModelSelector + VoiceInput */}
             <div className="flex items-center gap-1.5">
               <ModelSelector disabled={isStreaming} />
+              <VoiceInput
+                onTranscript={(text) => setContent((prev) => prev ? `${prev} ${text}` : text)}
+                disabled={isStreaming}
+              />
             </div>
 
             {/* Cote droit — Bouton envoyer / annuler */}
@@ -334,7 +355,7 @@ export function InputZone({
           <ContextWindowIndicator currentTokens={currentTokens} maxTokens={maxTokens} />
         )}
 
-        {/* Bottom slot (ModelParams, token counter, etc.) */}
+        {/* Bottom slot */}
         {bottomSlot}
 
         {/* Hint clavier — tres discret */}

@@ -1,0 +1,44 @@
+appId: com.multiLLM.desktop
+productName: Multi-LLM Desktop
+directories:
+  buildResources: resources
+  output: dist
+files:
+  - "out/**/*"
+  - "!node_modules"
+mac:
+  category: public.app-category.developer-tools
+  icon: resources/icon.icns
+  target:
+    - dmg
+    - zip
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+win:
+  target:
+    - nsis
+  icon: resources/icon.ico
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Development
+  icon: resources
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+publish:
+  provider: github
+extraResources:
+  - from: "drizzle"
+    to: "drizzle"
