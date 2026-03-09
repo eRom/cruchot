@@ -1,57 +1,70 @@
-# Fichiers clés — Multi-LLM Desktop
+# Fichiers cles — Multi-LLM Desktop
 
-**Dernière mise à jour** : 2026-03-09
+**Derniere mise a jour** : 2026-03-09 (session 2)
 
-## Documents de référence (existants)
+## Main process
 
-| Fichier | Rôle |
+| Fichier | Role |
 |---------|------|
-| `FEATURES.md` | Liste exhaustive des ~475 fonctionnalités V1 + ~20 backlog V2 |
-| `ARCH.md` | 10 décisions architecturales, 14 contraintes stack, 9 risques |
-| `STACK.md` | Stack retenue (Electron + React + TS), ~50 briques techniques |
-| `CLAUDE.md` | Best practices compressées de la stack (~6.5 KB) |
-| `PLAN.md` | Plan de développement : architecture, data model, 3 phases, Gantt |
-| `TASKS.md` | 60 tâches d'exécution avec dépendances, fichiers, critères |
-| `TEAM-ANALYSIS.md` | Analyse de parallélisation : 4 vagues, 4 agents P1, gain ~60% |
-| `team.md` | Prompt d'orchestration multi-agents Opus — autonome, prêt à lancer via `cat team.md \| claude` |
-
-## Fichiers critiques à créer (T01-T03)
-
-### Main process
-| Fichier | Rôle |
-|---------|------|
-| `src/main/index.ts` | Entry point Electron, app lifecycle |
-| `src/main/window.ts` | Création BrowserWindow, webPreferences sécurisées |
+| `src/main/index.ts` | Entry point Electron, app lifecycle, auto-updater init |
+| `src/main/ipc/chat.ipc.ts` | Handler chat:send — streamText() AI SDK, forward chunks IPC |
+| `src/main/ipc/conversations.ipc.ts` | CRUD conversations + filtre par projet + setConversationProject |
 | `src/main/ipc/index.ts` | Registre central de tous les IPC handlers |
 | `src/main/llm/router.ts` | Routeur getModel() — Vercel AI SDK |
-| `src/main/llm/providers.ts` | Config providers AI SDK avec clés safeStorage |
-| `src/main/llm/cost-calculator.ts` | Table PRICING + calcul coût par message |
-| `src/main/llm/image.ts` | generateImage() wrapper Gemini (2 modèles) |
-| `src/main/db/schema.ts` | Schéma Drizzle (11 tables) |
-| `src/main/db/index.ts` | Connexion SQLite + pragmas (WAL, FK) |
-| `src/main/services/credential.service.ts` | Wrapper safeStorage pour clés API |
+| `src/main/llm/registry.ts` | Registry des providers et modeles disponibles |
+| `src/main/llm/cost-calculator.ts` | Table PRICING + calcul cout par message |
+| `src/main/db/schema.ts` | Schema Drizzle (11 tables) — projects a systemPrompt, defaultModelId, color |
+| `src/main/db/queries/conversations.ts` | Queries conversations — createConversation(title, projectId), getConversationsByProject(), setConversationProject() |
+| `src/main/services/credential.service.ts` | Wrapper safeStorage pour cles API |
+| `src/main/services/updater.service.ts` | electron-updater service |
 
-### Preload
-| Fichier | Rôle |
+## Preload
+
+| Fichier | Role |
 |---------|------|
-| `src/preload/index.ts` | contextBridge — expose window.api |
-| `src/preload/types.ts` | Types partagés de l'API IPC |
+| `src/preload/index.ts` | contextBridge — expose ~50 methodes window.api |
+| `src/preload/types.ts` | Types partages ElectronAPI, tous les DTO (ProjectInfo, ConversationInfo, etc.) |
 
-### Renderer
-| Fichier | Rôle |
+## Renderer — Composants critiques
+
+| Fichier | Role |
 |---------|------|
-| `src/renderer/src/App.tsx` | Composant racine React |
-| `src/renderer/src/stores/*.store.ts` | 9 Zustand stores (slices) |
-| `src/renderer/src/components/chat/InputZone.tsx` | Zone de saisie — composant le plus sollicité (9 tâches) |
-| `src/renderer/src/components/chat/MessageItem.tsx` | Rendu d'un message (5 tâches) |
-| `src/renderer/src/components/chat/MarkdownRenderer.tsx` | Pipeline Markdown (react-markdown + rehype + remark) |
-| `src/renderer/src/components/layout/Sidebar.tsx` | Sidebar navigation |
-| `src/renderer/src/styles/globals.css` | Tailwind + CSS variables thème |
+| `src/renderer/src/App.tsx` | Racine React — routing ViewMode, keyboard shortcuts, onboarding |
+| `src/renderer/src/components/chat/InputZone.tsx` | Zone de saisie — cree conversation avec projectId actif, ModelParams, VoiceInput |
+| `src/renderer/src/components/chat/MessageItem.tsx` | Rendu d'un message — markdown, TTS AudioPlayer, metadata |
+| `src/renderer/src/components/chat/MessageList.tsx` | Liste virtualisee — applique fontSizePx, density, messageWidth depuis settings store |
+| `src/renderer/src/components/chat/ModelSelector.tsx` | Select modele groupe par provider (format composite `providerId::modelId`) |
+| `src/renderer/src/components/layout/Sidebar.tsx` | Sidebar — ProjectSelector, ConversationList filtree par projet, nav footer (5 vues) |
+| `src/renderer/src/components/conversations/ConversationItem.tsx` | Item conversation — rename inline, delete avec confirmation |
+| `src/renderer/src/components/projects/ProjectsView.tsx` | Vue Projets — grille de cartes + formulaire inline (create/edit), pas de dialog |
+| `src/renderer/src/components/projects/ProjectForm.tsx` | Formulaire projet inline (nom, couleur, description, systemPrompt, modele obligatoire) |
+| `src/renderer/src/components/projects/ProjectSelector.tsx` | Dropdown sidebar — switch projet rapide, applique defaultModelId |
+| `src/renderer/src/components/settings/SettingsView.tsx` | 6 tabs : General, Apparence, Cles API, Raccourcis, Donnees, Sauvegardes |
+| `src/renderer/src/components/settings/AppearanceSettings.tsx` | Font size, density, message width — persistes via Zustand |
 
-### Config
-| Fichier | Rôle |
+## Renderer — Stores
+
+| Fichier | Role |
+|---------|------|
+| `src/renderer/src/stores/ui.store.ts` | ViewMode (chat/settings/statistics/images/projects), isStreaming, commandPalette |
+| `src/renderer/src/stores/conversations.store.ts` | CRUD conversations — Conversation a projectId optionnel |
+| `src/renderer/src/stores/projects.store.ts` | CRUD projets — Project a systemPrompt, defaultModelId, color |
+| `src/renderer/src/stores/providers.store.ts` | Providers + models + selectModel(providerId, modelId) |
+| `src/renderer/src/stores/settings.store.ts` | Settings persistees (theme, fontSizePx, density, messageWidth, sidebar) |
+| `src/renderer/src/stores/messages.store.ts` | Messages de la conversation active |
+
+## Renderer — Hooks
+
+| Fichier | Role |
+|---------|------|
+| `src/renderer/src/hooks/useStreaming.ts` | Ecoute chat:chunk IPC, met a jour messages store en temps reel |
+| `src/renderer/src/hooks/useInitApp.ts` | Charge conversations + providers + models au demarrage |
+| `src/renderer/src/hooks/useKeyboardShortcuts.ts` | Cmd+N, Cmd+K, Cmd+virgule, Escape |
+
+## Config
+
+| Fichier | Role |
 |---------|------|
 | `electron.vite.config.ts` | Config build main + preload + renderer |
-| `drizzle.config.ts` | Config drizzle-kit (schema, output, driver) |
 | `electron-builder.yml` | Config packaging multi-OS |
-| `package.json` | Dépendances, scripts |
+| `CLAUDE.md` | Best practices stack + regles projet |

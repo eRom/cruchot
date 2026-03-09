@@ -19,17 +19,20 @@ const api: ElectronAPI = {
   },
 
   // ── Conversations ─────────────────────────────────────
-  getConversations: (): Promise<ReturnType<ElectronAPI['getConversations']>> =>
-    ipcRenderer.invoke('conversations:list'),
+  getConversations: (projectId?: string | null) =>
+    ipcRenderer.invoke('conversations:list', projectId),
 
-  createConversation: (title?: string): Promise<ReturnType<ElectronAPI['createConversation']>> =>
-    ipcRenderer.invoke('conversations:create', title),
+  createConversation: (title?: string, projectId?: string) =>
+    ipcRenderer.invoke('conversations:create', title, projectId),
 
   deleteConversation: (id: string): Promise<void> =>
     ipcRenderer.invoke('conversations:delete', id),
 
   renameConversation: (id: string, title: string): Promise<void> =>
     ipcRenderer.invoke('conversations:rename', id, title),
+
+  setConversationProject: (id: string, projectId: string | null): Promise<void> =>
+    ipcRenderer.invoke('conversations:setProject', id, projectId),
 
   getMessages: (conversationId: string): Promise<ReturnType<ElectronAPI['getMessages']>> =>
     ipcRenderer.invoke('conversations:messages', conversationId),
@@ -111,6 +114,75 @@ const api: ElectronAPI = {
 
   offConversationUpdated: (): void => {
     ipcRenderer.removeAllListeners('conversation:updated')
+  },
+
+  // ── Notifications ─────────────────────────────────────
+  showNotification: (data) => ipcRenderer.invoke('notification:show', data),
+
+  setBadge: (count) => ipcRenderer.invoke('notification:setBadge', { count }),
+
+  clearBadge: () => ipcRenderer.invoke('notification:clearBadge'),
+
+  // ── Backup ──────────────────────────────────────────
+  backupCreate: () => ipcRenderer.invoke('backup:create'),
+
+  backupList: () => ipcRenderer.invoke('backup:list'),
+
+  backupRestore: (backupPath) => ipcRenderer.invoke('backup:restore', { backupPath }),
+
+  backupDelete: (backupPath) => ipcRenderer.invoke('backup:delete', { backupPath }),
+
+  backupClean: (keep) => ipcRenderer.invoke('backup:clean', { keep }),
+
+  // ── Network ─────────────────────────────────────────
+  getNetworkStatus: () => ipcRenderer.invoke('network:status'),
+
+  onNetworkChanged: (callback) => {
+    ipcRenderer.on('network:changed', (_event, status) => callback(status))
+  },
+
+  offNetworkChanged: () => {
+    ipcRenderer.removeAllListeners('network:changed')
+  },
+
+  // ── Files (attachments) ─────────────────────────────
+  fileSave: (data) => ipcRenderer.invoke('files:save', data),
+
+  fileRead: (filePath) => ipcRenderer.invoke('files:read', filePath),
+
+  // ── Images (generation) ─────────────────────────────
+  generateImage: (data) => ipcRenderer.invoke('images:generate', data),
+
+  listImages: () => ipcRenderer.invoke('images:list'),
+
+  // ── Updater (auto-update) ────────────────────────────
+  checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+
+  downloadUpdate: () => ipcRenderer.invoke('updater:download'),
+
+  installUpdate: () => ipcRenderer.invoke('updater:install'),
+
+  onUpdaterAvailable: (callback: (data: { version: string; releaseNotes?: string }) => void) => {
+    ipcRenderer.on('updater:available', (_event, data) => callback(data))
+  },
+
+  onUpdaterProgress: (callback: (data: { percent: number }) => void) => {
+    ipcRenderer.on('updater:progress', (_event, data) => callback(data))
+  },
+
+  onUpdaterDownloaded: (callback: (data: { version: string }) => void) => {
+    ipcRenderer.on('updater:downloaded', (_event, data) => callback(data))
+  },
+
+  onUpdaterError: (callback: (data: { message: string }) => void) => {
+    ipcRenderer.on('updater:error', (_event, data) => callback(data))
+  },
+
+  offUpdater: () => {
+    ipcRenderer.removeAllListeners('updater:available')
+    ipcRenderer.removeAllListeners('updater:progress')
+    ipcRenderer.removeAllListeners('updater:downloaded')
+    ipcRenderer.removeAllListeners('updater:error')
   },
 
   // ── Settings ──────────────────────────────────────────

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { Message } from '@/stores/messages.store'
+import { useSettingsStore } from '@/stores/settings.store'
 import MessageItem from './MessageItem'
 
 interface MessageListProps {
@@ -15,6 +16,11 @@ interface MessageListProps {
  */
 function MessageList({ messages, streamingMessageId }: MessageListProps) {
   const parentRef = useRef<HTMLDivElement>(null)
+  const fontSizePx = useSettingsStore((s) => s.fontSizePx)
+  const messageWidth = useSettingsStore((s) => s.messageWidth)
+  const density = useSettingsStore((s) => s.density)
+
+  const densityPy = density === 'compact' ? 'py-1.5' : density === 'comfortable' ? 'py-5' : 'py-3'
 
   const virtualizer = useVirtualizer({
     count: messages.length,
@@ -56,8 +62,8 @@ function MessageList({ messages, streamingMessageId }: MessageListProps) {
       className="flex-1 overflow-y-auto scroll-smooth"
     >
       <div
-        className="relative mx-auto max-w-3xl"
-        style={{ height: `${virtualizer.getTotalSize()}px` }}
+        className="relative mx-auto"
+        style={{ height: `${virtualizer.getTotalSize()}px`, maxWidth: `${messageWidth}%`, fontSize: `${fontSizePx}px` }}
       >
         {virtualizer.getVirtualItems().map((virtualItem) => {
           const message = messages[virtualItem.index]
@@ -66,7 +72,7 @@ function MessageList({ messages, streamingMessageId }: MessageListProps) {
               key={message.id}
               ref={measureElement}
               data-index={virtualItem.index}
-              className="absolute left-0 w-full py-3"
+              className={`absolute left-0 w-full ${densityPy}`}
               style={{
                 transform: `translateY(${virtualItem.start}px)`,
               }}

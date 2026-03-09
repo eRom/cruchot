@@ -159,6 +159,32 @@ export interface ImportResult {
   messagesCount?: number
 }
 
+export interface BackupEntry {
+  path: string
+  filename: string
+  date: string
+  size: number
+}
+
+export interface NetworkStatus {
+  online: boolean
+}
+
+export interface ImageGenerateResult {
+  id: string
+  path: string
+  base64: string
+}
+
+export interface ImageRecord {
+  id: string
+  prompt: string
+  modelId: string
+  path: string
+  size: number
+  createdAt: Date
+}
+
 // L'API exposee au renderer via contextBridge
 export interface ElectronAPI {
   // Chat
@@ -168,10 +194,11 @@ export interface ElectronAPI {
   offChunk: () => void
 
   // Conversations
-  getConversations: () => Promise<ConversationInfo[]>
-  createConversation: (title?: string) => Promise<ConversationInfo>
+  getConversations: (projectId?: string | null) => Promise<ConversationInfo[]>
+  createConversation: (title?: string, projectId?: string) => Promise<ConversationInfo>
   deleteConversation: (id: string) => Promise<void>
   renameConversation: (id: string, title: string) => Promise<void>
+  setConversationProject: (id: string, projectId: string | null) => Promise<void>
   getMessages: (conversationId: string) => Promise<MessageInfo[]>
 
   // Providers
@@ -221,6 +248,41 @@ export interface ElectronAPI {
   // Events
   onConversationUpdated: (callback: (data: { id: string; title: string }) => void) => void
   offConversationUpdated: () => void
+
+  // Notifications
+  showNotification: (data: { title: string; body: string; silent?: boolean }) => Promise<void>
+  setBadge: (count: number) => Promise<void>
+  clearBadge: () => Promise<void>
+
+  // Backup
+  backupCreate: () => Promise<BackupEntry>
+  backupList: () => Promise<BackupEntry[]>
+  backupRestore: (backupPath: string) => Promise<{ restored: boolean }>
+  backupDelete: (backupPath: string) => Promise<{ deleted: boolean }>
+  backupClean: (keep?: number) => Promise<{ removed: number }>
+
+  // Network
+  getNetworkStatus: () => Promise<NetworkStatus>
+  onNetworkChanged: (callback: (status: NetworkStatus) => void) => void
+  offNetworkChanged: () => void
+
+  // Files (attachments)
+  fileSave: (data: { buffer: ArrayBuffer; filename: string }) => Promise<string>
+  fileRead: (filePath: string) => Promise<ArrayBuffer>
+
+  // Images (generation)
+  generateImage: (data: { prompt: string; model?: string; aspectRatio?: string }) => Promise<ImageGenerateResult>
+  listImages: () => Promise<ImageRecord[]>
+
+  // Updater (auto-update)
+  checkForUpdates: () => Promise<void>
+  downloadUpdate: () => Promise<void>
+  installUpdate: () => Promise<void>
+  onUpdaterAvailable: (callback: (data: { version: string; releaseNotes?: string }) => void) => void
+  onUpdaterProgress: (callback: (data: { percent: number }) => void) => void
+  onUpdaterDownloaded: (callback: (data: { version: string }) => void) => void
+  onUpdaterError: (callback: (data: { message: string }) => void) => void
+  offUpdater: () => void
 
   // Settings
   getSetting: (key: string) => Promise<string | null>

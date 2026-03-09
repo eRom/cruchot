@@ -1,16 +1,21 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useEffect, useMemo } from 'react'
 import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
   Settings,
-  BarChart3
+  BarChart3,
+  Image,
+  FolderOpen,
+  BookOpen
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ConversationList } from '@/components/conversations/ConversationList'
+import { ProjectSelector } from '@/components/projects/ProjectSelector'
 import { useConversationsStore } from '@/stores/conversations.store'
+import { useProjectsStore } from '@/stores/projects.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useUiStore, type ViewMode } from '@/stores/ui.store'
 
@@ -19,14 +24,29 @@ const SIDEBAR_WIDTH_EXPANDED = 260
 const SIDEBAR_WIDTH_COLLAPSED = 52
 
 export function Sidebar(): React.JSX.Element {
-  const { conversations, activeConversationId, setActiveConversation, addConversation } =
+  const { conversations, activeConversationId, setActiveConversation, setConversations, addConversation, updateConversation, removeConversation } =
     useConversationsStore()
+  const activeProjectId = useProjectsStore((s) => s.activeProjectId)
   const { sidebarCollapsed, toggleSidebar } = useSettingsStore()
   const { currentView, setCurrentView } = useUiStore()
 
+  // ── Recharger les conversations quand le projet change ────
+  useEffect(() => {
+    window.api.getConversations(activeProjectId).then(setConversations).catch(console.error)
+  }, [activeProjectId, setConversations])
+
+  // ── Filtrage local (securite, au cas ou le backend n'est pas sync) ──
+  const filteredConversations = useMemo(() => {
+    if (activeProjectId === null) {
+      // Boite de reception : conversations sans projet
+      return conversations.filter((c) => !c.projectId)
+    }
+    return conversations.filter((c) => c.projectId === activeProjectId)
+  }, [conversations, activeProjectId])
+
   const handleNewConversation = useCallback(async () => {
     try {
-      const conv = await window.api.createConversation()
+      const conv = await window.api.createConversation(undefined, activeProjectId ?? undefined)
       if (conv) {
         addConversation(conv)
         setActiveConversation(conv.id)
@@ -35,7 +55,7 @@ export function Sidebar(): React.JSX.Element {
     } catch (error) {
       console.error('Failed to create conversation:', error)
     }
-  }, [addConversation, setActiveConversation, setCurrentView])
+  }, [addConversation, setActiveConversation, setCurrentView, activeProjectId])
 
   const handleSelectConversation = useCallback(
     (id: string) => {
@@ -43,6 +63,30 @@ export function Sidebar(): React.JSX.Element {
       setCurrentView('chat')
     },
     [setActiveConversation, setCurrentView]
+  )
+
+  const handleRenameConversation = useCallback(
+    async (id: string, title: string) => {
+      try {
+        await window.api.renameConversation(id, title)
+        updateConversation(id, { title })
+      } catch (err) {
+        console.error('Failed to rename conversation:', err)
+      }
+    },
+    [updateConversation]
+  )
+
+  const handleDeleteConversation = useCallback(
+    async (id: string) => {
+      try {
+        await window.api.deleteConversation(id)
+        removeConversation(id)
+      } catch (err) {
+        console.error('Failed to delete conversation:', err)
+      }
+    },
+    [removeConversation]
   )
 
   const handleNavClick = useCallback(
@@ -118,12 +162,21 @@ export function Sidebar(): React.JSX.Element {
         )}
       </div>
 
+      {/* ── Project selector ────────────────────────── */}
+      {!collapsed && (
+        <div className="shrink-0 border-b border-sidebar-border/50 px-3 py-2">
+          <ProjectSelector />
+        </div>
+      )}
+
       {/* ── Conversation list (scrollable, flex-1) ──── */}
       <ConversationList
-        conversations={conversations}
+        conversations={filteredConversations}
         activeConversationId={activeConversationId}
         isCollapsed={collapsed}
         onSelectConversation={handleSelectConversation}
+        onRenameConversation={handleRenameConversation}
+        onDeleteConversation={handleDeleteConversation}
       />
 
       {/* ── Footer navigation ──────────────────────── */}
@@ -134,11 +187,32 @@ export function Sidebar(): React.JSX.Element {
         )}
       >
         <NavButton
+          icon={FolderOpen}
+          label="Projets"
+          isActive={currentView === 'projects'}
+          isCollapsed={collapsed}
+          onClick={() => handleNavClick('projects')}
+        />
+        <NavButton
+          icon={BookOpen}
+          label="Prompts"
+          isActive={currentView === 'prompts'}
+          isCollapsed={collapsed}
+          onClick={() => handleNavClick('prompts')}
+        />
+        <NavButton
           icon={Settings}
           label="Parametres"
           isActive={currentView === 'settings'}
           isCollapsed={collapsed}
           onClick={() => handleNavClick('settings')}
+        />
+        <NavButton
+          icon={Image}
+          label="Images"
+          isActive={currentView === 'images'}
+          isCollapsed={collapsed}
+          onClick={() => handleNavClick('images')}
         />
         <NavButton
           icon={BarChart3}
