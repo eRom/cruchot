@@ -33,11 +33,6 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
       bindings.push(['command+k,ctrl+k', handler])
     }
 
-    if (callbacks.onSettings) {
-      const handler = callbacks.onSettings
-      bindings.push(['command+,,ctrl+,', handler])
-    }
-
     if (callbacks.onEscape) {
       const handler = callbacks.onEscape
       bindings.push(['escape', handler])
@@ -50,10 +45,23 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
       })
     }
 
+    // Cmd+, — hotkeys-js can't handle comma in its syntax, use native listener
+    const settingsHandler = callbacks.onSettings
+    function handleSettingsKey(e: KeyboardEvent) {
+      if (e.key === ',' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        settingsHandler?.()
+      }
+    }
+    if (settingsHandler) {
+      document.addEventListener('keydown', handleSettingsKey)
+    }
+
     return () => {
       for (const [keys] of bindings) {
         hotkeys.unbind(keys)
       }
+      document.removeEventListener('keydown', handleSettingsKey)
     }
   }, [
     callbacks.onNewConversation,

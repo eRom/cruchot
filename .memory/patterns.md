@@ -1,6 +1,6 @@
 # Patterns — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-09 (session 2)
+**Derniere mise a jour** : 2026-03-09 (session 3)
 
 ## Conventions de nommage
 
@@ -49,6 +49,32 @@
 - Formulaire inline (remplace la grille), pas de dialog modal
 - Bouton "Retour aux projets" pour revenir a la grille
 - Modele par defaut obligatoire (validation `canSave`)
+
+### Vue Prompts Pattern
+- Meme pattern que ProjectsView : `subView` state ('grid' | 'create' | 'edit')
+- Types : `complet` (prompt autonome) et `complement` (fragment) — pas de `system` (supprime par Romain)
+- Filtres : par type (pills), recherche texte, tri (activite/nom/creation)
+- Chaque prompt a : title, content, type, category, tags[], variables[]
+- Copier le contenu en un clic depuis la carte
+
+### CommandPalette Pattern
+- Ouvre via Cmd+K
+- Fetch TOUTES les conversations a l'ouverture (`window.api.getConversations()` sans arg)
+- Le store `conversations` ne contient que celles du projet actif (filtre sidebar)
+- Quand on selectionne une conv d'un autre projet : switch `activeProjectId` + `activeConversationId`
+- Les callbacks (onNewConversation, onOpenSettings, etc.) sont passes en props depuis App.tsx
+
+### Model Params Pattern
+- temperature, maxTokens, topP sont globaux (pas par modele)
+- Persistes dans `settings.store.ts` (Zustand persist → localStorage)
+- Configures dans Settings > Modele (presets Creatif/Equilibre/Precis)
+- InputZone lit directement depuis le settings store (plus de state local)
+
+### Title Bar Pattern (macOS)
+- `titleBarStyle: 'hiddenInset'` dans BrowserWindow
+- Zone drag 38px en haut de Sidebar ET AppLayout main
+- `[-webkit-app-region:drag]` pour les zones draggables
+- Traffic lights positiones a `{ x: 15, y: 10 }`
 
 ### Error Classification Pattern
 - **Transient** (429, 500, 503) → retry backoff exponentiel + jitter, max 3

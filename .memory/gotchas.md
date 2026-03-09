@@ -1,6 +1,6 @@
 # Gotchas — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-09 (session 2)
+**Derniere mise a jour** : 2026-03-09 (session 3)
 
 ## Bugs resolus
 
@@ -25,6 +25,21 @@
 
 ### CommandPalette — prop `onOpenChange` inexistante
 **Fix** : Remplacer par `onClose` (la prop reelle du composant).
+
+### CommandPalette — callbacks jamais passes
+**Symptome** : "Nouvelle conversation" et "Parametres" ne fonctionnaient pas dans Cmd+K.
+**Cause** : Les props `onNewConversation`, `onOpenSettings`, `onSelectConversation` n'etaient jamais passees depuis App.tsx.
+**Fix** : Cabler les callbacks dans App.tsx vers les handlers existants.
+
+### CommandPalette — recherche ne trouvait pas les conversations d'autres projets
+**Symptome** : Une conv dans un autre projet n'apparaissait pas dans Cmd+K.
+**Cause** : Le composant utilisait `useConversationsStore` qui ne contient que les conversations du projet actif.
+**Fix** : Fetch toutes les conversations via `window.api.getConversations()` (sans arg) a l'ouverture de la palette. Quand on selectionne une conv, switcher le `activeProjectId` pour que la sidebar se mette a jour.
+
+### hotkeys-js — Cmd+, impossible
+**Symptome** : Le raccourci Cmd+virgule pour ouvrir les parametres ne fonctionnait pas.
+**Cause** : `hotkeys-js` utilise la virgule comme separateur de raccourcis multiples (`'command+n,ctrl+n'`). Impossible de lui passer `command+,` ou `command+comma`.
+**Fix** : Utiliser un listener natif `document.addEventListener('keydown')` qui verifie `e.key === ',' && e.metaKey`.
 
 ## Composants non cables (session precedente)
 
@@ -67,18 +82,26 @@ L'annulation stoppe la requete cote client mais le serveur continue a consommer 
 ### Vercel AI SDK — providerOptions
 Les `providerOptions` sont specifiques a chaque provider. Pour Anthropic Extended Thinking : `providerOptions: { anthropic: { thinking: { type: 'enabled', budgetTokens } } }`.
 
+### hotkeys-js — virgule comme separateur
+**Piege general** : `hotkeys-js` utilise `,` comme separateur de raccourcis. Tout raccourci impliquant la touche virgule doit etre gere via un listener natif `keydown`.
+
 ## Preferences UI de Romain
 
 - Prefere les vues inline (formulaire remplace la grille) plutot que les modals/dialogs
 - Veut un CRUD complet visible (pas juste un champ nom pour creer un projet)
 - Le modele par defaut est obligatoire sur un projet (pas d'option "aucun")
 - Style Claude Desktop pour la vue Projets (grille de cartes avec barre de couleur, recherche, tri)
+- Parametres modele (temperature, maxTokens, topP) globaux, pas par modele — dans Settings
+- Type prompt "system" supprime — seulement "complet" et "complement"
+- Header sidebar : "Nouvelle discussion" (pas de label app), bouton cliquable qui cree une conv
+- Title bar macOS avec traffic lights natifs
 
 ## Elements toujours non cables / manquants
 
 - Search bar dans la sidebar (T34)
-- PromptPicker pour InputZone (T29)
+- PromptPicker pour InputZone (T29) — PromptsView existe maintenant, il faut le picker dans InputZone
 - BranchNavigation dans MessageItem (T45)
 - a11y.ts utilitaires
 - T48 (Prompt Optimizer), T52 (Export PDF), T56 (Advanced Stats), T60 (Packaging)
 - i18n (T41) — configure mais `useTranslation` jamais utilise
+- SSH key GitHub non configuree — push en HTTPS uniquement

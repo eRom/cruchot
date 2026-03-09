@@ -1,6 +1,6 @@
 # Architecture — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-09 (session 2)
+**Derniere mise a jour** : 2026-03-09 (session 3)
 
 ## Vue d'ensemble
 
@@ -46,7 +46,8 @@ src/
       chat/            # ChatView, InputZone, MessageList, MessageItem, ModelSelector, etc.
       layout/          # Sidebar, AppLayout
       projects/        # ProjectsView (grille + form inline), ProjectSelector (dropdown sidebar)
-      settings/        # SettingsView (6 tabs), ApiKeysSection, AppearanceSettings, etc.
+      prompts/         # PromptsView (grille + form inline), bibliotheque de prompts
+      settings/        # SettingsView (7 tabs), ApiKeysSection, AppearanceSettings, ModelSettings, etc.
       statistics/      # StatsView
       images/          # ImagesView, ImageGrid
       conversations/   # ConversationList, ConversationItem (rename/delete inline)
@@ -60,7 +61,8 @@ src/
 `App.tsx` route selon `useUiStore.currentView` :
 - `chat` — ChatView (conversation active)
 - `projects` — ProjectsView (grille de cartes / formulaire inline)
-- `settings` — SettingsView (6 tabs)
+- `prompts` — PromptsView (bibliotheque de prompts, types complet/complement)
+- `settings` — SettingsView (7 tabs)
 - `images` — ImagesView
 - `statistics` — StatsView
 
@@ -93,3 +95,15 @@ Couts : table `PRICING` par modele dans `cost-calculator.ts`.
 - Fichiers binaires sur filesystem (images, attachments)
 - Cles API chiffrees via Electron safeStorage (Keychain macOS)
 - Settings UI persistees via Zustand `persist` middleware (localStorage)
+
+## Fenetre
+
+- `titleBarStyle: 'hiddenInset'` — traffic lights macOS natifs
+- `trafficLightPosition: { x: 15, y: 10 }` — dans la zone drag
+- Zones drag en haut de la sidebar (38px) et du panneau principal (38px)
+- Sidebar header : bouton "Nouvelle discussion" (remplace l'ancien label "Multi-LLM")
+
+## GitHub
+
+- Repo prive : `eRom/app-desktop-llmx`
+- Remote HTTPS (pas SSH — cle SSH non configuree)
