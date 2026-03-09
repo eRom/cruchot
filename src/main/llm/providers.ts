@@ -1,0 +1,73 @@
+import { createOpenAI } from '@ai-sdk/openai'
+import { createAnthropic } from '@ai-sdk/anthropic'
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
+import { createMistral } from '@ai-sdk/mistral'
+import { createXai } from '@ai-sdk/xai'
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
+import { getApiKeyForProvider } from '../ipc/providers.ipc'
+
+/**
+ * Creates configured AI SDK provider instances.
+ * API keys are retrieved from safeStorage at call time (not cached).
+ */
+
+export function getOpenAIProvider() {
+  const apiKey = getApiKeyForProvider('openai')
+  if (!apiKey) throw new Error('OpenAI API key not configured')
+  return createOpenAI({ apiKey })
+}
+
+export function getAnthropicProvider() {
+  const apiKey = getApiKeyForProvider('anthropic')
+  if (!apiKey) throw new Error('Anthropic API key not configured')
+  return createAnthropic({ apiKey })
+}
+
+export function getGoogleProvider() {
+  const apiKey = getApiKeyForProvider('google')
+  if (!apiKey) throw new Error('Google API key not configured')
+  return createGoogleGenerativeAI({ apiKey })
+}
+
+export function getMistralProvider() {
+  const apiKey = getApiKeyForProvider('mistral')
+  if (!apiKey) throw new Error('Mistral API key not configured')
+  return createMistral({ apiKey })
+}
+
+export function getXaiProvider() {
+  const apiKey = getApiKeyForProvider('xai')
+  if (!apiKey) throw new Error('xAI API key not configured')
+  return createXai({ apiKey })
+}
+
+export function getPerplexityProvider() {
+  const apiKey = getApiKeyForProvider('perplexity')
+  if (!apiKey) throw new Error('Perplexity API key not configured')
+  return createOpenAICompatible({
+    name: 'perplexity',
+    baseURL: 'https://api.perplexity.ai',
+    headers: { Authorization: `Bearer ${apiKey}` }
+  })
+}
+
+export function getOpenRouterProvider() {
+  const apiKey = getApiKeyForProvider('openrouter')
+  if (!apiKey) throw new Error('OpenRouter API key not configured')
+  return createOpenAICompatible({
+    name: 'openrouter',
+    baseURL: 'https://openrouter.ai/api/v1',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'HTTP-Referer': 'https://multi-llm-desktop.app',
+      'X-Title': 'Multi-LLM Desktop'
+    }
+  })
+}
+
+export function getLmStudioProvider() {
+  return createOpenAICompatible({
+    name: 'lmstudio',
+    baseURL: 'http://localhost:1234/v1'
+  })
+}
