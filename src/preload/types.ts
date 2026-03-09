@@ -38,6 +38,7 @@ export interface ModelInfo {
   name: string
   displayName: string
   providerId: string
+  type: 'text' | 'image'
   contextWindow: number
   inputPrice: number
   outputPrice: number
@@ -271,7 +272,7 @@ export interface ElectronAPI {
   fileRead: (filePath: string) => Promise<ArrayBuffer>
 
   // Images (generation)
-  generateImage: (data: { prompt: string; model?: string; aspectRatio?: string }) => Promise<ImageGenerateResult>
+  generateImage: (data: { prompt: string; model?: string; aspectRatio?: string; conversationId?: string; providerId?: string }) => Promise<ImageGenerateResult>
   listImages: () => Promise<ImageRecord[]>
 
   // Updater (auto-update)

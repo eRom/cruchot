@@ -87,7 +87,24 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
         )}
       >
         {/* Content */}
-        <MessageContent content={message.content} role={message.role} />
+        {message.contentData?.type === 'image' ? (
+          <div className="flex flex-col gap-2">
+            <img
+              src={
+                message.contentData.path
+                  ? `local-image://${message.contentData.path}`
+                  : message.contentData.base64
+                    ? `data:image/png;base64,${message.contentData.base64}`
+                    : undefined
+              }
+              alt={message.content}
+              className="max-w-full rounded-lg"
+            />
+            <p className="text-xs text-muted-foreground/70 italic">{message.content}</p>
+          </div>
+        ) : (
+          <MessageContent content={message.content} role={message.role} />
+        )}
 
 
         {/* Streaming indicator */}
@@ -138,8 +155,8 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
               <span>{formatTime(message.responseTimeMs)}</span>
             )}
           </div>
-          {/* TTS — read message aloud */}
-          {message.content.length > 0 && (
+          {/* TTS — read message aloud (not for image messages) */}
+          {message.content.length > 0 && message.contentData?.type !== 'image' && (
             <AudioPlayer text={message.content} compact />
           )}
         </div>

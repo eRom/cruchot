@@ -14,6 +14,7 @@ export interface CreateMessageParams {
   tokensOut?: number
   cost?: number
   responseTimeMs?: number
+  contentData?: Record<string, unknown>
 }
 
 export function getMessagesForConversation(conversationId: string) {
@@ -43,6 +44,7 @@ export function createMessage(params: CreateMessageParams) {
       tokensOut: params.tokensOut,
       cost: params.cost,
       responseTimeMs: params.responseTimeMs,
+      contentData: params.contentData,
       createdAt: new Date()
     })
     .run()

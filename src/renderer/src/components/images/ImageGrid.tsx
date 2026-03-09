@@ -22,11 +22,11 @@ export function ImageGrid({ images }: ImageGridProps) {
           <button
             key={img.id}
             type="button"
-            onClick={() => setLightboxSrc(img.path)}
+            onClick={() => setLightboxSrc(`local-image://${img.path}`)}
             className="group relative aspect-square overflow-hidden rounded-xl border border-border/40 bg-muted transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
           >
             <img
-              src={img.path}
+              src={`local-image://${img.path}`}
               alt={img.prompt}
               className="size-full object-cover transition-transform group-hover:scale-105"
               loading="lazy"

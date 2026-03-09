@@ -16,6 +16,7 @@ export interface Model {
   providerId: string
   name: string
   displayName: string
+  type: 'text' | 'image'
   contextWindow: number
   inputPrice: number
   outputPrice: number

@@ -88,6 +88,7 @@ export const MODELS: ModelDefinition[] = [
     providerId: 'openai',
     name: 'gpt-5.4',
     displayName: 'GPT-5.4',
+    type: 'text',
     contextWindow: 1050000,
     inputPrice: 2.50,
     outputPrice: 15.00,
@@ -99,6 +100,7 @@ export const MODELS: ModelDefinition[] = [
     providerId: 'openai',
     name: 'gpt-5.3-codex',
     displayName: 'GPT-5.3 Codex',
+    type: 'text',
     contextWindow: 400000,
     inputPrice: 1.75,
     outputPrice: 14.00,
@@ -110,6 +112,7 @@ export const MODELS: ModelDefinition[] = [
     providerId: 'openai',
     name: 'gpt-5-mini',
     displayName: 'GPT-5 Mini',
+    type: 'text',
     contextWindow: 400000,
     inputPrice: 0.25,
     outputPrice: 2.00,
@@ -121,6 +124,7 @@ export const MODELS: ModelDefinition[] = [
     providerId: 'openai',
     name: 'gpt-5-nano',
     displayName: 'GPT-5 Nano',
+    type: 'text',
     contextWindow: 400000,
     inputPrice: 0.05,
     outputPrice: 0.40,
@@ -132,6 +136,7 @@ export const MODELS: ModelDefinition[] = [
     providerId: 'openai',
     name: 'gpt-4.1-mini',
     displayName: 'GPT-4.1 Mini',
+    type: 'text',
     contextWindow: 1048000,
     inputPrice: 0.40,
     outputPrice: 1.60,
@@ -145,6 +150,7 @@ export const MODELS: ModelDefinition[] = [
     providerId: 'anthropic',
     name: 'claude-opus-4-6',
     displayName: 'Claude Opus 4.6',
+    type: 'text',
     contextWindow: 1000000,
     inputPrice: 5.00,
     outputPrice: 25.00,
@@ -156,6 +162,7 @@ export const MODELS: ModelDefinition[] = [
     providerId: 'anthropic',
     name: 'claude-sonnet-4-6',
     displayName: 'Claude Sonnet 4.6',
+    type: 'text',
     contextWindow: 1000000,
     inputPrice: 3.00,
     outputPrice: 15.00,
@@ -167,6 +174,7 @@ export const MODELS: ModelDefinition[] = [
     providerId: 'anthropic',
     name: 'claude-haiku-4-5-20251001',
     displayName: 'Claude Haiku 4.5',
+    type: 'text',
     contextWindow: 200000,
     inputPrice: 1.00,
     outputPrice: 5.00,
@@ -180,6 +188,7 @@ export const MODELS: ModelDefinition[] = [
     providerId: 'google',
     name: 'gemini-3.1-pro-preview',
     displayName: 'Gemini 3.1 Pro Preview',
+    type: 'text',
     contextWindow: 1048000,
     inputPrice: 2.00,
     outputPrice: 12.00,
@@ -191,6 +200,7 @@ export const MODELS: ModelDefinition[] = [
     providerId: 'google',
     name: 'gemini-3-flash-preview',
     displayName: 'Gemini 3 Flash Preview',
+    type: 'text',
     contextWindow: 1048000,
     inputPrice: 0.50,
     outputPrice: 3.00,
@@ -204,6 +214,7 @@ export const MODELS: ModelDefinition[] = [
     providerId: 'xai',
     name: 'grok-4.1-fast',
     displayName: 'Grok 4.1 Fast',
+    type: 'text',
     contextWindow: 2000000,
     inputPrice: 0.20,
     outputPrice: 0.50,
@@ -215,6 +226,7 @@ export const MODELS: ModelDefinition[] = [
     providerId: 'xai',
     name: 'grok-code-fast-1',
     displayName: 'Grok Code Fast 1',
+    type: 'text',
     contextWindow: 256000,
     inputPrice: 0.20,
     outputPrice: 1.50,
@@ -228,6 +240,7 @@ export const MODELS: ModelDefinition[] = [
     providerId: 'mistral',
     name: 'devstral-2512',
     displayName: 'Devstral 2512',
+    type: 'text',
     contextWindow: 262000,
     inputPrice: 0.40,
     outputPrice: 2.00,
@@ -239,11 +252,50 @@ export const MODELS: ModelDefinition[] = [
     providerId: 'mistral',
     name: 'mistral-large-2512',
     displayName: 'Mistral Large 2512',
+    type: 'text',
     contextWindow: 262000,
     inputPrice: 0.50,
     outputPrice: 1.50,
     supportsImages: true,
     supportsStreaming: true
+  },
+
+  // ── Image Generation Models ─────────────────────────────────────────────
+  {
+    id: 'gemini-3.1-flash-image-preview',
+    providerId: 'google',
+    name: 'gemini-3.1-flash-image-preview',
+    displayName: 'Gemini Flash Image',
+    type: 'image',
+    contextWindow: 0,
+    inputPrice: 0.04,
+    outputPrice: 0.04,
+    supportsImages: false,
+    supportsStreaming: false
+  },
+  {
+    id: 'gemini-3-pro-image-preview',
+    providerId: 'google',
+    name: 'gemini-3-pro-image-preview',
+    displayName: 'Gemini Pro Image',
+    type: 'image',
+    contextWindow: 0,
+    inputPrice: 0.08,
+    outputPrice: 0.08,
+    supportsImages: false,
+    supportsStreaming: false
+  },
+  {
+    id: 'gpt-image-1.5',
+    providerId: 'openai',
+    name: 'gpt-image-1.5',
+    displayName: 'GPT Image 1.5',
+    type: 'image',
+    contextWindow: 0,
+    inputPrice: 0.02,
+    outputPrice: 0.08,
+    supportsImages: false,
+    supportsStreaming: false
   }
 ]
 
@@ -265,4 +317,9 @@ export function getProviderForModel(modelId: string): ProviderDefinition | undef
   const model = getModelById(modelId)
   if (!model) return undefined
   return getProvider(model.providerId)
+}
+
+export function isImageModel(modelId: string): boolean {
+  const model = getModelById(modelId)
+  return model?.type === 'image'
 }

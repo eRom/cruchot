@@ -7,13 +7,17 @@ import { desc } from 'drizzle-orm'
 import { getDatabase } from '../db'
 import { images } from '../db/schema'
 import { generateImage } from '../llm/image'
+import { createMessage } from '../db/queries/messages'
+import { touchConversation } from '../db/queries/conversations'
 
 const generateImageSchema = z.object({
   prompt: z.string().min(1).max(4000),
   model: z
-    .enum(['gemini-3.1-flash-image-preview', 'gemini-3-pro-image-preview'])
+    .enum(['gemini-3.1-flash-image-preview', 'gemini-3-pro-image-preview', 'gpt-image-1.5'])
     .optional(),
-  aspectRatio: z.enum(['1:1', '16:9', '9:16', '4:3', '3:4']).optional()
+  aspectRatio: z.enum(['1:1', '16:9', '9:16', '4:3', '3:4']).optional(),
+  conversationId: z.string().optional(),
+  providerId: z.string().optional()
 })
 
 function getImagesDir(): string {
@@ -32,10 +36,24 @@ export function registerImagesIpc(): void {
       throw new Error(`Invalid payload: ${parsed.error.message}`)
     }
 
-    const { prompt, model, aspectRatio } = parsed.data
+    const { prompt, model, aspectRatio, conversationId, providerId } = parsed.data
+    const modelId = model ?? 'gemini-3.1-flash-image-preview'
 
-    // Generate via Gemini
+    // Save user message to DB if conversationId provided
+    if (conversationId) {
+      createMessage({
+        conversationId,
+        role: 'user',
+        content: prompt
+      })
+    }
+
+    const startTime = Date.now()
+
+    // Generate image
     const result = await generateImage(prompt, { model, aspectRatio })
+
+    const responseTimeMs = Date.now() - startTime
 
     // Save to filesystem
     const id = nanoid()
@@ -44,19 +62,39 @@ export function registerImagesIpc(): void {
     const buffer = Buffer.from(result.base64, 'base64')
     fs.writeFileSync(filePath, buffer)
 
-    // Save to DB
+    // Save image record to DB
     const db = getDatabase()
     const now = new Date()
     db.insert(images)
       .values({
         id,
         prompt,
-        modelId: model ?? 'gemini-3.1-flash-image-preview',
+        modelId,
         path: filePath,
         size: buffer.length,
         createdAt: now
       })
       .run()
+
+    // Save assistant message with image contentData to DB
+    if (conversationId) {
+      createMessage({
+        conversationId,
+        role: 'assistant',
+        content: prompt,
+        modelId,
+        providerId,
+        responseTimeMs,
+        contentData: {
+          type: 'image',
+          imageId: id,
+          path: filePath
+        }
+      })
+
+      // Touch conversation updatedAt
+      touchConversation(conversationId)
+    }
 
     return {
       id,
