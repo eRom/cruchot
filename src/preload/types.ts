@@ -68,6 +68,97 @@ export interface MessageInfo {
   createdAt: Date
 }
 
+export interface ProjectInfo {
+  id: string
+  name: string
+  description?: string | null
+  systemPrompt?: string | null
+  defaultModelId?: string | null
+  color?: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface PromptVariable {
+  name: string
+  description?: string
+}
+
+export interface PromptInfo {
+  id: string
+  title: string
+  content: string
+  category?: string | null
+  tags?: string[] | null
+  type: 'complet' | 'complement' | 'system'
+  variables?: PromptVariable[] | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface RoleInfo {
+  id: string
+  name: string
+  description?: string | null
+  systemPrompt?: string | null
+  icon?: string | null
+  isBuiltin: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface SearchResult {
+  messageId: string
+  conversationId: string
+  conversationTitle: string
+  role: string
+  content: string
+  createdAt: number
+}
+
+export interface DailyStat {
+  date: string
+  messagesCount: number
+  tokensIn: number
+  tokensOut: number
+  totalCost: number
+}
+
+export interface ProviderStat {
+  providerId: string
+  messagesCount: number
+  tokensIn: number
+  tokensOut: number
+  totalCost: number
+}
+
+export interface ModelStat {
+  modelId: string
+  providerId: string
+  messagesCount: number
+  tokensIn: number
+  tokensOut: number
+  totalCost: number
+}
+
+export interface TotalCost {
+  totalCost: number
+  totalMessages: number
+  totalTokensIn: number
+  totalTokensOut: number
+}
+
+export interface ExportResult {
+  exported: boolean
+  filePath?: string
+}
+
+export interface ImportResult {
+  imported: boolean
+  conversationId?: string
+  messagesCount?: number
+}
+
 // L'API exposee au renderer via contextBridge
 export interface ElectronAPI {
   // Chat
@@ -90,6 +181,42 @@ export interface ElectronAPI {
   validateApiKey: (providerId: string, apiKey: string) => Promise<boolean>
   hasApiKey: (providerId: string) => Promise<boolean>
   getApiKeyMasked: (providerId: string) => Promise<string | null>
+
+  // Projects
+  getProjects: () => Promise<ProjectInfo[]>
+  createProject: (data: { name: string; description?: string; systemPrompt?: string; defaultModelId?: string; color?: string }) => Promise<ProjectInfo>
+  updateProject: (id: string, data: { name?: string; description?: string | null; systemPrompt?: string | null; defaultModelId?: string | null; color?: string | null }) => Promise<ProjectInfo | undefined>
+  deleteProject: (id: string) => Promise<void>
+
+  // Prompts
+  getPrompts: () => Promise<PromptInfo[]>
+  getPromptsByCategory: (category: string) => Promise<PromptInfo[]>
+  getPromptsByType: (type: string) => Promise<PromptInfo[]>
+  searchPrompts: (query: string) => Promise<PromptInfo[]>
+  createPrompt: (data: { title: string; content: string; category?: string; tags?: string[]; type: 'complet' | 'complement' | 'system'; variables?: PromptVariable[] }) => Promise<PromptInfo>
+  updatePrompt: (id: string, data: { title?: string; content?: string; category?: string | null; tags?: string[] | null; type?: 'complet' | 'complement' | 'system'; variables?: PromptVariable[] | null }) => Promise<PromptInfo | undefined>
+  deletePrompt: (id: string) => Promise<void>
+
+  // Roles
+  getRoles: () => Promise<RoleInfo[]>
+  createRole: (data: { name: string; description?: string; systemPrompt?: string; icon?: string }) => Promise<RoleInfo>
+  updateRole: (id: string, data: { name?: string; description?: string | null; systemPrompt?: string | null; icon?: string | null }) => Promise<RoleInfo | undefined>
+  deleteRole: (id: string) => Promise<void>
+
+  // Search
+  searchMessages: (query: string) => Promise<SearchResult[]>
+
+  // Export
+  exportConversation: (data: { conversationId: string; format: 'md' | 'json' | 'txt' | 'html' }) => Promise<ExportResult>
+
+  // Import
+  importConversation: (data: { format: 'json' | 'chatgpt' | 'claude' }) => Promise<ImportResult>
+
+  // Statistics
+  getDailyStats: (days?: number) => Promise<DailyStat[]>
+  getProviderStats: () => Promise<ProviderStat[]>
+  getModelStats: () => Promise<ModelStat[]>
+  getTotalCost: () => Promise<TotalCost>
 
   // Events
   onConversationUpdated: (callback: (data: { id: string; title: string }) => void) => void

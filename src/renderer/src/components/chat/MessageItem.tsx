@@ -1,13 +1,8 @@
 import React, { useCallback, useState } from 'react'
 import type { Message } from '@/stores/messages.store'
-import MessageContent from './MessageContent'
+import { MessageContent } from './MessageContent'
 import { cn } from '@/lib/utils'
 import { Check, Copy, Sparkles } from 'lucide-react'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger
-} from '@/components/ui/tooltip'
 
 interface MessageItemProps {
   message: Message
@@ -93,6 +88,7 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
         {/* Content */}
         <MessageContent content={message.content} role={message.role} />
 
+
         {/* Streaming indicator */}
         {isStreaming && (
           <span className="mt-1 inline-flex gap-[3px]">
@@ -104,29 +100,23 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
 
         {/* Copy button — appears on hover */}
         {!isStreaming && message.content.length > 0 && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={handleCopy}
-                className={cn(
-                  'absolute -bottom-3 right-2 flex size-6 items-center justify-center rounded-md opacity-0 transition-all group-hover:opacity-100',
-                  isUser
-                    ? 'bg-blue-500/30 text-white/70 hover:bg-blue-500/50 hover:text-white'
-                    : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                )}
-                aria-label="Copier le message"
-              >
-                {copied ? (
-                  <Check className="size-3" />
-                ) : (
-                  <Copy className="size-3" />
-                )}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              {copied ? 'Copie !' : 'Copier'}
-            </TooltipContent>
-          </Tooltip>
+          <button
+            onClick={handleCopy}
+            title={copied ? 'Copié !' : 'Copier'}
+            className={cn(
+              'absolute -bottom-3 right-2 flex size-6 items-center justify-center rounded-md opacity-0 transition-all group-hover:opacity-100',
+              isUser
+                ? 'bg-blue-500/30 text-white/70 hover:bg-blue-500/50 hover:text-white'
+                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+            )}
+            aria-label="Copier le message"
+          >
+            {copied ? (
+              <Check className="size-3" />
+            ) : (
+              <Copy className="size-3" />
+            )}
+          </button>
         )}
       </div>
 
@@ -153,4 +143,4 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
   )
 }
 
-export default React.memo(MessageItem)
+export default MessageItem
