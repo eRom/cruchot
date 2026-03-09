@@ -11,9 +11,8 @@ interface MessageContentProps {
  * Uses MarkdownRenderer for assistant messages (richer formatting),
  * and a simpler rendering for user messages (preserves line breaks).
  */
-function MessageContent({ content, role }: MessageContentProps) {
+export function MessageContent({ content, role }: MessageContentProps): React.JSX.Element {
   if (role === 'user') {
-    // User messages: preserve whitespace/line breaks, no heavy Markdown
     return (
       <div className="whitespace-pre-wrap break-words text-[14.5px] leading-relaxed">
         {content}
@@ -21,8 +20,9 @@ function MessageContent({ content, role }: MessageContentProps) {
     )
   }
 
-  // Assistant (and system) messages: full Markdown rendering
-  return <MarkdownRenderer content={content} />
+  return (
+    <div className="text-[14.5px]">
+      <MarkdownRenderer content={content} />
+    </div>
+  )
 }
-
-export default React.memo(MessageContent)

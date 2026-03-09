@@ -5,6 +5,13 @@ import { settings } from '../db/schema'
 import { registerProvidersIpc } from './providers.ipc'
 import { registerChatIpc } from './chat.ipc'
 import { registerConversationsIpc } from './conversations.ipc'
+import { registerProjectsIpc } from './projects.ipc'
+import { registerPromptsIpc } from './prompts.ipc'
+import { registerRolesIpc } from './roles.ipc'
+import { registerSearchIpc } from './search.ipc'
+import { registerExportIpc } from './export.ipc'
+import { registerImportIpc } from './import.ipc'
+import { registerStatisticsIpc } from './statistics.ipc'
 
 /**
  * Registre central des IPC handlers.
@@ -19,6 +26,27 @@ export function registerAllIpcHandlers(): void {
 
   // ── Conversations (CRUD) ───────────────────────────
   registerConversationsIpc()
+
+  // ── Projects (CRUD) ────────────────────────────────
+  registerProjectsIpc()
+
+  // ── Prompts (CRUD) ─────────────────────────────────
+  registerPromptsIpc()
+
+  // ── Roles (CRUD + seed) ────────────────────────────
+  registerRolesIpc()
+
+  // ── Search (FTS5) ──────────────────────────────────
+  registerSearchIpc()
+
+  // ── Export (conversations) ─────────────────────────
+  registerExportIpc()
+
+  // ── Import (conversations) ─────────────────────────
+  registerImportIpc()
+
+  // ── Statistics ─────────────────────────────────────
+  registerStatisticsIpc()
 
   // ── Settings ────────────────────────────────────────
   ipcMain.handle('settings:get', async (_event, key: string) => {

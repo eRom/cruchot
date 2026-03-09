@@ -10,6 +10,7 @@ export interface Message {
   providerId?: string
   tokensIn?: number
   tokensOut?: number
+  contentData?: Record<string, unknown>
   cost?: number
   responseTimeMs?: number
   createdAt: Date

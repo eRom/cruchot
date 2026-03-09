@@ -131,5 +131,7 @@ export function runMigrations(): void {
       size INTEGER,
       created_at INTEGER NOT NULL
     );
+
+    CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(content);
   `)
 }

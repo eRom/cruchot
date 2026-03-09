@@ -1,15 +1,56 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
-import { remarkGfm } from '@/lib/markdown'
+import { remarkGfm, remarkMath, rehypeKatex } from '@/lib/markdown'
 import { cn } from '@/lib/utils'
 import { Check, Copy } from 'lucide-react'
+import { createHighlighter, type Highlighter } from 'shiki'
+import MermaidBlock from './MermaidBlock'
+import 'katex/dist/katex.min.css'
+
+// ── Shiki singleton ────────────────────────────────────────────
+
+let highlighterPromise: Promise<Highlighter> | null = null
+let highlighterInstance: Highlighter | null = null
+
+function getHighlighter(): Promise<Highlighter> {
+  if (highlighterInstance) return Promise.resolve(highlighterInstance)
+  if (!highlighterPromise) {
+    highlighterPromise = createHighlighter({
+      themes: ['github-dark', 'github-light'],
+      langs: [
+        'javascript',
+        'typescript',
+        'python',
+        'rust',
+        'go',
+        'java',
+        'html',
+        'css',
+        'json',
+        'bash',
+        'sql',
+        'markdown',
+      ],
+    }).then((hl) => {
+      highlighterInstance = hl
+      return hl
+    })
+  }
+  return highlighterPromise
+}
+
+// Pre-load the highlighter immediately
+getHighlighter()
+
+// ── Types ──────────────────────────────────────────────────────
 
 interface MarkdownRendererProps {
   content: string
   className?: string
 }
 
-/** Button that copies text to clipboard with a brief check animation. */
+// ── CopyCodeButton ─────────────────────────────────────────────
+
 function CopyCodeButton({ code }: { code: string }) {
   const [copied, setCopied] = useState(false)
 
@@ -39,6 +80,66 @@ function CopyCodeButton({ code }: { code: string }) {
     </button>
   )
 }
+
+// ── ShikiCodeBlock ─────────────────────────────────────────────
+
+function ShikiCodeBlock({ code, language }: { code: string; language: string }) {
+  const [html, setHtml] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    getHighlighter().then((hl) => {
+      if (cancelled) return
+      try {
+        const rendered = hl.codeToHtml(code, {
+          lang: language,
+          themes: { light: 'github-light', dark: 'github-dark' },
+        })
+        setHtml(rendered)
+      } catch {
+        // Language not loaded — fallback to plain text
+        setHtml(null)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [code, language])
+
+  if (html) {
+    return (
+      <div className="group relative">
+        {language && (
+          <span className="absolute top-2.5 left-3 z-10 text-[11px] font-medium uppercase tracking-wider text-white/30">
+            {language}
+          </span>
+        )}
+        <CopyCodeButton code={code} />
+        <div
+          className="overflow-x-auto [&_pre]:p-4 [&_pre]:pt-8 [&_pre]:text-[13px] [&_pre]:leading-6 [&_pre]:!bg-transparent [&_code]:!bg-transparent"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      </div>
+    )
+  }
+
+  // Fallback — plain text
+  return (
+    <div className="group relative">
+      {language && (
+        <span className="absolute top-2.5 left-3 text-[11px] font-medium uppercase tracking-wider text-white/30">
+          {language}
+        </span>
+      )}
+      <CopyCodeButton code={code} />
+      <code className="block overflow-x-auto whitespace-pre p-4 pt-8 text-[13px] leading-6">
+        {code}
+      </code>
+    </div>
+  )
+}
+
+// ── Markdown components ────────────────────────────────────────
 
 /** Custom react-markdown components with polished styling. */
 const components: Partial<Components> = {
@@ -89,26 +190,19 @@ const components: Partial<Components> = {
   ),
   em: ({ children }) => <em className="italic">{children}</em>,
   hr: () => <hr className="my-5 border-border" />,
-  // Inline code
+  // Code — inline and block
   code: ({ children, className }) => {
-    // If className contains "language-" it's inside a pre (code block) — render raw
     const isBlock = typeof className === 'string' && className.includes('language-')
     if (isBlock) {
       const language = className?.replace('language-', '') ?? ''
       const codeStr = String(children).replace(/\n$/, '')
-      return (
-        <div className="group relative">
-          {language && (
-            <span className="absolute top-2.5 left-3 text-[11px] font-medium uppercase tracking-wider text-white/30">
-              {language}
-            </span>
-          )}
-          <CopyCodeButton code={codeStr} />
-          <code className="block overflow-x-auto whitespace-pre p-4 pt-8 text-[13px] leading-6">
-            {children}
-          </code>
-        </div>
-      )
+
+      // Mermaid diagrams
+      if (language === 'mermaid') {
+        return <MermaidBlock code={codeStr} />
+      }
+
+      return <ShikiCodeBlock code={codeStr} language={language} />
     }
     // Inline code
     return (
@@ -142,18 +236,27 @@ const components: Partial<Components> = {
   ),
 }
 
+// ── Main component ─────────────────────────────────────────────
+
 /**
  * Renders Markdown content with styled components.
- * Uses react-markdown with remark-gfm for GitHub Flavored Markdown.
+ * Supports GFM, LaTeX (KaTeX), syntax highlighting (Shiki), and Mermaid diagrams.
  */
-function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
+function MarkdownRenderer({ content, className }: MarkdownRendererProps): React.JSX.Element {
+  const remarkPlugins = useMemo(() => [remarkGfm, remarkMath], [])
+  const rehypePlugins = useMemo(() => [rehypeKatex], [])
+
   return (
     <div className={cn('markdown-body text-[14.5px]', className)}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown
+        remarkPlugins={remarkPlugins}
+        rehypePlugins={rehypePlugins}
+        components={components}
+      >
         {content}
       </ReactMarkdown>
     </div>
   )
 }
 
-export default React.memo(MarkdownRenderer)
+export default MarkdownRenderer

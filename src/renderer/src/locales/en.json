@@ -1,0 +1,61 @@
+{
+  "sidebar": {
+    "newConversation": "New conversation",
+    "search": "Search",
+    "settings": "Settings",
+    "statistics": "Statistics"
+  },
+  "chat": {
+    "send": "Send",
+    "stop": "Stop",
+    "copy": "Copy",
+    "noMessages": "No messages",
+    "startConversation": "Start a conversation",
+    "placeholder": "Send a message..."
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "apiKeys": "API Keys",
+    "save": "Save"
+  },
+  "errors": {
+    "error": "Error",
+    "unknown": "Unknown error",
+    "retry": "Retry",
+    "connection": "Connection error"
+  },
+  "models": {
+    "temperature": "Temperature",
+    "maxTokens": "Max tokens",
+    "creative": "Creative",
+    "precise": "Precise",
+    "balanced": "Balanced",
+    "topP": "Top P",
+    "extendedThinking": "Extended thinking",
+    "params": "Model parameters",
+    "presets": "Presets"
+  },
+  "stats": {
+    "totalCost": "Total cost",
+    "messages": "Messages sent",
+    "tokens": "Tokens used",
+    "period": "Period",
+    "days7": "7 days",
+    "days30": "30 days",
+    "days90": "90 days",
+    "all": "All",
+    "costEvolution": "Cost evolution",
+    "providerBreakdown": "Provider breakdown",
+    "topModels": "Top models",
+    "trend": "trend"
+  },
+  "attachments": {
+    "dropHere": "Drop your files here",
+    "file": "file",
+    "files": "files"
+  }
+}

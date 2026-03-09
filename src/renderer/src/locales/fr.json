@@ -1,0 +1,61 @@
+{
+  "sidebar": {
+    "newConversation": "Nouvelle conversation",
+    "search": "Rechercher",
+    "settings": "Parametres",
+    "statistics": "Statistiques"
+  },
+  "chat": {
+    "send": "Envoyer",
+    "stop": "Arreter",
+    "copy": "Copier",
+    "noMessages": "Aucun message",
+    "startConversation": "Commencez une conversation",
+    "placeholder": "Envoyer un message..."
+  },
+  "settings": {
+    "title": "Parametres",
+    "theme": "Theme",
+    "light": "Clair",
+    "dark": "Sombre",
+    "system": "Systeme",
+    "apiKeys": "Cles API",
+    "save": "Sauvegarder"
+  },
+  "errors": {
+    "error": "Erreur",
+    "unknown": "Erreur inconnue",
+    "retry": "Reessayer",
+    "connection": "Erreur de connexion"
+  },
+  "models": {
+    "temperature": "Temperature",
+    "maxTokens": "Tokens maximum",
+    "creative": "Creatif",
+    "precise": "Precis",
+    "balanced": "Equilibre",
+    "topP": "Top P",
+    "extendedThinking": "Reflexion etendue",
+    "params": "Parametres du modele",
+    "presets": "Presets"
+  },
+  "stats": {
+    "totalCost": "Cout total",
+    "messages": "Messages envoyes",
+    "tokens": "Tokens utilises",
+    "period": "Periode",
+    "days7": "7 jours",
+    "days30": "30 jours",
+    "days90": "90 jours",
+    "all": "Tout",
+    "costEvolution": "Evolution des couts",
+    "providerBreakdown": "Repartition par provider",
+    "topModels": "Top modeles",
+    "trend": "tendance"
+  },
+  "attachments": {
+    "dropHere": "Deposez vos fichiers ici",
+    "file": "fichier",
+    "files": "fichiers"
+  }
+}

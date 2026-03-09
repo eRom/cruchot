@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { ArrowUp, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ModelSelector } from '@/components/chat/ModelSelector'
+import { ContextWindowIndicator } from '@/components/chat/ContextWindowIndicator'
 import { useProvidersStore } from '@/stores/providers.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useMessagesStore } from '@/stores/messages.store'
 import { useUiStore } from '@/stores/ui.store'
+import { useContextWindow } from '@/hooks/useContextWindow'
 import { cn } from '@/lib/utils'
 
 // ── Types pour futures integrations (ModelParams, Attachments, DropZone) ──
@@ -40,10 +42,27 @@ export function InputZone({
   const formRef = useRef<HTMLFormElement>(null)
 
   // ── Stores ───────────────────────────────────────────────
-  const { selectedModelId, selectedProviderId } = useProvidersStore()
+  const { selectedModelId, selectedProviderId, models } = useProvidersStore()
   const { activeConversationId } = useConversationsStore()
-  const { addMessage } = useMessagesStore()
+  const { messages, addMessage } = useMessagesStore()
   const { isStreaming } = useUiStore()
+
+  // ── Context window ────────────────────────────────────────
+  const conversationMessages = useMemo(
+    () => messages.filter((m) => m.conversationId === activeConversationId),
+    [messages, activeConversationId]
+  )
+
+  const selectedModel = useMemo(
+    () => models.find((m) => m.id === selectedModelId && m.providerId === selectedProviderId),
+    [models, selectedModelId, selectedProviderId]
+  )
+
+  const { currentTokens, maxTokens } = useContextWindow(
+    conversationMessages,
+    content,
+    selectedModel?.contextWindow ?? 0
+  )
 
   // ── Derived state ────────────────────────────────────────
   const canSend = content.trim().length > 0 && !isStreaming && !!selectedModelId && !!selectedProviderId
@@ -309,6 +328,11 @@ export function InputZone({
             </div>
           </div>
         </div>
+
+        {/* Context window indicator */}
+        {selectedModel && maxTokens > 0 && (
+          <ContextWindowIndicator currentTokens={currentTokens} maxTokens={maxTokens} />
+        )}
 
         {/* Bottom slot (ModelParams, token counter, etc.) */}
         {bottomSlot}
