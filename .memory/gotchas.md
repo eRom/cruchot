@@ -1,6 +1,6 @@
 # Gotchas — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-09 (session 3)
+**Derniere mise a jour** : 2026-03-09 (session 4)
 
 ## Bugs resolus
 
@@ -40,6 +40,26 @@
 **Symptome** : Le raccourci Cmd+virgule pour ouvrir les parametres ne fonctionnait pas.
 **Cause** : `hotkeys-js` utilise la virgule comme separateur de raccourcis multiples (`'command+n,ctrl+n'`). Impossible de lui passer `command+,` ou `command+comma`.
 **Fix** : Utiliser un listener natif `document.addEventListener('keydown')` qui verifie `e.key === ',' && e.metaKey`.
+
+### Electron sandbox bloque file:// dans le renderer
+**Symptome** : Les images generees s'affichaient avec une icone cassee (broken image) dans le chat ET la galerie.
+**Cause** : `sandbox: true` dans BrowserWindow empeche le renderer d'acceder aux fichiers locaux via `file://`.
+**Fix** : Enregistrer un custom protocol `local-image://` dans `index.ts` avec `protocol.registerSchemesAsPrivileged()` + `protocol.handle()`. Utiliser `net.fetch(pathToFileURL(path))` pour servir les fichiers.
+
+### AI SDK v6 — `mimeType` renomme en `mediaType`
+**Symptome** : `result.image.mimeType` retourne `undefined` dans `image.ts`.
+**Cause** : AI SDK v6 a renomme `mimeType` en `mediaType` sur `GeneratedFile`.
+**Impact** : Mineur — on fallback sur `'image/png'` donc ca marche quand meme.
+
+### Generation d'images — messages non persistes en DB
+**Symptome** : Apres generation, cliquer sur la conversation dans la sidebar affichait "Aucun message".
+**Cause** : Le flux image dans InputZone ajoutait les messages au store Zustand (memoire) mais ne les sauvegardait pas en DB via IPC. Le handler `images:generate` ne creait pas de messages.
+**Fix** : Ajouter `conversationId` et `providerId` au payload de `images:generate`. Le handler main sauvegarde maintenant le message user + assistant (avec `contentData`) en DB. Aussi ajoute `contentData` a `CreateMessageParams` dans `messages.ts`.
+
+### Base64 trop gros pour le store Zustand
+**Symptome** : Performance degradee apres generation d'image.
+**Cause** : Le base64 d'une image (~2.4 MB en string) etait stocke dans le contentData du message Zustand.
+**Fix** : Ne stocker que le `path` dans contentData, afficher via `local-image://` protocol. Le base64 n'est plus dans le store.
 
 ## Composants non cables (session precedente)
 
@@ -85,6 +105,12 @@ Les `providerOptions` sont specifiques a chaque provider. Pour Anthropic Extende
 ### hotkeys-js — virgule comme separateur
 **Piege general** : `hotkeys-js` utilise `,` comme separateur de raccourcis. Tout raccourci impliquant la touche virgule doit etre gere via un listener natif `keydown`.
 
+### Electron protocol.registerSchemesAsPrivileged — DOIT etre avant app.whenReady()
+L'appel a `protocol.registerSchemesAsPrivileged()` doit se faire au top-level du module, AVANT `app.whenReady()`. Sinon le scheme n'est pas reconnu.
+
+### AI SDK — experimental_generateImage vs generateImage
+Dans `ai@^6.0.116`, `experimental_generateImage` est un alias deprece de `generateImage`. Les deux fonctionnent. Le type de retour a `image` (premier) et `images` (tableau). `GeneratedFile` a `base64`, `uint8Array`, `mediaType` (pas `mimeType`).
+
 ## Preferences UI de Romain
 
 - Prefere les vues inline (formulaire remplace la grille) plutot que les modals/dialogs
@@ -99,7 +125,7 @@ Les `providerOptions` sont specifiques a chaque provider. Pour Anthropic Extende
 ## Elements toujours non cables / manquants
 
 - Search bar dans la sidebar (T34)
-- PromptPicker pour InputZone (T29) — PromptsView existe maintenant, il faut le picker dans InputZone
+- ~~PromptPicker pour InputZone (T29)~~ — **FAIT** (session 4, cable dans InputZone)
 - BranchNavigation dans MessageItem (T45)
 - a11y.ts utilitaires
 - T48 (Prompt Optimizer), T52 (Export PDF), T56 (Advanced Stats), T60 (Packaging)

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowUp, Square } from 'lucide-react'
+import { ArrowUp, ImageIcon, Loader2, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ModelSelector } from '@/components/chat/ModelSelector'
 import { ContextWindowIndicator } from '@/components/chat/ContextWindowIndicator'
 import { VoiceInput } from '@/components/chat/VoiceInput'
+import { PromptPicker } from '@/components/chat/PromptPicker'
+import { AspectRatioSelector, type AspectRatio } from '@/components/chat/AspectRatioSelector'
 import { useProvidersStore } from '@/stores/providers.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
@@ -41,6 +43,8 @@ export function InputZone({
   className
 }: InputZoneProps) {
   const [content, setContent] = useState('')
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1')
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -65,6 +69,8 @@ export function InputZone({
     [models, selectedModelId, selectedProviderId]
   )
 
+  const isImageMode = selectedModel?.type === 'image'
+
   const { currentTokens, maxTokens } = useContextWindow(
     conversationMessages,
     content,
@@ -72,7 +78,8 @@ export function InputZone({
   )
 
   // ── Derived state ────────────────────────────────────────
-  const canSend = content.trim().length > 0 && !isStreaming && !!selectedModelId && !!selectedProviderId
+  const isBusy = isStreaming || isGeneratingImage
+  const canSend = content.trim().length > 0 && !isBusy && !!selectedModelId && !!selectedProviderId
   const isEmpty = content.trim().length === 0
 
   // ── Auto-grow textarea ───────────────────────────────────
@@ -99,31 +106,98 @@ export function InputZone({
 
   // ── Re-focus apres fin de streaming ──────────────────────
   useEffect(() => {
-    if (!isStreaming) {
+    if (!isBusy) {
       textareaRef.current?.focus({ preventScroll: true })
     }
-  }, [isStreaming])
+  }, [isBusy])
 
-  // ── Envoi du message ─────────────────────────────────────
-  const handleSend = useCallback(async () => {
+  // ── Ensure conversation exists ──────────────────────────
+  const ensureConversation = useCallback(async (): Promise<string | null> => {
+    if (activeConversationId) return activeConversationId
+    try {
+      const conv = await window.api.createConversation(undefined, activeProjectId ?? undefined)
+      addConversation(conv)
+      setActiveConversation(conv.id)
+      return conv.id
+    } catch {
+      return null
+    }
+  }, [activeConversationId, activeProjectId, addConversation, setActiveConversation])
+
+  // ── Envoi image ────────────────────────────────────────
+  const handleSendImage = useCallback(async () => {
+    const trimmed = content.trim()
+    if (!trimmed || !selectedModelId) return
+
+    const conversationId = await ensureConversation()
+    if (!conversationId) return
+
+    // Ajouter le message user (prompt)
+    const userMessage = {
+      id: crypto.randomUUID(),
+      conversationId,
+      role: 'user' as const,
+      content: trimmed,
+      createdAt: new Date()
+    }
+    addMessage(userMessage)
+    setContent('')
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        textareaRef.current.style.height = `${TEXTAREA_MIN_HEIGHT}px`
+      }
+    })
+
+    setIsGeneratingImage(true)
+    try {
+      const result = await window.api.generateImage({
+        prompt: trimmed,
+        model: selectedModelId,
+        aspectRatio,
+        conversationId,
+        providerId: selectedProviderId ?? undefined
+      })
+
+      // Ajouter le message assistant avec l'image
+      const assistantMessage = {
+        id: crypto.randomUUID(),
+        conversationId,
+        role: 'assistant' as const,
+        content: trimmed,
+        modelId: selectedModelId,
+        providerId: selectedProviderId ?? undefined,
+        contentData: {
+          type: 'image' as const,
+          imageId: result.id,
+          path: result.path
+        },
+        createdAt: new Date()
+      }
+      addMessage(assistantMessage)
+    } catch (error) {
+      // Ajouter un message d'erreur
+      addMessage({
+        id: crypto.randomUUID(),
+        conversationId,
+        role: 'assistant' as const,
+        content: `Erreur de generation : ${error instanceof Error ? error.message : 'Erreur inconnue'}`,
+        modelId: selectedModelId,
+        providerId: selectedProviderId ?? undefined,
+        createdAt: new Date()
+      })
+    } finally {
+      setIsGeneratingImage(false)
+    }
+  }, [content, selectedModelId, selectedProviderId, aspectRatio, ensureConversation, addMessage])
+
+  // ── Envoi du message texte ─────────────────────────────
+  const handleSendText = useCallback(async () => {
     const trimmed = content.trim()
     if (!trimmed || !selectedModelId || !selectedProviderId) return
     if (isStreaming) return
 
-    // Determiner la conversation (existante ou nouvelle)
-    let conversationId: string
-    if (activeConversationId) {
-      conversationId = activeConversationId
-    } else {
-      try {
-        const conv = await window.api.createConversation(undefined, activeProjectId ?? undefined)
-        conversationId = conv.id
-        addConversation(conv)
-        setActiveConversation(conv.id)
-      } catch {
-        return
-      }
-    }
+    const conversationId = await ensureConversation()
+    if (!conversationId) return
 
     // Ajouter le message user au store local (optimistic update)
     const userMessage = {
@@ -165,17 +239,36 @@ export function InputZone({
     content,
     selectedModelId,
     selectedProviderId,
-    activeConversationId,
-    activeProjectId,
     isStreaming,
+    ensureConversation,
     addMessage,
-    addConversation,
-    setActiveConversation,
     temperature,
     settingsMaxTokens,
     topP,
     onMessageSent
   ])
+
+  // ── Dispatch send ──────────────────────────────────────
+  const handleSend = useCallback(() => {
+    if (isImageMode) {
+      handleSendImage()
+    } else {
+      handleSendText()
+    }
+  }, [isImageMode, handleSendImage, handleSendText])
+
+  // ── Insertion depuis PromptPicker ─────────────────────────
+  const handlePromptInsert = useCallback(
+    (text: string, mode: 'replace' | 'append') => {
+      if (mode === 'replace') {
+        setContent(text)
+      } else {
+        setContent((prev) => (prev ? `${prev}\n\n${text}` : text))
+      }
+      requestAnimationFrame(() => textareaRef.current?.focus())
+    },
+    []
+  )
 
   // ── Cancel stream ────────────────────────────────────────
   const handleCancel = useCallback(async () => {
@@ -240,7 +333,9 @@ export function InputZone({
             'focus-within:border-ring/40 focus-within:shadow-md',
             'focus-within:shadow-ring/5 dark:focus-within:shadow-ring/10',
             // Etat streaming — bordure animee
-            isStreaming && 'border-primary/30'
+            isStreaming && 'border-primary/30',
+            // Mode image — accent violet
+            isImageMode && 'border-violet-500/30 focus-within:border-violet-500/40'
           )}
         >
           {/* Textarea */}
@@ -249,8 +344,8 @@ export function InputZone({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Envoyer un message..."
-            disabled={isStreaming}
+            placeholder={isImageMode ? 'Decrivez l\'image a generer...' : 'Envoyer un message...'}
+            disabled={isBusy}
             rows={1}
             className={cn(
               // Reset et base
@@ -265,7 +360,7 @@ export function InputZone({
               // Transition fluide de la hauteur
               'transition-[height] duration-150 ease-out',
               // Desactive pendant le streaming
-              isStreaming && 'cursor-not-allowed opacity-50'
+              isBusy && 'cursor-not-allowed opacity-50'
             )}
             style={{
               minHeight: `${TEXTAREA_MIN_HEIGHT}px`,
@@ -274,15 +369,34 @@ export function InputZone({
             }}
           />
 
+          {/* Aspect ratio selector — mode image uniquement */}
+          {isImageMode && (
+            <div className="px-4 pb-1 pt-2">
+              <AspectRatioSelector
+                value={aspectRatio}
+                onChange={setAspectRatio}
+                disabled={isBusy}
+              />
+            </div>
+          )}
+
           {/* Barre d'outils en bas du textarea */}
           <div className="flex items-center justify-between gap-2 px-2 pb-2 pt-1">
             {/* Cote gauche — ModelSelector + VoiceInput */}
             <div className="flex items-center gap-1.5">
-              <ModelSelector disabled={isStreaming} />
-              <VoiceInput
-                onTranscript={(text) => setContent((prev) => prev ? `${prev} ${text}` : text)}
-                disabled={isStreaming}
-              />
+              <ModelSelector disabled={isBusy} />
+              {!isImageMode && (
+                <>
+                  <PromptPicker
+                    onInsert={handlePromptInsert}
+                    disabled={isBusy}
+                  />
+                  <VoiceInput
+                    onTranscript={(text) => setContent((prev) => prev ? `${prev} ${text}` : text)}
+                    disabled={isBusy}
+                  />
+                </>
+              )}
             </div>
 
             {/* Cote droit — Bouton envoyer / annuler */}
@@ -305,6 +419,15 @@ export function InputZone({
                   </TooltipTrigger>
                   <TooltipContent side="top">Arreter la generation</TooltipContent>
                 </Tooltip>
+              ) : isGeneratingImage ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled
+                  className="size-8 rounded-full bg-violet-500/10 text-violet-600"
+                >
+                  <Loader2 className="size-4 animate-spin" />
+                </Button>
               ) : (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -320,7 +443,9 @@ export function InputZone({
                         'transition-all duration-200 ease-out',
                         // Etat actif — apparition douce
                         canSend && [
-                          'bg-primary text-primary-foreground',
+                          isImageMode
+                            ? 'bg-violet-600 text-white hover:bg-violet-700'
+                            : 'bg-primary text-primary-foreground',
                           'shadow-sm hover:shadow-md',
                           'hover:scale-105 active:scale-95'
                         ],
@@ -331,18 +456,26 @@ export function InputZone({
                         ]
                       )}
                     >
-                      <ArrowUp
-                        className={cn(
-                          'size-4 transition-transform duration-200',
-                          canSend && 'translate-y-0',
-                          !canSend && 'translate-y-0.5 opacity-50'
-                        )}
-                        strokeWidth={2.5}
-                      />
+                      {isImageMode ? (
+                        <ImageIcon className="size-4" strokeWidth={2.5} />
+                      ) : (
+                        <ArrowUp
+                          className={cn(
+                            'size-4 transition-transform duration-200',
+                            canSend && 'translate-y-0',
+                            !canSend && 'translate-y-0.5 opacity-50'
+                          )}
+                          strokeWidth={2.5}
+                        />
+                      )}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top">
-                    {canSend ? 'Envoyer (Enter)' : 'Ecrivez un message'}
+                    {canSend
+                      ? isImageMode
+                        ? 'Generer (Enter)'
+                        : 'Envoyer (Enter)'
+                      : 'Ecrivez un message'}
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -350,8 +483,8 @@ export function InputZone({
           </div>
         </div>
 
-        {/* Context window indicator */}
-        {selectedModel && maxTokens > 0 && (
+        {/* Context window indicator — mode texte uniquement */}
+        {!isImageMode && selectedModel && maxTokens > 0 && (
           <ContextWindowIndicator currentTokens={currentTokens} maxTokens={maxTokens} />
         )}
 
@@ -361,7 +494,9 @@ export function InputZone({
         {/* Hint clavier — tres discret */}
         <div className="flex justify-center">
           <span className="text-[10px] text-muted-foreground/30 select-none">
-            Enter pour envoyer &middot; Shift+Enter pour un saut de ligne
+            {isImageMode
+              ? 'Enter pour generer &middot; Shift+Enter pour un saut de ligne'
+              : 'Enter pour envoyer &middot; Shift+Enter pour un saut de ligne'}
           </span>
         </div>
       </div>

@@ -1,6 +1,6 @@
 # Patterns — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-09 (session 3)
+**Derniere mise a jour** : 2026-03-09 (session 4)
 
 ## Conventions de nommage
 
@@ -21,11 +21,27 @@
 
 ### LLM — Vercel AI SDK Pattern
 - `streamText()` pour le chat streaming
-- `generateImage()` pour la generation d'images (Gemini uniquement)
+- `experimental_generateImage()` pour la generation d'images (multi-provider)
 - `onChunk` callback pour forward IPC — **ATTENTION: `chunk.text` pas `chunk.textDelta`** (AI SDK v6)
 - `onFinish` callback pour sauvegarde DB + calcul couts
 - `abortSignal` pour annulation
 - `providerOptions` pour features specifiques (ex: Anthropic thinking)
+
+### Image Generation Pattern
+- Modeles avec `type: 'image'` dans `ModelDefinition` et `registry.ts`
+- `image.ts` route selon le modelId : `gemini-*` → Google, `gpt-image-*` → OpenAI
+- Google : `providerOptions.google.aspectRatio` (string ratio "1:1")
+- OpenAI : `size` param (string pixel "1024x1024") via `aspectRatioToSize()` helper
+- `images.ipc.ts` sauvegarde : fichier PNG sur disk + record `images` table + messages user/assistant en DB
+- InputZone : `isImageMode = selectedModel?.type === 'image'` → AspectRatioSelector + bouton Generer
+- MessageItem : `contentData.type === 'image'` → `<img src="local-image://path">` au lieu de markdown
+- TTS (AudioPlayer) masque sur les messages image
+
+### Custom Protocol Pattern (local-image://)
+- `protocol.registerSchemesAsPrivileged()` avant `app.whenReady()` dans `index.ts`
+- `protocol.handle('local-image', ...)` dans `app.whenReady()` — sert les fichiers via `net.fetch(pathToFileURL(...))`
+- Necessaire car `sandbox: true` bloque `file://` dans le renderer
+- Utilise dans : ImageGrid, ImageLightbox, MessageItem
 
 ### Zustand Store Pattern
 - Slices composables, middleware `persist` uniquement pour settings (localStorage)

@@ -1,18 +1,21 @@
 # Fichiers cles — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-09 (session 3)
+**Derniere mise a jour** : 2026-03-09 (session 4)
 
 ## Main process
 
 | Fichier | Role |
 |---------|------|
-| `src/main/index.ts` | Entry point Electron, app lifecycle, auto-updater init |
+| `src/main/index.ts` | Entry point Electron, app lifecycle, auto-updater, custom protocol `local-image://` |
 | `src/main/ipc/chat.ipc.ts` | Handler chat:send — streamText() AI SDK, forward chunks IPC |
 | `src/main/ipc/conversations.ipc.ts` | CRUD conversations + filtre par projet + setConversationProject |
 | `src/main/ipc/index.ts` | Registre central de tous les IPC handlers |
 | `src/main/llm/router.ts` | Routeur getModel() — Vercel AI SDK |
-| `src/main/llm/registry.ts` | Registry des providers et modeles disponibles |
+| `src/main/llm/registry.ts` | Registry des providers et modeles (text + image) + `isImageModel()` helper |
+| `src/main/llm/types.ts` | `ModelDefinition` (avec `type: 'text' \| 'image'`), `ProviderDefinition`, `ModelPricing` |
+| `src/main/llm/image.ts` | Generation d'images multi-provider (Google Gemini + OpenAI GPT Image) |
 | `src/main/llm/cost-calculator.ts` | Table PRICING + calcul cout par message |
+| `src/main/ipc/images.ipc.ts` | Handler images:generate — genere, sauve fichier + DB images + DB messages |
 | `src/main/db/schema.ts` | Schema Drizzle (11 tables) — projects a systemPrompt, defaultModelId, color |
 | `src/main/db/queries/conversations.ts` | Queries conversations — createConversation(title, projectId), getConversationsByProject(), setConversationProject() |
 | `src/main/services/credential.service.ts` | Wrapper safeStorage pour cles API |
@@ -33,10 +36,11 @@
 | Fichier | Role |
 |---------|------|
 | `src/renderer/src/App.tsx` | Racine React — routing ViewMode, keyboard shortcuts, onboarding |
-| `src/renderer/src/components/chat/InputZone.tsx` | Zone de saisie — cree conversation avec projectId actif, VoiceInput, lit model params depuis settings store |
-| `src/renderer/src/components/chat/MessageItem.tsx` | Rendu d'un message — markdown, TTS AudioPlayer, metadata |
+| `src/renderer/src/components/chat/InputZone.tsx` | Zone de saisie — mode texte + mode image (AspectRatio, generateImage IPC), VoiceInput |
+| `src/renderer/src/components/chat/MessageItem.tsx` | Rendu d'un message — markdown, images via `local-image://`, TTS (masque sur images) |
+| `src/renderer/src/components/chat/AspectRatioSelector.tsx` | Chips inline pour ratio d'image (1:1, 16:9, 9:16, 4:3, 3:4) |
 | `src/renderer/src/components/chat/MessageList.tsx` | Liste virtualisee — applique fontSizePx, density, messageWidth depuis settings store |
-| `src/renderer/src/components/chat/ModelSelector.tsx` | Select modele groupe par provider (format composite `providerId::modelId`) |
+| `src/renderer/src/components/chat/ModelSelector.tsx` | Select modele — textGroups par provider + section "Generation d'images" separee |
 | `src/renderer/src/components/layout/Sidebar.tsx` | Sidebar — drag zone, "Nouvelle discussion", ProjectSelector, ConversationList, nav footer (6 vues) |
 | `src/renderer/src/components/layout/AppLayout.tsx` | Layout racine — sidebar + main avec drag zone title bar |
 | `src/renderer/src/components/conversations/ConversationItem.tsx` | Item conversation — rename inline, delete avec confirmation |
@@ -57,7 +61,7 @@
 | `src/renderer/src/stores/prompts.store.ts` | CRUD prompts — Prompt a type complet/complement, tags, variables |
 | `src/renderer/src/stores/conversations.store.ts` | CRUD conversations — Conversation a projectId optionnel |
 | `src/renderer/src/stores/projects.store.ts` | CRUD projets — Project a systemPrompt, defaultModelId, color |
-| `src/renderer/src/stores/providers.store.ts` | Providers + models + selectModel(providerId, modelId) |
+| `src/renderer/src/stores/providers.store.ts` | Providers + models (avec `type: 'text' \| 'image'`) + selectModel(providerId, modelId) |
 | `src/renderer/src/stores/settings.store.ts` | Settings persistees (theme, fontSizePx, density, messageWidth, sidebar, temperature, maxTokens, topP) |
 | `src/renderer/src/stores/messages.store.ts` | Messages de la conversation active |
 

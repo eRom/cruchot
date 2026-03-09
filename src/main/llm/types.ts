@@ -13,6 +13,7 @@ export interface ModelDefinition {
   providerId: string
   name: string
   displayName: string
+  type: 'text' | 'image'
   contextWindow: number
   inputPrice: number  // USD per million tokens
   outputPrice: number // USD per million tokens

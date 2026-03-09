@@ -1,6 +1,6 @@
 # Architecture — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-09 (session 3)
+**Derniere mise a jour** : 2026-03-09 (session 4)
 
 ## Vue d'ensemble
 
@@ -8,7 +8,7 @@ Application desktop locale de chat multi-LLM. Clone de Claude Desktop avec suppo
 
 ## Stack
 
-Electron 35 + React 19 + TypeScript 5.7 + Tailwind CSS 4 + shadcn/ui + better-sqlite3 + Drizzle ORM + Zustand + **Vercel AI SDK 5** (`ai` + `@ai-sdk/*`)
+Electron 35 + React 19 + TypeScript 5.7 + Tailwind CSS 4 + shadcn/ui + better-sqlite3 + Drizzle ORM + Zustand + **Vercel AI SDK 6** (`ai@^6.0.116` + `@ai-sdk/*`)
 
 ## Architecture 2 processus
 
@@ -29,7 +29,7 @@ Main (Node.js — DB, APIs, secrets)
 ```
 src/
   main/
-    index.ts          # App lifecycle + auto-updater
+    index.ts          # App lifecycle + auto-updater + custom protocol `local-image://`
     ipc/              # Handlers IPC par domaine (chat, conversations, projects, prompts, roles, etc.)
     llm/              # Routeur AI SDK + cost-calculator + image generation
     db/
@@ -84,9 +84,27 @@ User saisit message → InputZone → IPC invoke("chat:send")
 - Quand on selectionne un projet → filtre conversations sidebar + applique le modele par defaut
 - Quand on cree une conversation → elle herite du `projectId` actif
 
+## Flux — Generation d'images
+
+```
+User saisit prompt → InputZone (mode image) → IPC invoke("images:generate")
+→ Main: image.ts route vers Google (Gemini) ou OpenAI (GPT Image)
+→ Main: experimental_generateImage() → API
+→ Main: sauve fichier PNG sur disk + record images table + messages user/assistant en DB
+→ Main: retourne { id, path, base64 }
+→ Renderer: ajoute message assistant avec contentData { type: 'image', path }
+→ MessageItem: affiche via <img src="local-image://path">
+```
+
+- **Mode image** active quand `selectedModel.type === 'image'`
+- AspectRatioSelector (chips 1:1, 16:9, 9:16, 4:3, 3:4) visible en mode image
+- 3 modeles image : Gemini Flash Image, Gemini Pro Image, GPT Image 1.5
+- Images servies via custom protocol `local-image://` (sandbox bloque `file://`)
+
 ## LLM — Vercel AI SDK
 
 Providers : OpenAI, Anthropic, Google (+ images), Mistral, xAI, OpenRouter, Perplexity, LM Studio, Ollama.
+Modeles : chaque modele a un `type: 'text' | 'image'` dans `ModelDefinition`.
 Couts : table `PRICING` par modele dans `cost-calculator.ts`.
 
 ## Donnees

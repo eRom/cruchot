@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { ChevronDown, Circle, Cpu } from 'lucide-react'
+import { ChevronDown, Circle, Cpu, ImageIcon } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -30,8 +30,8 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
   const { providers, models, selectedModelId, selectedProviderId, selectModel } =
     useProvidersStore()
 
-  // Grouper les modeles par provider
-  const groups = useMemo<ProviderGroup[]>(() => {
+  // Separer modeles texte et image
+  const { textGroups, imageModels } = useMemo(() => {
     const map = new Map<string, ProviderGroup>()
 
     for (const provider of providers) {
@@ -39,15 +39,23 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
       map.set(provider.id, { provider, models: [] })
     }
 
+    const imgModels: { model: Model; provider: Provider }[] = []
+
     for (const model of models) {
       const group = map.get(model.providerId)
-      if (group) {
+      if (!group) continue
+
+      if (model.type === 'image') {
+        imgModels.push({ model, provider: group.provider })
+      } else {
         group.models.push(model)
       }
     }
 
-    // Ne garder que les groupes avec des modeles
-    return Array.from(map.values()).filter((g) => g.models.length > 0)
+    // Ne garder que les groupes texte avec des modeles
+    const tGroups = Array.from(map.values()).filter((g) => g.models.length > 0)
+
+    return { textGroups: tGroups, imageModels: imgModels }
   }, [providers, models])
 
   // Valeur composite pour le Select: "providerId::modelId"
@@ -59,6 +67,7 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
   // Trouver le modele et provider selectionnes pour l'affichage
   const selectedModel = models.find((m) => m.id === selectedModelId)
   const selectedProvider = providers.find((p) => p.id === selectedProviderId)
+  const isImageSelected = selectedModel?.type === 'image'
 
   const handleValueChange = (composite: string) => {
     const [providerId, modelId] = composite.split('::')
@@ -66,6 +75,8 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
       selectModel(providerId, modelId)
     }
   }
+
+  const TriggerIcon = isImageSelected ? ImageIcon : Cpu
 
   return (
     <Select value={selectedValue} onValueChange={handleValueChange} disabled={disabled}>
@@ -84,10 +95,12 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
               'focus-visible:ring-1 focus-visible:ring-ring/30',
               // Ombre legere pour l'elevation
               'shadow-none hover:shadow-xs',
+              // Accent quand modele image selectionne
+              isImageSelected && 'bg-violet-500/10 text-violet-600 hover:bg-violet-500/20 dark:text-violet-400',
               className
             )}
           >
-            <Cpu className="size-3 shrink-0 opacity-60" />
+            <TriggerIcon className="size-3 shrink-0 opacity-60" />
             <SelectValue placeholder="Modele...">
               {selectedModel ? (
                 <span className="truncate text-xs font-medium">
@@ -119,7 +132,8 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
           'shadow-lg shadow-black/10 dark:shadow-black/30'
         )}
       >
-        {groups.map((group, index) => (
+        {/* Text models grouped by provider */}
+        {textGroups.map((group, index) => (
           <div key={group.provider.id}>
             {index > 0 && <SelectSeparator />}
             <SelectGroup>
@@ -155,7 +169,35 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
           </div>
         ))}
 
-        {groups.length === 0 && (
+        {/* Image generation models */}
+        {imageModels.length > 0 && (
+          <>
+            <SelectSeparator />
+            <SelectGroup>
+              <SelectLabel className="flex items-center gap-2 px-2 py-1.5">
+                <ImageIcon className="size-3.5 text-violet-500" />
+                <span className="font-semibold tracking-tight">Generation d'images</span>
+              </SelectLabel>
+              {imageModels.map(({ model, provider }) => (
+                <SelectItem
+                  key={`${provider.id}::${model.id}`}
+                  value={`${provider.id}::${model.id}`}
+                  disabled={!provider.isConfigured}
+                  className="pl-6"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="truncate">{model.displayName}</span>
+                    <span className="ml-auto shrink-0 text-[10px] text-muted-foreground/50">
+                      {provider.name}
+                    </span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </>
+        )}
+
+        {textGroups.length === 0 && imageModels.length === 0 && (
           <div className="px-4 py-6 text-center text-xs text-muted-foreground">
             Aucun modele disponible.
             <br />
