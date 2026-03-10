@@ -14,6 +14,8 @@ interface StreamChunk {
   error?: string
   category?: string
   suggestion?: string
+  toolName?: string
+  toolArgs?: Record<string, unknown>
   usage?: {
     promptTokens: number
     completionTokens: number
@@ -24,15 +26,23 @@ interface StreamChunk {
   fileOperations?: Array<{ id: string; type: string; path: string; content?: string; status: string }>
 }
 
+/** Human-readable labels for workspace tool calls */
+const TOOL_LABELS: Record<string, string> = {
+  readFile: 'Lecture du fichier',
+  listFiles: 'Exploration des fichiers',
+  searchInFiles: 'Recherche dans les fichiers'
+}
+
 /**
  * Hook that listens for streaming chunks from the main process
  * and updates the messages store in real-time.
  *
  * Stream phases:
  *  1. start         → create placeholder message (processing spinner)
- *  2. reasoning-delta → accumulate reasoning text (thinking phase)
- *  3. text-delta    → accumulate response text (generating phase)
- *  4. finish/error  → finalize
+ *  2. tool-call     → LLM calls workspace tool (reading files, etc.)
+ *  3. reasoning-delta → accumulate reasoning text (thinking phase)
+ *  4. text-delta    → accumulate response text (generating phase)
+ *  5. finish/error  → finalize
  */
 export function useStreaming() {
   const addMessage = useMessagesStore((s) => s.addMessage)
@@ -85,6 +95,21 @@ export function useStreaming() {
           break
         }
 
+        case 'tool-call': {
+          const msgId = streamingIdRef.current
+          if (msgId && chunk.toolName) {
+            // Show tool call as a processing indicator
+            const toolLabel = TOOL_LABELS[chunk.toolName] || chunk.toolName
+            const argPath = (chunk.toolArgs?.path || chunk.toolArgs?.query || '') as string
+            const detail = argPath ? ` : ${argPath}` : ''
+            updateMessage(msgId, {
+              streamPhase: 'processing',
+              toolCall: `${toolLabel}${detail}`
+            })
+          }
+          break
+        }
+
         case 'text-delta': {
           if (!streamingIdRef.current) {
             // Edge case: text-delta arrives without a prior start signal
@@ -102,8 +127,8 @@ export function useStreaming() {
             setStreamingMessageId(id)
             setIsStreaming(true)
           } else {
-            // Switch to generating phase on first text chunk
-            updateMessage(streamingIdRef.current, { streamPhase: 'generating' })
+            // Switch to generating phase on first text chunk (clear tool call indicator)
+            updateMessage(streamingIdRef.current, { streamPhase: 'generating', toolCall: undefined })
             appendToMessage(streamingIdRef.current, chunk.content || '')
           }
           break
@@ -115,6 +140,7 @@ export function useStreaming() {
             updateMessage(msgId, {
               isStreaming: false,
               streamPhase: null,
+              toolCall: undefined,
               ...(chunk.content ? { content: chunk.content } : {}),
               tokensIn: chunk.usage?.promptTokens,
               tokensOut: chunk.usage?.completionTokens,

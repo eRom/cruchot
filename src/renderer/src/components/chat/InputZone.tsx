@@ -504,6 +504,9 @@ export function InputZone({
 
     // Envoyer via IPC
     try {
+      // Check if workspace is active for tool-based file access
+      const workspaceIsOpen = !!useWorkspaceStore.getState().rootPath
+
       await window.api.sendMessage({
         conversationId,
         content: messageContent,
@@ -516,7 +519,8 @@ export function InputZone({
         thinkingEffort: selectedModel?.supportsThinking ? thinkingEffort : undefined,
         roleId: roleIdForPersist,
         attachments: attachmentRefsForIpc.length > 0 ? attachmentRefsForIpc : undefined,
-        fileContexts: fileContexts && fileContexts.length > 0 ? fileContexts : undefined
+        fileContexts: fileContexts && fileContexts.length > 0 ? fileContexts : undefined,
+        hasWorkspace: workspaceIsOpen || undefined
       })
     } catch {
       // Erreur geree par le stream handler dans le main

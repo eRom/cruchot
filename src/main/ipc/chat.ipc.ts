@@ -7,6 +7,8 @@ import { classifyError } from '../llm/errors'
 import { buildThinkingProviderOptions } from '../llm/thinking'
 import { validateAttachment, processAttachments, buildContentParts, MAX_FILES_PER_MESSAGE, type AttachmentRef } from '../llm/attachments'
 import { parseFileOperations } from '../llm/file-operations'
+import { buildWorkspaceTools, WORKSPACE_TOOLS_PROMPT } from '../llm/workspace-tools'
+import { getActiveWorkspace } from './workspace.ipc'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
 import { touchConversation, renameConversation, getConversation, updateConversationModel, updateConversationRole } from '../db/queries/conversations'
 
@@ -34,7 +36,8 @@ const sendMessageSchema = z.object({
     path: z.string(),
     content: z.string(),
     language: z.string()
-  })).optional()
+  })).optional(),
+  hasWorkspace: z.boolean().optional()
 })
 
 let currentAbortController: AbortController | null = null
@@ -46,7 +49,7 @@ export function registerChatIpc(): void {
       throw new Error(`Invalid payload: ${parsed.error.message}`)
     }
 
-    const { conversationId, content, modelId, providerId, systemPrompt, temperature, maxTokens, topP, thinkingEffort, roleId, attachments: attachmentRefs, fileContexts } = parsed.data
+    const { conversationId, content, modelId, providerId, systemPrompt, temperature, maxTokens, topP, thinkingEffort, roleId, attachments: attachmentRefs, fileContexts, hasWorkspace } = parsed.data
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) throw new Error('No window found')
 
@@ -167,13 +170,27 @@ export function registerChatIpc(): void {
         }
       }
 
+      // Build workspace tools if workspace is active
+      const activeWorkspace = hasWorkspace ? getActiveWorkspace() : null
+      const tools = activeWorkspace ? buildWorkspaceTools(activeWorkspace) : undefined
+
+      // Inject workspace tools system prompt when workspace is active
+      if (activeWorkspace) {
+        if (aiMessages.length > 0 && aiMessages[0].role === 'system') {
+          aiMessages[0].content += '\n\n' + WORKSPACE_TOOLS_PROMPT
+        } else {
+          aiMessages.unshift({ role: 'system', content: WORKSPACE_TOOLS_PROMPT })
+        }
+      }
+
       // Build providerOptions for thinking if supported
       const providerOptions = thinkingEffort && thinkingEffort !== 'off'
         ? buildThinkingProviderOptions(providerId, thinkingEffort)
         : undefined
 
-      // Accumulate reasoning text during streaming
+      // Accumulate text during streaming (needed because with maxSteps, result.text only has the last step)
       let accumulatedReasoning = ''
+      let accumulatedText = ''
 
       const result = streamText({
         model,
@@ -183,8 +200,10 @@ export function registerChatIpc(): void {
         maxTokens,
         topP,
         providerOptions,
+        ...(tools ? { tools, maxSteps: 10 } : {}),
         onChunk({ chunk }) {
           if (chunk.type === 'text-delta') {
+            accumulatedText += chunk.text
             win.webContents.send('chat:chunk', {
               type: 'text-delta',
               content: chunk.text
@@ -195,6 +214,12 @@ export function registerChatIpc(): void {
               type: 'reasoning-delta',
               content: chunk.text
             })
+          } else if (chunk.type === 'tool-call') {
+            win.webContents.send('chat:chunk', {
+              type: 'tool-call',
+              toolName: chunk.toolName,
+              toolArgs: chunk.args
+            })
           }
         }
       })
@@ -202,7 +227,8 @@ export function registerChatIpc(): void {
       // Consume the stream — usage is only available after full consumption
       let fullText = ''
       try {
-        fullText = await result.text
+        await result.text
+        fullText = accumulatedText
       } catch (e) {
         if (e instanceof NoOutputGeneratedError) {
           // If the NoOutputGeneratedError wraps a real API error, rethrow it
