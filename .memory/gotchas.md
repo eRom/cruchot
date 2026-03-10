@@ -1,6 +1,6 @@
 # Gotchas — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 11)
+**Derniere mise a jour** : 2026-03-10 (session 12)
 
 ## Bugs resolus
 
@@ -152,6 +152,35 @@ Romain veut que ces champs soient invisibles dans le formulaire ET les cartes. I
 **Implementation** : `PanelRightClose` / `PanelRightOpen` icons, `togglePanel()` du store (pas `closeWorkspace()`).
 **ChatView** : condition `workspaceRootPath && <WorkspacePanel />` — le panneau est rendu des que le workspace est ouvert, il gere son propre etat collapsed.
 
+### CSP bloque blob: URLs pour media (session 12)
+**Symptome** : `<audio>` avec blob URL ne joue pas. Console : "Loading media from 'blob:...' violates Content Security Policy directive: 'default-src'".
+**Cause** : La CSP dans `index.html` avait `default-src 'self'` sans `media-src`. Le `<audio>` element ne peut pas charger les blob URLs.
+**Fix** : Ajouter `media-src 'self' blob:` a la meta CSP dans `src/renderer/index.html`.
+**Regle** : Toute nouvelle source media (audio, video) via blob URL necessite `media-src blob:` dans la CSP.
+
+### Google Gemini TTS retourne du PCM brut, pas du MP3 (session 12)
+**Symptome** : `audio.play()` echoue silencieusement apres synthese Google.
+**Cause** : Gemini TTS retourne `audio/L16;codec=pcm;rate=24000` (raw PCM 16-bit mono 24kHz). L'element `<audio>` HTML ne peut pas lire le PCM brut.
+**Fix** : Fonction `pcmToWav()` dans `tts.service.ts` — ajoute un header WAV 44 bytes avant le PCM, retourne `audio/wav`.
+**Detection** : Parser le sample rate depuis le mimeType : `rawMimeType.match(/rate=(\d+)/)`.
+
+### Mistral n'a PAS de TTS (session 12)
+**Symptome** : `POST api.mistral.ai/v1/audio/speech` retourne 404 ("no Route matched").
+**Cause** : Mistral AI ne propose que du STT (Voxtral Transcribe/Realtime), pas de TTS.
+**Fix** : Retirer Mistral des providers TTS. 2 providers cloud uniquement : OpenAI + Google.
+
+### Preload non recharge en HMR (session 12)
+**Symptome** : `window.api.ttsGetAvailableProviders is not a function` apres ajout de methodes au preload.
+**Cause** : Le preload est compile au demarrage d'Electron, pas recharge par le HMR du renderer.
+**Fix** : Toujours relancer l'app (`Cmd+Q` + `npm run dev`) apres modification du preload.
+**Regle** : Changements dans `src/preload/` ou `src/main/` → restart app complet. Seul `src/renderer/` beneficie du HMR.
+
+### TTS cloud — erreur IPC vs erreur playback (session 12)
+**Symptome** : Toujours la voix browser meme avec un provider cloud selectionne.
+**Cause** : `await audio.play()` etait dans le meme `try/catch` que l'appel IPC. Si le playback echouait (ex: CSP, format PCM), le catch declenchait le fallback browser.
+**Fix** : Separer les `try/catch` — un pour l'IPC, un pour le playback. Ne pas fallback silencieusement.
+**Regle** : Toujours separer les erreurs reseau/IPC des erreurs de rendu UI dans les catch.
+
 ## Composants non cables (session precedente)
 
 Probleme majeur decouvert : de nombreux composants crees par les agents P1/P2 n'etaient jamais importes. Session de cablage massif effectuee :
@@ -275,6 +304,7 @@ Quand on ajoute un champ au settings store (ex: `favoriteModelIds`), il sera `un
 - ~~T56 (Advanced Stats)~~ — **FAIT** (session 8) — fix bugs + stats projet + global stats + 6 cards + 4 graphiques
 - ~~Roles (System Prompts)~~ — **FAIT** (session 9) — RolesView, RoleSelector, verrouillage, variables, persistance roleId
 - ~~Workspace Co-Work~~ — **FAIT** (session 11) — WorkspaceService, FileWatcher, FileTree, FilePanel, FileOperationCard, context injection, toggle panel
+- ~~TTS Multi-Provider~~ — **FAIT** (session 12) — Browser + OpenAI (Coral) + Google (Aoede), AudioSettings, tts_usage table, stats TTS, cache audio
 - T48 (Prompt Optimizer), T52 (Export PDF), T60 (Packaging)
 - i18n (T41) — configure mais `useTranslation` jamais utilise
 - SSH key GitHub non configuree — push en HTTPS uniquement

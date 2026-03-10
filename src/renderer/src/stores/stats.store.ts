@@ -54,6 +54,7 @@ interface StatsState {
   totalTokensOut: number
   totalResponseTimeMs: number
   totalConversations: number
+  totalTtsCost: number
   selectedPeriod: StatsPeriod
   isLoading: boolean
   error: string | null
@@ -73,6 +74,7 @@ export const useStatsStore = create<StatsState>((set, get) => ({
   totalTokensOut: 0,
   totalResponseTimeMs: 0,
   totalConversations: 0,
+  totalTtsCost: 0,
   selectedPeriod: '30d',
   isLoading: false,
   error: null,
@@ -139,6 +141,7 @@ export const useStatsStore = create<StatsState>((set, get) => ({
         totalTokensOut: rawGlobal?.totalTokensOut ?? 0,
         totalResponseTimeMs: rawGlobal?.totalResponseTimeMs ?? 0,
         totalConversations: rawGlobal?.totalConversations ?? 0,
+        totalTtsCost: rawGlobal?.totalTtsCost ?? 0,
         isLoading: false
       })
     } catch (error) {
@@ -154,6 +157,7 @@ export const useStatsStore = create<StatsState>((set, get) => ({
         totalTokensOut: 0,
         totalResponseTimeMs: 0,
         totalConversations: 0,
+        totalTtsCost: 0,
         isLoading: false,
         error: error instanceof Error ? error.message : 'Failed to load statistics'
       })

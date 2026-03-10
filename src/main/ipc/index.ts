@@ -19,6 +19,7 @@ import { registerFilesIpc } from './files.ipc'
 import { registerImagesIpc } from './images.ipc'
 import { registerUpdaterIpc } from './updater.ipc'
 import { registerWorkspaceIpc } from './workspace.ipc'
+import { registerTtsIpc } from './tts.ipc'
 
 /**
  * Registre central des IPC handlers.
@@ -75,6 +76,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Workspace (file system) ────────────────────
   registerWorkspaceIpc()
+
+  // ── TTS (text-to-speech) ─────────────────────
+  registerTtsIpc()
 
   // ── Settings ────────────────────────────────────────
   ipcMain.handle('settings:get', async (_event, key: string) => {

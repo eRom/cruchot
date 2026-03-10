@@ -1,6 +1,6 @@
 # Fichiers cles — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 11)
+**Derniere mise a jour** : 2026-03-10 (session 12)
 
 ## Main process
 
@@ -17,7 +17,7 @@
 | `src/main/llm/image.ts` | Generation d'images multi-provider (Google Gemini + OpenAI GPT Image) |
 | `src/main/llm/cost-calculator.ts` | Table PRICING + calcul cout par message |
 | `src/main/ipc/images.ipc.ts` | Handler images:generate — genere, sauve fichier + DB images + DB messages |
-| `src/main/db/schema.ts` | Schema Drizzle (11 tables) — projects a systemPrompt, defaultModelId, color, workspacePath |
+| `src/main/db/schema.ts` | Schema Drizzle (12 tables) — projects a systemPrompt, defaultModelId, color, workspacePath, tts_usage |
 | `src/main/db/queries/conversations.ts` | Queries conversations — CRUD + getConversationsByProject() + updateConversationModel() + updateConversationRole() + deleteAllConversations() |
 | `src/main/db/queries/roles.ts` | Queries roles — CRUD + seedBuiltinRoles() + deleteRole() (FK cleanup) |
 | `src/main/ipc/roles.ipc.ts` | CRUD roles — Zod validation, 6 handlers (getAll, get, create, update, delete, seed) |
@@ -32,13 +32,16 @@
 | `src/main/services/file-watcher.service.ts` | Chokidar wrapper — watch workspace, forward events vers renderer |
 | `src/main/ipc/workspace.ipc.ts` | 8 handlers workspace — selectFolder, open, close, getTree, readFile, writeFile, deleteFile, getInfo |
 | `src/main/llm/file-operations.ts` | Parser blocs ```file:create/modify/delete:path``` dans les reponses LLM, retourne ParsedFileOperation[] |
+| `src/main/services/tts.service.ts` | Service TTS multi-provider — OpenAI (MP3) + Google Gemini (PCM→WAV), pricing, pcmToWav() |
+| `src/main/ipc/tts.ipc.ts` | 2 handlers TTS — tts:synthesize (Zod) + tts:getAvailableProviders (check cles API) |
+| `src/main/db/queries/tts.ts` | Queries tts_usage — insertTtsUsage, getTtsCostTotal(days?) |
 
 ## Preload
 
 | Fichier | Role |
 |---------|------|
-| `src/preload/index.ts` | contextBridge — expose ~60 methodes window.api (dont 10 workspace + 2 listeners) |
-| `src/preload/types.ts` | Types partages ElectronAPI, tous les DTO, ThinkingEffort, StreamChunk, FileNode, FileOperation, WorkspaceFileContext |
+| `src/preload/index.ts` | contextBridge — expose ~62 methodes window.api (dont 10 workspace, 2 tts, 2 listeners) |
+| `src/preload/types.ts` | Types partages ElectronAPI, tous les DTO, ThinkingEffort, StreamChunk, FileNode, FileOperation, WorkspaceFileContext, TtsProvider, TtsSynthesizePayload/Result |
 
 ## Renderer — Composants critiques
 
@@ -63,7 +66,8 @@
 | `src/renderer/src/components/projects/ProjectForm.tsx` | Formulaire projet inline (nom, couleur, description, systemPrompt, modele obligatoire, workspacePath) |
 | `src/renderer/src/components/projects/ProjectSelector.tsx` | Dropdown sidebar — switch projet rapide, applique defaultModelId |
 | `src/renderer/src/components/prompts/PromptsView.tsx` | Vue Prompts — grille + form inline, types complet/complement, tags, variables |
-| `src/renderer/src/components/settings/SettingsView.tsx` | 7 tabs : General, Apparence, Cles API, Modele, Raccourcis, Donnees, Sauvegardes — consomme settingsTab du ui.store |
+| `src/renderer/src/components/settings/SettingsView.tsx` | 8 tabs : General, Apparence, Cles API, Modele, Audio, Raccourcis, Donnees, Sauvegardes — consomme settingsTab du ui.store |
+| `src/renderer/src/components/settings/AudioSettings.tsx` | Onglet Audio — select provider TTS (browser/openai/google), bouton tester, section STT placeholder |
 | `src/renderer/src/components/settings/ModelSettings.tsx` | Conteneur 3 sous-onglets : Modeles LLM, Modeles Images, Parametres |
 | `src/renderer/src/components/settings/ModelTableLLM.tsx` | Table modeles texte groupes par provider — prix, contexte, badge think, etoile favori |
 | `src/renderer/src/components/settings/ModelTableImages.tsx` | Table modeles image — provider, prix, etoile favori |
@@ -89,15 +93,16 @@
 | `src/renderer/src/stores/conversations.store.ts` | CRUD conversations — Conversation a projectId optionnel, roleId optionnel |
 | `src/renderer/src/stores/projects.store.ts` | CRUD projets — Project a systemPrompt, defaultModelId, color |
 | `src/renderer/src/stores/providers.store.ts` | Providers + models (avec `type: 'text' \| 'image'`) + selectModel(providerId, modelId) |
-| `src/renderer/src/stores/settings.store.ts` | Settings persistees (theme, fontSizePx, density, messageWidth, sidebar, temperature, maxTokens, topP, thinkingEffort, favoriteModelIds) |
+| `src/renderer/src/stores/settings.store.ts` | Settings persistees (theme, fontSizePx, density, messageWidth, sidebar, temperature, maxTokens, topP, thinkingEffort, ttsProvider, favoriteModelIds) |
 | `src/renderer/src/stores/messages.store.ts` | Messages de la conversation active |
-| `src/renderer/src/stores/stats.store.ts` | Stats — dailyStats, providerStats, modelStats, projectStats, globalStats, selectedPeriod, auto-reload |
+| `src/renderer/src/stores/stats.store.ts` | Stats — dailyStats, providerStats, modelStats, projectStats, globalStats (dont totalTtsCost), selectedPeriod, auto-reload |
 | `src/renderer/src/stores/workspace.store.ts` | Workspace — rootPath, tree, filePreview, isPanelOpen, attachedFiles, openWorkspace/closeWorkspace/refreshTree/togglePanel |
 
 ## Renderer — Hooks
 
 | Fichier | Role |
 |---------|------|
+| `src/renderer/src/hooks/useAudioPlayer.ts` | Hook TTS dual-mode : browser (Web Speech) ou cloud (IPC → base64 → Blob → Audio), cache module-level |
 | `src/renderer/src/hooks/useStreaming.ts` | Ecoute chat:chunk IPC, met a jour messages store en temps reel |
 | `src/renderer/src/hooks/useInitApp.ts` | Charge conversations + providers + models au demarrage |
 | `src/renderer/src/hooks/useKeyboardShortcuts.ts` | Cmd+N, Cmd+K, Cmd+M, Cmd+B (workspace toggle), Cmd+virgule, Escape |

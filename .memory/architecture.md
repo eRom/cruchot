@@ -1,10 +1,10 @@
 # Architecture — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 11)
+**Derniere mise a jour** : 2026-03-10 (session 12)
 
 ## Vue d'ensemble
 
-Application desktop locale de chat multi-LLM. Clone de Claude Desktop avec support multi-provider (7 cloud + OpenRouter + 2 locaux), generation d'images, recherche web, voix STT/TTS, statistiques de couts avancees (par provider, modele, projet), workspace co-work (LLM context-aware sur fichiers projet). Aucun serveur backend — tout local.
+Application desktop locale de chat multi-LLM. Clone de Claude Desktop avec support multi-provider (7 cloud + OpenRouter + 2 locaux), generation d'images, recherche web, voix TTS cloud multi-provider (OpenAI/Google) + STT, statistiques de couts avancees (par provider, modele, projet, TTS), workspace co-work (LLM context-aware sur fichiers projet). Aucun serveur backend — tout local.
 
 ## Stack
 
@@ -33,11 +33,11 @@ src/
     ipc/              # Handlers IPC par domaine (chat, conversations, projects, prompts, roles, workspace, etc.)
     llm/              # Routeur AI SDK + cost-calculator + image generation + file-operations parser
     db/
-      schema.ts       # 11 tables Drizzle (providers, models, projects, conversations, messages, etc.)
+      schema.ts       # 12 tables Drizzle (providers, models, projects, conversations, messages, tts_usage, etc.)
       queries/        # Queries par domaine
-    services/         # Credential, backup, export, updater, network, notification, workspace, file-watcher
+    services/         # Credential, backup, export, updater, network, notification, workspace, file-watcher, tts
   preload/
-    index.ts          # contextBridge — expose window.api (~50 methodes)
+    index.ts          # contextBridge — expose window.api (~62 methodes)
     types.ts          # Types partages ElectronAPI + tous les DTO
   renderer/src/
     App.tsx            # Composant racine — routing par ViewMode
@@ -48,7 +48,7 @@ src/
       projects/        # ProjectsView (grille + form inline), ProjectSelector (dropdown sidebar)
       prompts/         # PromptsView (grille + form inline), bibliotheque de prompts
       roles/           # RolesView (grille + form inline), RoleSelector (pill dans InputZone)
-      settings/        # SettingsView (7 tabs), ApiKeysSection, AppearanceSettings, ModelSettings, etc.
+      settings/        # SettingsView (8 tabs), ApiKeysSection, AppearanceSettings, ModelSettings, AudioSettings, etc.
       statistics/      # StatsView
       images/          # ImagesView, ImageGrid
       conversations/   # ConversationList, ConversationItem (rename/delete inline)
@@ -64,7 +64,7 @@ src/
 - `chat` — ChatView (conversation active)
 - `projects` — ProjectsView (grille de cartes / formulaire inline)
 - `prompts` — PromptsView (bibliotheque de prompts, types complet/complement)
-- `settings` — SettingsView (7 tabs)
+- `settings` — SettingsView (8 tabs, dont Audio)
 - `images` — ImagesView
 - `roles` — RolesView (bibliotheque de roles / system prompts)
 - `statistics` — StatsView
@@ -200,6 +200,27 @@ Projet avec workspacePath → ChatView auto-open workspace → WorkspaceService 
 - Auto-open workspace quand projet change (ChatView useEffect)
 - `Cmd+B` : toggle workspace panel
 
+## Flux — TTS Multi-Provider (session 12)
+
+```
+AudioPlayer click Play → useAudioPlayer hook lit ttsProvider depuis settings store
+→ browser : SpeechSynthesisUtterance (Web Speech API, gratuit)
+→ cloud (openai/google) : IPC invoke("tts:synthesize")
+  → Main: tts.service.ts fetch REST API (OpenAI MP3 / Google Gemini PCM→WAV)
+  → Main: retourne { audio: base64, mimeType, cost }
+  → Main: persiste dans tts_usage table (si messageId fourni)
+  → Renderer: decode base64 → Blob → URL.createObjectURL → new Audio(blobUrl).play()
+  → Cache module-level Map<"messageId:provider", blobUrl> (pas de re-synthese)
+```
+
+- **3 providers** : Browser (Web Speech, gratuit), OpenAI (gpt-4o-mini-tts, voix Coral, $2.40/1M chars), Google (gemini-2.5-flash-preview-tts, voix Aoede, preview gratuit)
+- **Mistral** : pas de TTS API (seulement STT/transcription via Voxtral) — retire
+- **Settings** : `ttsProvider` dans settings.store (Zustand persist, default 'browser')
+- **Onglet Audio** : Settings > Audio (AudioSettings.tsx) — select provider + bouton tester
+- **Stats** : `totalTtsCost` dans GlobalStats, affiche "dont $X.XX TTS" dans StatCard cout total
+- **CSP** : `media-src 'self' blob:` obligatoire dans index.html pour les blob URLs audio
+- **Google PCM→WAV** : Gemini TTS retourne `audio/L16;codec=pcm;rate=24000` — converti en WAV avec header 44 bytes cote main
+
 ## Flux — Persistance modele par conversation
 
 - Quand on envoie un message → `chat.ipc.ts` appelle `updateConversationModel(convId, 'providerId::modelId')`
@@ -209,7 +230,7 @@ Projet avec workspacePath → ChatView auto-open workspace → WorkspaceService 
 
 ## Donnees
 
-- SQLite WAL + FTS5, 11 tables
+- SQLite WAL + FTS5, 12 tables (dont tts_usage)
 - Fichiers binaires sur filesystem (images, attachments)
 - Cles API chiffrees via Electron safeStorage (Keychain macOS)
 - Settings UI persistees via Zustand `persist` middleware (localStorage)

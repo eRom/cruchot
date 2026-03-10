@@ -152,6 +152,19 @@ export const statistics = sqliteTable('statistics', {
 })
 
 // ---------------------------------------------------------------------------
+// TTS Usage
+// ---------------------------------------------------------------------------
+export const ttsUsage = sqliteTable('tts_usage', {
+  id: text('id').primaryKey(),
+  messageId: text('message_id'),
+  provider: text('provider').notNull(),
+  model: text('model').notNull(),
+  textLength: integer('text_length').notNull(),
+  cost: real('cost').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+})
+
+// ---------------------------------------------------------------------------
 // Images
 // ---------------------------------------------------------------------------
 export const images = sqliteTable('images', {

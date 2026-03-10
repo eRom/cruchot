@@ -1,6 +1,6 @@
 # Patterns — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 11)
+**Derniere mise a jour** : 2026-03-10 (session 12)
 
 ## Conventions de nommage
 
@@ -199,6 +199,24 @@
 - **Securite** : path traversal check (`..`), sensitive files blocklist (`.env`, credentials, etc.), 10MB file limit, binary detection
 - **Deps** : `chokidar` (ESM, `external` dans electron.vite.config), `trash` pour deletion safe
 - **Raccourci** : `Cmd+B` toggle workspace panel
+
+### TTS Multi-Provider Pattern (session 12)
+- **3 providers** : `'browser'` (Web Speech, gratuit), `'openai'` (gpt-4o-mini-tts, Coral), `'google'` (gemini-2.5-flash-preview-tts, Aoede)
+- **Mistral n'a PAS de TTS** — seulement STT (Voxtral transcription)
+- **tts.service.ts** : `synthesizeSpeech({ provider, text, speed })` → `{ audio: base64, mimeType, cost }`
+- **OpenAI** : POST `/v1/audio/speech` → MP3 direct
+- **Google** : POST Gemini `generateContent` avec `responseModalities: ['AUDIO']` → retourne PCM brut (`audio/L16;codec=pcm;rate=24000`) → `pcmToWav()` ajoute header WAV 44 bytes
+- **tts.ipc.ts** : `tts:synthesize` (Zod validated) + `tts:getAvailableProviders` (check cles API existantes)
+- **useAudioPlayer hook** : lit `ttsProvider` depuis settings store, dual-mode browser/cloud
+  - Cloud : IPC → decode base64 → `Blob` → `URL.createObjectURL()` → `new Audio(blobUrl).play()`
+  - Cache module-level `Map<"messageId:provider", blobUrl>` — evite re-synthese
+  - Erreur IPC catch separement de erreur playback (pas de fallback browser silencieux)
+- **AudioPlayer** composant : prop `messageId` optionnelle pour le cache cloud
+- **AudioSettings** : select provider dynamique (`ttsGetAvailableProviders`), bouton tester
+- **tts_usage table** : id, messageId, provider, model, textLength, cost, createdAt — peuplee par tts.ipc.ts
+- **Stats** : `totalTtsCost` sous-query dans `getGlobalStats()`, affiche dans StatCard "Cout total"
+- **CSP** : `media-src 'self' blob:` dans `index.html` — obligatoire pour `<audio>` avec blob URLs
+- **Settings store** : `ttsProvider: TtsProvider` (default `'browser'`, Zustand persist → `?? 'browser'`)
 
 ### Data Pattern
 - Drizzle ORM avec schema-first

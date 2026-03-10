@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils'
 export interface AudioPlayerProps {
   /** Text content to read aloud */
   text: string
+  /** Message ID for cloud TTS caching */
+  messageId?: string
   /** Compact mode — hides the speed slider (default: false) */
   compact?: boolean
   /** Additional CSS classes */
@@ -21,9 +23,9 @@ export interface AudioPlayerProps {
  * In compact mode, only shows the play/pause/stop button.
  * Designed to integrate in a message's metadata area.
  */
-export function AudioPlayer({ text, compact = false, className }: AudioPlayerProps) {
+export function AudioPlayer({ text, messageId, compact = false, className }: AudioPlayerProps) {
   const { isPlaying, isAvailable, state, play, pause, resume, stop, rate, setRate } =
-    useAudioPlayer()
+    useAudioPlayer({ messageId })
 
   const handlePlayPause = useCallback(() => {
     switch (state) {

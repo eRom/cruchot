@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { ArrowLeft, Settings, Palette, Keyboard, Database, Archive, Key, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, Settings, Palette, Keyboard, Database, Archive, Key, SlidersHorizontal, Volume2 } from 'lucide-react'
 import { useUiStore, type SettingsTab } from '@/stores/ui.store'
 import { GeneralSettings } from './GeneralSettings'
 import { AppearanceSettings } from './AppearanceSettings'
@@ -8,6 +8,7 @@ import { DataSettings } from './DataSettings'
 import { BackupSettings } from './BackupSettings'
 import { ApiKeysSection } from './ApiKeysSection'
 import { ModelSettings } from './ModelSettings'
+import { AudioSettings } from './AudioSettings'
 import { cn } from '@/lib/utils'
 
 const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
@@ -15,6 +16,7 @@ const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
   { id: 'appearance', label: 'Apparence', icon: <Palette className="size-4" /> },
   { id: 'apikeys', label: 'Cles API', icon: <Key className="size-4" /> },
   { id: 'model', label: 'Modele', icon: <SlidersHorizontal className="size-4" /> },
+  { id: 'audio', label: 'Audio', icon: <Volume2 className="size-4" /> },
   { id: 'keybindings', label: 'Raccourcis', icon: <Keyboard className="size-4" /> },
   { id: 'data', label: 'Donnees', icon: <Database className="size-4" /> },
   { id: 'backup', label: 'Sauvegardes', icon: <Archive className="size-4" /> },
@@ -77,6 +79,7 @@ export function SettingsView() {
             {activeTab === 'appearance' && <AppearanceSettings />}
             {activeTab === 'apikeys' && <ApiKeysSection />}
             {activeTab === 'model' && <ModelSettings />}
+            {activeTab === 'audio' && <AudioSettings />}
             {activeTab === 'keybindings' && <KeybindingsSettings />}
             {activeTab === 'data' && <DataSettings />}
             {activeTab === 'backup' && <BackupSettings />}
