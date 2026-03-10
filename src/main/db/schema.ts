@@ -54,6 +54,9 @@ export const roles = sqliteTable('roles', {
   systemPrompt: text('system_prompt'),
   icon: text('icon'),
   isBuiltin: integer('is_builtin', { mode: 'boolean' }).notNull().default(false),
+  category: text('category'),
+  tags: text('tags', { mode: 'json' }).$type<string[]>(),
+  variables: text('variables', { mode: 'json' }).$type<Array<{ name: string; description?: string }>>(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })

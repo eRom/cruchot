@@ -12,6 +12,7 @@ export interface SendMessagePayload {
   maxTokens?: number
   topP?: number
   thinkingEffort?: ThinkingEffort
+  roleId?: string
 }
 
 export interface StreamChunk {
@@ -55,6 +56,7 @@ export interface ConversationInfo {
   title: string
   projectId?: string
   modelId?: string
+  roleId?: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -102,6 +104,11 @@ export interface PromptInfo {
   updatedAt: Date
 }
 
+export interface RoleVariable {
+  name: string
+  description?: string
+}
+
 export interface RoleInfo {
   id: string
   name: string
@@ -109,6 +116,9 @@ export interface RoleInfo {
   systemPrompt?: string | null
   icon?: string | null
   isBuiltin: boolean
+  category?: string | null
+  tags?: string[] | null
+  variables?: RoleVariable[] | null
   createdAt: Date
   updatedAt: Date
 }
@@ -246,9 +256,11 @@ export interface ElectronAPI {
 
   // Roles
   getRoles: () => Promise<RoleInfo[]>
-  createRole: (data: { name: string; description?: string; systemPrompt?: string; icon?: string }) => Promise<RoleInfo>
-  updateRole: (id: string, data: { name?: string; description?: string | null; systemPrompt?: string | null; icon?: string | null }) => Promise<RoleInfo | undefined>
+  createRole: (data: { name: string; description?: string; systemPrompt?: string; icon?: string; category?: string; tags?: string[]; variables?: RoleVariable[] }) => Promise<RoleInfo>
+  updateRole: (id: string, data: { name?: string; description?: string | null; systemPrompt?: string | null; icon?: string | null; category?: string | null; tags?: string[] | null; variables?: RoleVariable[] | null }) => Promise<RoleInfo | undefined>
   deleteRole: (id: string) => Promise<void>
+  getRole: (id: string) => Promise<RoleInfo | undefined>
+  setConversationRole: (id: string, roleId: string | null) => Promise<void>
 
   // Search
   searchMessages: (query: string) => Promise<SearchResult[]>

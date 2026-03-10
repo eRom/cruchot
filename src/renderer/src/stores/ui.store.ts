@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type ViewMode = 'chat' | 'settings' | 'statistics' | 'images' | 'projects' | 'prompts'
+export type ViewMode = 'chat' | 'settings' | 'statistics' | 'images' | 'projects' | 'prompts' | 'roles'
 
 export type SettingsTab = 'general' | 'appearance' | 'apikeys' | 'model' | 'keybindings' | 'data' | 'backup'
 

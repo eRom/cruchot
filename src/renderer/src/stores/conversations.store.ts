@@ -5,7 +5,7 @@ export interface Conversation {
   title: string
   projectId?: string
   modelId?: string
-  roleId?: string
+  roleId?: string | null
   createdAt: Date
   updatedAt: Date
 }

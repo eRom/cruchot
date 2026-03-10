@@ -134,4 +134,19 @@ export function runMigrations(): void {
 
     CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(content);
   `)
+
+  // ── Incremental migrations (idempotent) ────────────────
+  // Add category, tags, variables columns to roles table
+  const roleMigrations = [
+    'ALTER TABLE roles ADD COLUMN category TEXT',
+    'ALTER TABLE roles ADD COLUMN tags TEXT',
+    'ALTER TABLE roles ADD COLUMN variables TEXT'
+  ]
+  for (const sql of roleMigrations) {
+    try {
+      sqlite.exec(sql)
+    } catch {
+      // Column already exists — ignore
+    }
+  }
 }

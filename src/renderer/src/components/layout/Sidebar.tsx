@@ -7,7 +7,8 @@ import {
   BarChart3,
   Image,
   FolderOpen,
-  BookOpen
+  BookOpen,
+  UserCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -199,6 +200,13 @@ export function Sidebar(): React.JSX.Element {
           isActive={currentView === 'prompts'}
           isCollapsed={collapsed}
           onClick={() => handleNavClick('prompts')}
+        />
+        <NavButton
+          icon={UserCircle}
+          label="Roles"
+          isActive={currentView === 'roles'}
+          isCollapsed={collapsed}
+          onClick={() => handleNavClick('roles')}
         />
         <NavButton
           icon={Settings}

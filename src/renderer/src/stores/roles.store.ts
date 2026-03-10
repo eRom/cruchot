@@ -1,5 +1,10 @@
 import { create } from 'zustand'
 
+export interface RoleVariable {
+  name: string
+  description?: string
+}
+
 export interface Role {
   id: string
   name: string
@@ -7,6 +12,9 @@ export interface Role {
   systemPrompt?: string | null
   icon?: string | null
   isBuiltin: boolean
+  category?: string | null
+  tags?: string[] | null
+  variables?: RoleVariable[] | null
   createdAt: Date
   updatedAt: Date
 }
@@ -14,9 +22,11 @@ export interface Role {
 interface RolesState {
   roles: Role[]
   activeRoleId: string | null
+  activeSystemPrompt: string | null
 
   setRoles: (roles: Role[]) => void
   setActiveRole: (id: string | null) => void
+  setActiveSystemPrompt: (prompt: string | null) => void
   addRole: (role: Role) => void
   updateRole: (id: string, updates: Partial<Role>) => void
   removeRole: (id: string) => void
@@ -25,10 +35,13 @@ interface RolesState {
 export const useRolesStore = create<RolesState>((set) => ({
   roles: [],
   activeRoleId: null,
+  activeSystemPrompt: null,
 
   setRoles: (roles) => set({ roles }),
 
   setActiveRole: (id) => set({ activeRoleId: id }),
+
+  setActiveSystemPrompt: (prompt) => set({ activeSystemPrompt: prompt }),
 
   addRole: (role) =>
     set((state) => ({
@@ -46,6 +59,8 @@ export const useRolesStore = create<RolesState>((set) => ({
     set((state) => ({
       roles: state.roles.filter((r) => r.id !== id),
       activeRoleId:
-        state.activeRoleId === id ? null : state.activeRoleId
+        state.activeRoleId === id ? null : state.activeRoleId,
+      activeSystemPrompt:
+        state.activeRoleId === id ? null : state.activeSystemPrompt
     }))
 }))
