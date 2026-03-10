@@ -1,13 +1,14 @@
 # Fichiers cles — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 16 — audit securite)
+**Derniere mise a jour** : 2026-03-10 (session 17 — workspace tools & tool call UI)
 
 ## Main process
 
 | Fichier | Role |
 |---------|------|
 | `src/main/index.ts` | Entry point Electron, app lifecycle, auto-updater, custom protocol `local-image://` (securise: allowlist dirs, pas de bypassCSP) |
-| `src/main/ipc/chat.ipc.ts` | Handler chat:send — streamText() AI SDK, forward chunks IPC, providerOptions thinking, reasoning persistence, cost calc, model + role persistence, workspace file context injection, file operations parsing |
+| `src/main/ipc/chat.ipc.ts` | Handler chat:send — streamText() AI SDK, forward chunks IPC, providerOptions thinking, reasoning persistence, cost calc, model + role persistence, workspace file context injection, file operations parsing, workspace tools multi-step (stopWhen), tool call tracking (accumulatedToolCalls) |
+| `src/main/llm/workspace-tools.ts` | 3 outils AI SDK workspace (readFile, listFiles, searchInFiles) + WORKSPACE_TOOLS_PROMPT — utilise `inputSchema` (pas `parameters`, AI SDK v6) |
 | `src/main/ipc/conversations.ipc.ts` | CRUD conversations + filtre par projet + setConversationProject + setConversationRole + deleteAllConversations |
 | `src/main/ipc/index.ts` | Registre central de tous les IPC handlers + blocage `multi-llm:apikey:*` dans settings:get/set |
 | `src/main/llm/router.ts` | Routeur getModel() — Vercel AI SDK |
@@ -58,7 +59,7 @@
 | `src/renderer/src/App.tsx` | Racine React — routing ViewMode, keyboard shortcuts, onboarding |
 | `src/renderer/src/components/chat/InputZone.tsx` | Zone de saisie — mode texte + mode image, ThinkingSelector, RoleSelector, VoiceInput, PromptPicker, FileReference chips, workspace toggle |
 | `src/renderer/src/components/chat/ChatView.tsx` | Zone A — message list + empty state + WorkspacePanel, auto-open workspace, file watcher sync |
-| `src/renderer/src/components/chat/MessageItem.tsx` | Rendu message — markdown, images, ReasoningBlock, FileOperationCards, footer (audio+copier a gauche, model+cout+temps a droite) |
+| `src/renderer/src/components/chat/MessageItem.tsx` | Rendu message — markdown, images, ReasoningBlock, ToolCallBlock (cyan, collapsible), FileOperationCards, footer (audio+copier a gauche, model+cout+temps a droite) |
 | `src/renderer/src/components/chat/ThinkingSelector.tsx` | Dropdown pill effort de reflexion (off/low/medium/high), accent violet |
 | `src/renderer/src/components/chat/AspectRatioSelector.tsx` | Chips inline pour ratio d'image (1:1, 16:9, 9:16, 4:3, 3:4) |
 | `src/renderer/src/components/chat/MessageList.tsx` | Liste virtualisee — applique fontSizePx, density, messageWidth depuis settings store |
@@ -105,7 +106,7 @@
 | `src/renderer/src/stores/projects.store.ts` | CRUD projets — Project a systemPrompt, defaultModelId, color |
 | `src/renderer/src/stores/providers.store.ts` | Providers + models (avec `type: 'text' \| 'image'`) + selectModel(providerId, modelId) |
 | `src/renderer/src/stores/settings.store.ts` | Settings persistees (theme, fontSizePx, density, messageWidth, sidebar, temperature, maxTokens, topP, thinkingEffort, ttsProvider, favoriteModelIds) |
-| `src/renderer/src/stores/messages.store.ts` | Messages de la conversation active |
+| `src/renderer/src/stores/messages.store.ts` | Messages de la conversation active — ToolCallDisplay type, addToolCall/updateLastToolCallStatus actions |
 | `src/renderer/src/stores/stats.store.ts` | Stats — dailyStats, providerStats, modelStats, projectStats, globalStats (dont totalTtsCost), selectedPeriod, auto-reload |
 | `src/renderer/src/stores/workspace.store.ts` | Workspace — rootPath, tree, filePreview, isPanelOpen, attachedFiles, openWorkspace/closeWorkspace/refreshTree/togglePanel |
 | `src/renderer/src/stores/tasks.store.ts` | Taches planifiees — tasks[], setTasks, addTask, updateTask, removeTask, loadTasks (pas de persist, DB-backed) |
@@ -115,7 +116,7 @@
 | Fichier | Role |
 |---------|------|
 | `src/renderer/src/hooks/useAudioPlayer.ts` | Hook TTS dual-mode : browser (Web Speech) ou cloud (IPC → base64 → Blob → Audio), cache module-level |
-| `src/renderer/src/hooks/useStreaming.ts` | Ecoute chat:chunk IPC, met a jour messages store en temps reel |
+| `src/renderer/src/hooks/useStreaming.ts` | Ecoute chat:chunk IPC, met a jour messages store en temps reel — gere tool-call + tool-result chunks |
 | `src/renderer/src/hooks/useInitApp.ts` | Charge conversations + providers + models au demarrage |
 | `src/renderer/src/hooks/useKeyboardShortcuts.ts` | Cmd+N, Cmd+K, Cmd+M, Cmd+B (workspace toggle), Cmd+virgule, Escape |
 

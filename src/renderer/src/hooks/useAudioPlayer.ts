@@ -113,7 +113,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}): UseAudioPla
       let result
       try {
         result = await window.api.ttsSynthesize({
-          provider: ttsProvider as 'openai' | 'google' | 'mistral',
+          provider: ttsProvider as 'openai' | 'google',
           text: text.slice(0, 4096),
           speed: rate,
           messageId

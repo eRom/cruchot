@@ -11,7 +11,7 @@ export function buildWorkspaceTools(workspace: WorkspaceService) {
     readFile: tool({
       description:
         'Lire le contenu d\'un fichier du workspace. Retourne le contenu texte, le langage detecte et la taille.',
-      parameters: z.object({
+      inputSchema: z.object({
         path: z.string().describe('Chemin relatif du fichier dans le workspace (ex: "src/index.ts", "README.md")')
       }),
       execute: async ({ path }) => {
@@ -34,7 +34,7 @@ export function buildWorkspaceTools(workspace: WorkspaceService) {
     listFiles: tool({
       description:
         'Lister les fichiers et dossiers dans le workspace. Sans argument, liste la racine. Avec un chemin, liste ce repertoire.',
-      parameters: z.object({
+      inputSchema: z.object({
         path: z.string().optional().describe('Chemin relatif du repertoire a lister (optionnel, racine par defaut)')
       }),
       execute: async ({ path }) => {
@@ -61,7 +61,7 @@ export function buildWorkspaceTools(workspace: WorkspaceService) {
     searchInFiles: tool({
       description:
         'Rechercher un texte dans les fichiers du workspace. Retourne les fichiers correspondants avec les lignes trouvees.',
-      parameters: z.object({
+      inputSchema: z.object({
         query: z.string().describe('Texte ou pattern a rechercher'),
         path: z.string().optional().describe('Restreindre la recherche a ce sous-repertoire (optionnel)')
       }),
@@ -127,10 +127,11 @@ Outils disponibles :
 - listFiles(path?) — Lister les fichiers et dossiers (racine par defaut)
 - searchInFiles(query, path?) — Rechercher du texte dans les fichiers
 
-Regles :
-- Quand l'utilisateur te demande de lire, analyser ou explorer des fichiers, utilise ces outils au lieu de demander le contenu.
-- Commence par listFiles() pour decouvrir la structure si tu ne la connais pas.
-- Tu peux enchainer plusieurs appels d'outils pour explorer le projet.
+REGLES IMPORTANTES :
+- TOUJOURS utiliser les outils pour lire les fichiers. Ne dis JAMAIS "je vais lire le fichier" sans appeler readFile() immediatement.
+- Si l'utilisateur demande de lire un fichier, appelle readFile() tout de suite. N'annonce pas ce que tu vas faire, fais-le.
+- Tu peux enchainer plusieurs appels d'outils dans une meme reponse. Par exemple : listFiles() pour trouver un fichier, puis readFile() pour le lire.
+- Commence par listFiles() pour decouvrir la structure si tu ne connais pas les chemins.
 - Si un fichier est trop gros ou binaire, l'outil retournera une erreur — passe au suivant.
 - Quand tu proposes des modifications de fichiers, utilise ce format :
 \`\`\`file:create:chemin/fichier.ext

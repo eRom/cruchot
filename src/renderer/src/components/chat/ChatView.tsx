@@ -80,7 +80,8 @@ export default function ChatView() {
         const loadedMessages = msgs.map((m): Message => ({
           ...m,
           isStreaming: false,
-          reasoning: (m.contentData?.reasoning as string) || undefined
+          reasoning: (m.contentData?.reasoning as string) || undefined,
+          toolCalls: (m.contentData?.toolCalls as Message['toolCalls']) || undefined
         }))
         setMessages(loadedMessages)
 

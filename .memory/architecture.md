@@ -1,6 +1,6 @@
 # Architecture — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 16 — audit securite)
+**Derniere mise a jour** : 2026-03-10 (session 17 — workspace tools & tool call UI)
 
 ## Vue d'ensemble
 
@@ -211,6 +211,8 @@ Projet avec workspacePath → ChatView auto-open workspace → WorkspaceService 
 ```
 
 - **WorkspaceService** : scan tree, read/write/delete, securite (path traversal, sensitive files), `.coworkignore`
+- **Workspace Tools** : 3 outils AI SDK (readFile, listFiles, searchInFiles) dans `workspace-tools.ts`, injectes via `buildWorkspaceTools()` dans `streamText()` avec `maxSteps: 10` + `stopWhen: stepCountIs(10)` pour le multi-step
+- **Tool Call UI** : ToolCallBlock dans MessageItem (collapsible, accent cyan), affiche chaque outil avec statut (running/success/error), accumule via `accumulatedToolCalls` dans chat.ipc.ts, persiste dans `contentData.toolCalls`
 - **FileWatcherService** : Chokidar wrapper, forward events vers renderer via IPC
 - **WorkspacePanel** : panneau droit collapsible (w-80 expanded, w-10 collapsed), toggle PanelRightClose/PanelRightOpen
 - **FileTree** : arbre recursif avec recherche, expand/collapse, right-click pour attacher

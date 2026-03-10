@@ -1,6 +1,6 @@
 # Patterns — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 16 — audit securite)
+**Derniere mise a jour** : 2026-03-10 (session 17 — workspace tools & tool call UI)
 
 ## Conventions de nommage
 
@@ -28,6 +28,8 @@
 - `abortSignal` pour annulation
 - `providerOptions` pour features specifiques (thinking, reasoning)
 - `await result.text` pour consommer le stream — attraper `NoOutputGeneratedError` pour les modeles reasoning
+- **`stopWhen: stepCountIs(N)`** obligatoire pour le multi-step tools — AI SDK v6 default `stopWhen: stepCountIs(1)` ne fait qu'1 step
+- **`tool-call` et `tool-result`** chunks dans `onChunk` — accumules dans `accumulatedToolCalls[]`, persistes dans `contentData.toolCalls`
 - `console.error('[Chat] Stream error:', error)` pour le debug
 
 ### Thinking / Reasoning Pattern
@@ -209,6 +211,18 @@
 - **Securite** : path traversal check (`..`), sensitive files blocklist (`.env`, credentials, etc.), 10MB file limit, binary detection
 - **Deps** : `chokidar` (ESM, `external` dans electron.vite.config), `trash` pour deletion safe
 - **Raccourci** : `Cmd+B` toggle workspace panel
+
+### Workspace Tools Pattern (session 17)
+- **3 outils AI SDK** dans `workspace-tools.ts` : `readFile(path)`, `listFiles(path?)`, `searchInFiles(query, path?)`
+- **`inputSchema`** (PAS `parameters`) — AI SDK v6 breaking change. `tool()` est une fonction identite, pas de transformation
+- **`stopWhen: stepCountIs(10)`** obligatoire dans `streamText()` — sans ca, default `stepCountIs(1)` empeche le multi-step
+- **System prompt** : `WORKSPACE_TOOLS_PROMPT` injecte quand workspace actif, instructions fortes pour utiliser les outils immediatement
+- **Tool Call UI** : `ToolCallBlock` dans MessageItem (collapsible, accent cyan `bg-cyan-500/10 text-cyan-700`)
+  - Chaque outil affiche : icone par nom (FileText/FolderSearch/Search), label traduit, argument, spinner/check/erreur
+  - Header : "Utilisation d'outils..." (running) ou "N outil(s) utilise(s)" (done) avec icone globale
+- **Streaming** : `useStreaming` gere `tool-call` (addToolCall avec status 'running') + `tool-result` (updateLastToolCallStatus)
+- **Persistance** : `contentData.toolCalls` sur le message assistant, restaure au chargement historique (ChatView)
+- **Store** : `ToolCallDisplay` type + `addToolCall()` + `updateLastToolCallStatus()` dans messages.store
 
 ### TTS Multi-Provider Pattern (session 12)
 - **3 providers** : `'browser'` (Web Speech, gratuit), `'openai'` (gpt-4o-mini-tts, Coral), `'google'` (gemini-2.5-flash-preview-tts, Aoede)

@@ -1,6 +1,6 @@
 # Gotchas — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 16 — audit securite)
+**Derniere mise a jour** : 2026-03-10 (session 17 — workspace tools & tool call UI)
 
 ## Bugs resolus
 
@@ -308,6 +308,7 @@ Quand on ajoute un champ au settings store (ex: `favoriteModelIds`), il sera `un
 - ~~TTS Multi-Provider~~ — **FAIT** (session 12) — Browser + OpenAI (Coral) + Google (Aoede), AudioSettings, tts_usage table, stats TTS, cache audio
 - ~~DeepSeek + Alibaba Qwen~~ — **FAIT** (session 13) — 2 providers, 6 modeles, thinking DeepSeek, Qwen via OpenAI-compatible DashScope
 - ~~Taches planifiees~~ — **FAIT** (session 15) — SchedulerService, task-executor, TasksView, TaskCard, TaskForm, 4 types schedule, isolation streaming
+- ~~Workspace Tools multi-step + Tool Call UI~~ — **FAIT** (session 17) — fix inputSchema/stopWhen, ToolCallBlock, tool-call/tool-result streaming, persistance contentData.toolCalls
 - T48 (Prompt Optimizer), T52 (Export PDF), T60 (Packaging)
 - i18n (T41) — configure mais `useTranslation` jamais utilise
 - SSH key GitHub non configuree — push en HTTPS uniquement
@@ -387,3 +388,26 @@ Certains providers (OpenAI notamment) retournent 429 pour le rate limit ET pour 
 **Cause** : On voulait juste lire `rootPath` pour l'allowlist de fichiers.
 **Fix** : Acceder directement a `activeWorkspace.rootPath` (change de `private` a `readonly` dans WorkspaceService).
 **Regle** : Pour des accesseurs simples, ne jamais appeler une methode qui fait du I/O lourd.
+
+### AI SDK v6 — `parameters` renomme en `inputSchema` pour tool() (session 17)
+**Symptome** : `APICallError: tools.0.custom.input_schema.type: Field required` de l'API Anthropic.
+**Cause** : AI SDK v6 a renomme `parameters` en `inputSchema` dans la definition des outils. `tool()` est une fonction identite (pas de transformation). `asSchema(undefined)` produit `{"properties": {}, "additionalProperties": false}` sans `"type": "object"`.
+**Fix** : Changer `parameters:` en `inputSchema:` dans `workspace-tools.ts`.
+**Regle** : Toujours utiliser `inputSchema` (pas `parameters`) pour definir les outils AI SDK v6.
+
+### AI SDK v6 — `stopWhen: stepCountIs(1)` par defaut bloque le multi-step (session 17)
+**Symptome** : Le LLM n'enchaine pas les appels d'outils — il appelle `listFiles` mais ne suit jamais avec `readFile`.
+**Cause** : AI SDK v6 `streamText()` a `stopWhen = stepCountIs(1)` comme defaut. `maxSteps: 10` est ignore si `stopWhen` n'est pas explicitement defini.
+**Fix** : Ajouter `stopWhen: stepCountIs(10)` dans les options `streamText()` en plus de `maxSteps: 10`.
+**Import** : `import { stepCountIs } from 'ai'`
+**Regle** : Toujours definir `stopWhen` explicitement quand on utilise des outils avec `streamText()` en AI SDK v6. Le `maxSteps` seul ne suffit pas.
+
+### AI SDK v6 — tool-result chunks dans onChunk (session 17)
+**Confirmation** : Les chunks `tool-result` SONT forwarded dans `onChunk` (ligne 6537 du AI SDK source). `onStepFinish` n'est pas fiable pour le tracking des resultats d'outils en streaming. Utiliser `onChunk` pour les deux (`tool-call` et `tool-result`).
+
+### React 19 types — contentData Record<string,unknown> empoisonne JSX children (session 17)
+**Symptome** : `TS2322: Type 'unknown' is not assignable to type (valid ReactNode types)` sur N'IMPORTE QUEL enfant JSX, meme `{null}`.
+**Cause** : `message.contentData?.type` retourne `unknown` (car `contentData: Record<string, unknown>`). Dans React 19 strict JSX types, ce `unknown` se propage dans l'expression ternaire et empoisonne le type infere de TOUS les enfants du parent `<div>`.
+**Impact** : Erreur TS pre-existante dans MessageItem.tsx, ne bloque pas le build ni le runtime (esbuild ignore les erreurs de type).
+**Workaround partiel** : `(message.contentData?.type as string) === 'image'` — caster les acces a `contentData` pour eviter la propagation de `unknown`. Ne resout pas completement le probleme car il y a de multiples acces.
+**Fix definitif futur** : Typer `contentData` plus strictement (union discriminee au lieu de `Record<string, unknown>`) ou extraire le corps du message dans un sous-composant isole.
