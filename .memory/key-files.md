@@ -1,6 +1,6 @@
 # Fichiers cles — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 6)
+**Derniere mise a jour** : 2026-03-10 (session 8)
 
 ## Main process
 
@@ -23,6 +23,8 @@
 | `src/main/ipc/prompts.ipc.ts` | CRUD prompts — Zod validation, 7 handlers |
 | `src/main/db/queries/prompts.ts` | Queries prompts — getAllPrompts, searchPrompts, CRUD |
 | `src/main/window.ts` | Config BrowserWindow — titleBarStyle hiddenInset, trafficLights |
+| `src/main/db/queries/statistics.ts` | Queries stats — getDailyStats, getProviderStats, getModelStats, getProjectStats, getGlobalStats (toutes avec param `days`) |
+| `src/main/ipc/statistics.ipc.ts` | 5 handlers stats — daily, providers, models, total, projects — tous avec param `days` |
 | `src/main/services/updater.service.ts` | electron-updater service |
 
 ## Preload
@@ -42,7 +44,9 @@
 | `src/renderer/src/components/chat/ThinkingSelector.tsx` | Dropdown pill effort de reflexion (off/low/medium/high), accent violet |
 | `src/renderer/src/components/chat/AspectRatioSelector.tsx` | Chips inline pour ratio d'image (1:1, 16:9, 9:16, 4:3, 3:4) |
 | `src/renderer/src/components/chat/MessageList.tsx` | Liste virtualisee — applique fontSizePx, density, messageWidth depuis settings store |
-| `src/renderer/src/components/chat/ModelSelector.tsx` | Select modele — textGroups par provider + section "Generation d'images" separee |
+| `src/renderer/src/components/chat/ModelSelector.tsx` | Select modele — liste plate 2 sections (texte/images), filtre par favoris |
+| `src/renderer/src/components/chat/ContextWindowIndicator.tsx` | Barre de progression tokens + cout total conversation |
+| `src/renderer/src/components/chat/MarkdownRenderer.tsx` | Rendu Markdown — react-markdown + Shiki syntax highlighting + KaTeX + Mermaid |
 | `src/renderer/src/components/layout/Sidebar.tsx` | Sidebar — drag zone, "Nouvelle discussion", ProjectSelector, ConversationList, nav footer (6 vues) |
 | `src/renderer/src/components/layout/AppLayout.tsx` | Layout racine — sidebar + main avec drag zone title bar |
 | `src/renderer/src/components/conversations/ConversationItem.tsx` | Item conversation — rename inline, delete confirmation, boutons hover absolus avec degrade |
@@ -52,22 +56,27 @@
 | `src/renderer/src/components/projects/ProjectForm.tsx` | Formulaire projet inline (nom, couleur, description, systemPrompt, modele obligatoire) |
 | `src/renderer/src/components/projects/ProjectSelector.tsx` | Dropdown sidebar — switch projet rapide, applique defaultModelId |
 | `src/renderer/src/components/prompts/PromptsView.tsx` | Vue Prompts — grille + form inline, types complet/complement, tags, variables |
-| `src/renderer/src/components/settings/SettingsView.tsx` | 7 tabs : General, Apparence, Cles API, Modele, Raccourcis, Donnees, Sauvegardes |
-| `src/renderer/src/components/settings/ModelSettings.tsx` | Temperature, maxTokens, topP — presets (Creatif/Equilibre/Precis), persistes globalement |
+| `src/renderer/src/components/settings/SettingsView.tsx` | 7 tabs : General, Apparence, Cles API, Modele, Raccourcis, Donnees, Sauvegardes — consomme settingsTab du ui.store |
+| `src/renderer/src/components/settings/ModelSettings.tsx` | Conteneur 3 sous-onglets : Modeles LLM, Modeles Images, Parametres |
+| `src/renderer/src/components/settings/ModelTableLLM.tsx` | Table modeles texte groupes par provider — prix, contexte, badge think, etoile favori |
+| `src/renderer/src/components/settings/ModelTableImages.tsx` | Table modeles image — provider, prix, etoile favori |
 | `src/renderer/src/components/settings/AppearanceSettings.tsx` | Font size, density, message width — persistes via Zustand |
+| `src/renderer/src/components/statistics/StatsView.tsx` | Vue Statistiques — 6 cards, 4 graphiques (line, 2 pie, bar), selecteur de periode |
+| `src/renderer/src/components/statistics/StatCard.tsx` | Composant carte stat individuelle (titre, valeur, icone, trend optionnel) |
 | `src/renderer/src/components/common/CommandPalette.tsx` | Cmd+K — recherche globale (actions, projets, TOUTES conversations) |
 
 ## Renderer — Stores
 
 | Fichier | Role |
 |---------|------|
-| `src/renderer/src/stores/ui.store.ts` | ViewMode (chat/settings/statistics/images/projects/prompts), isStreaming, commandPalette |
+| `src/renderer/src/stores/ui.store.ts` | ViewMode, isStreaming, commandPalette, settingsTab (navigation directe vers un onglet settings) |
 | `src/renderer/src/stores/prompts.store.ts` | CRUD prompts — Prompt a type complet/complement, tags, variables |
 | `src/renderer/src/stores/conversations.store.ts` | CRUD conversations — Conversation a projectId optionnel |
 | `src/renderer/src/stores/projects.store.ts` | CRUD projets — Project a systemPrompt, defaultModelId, color |
 | `src/renderer/src/stores/providers.store.ts` | Providers + models (avec `type: 'text' \| 'image'`) + selectModel(providerId, modelId) |
-| `src/renderer/src/stores/settings.store.ts` | Settings persistees (theme, fontSizePx, density, messageWidth, sidebar, temperature, maxTokens, topP, thinkingEffort) |
+| `src/renderer/src/stores/settings.store.ts` | Settings persistees (theme, fontSizePx, density, messageWidth, sidebar, temperature, maxTokens, topP, thinkingEffort, favoriteModelIds) |
 | `src/renderer/src/stores/messages.store.ts` | Messages de la conversation active |
+| `src/renderer/src/stores/stats.store.ts` | Stats — dailyStats, providerStats, modelStats, projectStats, globalStats, selectedPeriod, auto-reload |
 
 ## Renderer — Hooks
 
@@ -75,7 +84,7 @@
 |---------|------|
 | `src/renderer/src/hooks/useStreaming.ts` | Ecoute chat:chunk IPC, met a jour messages store en temps reel |
 | `src/renderer/src/hooks/useInitApp.ts` | Charge conversations + providers + models au demarrage |
-| `src/renderer/src/hooks/useKeyboardShortcuts.ts` | Cmd+N, Cmd+K, Cmd+virgule, Escape |
+| `src/renderer/src/hooks/useKeyboardShortcuts.ts` | Cmd+N, Cmd+K, Cmd+M, Cmd+virgule, Escape |
 
 ## Config
 

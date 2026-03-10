@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { getDatabase } from '../index'
-import { messages } from '../schema'
+import { messages, conversations, projects } from '../schema'
 
 export interface DailyStat {
   date: string
@@ -27,32 +27,61 @@ export interface ModelStat {
   totalCost: number
 }
 
+export interface ProjectStat {
+  projectId: string | null
+  projectName: string
+  projectColor: string | null
+  messagesCount: number
+  tokensIn: number
+  tokensOut: number
+  totalCost: number
+  conversationsCount: number
+}
+
+export interface GlobalStats {
+  totalCost: number
+  totalMessages: number
+  totalTokensIn: number
+  totalTokensOut: number
+  totalResponseTimeMs: number
+  totalConversations: number
+}
+
+function buildWhereClause(days?: number, tableRef = messages): ReturnType<typeof sql> | undefined {
+  if (!days || days <= 0) return undefined
+  const sinceTimestamp = Math.floor((Date.now() - days * 86400000) / 1000)
+  return sql`${tableRef.createdAt} >= ${sinceTimestamp}`
+}
+
 export function getDailyStats(days: number = 30): DailyStat[] {
   const db = getDatabase()
+  const whereClause = buildWhereClause(days)
 
-  const results = db
+  const query = db
     .select({
-      date: sql<string>`date(${messages.createdAt} / 1000, 'unixepoch')`,
+      date: sql<string>`date(${messages.createdAt}, 'unixepoch')`,
       messagesCount: sql<number>`count(*)`,
       tokensIn: sql<number>`coalesce(sum(${messages.tokensIn}), 0)`,
       tokensOut: sql<number>`coalesce(sum(${messages.tokensOut}), 0)`,
       totalCost: sql<number>`coalesce(sum(${messages.cost}), 0)`
     })
     .from(messages)
-    .where(
-      sql`${messages.createdAt} >= ${new Date(Date.now() - days * 24 * 60 * 60 * 1000)}`
-    )
-    .groupBy(sql`date(${messages.createdAt} / 1000, 'unixepoch')`)
-    .orderBy(sql`date(${messages.createdAt} / 1000, 'unixepoch') DESC`)
-    .all()
 
-  return results
+  if (whereClause) {
+    query.where(whereClause)
+  }
+
+  return query
+    .groupBy(sql`date(${messages.createdAt}, 'unixepoch')`)
+    .orderBy(sql`date(${messages.createdAt}, 'unixepoch') ASC`)
+    .all()
 }
 
-export function getProviderStats(): ProviderStat[] {
+export function getProviderStats(days?: number): ProviderStat[] {
   const db = getDatabase()
+  const whereClause = buildWhereClause(days)
 
-  const results = db
+  const query = db
     .select({
       providerId: sql<string>`coalesce(${messages.providerId}, 'unknown')`,
       messagesCount: sql<number>`count(*)`,
@@ -61,17 +90,21 @@ export function getProviderStats(): ProviderStat[] {
       totalCost: sql<number>`coalesce(sum(${messages.cost}), 0)`
     })
     .from(messages)
-    .where(sql`${messages.role} = 'assistant'`)
-    .groupBy(messages.providerId)
-    .all()
 
-  return results
+  if (whereClause) {
+    query.where(sql`${messages.role} = 'assistant' AND ${whereClause}`)
+  } else {
+    query.where(sql`${messages.role} = 'assistant'`)
+  }
+
+  return query.groupBy(messages.providerId).all()
 }
 
-export function getModelStats(): ModelStat[] {
+export function getModelStats(days?: number): ModelStat[] {
   const db = getDatabase()
+  const whereClause = buildWhereClause(days)
 
-  const results = db
+  const query = db
     .select({
       modelId: sql<string>`coalesce(${messages.modelId}, 'unknown')`,
       providerId: sql<string>`coalesce(${messages.providerId}, 'unknown')`,
@@ -81,25 +114,75 @@ export function getModelStats(): ModelStat[] {
       totalCost: sql<number>`coalesce(sum(${messages.cost}), 0)`
     })
     .from(messages)
-    .where(sql`${messages.role} = 'assistant'`)
-    .groupBy(messages.modelId, messages.providerId)
-    .all()
+
+  if (whereClause) {
+    query.where(sql`${messages.role} = 'assistant' AND ${whereClause}`)
+  } else {
+    query.where(sql`${messages.role} = 'assistant'`)
+  }
+
+  return query.groupBy(messages.modelId, messages.providerId).all()
+}
+
+export function getProjectStats(days?: number): ProjectStat[] {
+  const db = getDatabase()
+  const sinceTimestamp = days && days > 0
+    ? Math.floor((Date.now() - days * 86400000) / 1000)
+    : null
+
+  const timeFilter = sinceTimestamp
+    ? sql`AND ${messages.createdAt} >= ${sinceTimestamp}`
+    : sql``
+
+  const results = db.all<ProjectStat>(sql`
+    SELECT
+      ${conversations.projectId} as projectId,
+      coalesce(${projects.name}, 'Sans projet') as projectName,
+      ${projects.color} as projectColor,
+      count(*) as messagesCount,
+      coalesce(sum(${messages.tokensIn}), 0) as tokensIn,
+      coalesce(sum(${messages.tokensOut}), 0) as tokensOut,
+      coalesce(sum(${messages.cost}), 0) as totalCost,
+      count(distinct ${messages.conversationId}) as conversationsCount
+    FROM ${messages}
+    INNER JOIN ${conversations} ON ${messages.conversationId} = ${conversations.id}
+    LEFT JOIN ${projects} ON ${conversations.projectId} = ${projects.id}
+    WHERE ${messages.role} = 'assistant' ${timeFilter}
+    GROUP BY ${conversations.projectId}
+    ORDER BY totalCost DESC
+  `)
 
   return results
 }
 
-export function getTotalCost(): { totalCost: number; totalMessages: number; totalTokensIn: number; totalTokensOut: number } {
+export function getGlobalStats(days?: number): GlobalStats {
   const db = getDatabase()
+  const sinceTimestamp = days && days > 0
+    ? Math.floor((Date.now() - days * 86400000) / 1000)
+    : null
 
-  const result = db
-    .select({
-      totalCost: sql<number>`coalesce(sum(${messages.cost}), 0)`,
-      totalMessages: sql<number>`count(*)`,
-      totalTokensIn: sql<number>`coalesce(sum(${messages.tokensIn}), 0)`,
-      totalTokensOut: sql<number>`coalesce(sum(${messages.tokensOut}), 0)`
-    })
-    .from(messages)
-    .get()
+  const timeFilter = sinceTimestamp
+    ? sql`WHERE ${messages.createdAt} >= ${sinceTimestamp}`
+    : sql``
 
-  return result ?? { totalCost: 0, totalMessages: 0, totalTokensIn: 0, totalTokensOut: 0 }
+  const result = db.get<GlobalStats>(sql`
+    SELECT
+      coalesce(sum(${messages.cost}), 0) as totalCost,
+      count(*) as totalMessages,
+      coalesce(sum(${messages.tokensIn}), 0) as totalTokensIn,
+      coalesce(sum(${messages.tokensOut}), 0) as totalTokensOut,
+      coalesce(sum(${messages.responseTimeMs}), 0) as totalResponseTimeMs,
+      count(distinct ${messages.conversationId}) as totalConversations
+    FROM ${messages}
+    ${timeFilter}
+  `)
+
+  return result ?? {
+    totalCost: 0,
+    totalMessages: 0,
+    totalTokensIn: 0,
+    totalTokensOut: 0,
+    totalResponseTimeMs: 0,
+    totalConversations: 0
+  }
 }

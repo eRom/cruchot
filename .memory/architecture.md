@@ -1,10 +1,10 @@
 # Architecture — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 6)
+**Derniere mise a jour** : 2026-03-10 (session 8)
 
 ## Vue d'ensemble
 
-Application desktop locale de chat multi-LLM. Clone de Claude Desktop avec support multi-provider (7 cloud + OpenRouter + 2 locaux), generation d'images, recherche web, voix STT/TTS, statistiques de couts. Aucun serveur backend — tout local.
+Application desktop locale de chat multi-LLM. Clone de Claude Desktop avec support multi-provider (7 cloud + OpenRouter + 2 locaux), generation d'images, recherche web, voix STT/TTS, statistiques de couts avancees (par provider, modele, projet). Aucun serveur backend — tout local.
 
 ## Stack
 
@@ -117,6 +117,7 @@ InputZone: thinkingEffort (settings store) → IPC payload
 - Visible uniquement si `selectedModel.supportsThinking && !isImageMode`
 - 4 niveaux unifies : off | low | medium | high
 - Mapping par provider dans `thinking.ts` (Anthropic, OpenAI, Google, xAI)
+- Mistral (Magistral) : reasoning built-in, pas de providerOptions — le ThinkingSelector est decoratif
 - Setting global `thinkingEffort` dans `settings.store.ts` (default: 'medium')
 
 ## LLM — Vercel AI SDK
@@ -124,6 +125,33 @@ InputZone: thinkingEffort (settings store) → IPC payload
 Providers : OpenAI, Anthropic, Google (+ images), Mistral, xAI, OpenRouter, Perplexity, LM Studio, Ollama.
 Modeles : chaque modele a un `type: 'text' | 'image'` et `supportsThinking: boolean` dans `ModelDefinition`.
 Couts : table `PRICING` par modele dans `cost-calculator.ts`. Footer message affiche cout + tokens + temps.
+Cout total conversation affiche dans ContextWindowIndicator (bas droite de InputZone).
+
+## Flux — Statistiques (session 8)
+
+```
+StatsView mount → loadStats() → IPC invoke("statistics:*") avec days param
+→ Main: statistics.ts queries SQL sur messages table (JOIN conversations/projects pour stats projet)
+→ Main: retourne DailyStat[], ProviderStat[], ModelStat[], ProjectStat[], GlobalStats
+→ Renderer: stats.store.ts mappe les donnees, StatsView affiche 6 cards + 4 graphiques
+```
+
+- **6 stat cards** : Cout total, Messages, Conversations, Tokens entree, Tokens sortie, Temps total
+- **4 graphiques** : Evolution couts (LineChart), Repartition provider (PieChart donut), Repartition projet (PieChart donut avec project.color), Top modeles (BarChart horizontal)
+- **Selecteur de periode** : 7j / 30j / 90j / Tout — re-query serveur a chaque changement (pas de filtre client)
+- `setSelectedPeriod()` declenche `loadStats()` automatiquement
+- `days = 0` signifie "pas de filtre temporel" (toutes les donnees)
+- `getProjectStats()` : JOIN messages → conversations → projects (LEFT JOIN pour "Sans projet")
+- `getGlobalStats()` : remplace `getTotalCost()`, ajoute `totalResponseTimeMs` + `totalConversations`
+
+## Systeme de favoris (session 7)
+
+- `favoriteModelIds: string[]` dans `settings.store.ts` (persiste localStorage)
+- `toggleFavoriteModel(modelId)` ajoute/retire un modele
+- Si aucun favori → tous les modeles affiches dans ModelSelector (retrocompatible)
+- Si au moins 1 favori → seuls les favoris apparaissent dans le dropdown du chat
+- Gestion des favoris dans Settings > Modele > sous-onglet "Modeles LLM" / "Modeles Images" (etoile cliquable)
+- ProjectForm (modele par defaut projet) affiche TOUS les modeles, pas filtre par favoris
 
 ## Flux — Persistance modele par conversation
 
@@ -145,6 +173,11 @@ Couts : table `PRICING` par modele dans `cost-calculator.ts`. Footer message aff
 - `trafficLightPosition: { x: 15, y: 10 }` — dans la zone drag
 - Zones drag en haut de la sidebar (38px) et du panneau principal (38px)
 - Sidebar header : bouton "Nouvelle discussion" (remplace l'ancien label "Multi-LLM")
+
+## Specifications
+
+- `specs/phase-setup/` — Specs initiales archivees (ARCH, FEATURES, PLAN, PRICING, STACK, TASKS, TEAM)
+- `specs/` — Nouvelles specs de fonctionnalites (un fichier par feature)
 
 ## GitHub
 

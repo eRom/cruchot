@@ -1,6 +1,6 @@
 # Patterns — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 6)
+**Derniere mise a jour** : 2026-03-10 (session 8)
 
 ## Conventions de nommage
 
@@ -32,7 +32,7 @@
 
 ### Thinking / Reasoning Pattern
 - `supportsThinking: boolean` sur `ModelDefinition`, `ModelInfo`, `Model`
-- 6 modeles : Opus, Sonnet (Anthropic), GPT-5.4, GPT-5.3 Codex (OpenAI), Gemini 3.1 Pro, Gemini 3 Flash (Google), Grok 4.1 Fast Reasoning (xAI)
+- 8 modeles thinking : Opus, Sonnet (Anthropic), GPT-5.4, GPT-5.3 Codex (OpenAI), Gemini 3.1 Pro, Gemini 3 Flash (Google), Grok 4.1 Fast Reasoning (xAI), Magistral Medium (Mistral)
 - `thinking.ts` : `buildThinkingProviderOptions(providerId, effort)` — mapping unifie 4 niveaux → providerOptions specifiques
 - Anthropic : `thinking: { type: 'disabled' | 'enabled' | 'adaptive' }` avec `budgetTokens`
 - OpenAI : `reasoningEffort: 'none' | 'low' | 'medium' | 'high'`
@@ -99,12 +99,37 @@
 - Chaque prompt a : title, content, type, category, tags[], variables[]
 - Copier le contenu en un clic depuis la carte
 
+### Favorite Models Pattern (session 7)
+- `favoriteModelIds: string[]` dans settings.store (Zustand persist)
+- `toggleFavoriteModel(modelId)` ajoute/retire
+- ModelSelector filtre : `hasFavs && !favoriteModelIds.includes(model.id)` → skip
+- `favoriteModelIds.length === 0` → tous les modeles affiches (retrocompatible)
+- Etoiles dans ModelTableLLM / ModelTableImages (Settings > Modele)
+- ProjectForm n'est PAS filtre par favoris (affiche tous les modeles)
+
+### ModelSelector Pattern (session 7)
+- Liste plate avec 2 sections : "Generation de textes" et "Generation d'images"
+- Plus de groupement par provider (simplifie)
+- Filtre par favoris integre dans le useMemo
+
+### Settings Navigation Pattern (session 7)
+- `settingsTab: SettingsTab | null` dans ui.store
+- CommandPalette et Cmd+M : `setSettingsTab('model')` puis `setCurrentView('settings')`
+- SettingsView consomme `settingsTab` au mount, puis le clear (`setSettingsTab(null)`)
+- Permet de naviguer directement vers un onglet specifique des settings
+
+### ModelSettings Sub-tabs Pattern (session 7)
+- `useState<'llm' | 'images' | 'params'>('llm')` pour la navigation interne
+- 3 sous-onglets : Modeles LLM (table), Modeles Images (table), Parametres (sliders/presets)
+- Meme style pills que les presets (`border-primary bg-primary/5` actif)
+
 ### CommandPalette Pattern
 - Ouvre via Cmd+K
 - Fetch TOUTES les conversations a l'ouverture (`window.api.getConversations()` sans arg)
 - Le store `conversations` ne contient que celles du projet actif (filtre sidebar)
 - Quand on selectionne une conv d'un autre projet : switch `activeProjectId` + `activeConversationId`
 - Les callbacks (onNewConversation, onOpenSettings, etc.) sont passes en props depuis App.tsx
+- Quick action "Liste des modeles" : navigue vers Settings > onglet Modele via settingsTab
 
 ### Model Params Pattern
 - temperature, maxTokens, topP, thinkingEffort sont globaux (pas par modele)
@@ -131,10 +156,23 @@
 - **Fatal** (401, 403) → notification immediate
 - **Actionable** (402, deprecie) → notification avec action
 
+### Statistics Pattern (session 8)
+- Queries SQL directes sur la table `messages` (pas de table `statistics` pre-agregee)
+- Toutes les fonctions acceptent un param `days?: number` (0 ou undefined = pas de filtre)
+- Timestamps en secondes (Drizzle `mode: 'timestamp'`) — `date(createdAt, 'unixepoch')` sans diviser par 1000
+- Parametres temporels : `Math.floor((Date.now() - days * 86400000) / 1000)` (entier, pas Date object)
+- `buildWhereClause(days)` helper interne pour factoriser le filtre temporel
+- `getProjectStats()` : JOIN messages → conversations → projects (LEFT JOIN, "Sans projet" pour projectId null)
+- `getGlobalStats()` : totalCost, totalMessages, totalTokensIn, totalTokensOut, totalResponseTimeMs, totalConversations
+- Store : `setSelectedPeriod()` declenche `loadStats()` automatiquement via `get().loadStats()`
+- StatsView : 6 stat cards (grid 3x2), 4 graphiques Recharts (LineChart, 2x PieChart donut, BarChart horizontal)
+- PieChart projet utilise `project.color` comme couleur de segment
+- Formatage : `toLocaleString('fr-FR')` pour les nombres, `formatDuration(ms)` pour le temps
+
 ### Data Pattern
 - Drizzle ORM avec schema-first
 - WAL mode + foreign_keys ON
-- Stats pre-agregees par jour, a la volee pour aujourd'hui
+- Stats calculees a la volee depuis la table messages (pas de pre-agregation)
 - Fichiers binaires sur filesystem, reference en DB
 
 ## Conventions projet

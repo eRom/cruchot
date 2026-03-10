@@ -1,6 +1,6 @@
 # Gotchas — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 6)
+**Derniere mise a jour** : 2026-03-10 (session 8)
 
 ## Bugs resolus
 
@@ -176,6 +176,31 @@ Dans `ai@^6.0.116`, `experimental_generateImage` est un alias deprece de `genera
 - Footer message assistant : actions (audio, copier) a gauche, info modele a droite — en bas de la bulle, pas dans une colonne separee
 - Hover-to-reveal pour les boutons d'action (pas toujours visibles)
 
+## Preferences UI de Romain (complement session 7)
+
+- ModelSelector simplifie : liste plate (texte/images), pas de groupement par provider
+- Cout total conversation en gras dans le compteur de tokens (bas droite)
+- Blocs de code markdown : padding interne pour ne pas coller au bord
+
+### MarkdownRenderer — blocs de code sans langage collent au bord
+**Symptome** : Texte colle a la bordure gauche dans les blocs de code sans langage specifie.
+**Cause** : `<pre>` n'avait pas de padding. Les blocs avec langage passaient par `ShikiCodeBlock` (qui a `p-4 pt-8`), mais les blocs sans langage tombaient dans le fallback inline `<code>` sans marge.
+**Fix** : Ajouter `p-4 text-[13px] leading-6` sur `<pre>` + reset des styles inline code imbrique `[&_code]:bg-transparent [&_code]:p-0 [&_code]:text-inherit`.
+**Attention** : Sans le reset `[&_code]`, le `<code>` inline a l'interieur du `<pre>` ajoutait un double padding (`px-1.5` + `p-4`).
+
+### Mistral Magistral — reasoning built-in
+Le modele `magistral-medium-2509` a un reasoning built-in (Test Time Computation). Pas de `providerOptions` a envoyer — le `ThinkingSelector` est purement decoratif pour ce provider. Le `default` case dans `thinking.ts` retourne `undefined`, ce qui est le bon comportement.
+
+### Statistics — 4 bugs critiques (session 8)
+**Bug 1** : `date(createdAt / 1000, 'unixepoch')` → createdAt est deja en secondes (Drizzle `mode: 'timestamp'`), diviser par 1000 donne des dates en 1970. Fix : `date(createdAt, 'unixepoch')`.
+**Bug 2** : `new Date(...)` dans `sql\`\`` → better-sqlite3 ne peut pas binder un objet Date. Fix : utiliser un entier `Math.floor((Date.now() - days * 86400000) / 1000)`.
+**Bug 3** : `ORDER BY ... DESC` dans `getDailyStats()` → StatsView faisait `slice(-days)` qui prenait les plus anciens. Fix : `ASC`.
+**Bug 4** : `loadStats()` ne passait pas `days` aux IPC → toujours 30 jours cote serveur. Fix : passer `days` depuis `selectedPeriod` du store.
+**API renommee** : `getTotalCost()` → `getGlobalStats()` (ajoute totalResponseTimeMs, totalConversations). `getProjectStats()` nouveau.
+
+### Zustand persist — nouveaux champs
+Quand on ajoute un champ au settings store (ex: `favoriteModelIds`), il sera `undefined` au premier chargement apres update (le localStorage n'a pas encore la cle). Toujours traiter avec `?? []` ou `?? defaultValue` dans les composants.
+
 ## Elements toujours non cables / manquants
 
 - Search bar dans la sidebar (T34)
@@ -184,8 +209,13 @@ Dans `ai@^6.0.116`, `experimental_generateImage` est un alias deprece de `genera
 - ~~Bouton "Supprimer tout" DataSettings~~ — **FAIT** (session 6)
 - ~~Persistance modele par conversation~~ — **FAIT** (session 6)
 - ~~Cout dans footer message~~ — **FAIT** (session 6)
+- ~~Systeme de favoris modeles~~ — **FAIT** (session 7)
+- ~~ModelSettings sous-onglets~~ — **FAIT** (session 7)
+- ~~Cout total conversation~~ — **FAIT** (session 7)
+- ~~Cmd+M liste des modeles~~ — **FAIT** (session 7)
 - BranchNavigation dans MessageItem (T45)
 - a11y.ts utilitaires
-- T48 (Prompt Optimizer), T52 (Export PDF), T56 (Advanced Stats), T60 (Packaging)
+- ~~T56 (Advanced Stats)~~ — **FAIT** (session 8) — fix bugs + stats projet + global stats + 6 cards + 4 graphiques
+- T48 (Prompt Optimizer), T52 (Export PDF), T60 (Packaging)
 - i18n (T41) — configure mais `useTranslation` jamais utilise
 - SSH key GitHub non configuree — push en HTTPS uniquement
