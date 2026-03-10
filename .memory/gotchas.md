@@ -1,6 +1,6 @@
 # Gotchas — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 5)
+**Derniere mise a jour** : 2026-03-10 (session 6)
 
 ## Bugs resolus
 
@@ -69,6 +69,32 @@
 
 ### AI SDK — `NoOutputGeneratedError` import
 L'erreur est exportee depuis `'ai'` : `import { NoOutputGeneratedError } from 'ai'`.
+
+### AI SDK v6 — `promptTokens` renomme en `inputTokens`
+**Symptome** : Le cout affiche toujours $0.00, tokens = 0 dans la DB, malgre pricing correct.
+**Cause** : AI SDK v6 a renomme les proprietes usage : `promptTokens` → `inputTokens`, `completionTokens` → `outputTokens`.
+**Preuve** : `result.usage` retourne `{ inputTokens: 42, outputTokens: 352, ... }` — `promptTokens` est `undefined`.
+**Fix** : Dans `chat.ipc.ts`, utiliser `usage?.inputTokens` et `usage?.outputTokens`.
+**Note** : `include_usage: true` est envoye automatiquement par `@ai-sdk/openai` en streaming — pas besoin de config.
+
+### AI SDK v6 — `onFinish` vs `await result.usage`
+**Piege** : Ne PAS utiliser `onFinish` pour sauvegarder les couts. Utiliser `await result.text` puis `await result.usage` apres consommation du stream. Plus fiable pour tous les providers.
+
+### Radix ScrollArea — `display: table` casse les layouts flex
+**Symptome** : Boutons hover des ConversationItem pousses hors de la zone visible quand le titre est long.
+**Cause** : Radix ScrollArea Viewport enveloppe le contenu dans `<div style="display: table; min-width: 100%">`. Ce wrapper s'elargit avec le contenu au lieu de le contraindre. Les elements flex `w-full` prennent 100% du wrapper elargi.
+**Fix** : Remplacer `<ScrollArea>` par un simple `<div className="overflow-y-auto overflow-x-hidden">` dans ConversationList. Positionner les boutons d'action en `absolute` avec degrade de fond.
+**Regle** : Ne PAS utiliser Radix ScrollArea quand le contenu a des elements flex avec hover actions.
+
+### DataSettings — bouton "Supprimer tout" etait un stub
+**Symptome** : Le bouton "Supprimer tout" dans Parametres > Donnees ne faisait rien.
+**Cause** : `handleDeleteAll` fermait juste le dialog de confirmation sans appeler d'IPC.
+**Fix** : Ajoute `deleteAllConversations` IPC (conversations.ipc.ts) + `deleteAllMessages` (messages.ts) + expose dans preload. DataSettings appelle l'IPC puis `window.location.reload()`.
+
+### Conversation modelId — jamais sauve ni restaure
+**Symptome** : Le modele revenait au defaut quand on switchait de conversation ou relancait l'app.
+**Cause** : `updateConversationModel()` existait dans queries/conversations.ts mais n'etait jamais appelee. ChatView ne restaurait pas le modele au switch.
+**Fix** : chat.ipc.ts appelle `updateConversationModel(convId, 'providerId::modelId')`. ChatView lit `conv.modelId` et appelle `selectModel()` au switch.
 
 ### xAI — modeles Grok renommes (mars 2026)
 Les anciens IDs `grok-4.1-fast` et `grok-code-fast-1` n'existent plus.
@@ -153,8 +179,11 @@ Dans `ai@^6.0.116`, `experimental_generateImage` est un alias deprece de `genera
 ## Elements toujours non cables / manquants
 
 - Search bar dans la sidebar (T34)
-- ~~PromptPicker pour InputZone (T29)~~ — **FAIT** (session 4, cable dans InputZone)
+- ~~PromptPicker pour InputZone (T29)~~ — **FAIT** (session 4)
 - ~~ThinkingSelector pour InputZone~~ — **FAIT** (session 5)
+- ~~Bouton "Supprimer tout" DataSettings~~ — **FAIT** (session 6)
+- ~~Persistance modele par conversation~~ — **FAIT** (session 6)
+- ~~Cout dans footer message~~ — **FAIT** (session 6)
 - BranchNavigation dans MessageItem (T45)
 - a11y.ts utilitaires
 - T48 (Prompt Optimizer), T52 (Export PDF), T56 (Advanced Stats), T60 (Packaging)

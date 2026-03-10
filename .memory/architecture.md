@@ -1,6 +1,6 @@
 # Architecture — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 5)
+**Derniere mise a jour** : 2026-03-10 (session 6)
 
 ## Vue d'ensemble
 
@@ -73,7 +73,7 @@ User saisit message → InputZone → IPC invoke("chat:send")
 → Main: Router → AI SDK streamText() → API stream SSE
 → Main: forward chunks via webContents.send("chat:chunk")
 → Renderer: useStreaming() affiche token par token
-→ Main: onFinish → sauvegarde message complet en DB + calcul cout
+→ Main: await result.text + result.usage → sauvegarde message + cout en DB + updateConversationModel
 ```
 
 ## Flux — Projets
@@ -123,7 +123,14 @@ InputZone: thinkingEffort (settings store) → IPC payload
 
 Providers : OpenAI, Anthropic, Google (+ images), Mistral, xAI, OpenRouter, Perplexity, LM Studio, Ollama.
 Modeles : chaque modele a un `type: 'text' | 'image'` et `supportsThinking: boolean` dans `ModelDefinition`.
-Couts : table `PRICING` par modele dans `cost-calculator.ts`.
+Couts : table `PRICING` par modele dans `cost-calculator.ts`. Footer message affiche cout + tokens + temps.
+
+## Flux — Persistance modele par conversation
+
+- Quand on envoie un message → `chat.ipc.ts` appelle `updateConversationModel(convId, 'providerId::modelId')`
+- InputZone met a jour le store Zustand `conversations` immediatement (optimistic)
+- Quand on switch de conversation → ChatView lit `conv.modelId`, `split('::')`, appelle `selectModel()`
+- Format composite `providerId::modelId` — meme format que `defaultModelId` des projets
 
 ## Donnees
 

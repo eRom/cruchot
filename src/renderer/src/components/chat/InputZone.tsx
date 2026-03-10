@@ -51,7 +51,7 @@ export function InputZone({
 
   // ── Stores ───────────────────────────────────────────────
   const { selectedModelId, selectedProviderId, models } = useProvidersStore()
-  const { activeConversationId, addConversation, setActiveConversation } = useConversationsStore()
+  const { activeConversationId, addConversation, setActiveConversation, updateConversation } = useConversationsStore()
   const activeProjectId = useProjectsStore((s) => s.activeProjectId)
   const { messages, addMessage } = useMessagesStore()
   const { isStreaming } = useUiStore()
@@ -221,6 +221,9 @@ export function InputZone({
       }
     })
 
+    // Update conversation model in store (DB is updated by chat.ipc.ts)
+    updateConversation(conversationId, { modelId: `${selectedProviderId}::${selectedModelId}` })
+
     // Envoyer via IPC
     try {
       await window.api.sendMessage({
@@ -245,6 +248,7 @@ export function InputZone({
     isStreaming,
     ensureConversation,
     addMessage,
+    updateConversation,
     temperature,
     settingsMaxTokens,
     topP,

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useMessagesStore, type Message } from '@/stores/messages.store'
+import { useProvidersStore } from '@/stores/providers.store' // used via getState()
 import MessageList from './MessageList'
 import { InputZone } from './InputZone'
 import { MessageSquare, Sparkles } from 'lucide-react'
@@ -19,12 +20,20 @@ export default function ChatView() {
   const streamingMessageId = useMessagesStore((s) => s.streamingMessageId)
   const setMessages = useMessagesStore((s) => s.setMessages)
 
-  // Load messages when switching conversations
+  // Load messages + restore model when switching conversations
   useEffect(() => {
     if (!activeConversationId) {
       setMessages([])
       return
     }
+
+    // Restore model from conversation (read store snapshot, not reactive)
+    const conv = useConversationsStore.getState().conversations.find((c) => c.id === activeConversationId)
+    if (conv?.modelId?.includes('::')) {
+      const [providerId, modelId] = conv.modelId.split('::')
+      useProvidersStore.getState().selectModel(providerId, modelId)
+    }
+
     async function loadMessages() {
       try {
         const msgs = await window.api.getMessages(activeConversationId!)

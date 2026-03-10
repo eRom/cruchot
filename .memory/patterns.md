@@ -1,6 +1,6 @@
 # Patterns — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 5)
+**Derniere mise a jour** : 2026-03-10 (session 6)
 
 ## Conventions de nommage
 
@@ -23,7 +23,8 @@
 - `streamText()` pour le chat streaming
 - `experimental_generateImage()` pour la generation d'images (multi-provider)
 - `onChunk` callback pour forward IPC — **ATTENTION: `chunk.text` pas `chunk.textDelta`** (AI SDK v6)
-- `onFinish` callback pour sauvegarde DB + calcul couts
+- **PAS de `onFinish`** — sauvegarde DB apres `await result.text` + `await result.usage`
+- `result.usage` retourne `{ inputTokens, outputTokens }` — **PAS `promptTokens`/`completionTokens`** (AI SDK v6)
 - `abortSignal` pour annulation
 - `providerOptions` pour features specifiques (thinking, reasoning)
 - `await result.text` pour consommer le stream — attraper `NoOutputGeneratedError` pour les modeles reasoning
@@ -74,6 +75,16 @@
 - Rename : inline input dans ConversationItem, Enter/Escape/blur pour valider
 - Delete : confirmation inline "Supprimer ? Oui/Non"
 - Callbacks remontent : ConversationItem -> ConversationList -> Sidebar -> window.api
+- Boutons edit/delete en position **absolue** avec degrade (`bg-gradient-to-l from-sidebar`) — apparaissent au hover
+- ConversationList utilise `overflow-y-auto overflow-x-hidden` (PAS Radix ScrollArea — cf gotchas)
+- Titre auto-genere tronque a 35 chars (pas 60)
+
+### Conversation — Persistance modele (session 6)
+- `conversation.modelId` stocke au format `providerId::modelId` (meme format que projets)
+- Sauve par `chat.ipc.ts` via `updateConversationModel()` apres chaque message
+- Store Zustand mis a jour par InputZone (optimistic update)
+- Restaure par `ChatView.tsx` au switch de conversation : `getState().conversations.find()` puis `selectModel()`
+- `useConversationsStore.getState()` (pas de hook) pour eviter re-renders inutiles dans l'effect
 
 ### Vue Projets Pattern
 - Navigation interne par `subView` state : 'grid' | 'create' | 'edit'
@@ -101,11 +112,12 @@
 - Configures dans Settings > Modele (presets Creatif/Equilibre/Precis)
 - InputZone lit directement depuis le settings store (plus de state local)
 
-### MessageItem Footer Pattern (session 5)
+### MessageItem Footer Pattern (session 5+6)
 - Footer integre en bas de la bulle assistant (pas une colonne separee)
 - Separe par `border-t border-border/30`
 - Gauche : AudioPlayer (si pas image) + bouton Copier — apparaissent au hover (`opacity-0 group-hover:opacity-100`)
-- Droite : label provider-model + temps de reponse — toujours visible en `text-[10px] text-muted-foreground/40`
+- Droite : label provider-model + temps de reponse + tokens + **cout** — toujours visible en `text-[10px] text-muted-foreground/40`
+- Cout affiche si `message.cost != null && message.cost > 0` — formatCost() avec precision adaptative
 - Messages user : bouton copier en position absolue `-bottom-3 right-2` (inchange)
 
 ### Title Bar Pattern (macOS)
