@@ -161,6 +161,10 @@ const api: ElectronAPI = {
 
   fileRead: (filePath) => ipcRenderer.invoke('files:read', filePath),
 
+  fileOpenInOS: (filePath) => ipcRenderer.invoke('files:openInOS', filePath),
+
+  fileShowInFolder: (filePath) => ipcRenderer.invoke('files:showInFolder', filePath),
+
   // ── Images (generation) ─────────────────────────────
   generateImage: (data) => ipcRenderer.invoke('images:generate', data),
 

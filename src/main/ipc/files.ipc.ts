@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron'
+import { ipcMain, dialog, shell, BrowserWindow } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { saveAttachment, readAttachment } from '../services/file.service'
@@ -118,6 +118,22 @@ export function registerFilesIpc(): void {
       buffer.byteOffset,
       buffer.byteOffset + buffer.byteLength
     )
+  })
+
+  // ── Open file with default OS app ───────────────────
+  ipcMain.handle('files:openInOS', async (_event, filePath: string) => {
+    if (!filePath || typeof filePath !== 'string') {
+      throw new Error('File path is required')
+    }
+    return shell.openPath(filePath)
+  })
+
+  // ── Reveal file in Finder / Explorer ───────────────
+  ipcMain.handle('files:showInFolder', async (_event, filePath: string) => {
+    if (!filePath || typeof filePath !== 'string') {
+      throw new Error('File path is required')
+    }
+    shell.showItemInFolder(filePath)
   })
 
   console.log('[IPC] Files handlers registered')
