@@ -1,6 +1,6 @@
 # Patterns — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 13)
+**Derniere mise a jour** : 2026-03-10 (session 14)
 
 ## Conventions de nommage
 
@@ -169,10 +169,16 @@
 - `[-webkit-app-region:drag]` pour les zones draggables
 - Traffic lights positiones a `{ x: 15, y: 10 }`
 
-### Error Classification Pattern
-- **Transient** (429, 500, 503) → retry backoff exponentiel + jitter, max 3
-- **Fatal** (401, 403) → notification immediate
-- **Actionable** (402, deprecie) → notification avec action
+### Error Classification Pattern (session 14)
+- **`errors.ts`** : `classifyError(error)` — unwrap cause chain puis classify par statusCode + message
+- **`unwrapCause()`** : deroule `error.cause` recursivement (AI SDK wrape les erreurs API dans NoOutputGeneratedError)
+- **Fatal** (401, 403, cle invalide dans message) → toast immediate, non-retryable
+- **Actionable** (402, 429+quota epuise) → toast 10s "Credits epuises", non-retryable
+- **Transient** (429 rate limit, 5xx, timeout) → retry backoff exponentiel + jitter, max 3
+- **Detection cle invalide** : `isInvalidApiKey()` parse le message ("incorrect api key", "invalid x-api-key", etc.)
+- **Detection quota** : `isQuotaExhausted()` parse le message ("insufficient_quota", "billing hard limit", etc.)
+- **Toast** : `sonner` dans `useStreaming.ts`, duree adaptative (10s actionable, 6s sinon)
+- **chat.ipc.ts** : `NoOutputGeneratedError` avec `cause` → rethrow la cause (plus de "No output generated" pour erreurs API)
 
 ### Statistics Pattern (session 8)
 - Queries SQL directes sur la table `messages` (pas de table `statistics` pre-agregee)

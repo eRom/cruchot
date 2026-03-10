@@ -1,6 +1,6 @@
 # Architecture — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 13)
+**Derniere mise a jour** : 2026-03-10 (session 14)
 
 ## Vue d'ensemble
 
@@ -131,6 +131,22 @@ Providers : OpenAI, Anthropic, Google (+ images), Mistral, xAI, DeepSeek, Alibab
 Modeles : chaque modele a un `type: 'text' | 'image'` et `supportsThinking: boolean` dans `ModelDefinition`.
 Couts : table `PRICING` par modele dans `cost-calculator.ts`. Footer message affiche cout + tokens + temps.
 Cout total conversation affiche dans ContextWindowIndicator (bas droite de InputZone).
+
+## Gestion d'erreurs LLM (session 14)
+
+```
+streamText() echoue → catch dans chat.ipc.ts
+→ classifyError(error) dans errors.ts — unwrap cause chain + classify
+→ webContents.send('chat:chunk', { type: 'error', error, category, suggestion })
+→ Renderer: useStreaming → toast.error() via sonner (duree adaptative selon category)
+```
+
+- **Classification** : `errors.ts` — unwrap `error.cause` recursif (NoOutputGeneratedError wrape l'erreur API reelle)
+- **Categories** : `fatal` (401 cle invalide, 403), `actionable` (402 credits, 429 quota epuise), `transient` (429 rate limit, 5xx, timeout)
+- **Detection cle invalide** : statusCode 401 OU message contient "incorrect api key" / "invalid api key" / "invalid x-api-key" / "authentication failed"
+- **Detection quota epuise** : 429 + message contient "insufficient_quota" / "quota exceeded" / "billing hard limit" / "credit" / "plan limit"
+- **Toast** : sonner (deja monte dans App.tsx), duree 10s pour `actionable`, 6s sinon
+- **NoOutputGeneratedError** : si sa `cause` est une erreur API → rethrow vers le catch principal (plus de "No output generated" quand c'est une cle invalide)
 
 ## Flux — Statistiques (session 8)
 

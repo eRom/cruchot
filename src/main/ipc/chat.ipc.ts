@@ -204,7 +204,11 @@ export function registerChatIpc(): void {
       try {
         fullText = await result.text
       } catch (e) {
-        if (!(e instanceof NoOutputGeneratedError)) {
+        if (e instanceof NoOutputGeneratedError) {
+          // If the NoOutputGeneratedError wraps a real API error, rethrow it
+          if (e.cause) throw e.cause
+          // Otherwise it's a genuine "no output" (e.g. reasoning model with no text)
+        } else {
           throw e
         }
       }

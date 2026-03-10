@@ -1,6 +1,6 @@
 # Gotchas — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 13)
+**Derniere mise a jour** : 2026-03-10 (session 14)
 
 ## Bugs resolus
 
@@ -322,3 +322,16 @@ Utiliser `dashscope-intl.aliyuncs.com` (Singapore). L'endpoint Chine (`dashscope
 
 ### DeepSeek reasoning chunks — natifs (session 13)
 Le package `@ai-sdk/deepseek` emet des `reasoning-delta` chunks natifs, geres par le handler `onChunk` existant dans `chat.ipc.ts`. Pas de code supplementaire necessaire.
+
+### NoOutputGeneratedError masque les erreurs API (session 14)
+**Symptome** : "No output generated. Check the stream for errors." affiche dans le chat quand la cle API est invalide.
+**Cause** : `await result.text` lance `NoOutputGeneratedError` qui wrape l'erreur API reelle dans sa propriete `cause`. Le catch dans `chat.ipc.ts` avalait l'erreur au lieu de la propager.
+**Fix** : Dans le catch `NoOutputGeneratedError`, verifier `e.cause` — si present, rethrow vers le catch principal qui appelle `classifyError()`.
+**Regle** : Toujours verifier `error.cause` quand on attrape `NoOutputGeneratedError` — c'est souvent un wrapper autour de la vraie erreur.
+
+### AI SDK — erreurs API wrappees dans error.cause (session 14)
+Les erreurs `AI_APICallError` du SDK ont un `statusCode` et un `message`, mais sont souvent wrappees dans une autre erreur. `classifyError()` doit unwrap la chaine `cause` recursivement avant d'extraire le statusCode.
+**Pattern** : `NoOutputGeneratedError.cause → AI_APICallError { statusCode: 401, message: "Incorrect API key" }`
+
+### 429 quota epuise vs rate limit (session 14)
+Certains providers (OpenAI notamment) retournent 429 pour le rate limit ET pour le quota epuise. La difference est dans le message d'erreur. `isQuotaExhausted()` dans `errors.ts` parse les patterns connus : "insufficient_quota", "quota exceeded", "billing hard limit", "credit", "plan limit".

@@ -12,11 +12,33 @@ export interface ClassifiedError {
  * Classifies an LLM API error into transient, fatal, or actionable categories.
  */
 export function classifyError(error: unknown): ClassifiedError {
-  const statusCode = extractStatusCode(error)
-  const message = extractMessage(error)
+  // Unwrap cause chain (NoOutputGeneratedError wraps the real error)
+  const root = unwrapCause(error)
+  const statusCode = extractStatusCode(root)
+  const message = extractMessage(root)
 
-  // Transient — retry with backoff
+  // API key errors (some providers return 401, others embed it in message)
+  if (statusCode === 401 || isInvalidApiKey(message)) {
+    return {
+      category: 'fatal',
+      message: 'Clé API invalide ou expirée',
+      statusCode: statusCode ?? 401,
+      retryable: false,
+      suggestion: 'Vérifiez votre clé API dans Paramètres > Clés API'
+    }
+  }
+
+  // 429 — distinguish quota exhaustion from rate limit
   if (statusCode === 429) {
+    if (isQuotaExhausted(message)) {
+      return {
+        category: 'actionable',
+        message: 'Crédits épuisés pour ce provider',
+        statusCode,
+        retryable: false,
+        suggestion: 'Rechargez votre compte ou changez de modèle'
+      }
+    }
     return {
       category: 'transient',
       message: 'Rate limit atteint. Nouvelle tentative en cours...',
@@ -35,15 +57,6 @@ export function classifyError(error: unknown): ClassifiedError {
   }
 
   // Fatal — don't retry
-  if (statusCode === 401) {
-    return {
-      category: 'fatal',
-      message: 'Clé API invalide ou expirée',
-      statusCode,
-      retryable: false,
-      suggestion: 'Vérifiez votre clé API dans les paramètres'
-    }
-  }
   if (statusCode === 403) {
     return {
       category: 'fatal',
@@ -108,6 +121,37 @@ function extractMessage(error: unknown): string {
   if (error instanceof Error) return error.message
   if (typeof error === 'string') return error
   return 'Erreur inconnue'
+}
+
+function unwrapCause(error: unknown): unknown {
+  if (error && typeof error === 'object' && 'cause' in error) {
+    const cause = (error as { cause: unknown }).cause
+    if (cause && cause !== error) return unwrapCause(cause)
+  }
+  return error
+}
+
+function isInvalidApiKey(message: string): boolean {
+  const lower = message.toLowerCase()
+  return (
+    lower.includes('incorrect api key') ||
+    lower.includes('invalid api key') ||
+    lower.includes('invalid x-api-key') ||
+    lower.includes('invalid_api_key') ||
+    lower.includes('authentication failed')
+  )
+}
+
+function isQuotaExhausted(message: string): boolean {
+  const lower = message.toLowerCase()
+  return (
+    lower.includes('insufficient_quota') ||
+    lower.includes('quota exceeded') ||
+    lower.includes('billing hard limit') ||
+    lower.includes('exceeded your current quota') ||
+    lower.includes('credit') ||
+    lower.includes('plan limit')
+  )
 }
 
 function isNetworkError(error: unknown): boolean {

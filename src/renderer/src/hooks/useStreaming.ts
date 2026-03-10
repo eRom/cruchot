@@ -150,7 +150,7 @@ export function useStreaming() {
 
           toast.error(chunk.error || 'Erreur inconnue', {
             description: chunk.suggestion,
-            duration: 6000
+            duration: chunk.category === 'actionable' ? 10000 : 6000
           })
           break
         }

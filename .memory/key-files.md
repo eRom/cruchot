@@ -1,6 +1,6 @@
 # Fichiers cles — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 13)
+**Derniere mise a jour** : 2026-03-10 (session 14)
 
 ## Main process
 
@@ -15,6 +15,7 @@
 | `src/main/llm/types.ts` | `ModelDefinition` (avec `type`, `supportsThinking`), `ProviderDefinition`, `ModelPricing` |
 | `src/main/llm/thinking.ts` | Mapper effort → providerOptions par provider (Anthropic, OpenAI, Google, xAI, DeepSeek) |
 | `src/main/llm/image.ts` | Generation d'images multi-provider (Google Gemini + OpenAI GPT Image) |
+| `src/main/llm/errors.ts` | Classification erreurs API (unwrapCause, isInvalidApiKey, isQuotaExhausted) + withRetry backoff |
 | `src/main/llm/cost-calculator.ts` | Table PRICING + calcul cout par message |
 | `src/main/ipc/images.ipc.ts` | Handler images:generate — genere, sauve fichier + DB images + DB messages |
 | `src/main/db/schema.ts` | Schema Drizzle (12 tables) — projects a systemPrompt, defaultModelId, color, workspacePath, tts_usage |
