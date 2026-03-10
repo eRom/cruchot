@@ -142,6 +142,27 @@ export function runMigrations(): void {
       created_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS scheduled_tasks (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      prompt TEXT NOT NULL,
+      model_id TEXT NOT NULL,
+      role_id TEXT REFERENCES roles(id),
+      project_id TEXT REFERENCES projects(id),
+      schedule_type TEXT NOT NULL CHECK(schedule_type IN ('manual', 'interval', 'daily', 'weekly')),
+      schedule_config TEXT,
+      is_enabled INTEGER NOT NULL DEFAULT 1,
+      last_run_at INTEGER,
+      next_run_at INTEGER,
+      last_run_status TEXT CHECK(last_run_status IN ('success', 'error')),
+      last_run_error TEXT,
+      last_conversation_id TEXT,
+      run_count INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
     CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(content);
   `)
 

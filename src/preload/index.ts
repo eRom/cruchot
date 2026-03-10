@@ -235,6 +235,29 @@ const api: ElectronAPI = {
 
   ttsGetAvailableProviders: () => ipcRenderer.invoke('tts:getAvailableProviders'),
 
+  // ── Scheduled Tasks ───────────────────────────────
+  getScheduledTasks: () => ipcRenderer.invoke('tasks:list'),
+
+  getScheduledTask: (id) => ipcRenderer.invoke('tasks:get', id),
+
+  createScheduledTask: (data) => ipcRenderer.invoke('tasks:create', data),
+
+  updateScheduledTask: (id, data) => ipcRenderer.invoke('tasks:update', id, data),
+
+  deleteScheduledTask: (id) => ipcRenderer.invoke('tasks:delete', id),
+
+  executeScheduledTask: (id) => ipcRenderer.invoke('tasks:execute', id),
+
+  toggleScheduledTask: (id) => ipcRenderer.invoke('tasks:toggle', id),
+
+  onTaskExecuted: (cb) => {
+    ipcRenderer.on('task:executed', (_event, data) => cb(data))
+  },
+
+  offTaskExecuted: () => {
+    ipcRenderer.removeAllListeners('task:executed')
+  },
+
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>
     ipcRenderer.invoke('settings:get', key),

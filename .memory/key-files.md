@@ -1,6 +1,6 @@
 # Fichiers cles — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 14)
+**Derniere mise a jour** : 2026-03-10 (session 15)
 
 ## Main process
 
@@ -18,7 +18,7 @@
 | `src/main/llm/errors.ts` | Classification erreurs API (unwrapCause, isInvalidApiKey, isQuotaExhausted) + withRetry backoff |
 | `src/main/llm/cost-calculator.ts` | Table PRICING + calcul cout par message |
 | `src/main/ipc/images.ipc.ts` | Handler images:generate — genere, sauve fichier + DB images + DB messages |
-| `src/main/db/schema.ts` | Schema Drizzle (12 tables) — projects a systemPrompt, defaultModelId, color, workspacePath, tts_usage |
+| `src/main/db/schema.ts` | Schema Drizzle (13 tables) — projects a systemPrompt, defaultModelId, color, workspacePath, tts_usage, scheduledTasks |
 | `src/main/db/queries/conversations.ts` | Queries conversations — CRUD + getConversationsByProject() + updateConversationModel() + updateConversationRole() + deleteAllConversations() |
 | `src/main/db/queries/roles.ts` | Queries roles — CRUD + seedBuiltinRoles() + deleteRole() (FK cleanup) |
 | `src/main/ipc/roles.ipc.ts` | CRUD roles — Zod validation, 6 handlers (getAll, get, create, update, delete, seed) |
@@ -36,13 +36,17 @@
 | `src/main/services/tts.service.ts` | Service TTS multi-provider — OpenAI (MP3) + Google Gemini (PCM→WAV), pricing, pcmToWav() |
 | `src/main/ipc/tts.ipc.ts` | 2 handlers TTS — tts:synthesize (Zod) + tts:getAvailableProviders (check cles API) |
 | `src/main/db/queries/tts.ts` | Queries tts_usage — insertTtsUsage, getTtsCostTotal(days?) |
+| `src/main/db/queries/scheduled-tasks.ts` | Queries CRUD taches planifiees + computeNextRunAt(), updateTaskRunStatus(), incrementRunCount() |
+| `src/main/services/scheduler.service.ts` | Singleton SchedulerService — gestion timers (setTimeout/setInterval), init/stop lifecycle, scheduleAllEnabled() |
+| `src/main/services/task-executor.ts` | Execution programmatique LLM — cree conversation, charge role, streamText(), sauve messages + cout, notification Electron |
+| `src/main/ipc/scheduled-tasks.ipc.ts` | 7 handlers tasks:* — list, get, create, update, delete, execute, toggle — Zod discriminated union pour scheduleConfig |
 
 ## Preload
 
 | Fichier | Role |
 |---------|------|
-| `src/preload/index.ts` | contextBridge — expose ~62 methodes window.api (dont 10 workspace, 2 tts, 2 listeners) |
-| `src/preload/types.ts` | Types partages ElectronAPI, tous les DTO, ThinkingEffort, StreamChunk, FileNode, FileOperation, WorkspaceFileContext, TtsProvider, TtsSynthesizePayload/Result |
+| `src/preload/index.ts` | contextBridge — expose ~71 methodes window.api (dont 10 workspace, 2 tts, 9 tasks, 2 listeners tasks) |
+| `src/preload/types.ts` | Types partages ElectronAPI, tous les DTO, ThinkingEffort, StreamChunk, FileNode, FileOperation, WorkspaceFileContext, TtsProvider, ScheduledTaskInfo, TaskExecutedEvent |
 
 ## Renderer — Composants critiques
 
@@ -58,7 +62,7 @@
 | `src/renderer/src/components/chat/ModelSelector.tsx` | Select modele — liste plate 2 sections (texte/images), filtre par favoris |
 | `src/renderer/src/components/chat/ContextWindowIndicator.tsx` | Barre de progression tokens + cout total conversation |
 | `src/renderer/src/components/chat/MarkdownRenderer.tsx` | Rendu Markdown — react-markdown + Shiki syntax highlighting + KaTeX + Mermaid |
-| `src/renderer/src/components/layout/Sidebar.tsx` | Sidebar — drag zone, "Nouvelle discussion", ProjectSelector, ConversationList, nav footer (7 vues dont Roles) |
+| `src/renderer/src/components/layout/Sidebar.tsx` | Sidebar — drag zone, "Nouvelle discussion", ProjectSelector, ConversationList, nav footer (8 vues dont Roles et Taches) |
 | `src/renderer/src/components/layout/AppLayout.tsx` | Layout racine — sidebar + main avec drag zone title bar |
 | `src/renderer/src/components/conversations/ConversationItem.tsx` | Item conversation — rename inline, delete confirmation, boutons hover absolus avec degrade |
 | `src/renderer/src/components/conversations/ConversationList.tsx` | Liste groupee par date (Aujourd'hui/Hier/7j/Plus ancien) — div overflow au lieu de Radix ScrollArea |
@@ -77,7 +81,10 @@
 | `src/renderer/src/components/statistics/StatCard.tsx` | Composant carte stat individuelle (titre, valeur, icone, trend optionnel) |
 | `src/renderer/src/components/roles/RolesView.tsx` | Vue Roles — grille + form inline, CRUD complet, tags, variables, roles builtin non-supprimables |
 | `src/renderer/src/components/roles/RoleSelector.tsx` | Pill selector role dans InputZone — shadcn Select, verrouillage, variables, role projet virtuel |
-| `src/renderer/src/components/common/CommandPalette.tsx` | Cmd+K — recherche globale (actions, projets, roles, workspace, TOUTES conversations) |
+| `src/renderer/src/components/tasks/TasksView.tsx` | Vue Taches planifiees — grille + form inline, CRUD, toggle, execute, ecoute task:executed |
+| `src/renderer/src/components/tasks/TaskCard.tsx` | Carte tache — barre couleur par type (manual=bleu, interval=vert, daily=orange, weekly=violet), toggle, execute, badges |
+| `src/renderer/src/components/tasks/TaskForm.tsx` | Formulaire tache — config conditionnelle par scheduleType (interval/daily/weekly), select modele/role/projet |
+| `src/renderer/src/components/common/CommandPalette.tsx` | Cmd+K — recherche globale (actions, projets, roles, taches, workspace, TOUTES conversations) |
 | `src/renderer/src/components/workspace/WorkspacePanel.tsx` | Panneau droit collapsible (w-80/w-10), toggle PanelRightClose/PanelRightOpen, header + tree + preview |
 | `src/renderer/src/components/workspace/FileTree.tsx` | Arbre recursif avec recherche, expand/collapse, icones par extension, right-click attacher |
 | `src/renderer/src/components/workspace/FilePanel.tsx` | Preview read-only, breadcrumb, langage/taille footer, bouton attacher |
@@ -98,6 +105,7 @@
 | `src/renderer/src/stores/messages.store.ts` | Messages de la conversation active |
 | `src/renderer/src/stores/stats.store.ts` | Stats — dailyStats, providerStats, modelStats, projectStats, globalStats (dont totalTtsCost), selectedPeriod, auto-reload |
 | `src/renderer/src/stores/workspace.store.ts` | Workspace — rootPath, tree, filePreview, isPanelOpen, attachedFiles, openWorkspace/closeWorkspace/refreshTree/togglePanel |
+| `src/renderer/src/stores/tasks.store.ts` | Taches planifiees — tasks[], setTasks, addTask, updateTask, removeTask, loadTasks (pas de persist, DB-backed) |
 
 ## Renderer — Hooks
 

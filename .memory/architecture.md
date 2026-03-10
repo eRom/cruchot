@@ -1,10 +1,10 @@
 # Architecture — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 14)
+**Derniere mise a jour** : 2026-03-10 (session 15)
 
 ## Vue d'ensemble
 
-Application desktop locale de chat multi-LLM. Clone de Claude Desktop avec support multi-provider (9 cloud + OpenRouter + 2 locaux), generation d'images, recherche web, voix TTS cloud multi-provider (OpenAI/Google) + STT, statistiques de couts avancees (par provider, modele, projet, TTS), workspace co-work (LLM context-aware sur fichiers projet). Aucun serveur backend — tout local.
+Application desktop locale de chat multi-LLM. Clone de Claude Desktop avec support multi-provider (9 cloud + OpenRouter + 2 locaux), generation d'images, recherche web, voix TTS cloud multi-provider (OpenAI/Google) + STT, statistiques de couts avancees (par provider, modele, projet, TTS), workspace co-work (LLM context-aware sur fichiers projet), taches planifiees (execution LLM automatique sur schedule). Aucun serveur backend — tout local.
 
 ## Stack
 
@@ -30,24 +30,25 @@ Main (Node.js — DB, APIs, secrets)
 src/
   main/
     index.ts          # App lifecycle + auto-updater + custom protocol `local-image://`
-    ipc/              # Handlers IPC par domaine (chat, conversations, projects, prompts, roles, workspace, etc.)
+    ipc/              # Handlers IPC par domaine (chat, conversations, projects, prompts, roles, workspace, scheduled-tasks, etc.)
     llm/              # Routeur AI SDK + cost-calculator + image generation + file-operations parser
     db/
-      schema.ts       # 12 tables Drizzle (providers, models, projects, conversations, messages, tts_usage, etc.)
+      schema.ts       # 13 tables Drizzle (providers, models, projects, conversations, messages, tts_usage, scheduledTasks, etc.)
       queries/        # Queries par domaine
-    services/         # Credential, backup, export, updater, network, notification, workspace, file-watcher, tts
+    services/         # Credential, backup, export, updater, network, notification, workspace, file-watcher, tts, scheduler, task-executor
   preload/
-    index.ts          # contextBridge — expose window.api (~62 methodes)
+    index.ts          # contextBridge — expose window.api (~71 methodes)
     types.ts          # Types partages ElectronAPI + tous les DTO
   renderer/src/
     App.tsx            # Composant racine — routing par ViewMode
-    stores/            # Zustand: conversations, providers, projects, messages, settings, ui, roles, workspace
+    stores/            # Zustand: conversations, providers, projects, messages, settings, ui, roles, workspace, tasks
     components/
       chat/            # ChatView, InputZone, MessageList, MessageItem, ModelSelector, etc.
       layout/          # Sidebar, AppLayout
       projects/        # ProjectsView (grille + form inline), ProjectSelector (dropdown sidebar)
       prompts/         # PromptsView (grille + form inline), bibliotheque de prompts
       roles/           # RolesView (grille + form inline), RoleSelector (pill dans InputZone)
+      tasks/           # TasksView (grille + form inline), TaskCard, TaskForm
       settings/        # SettingsView (8 tabs), ApiKeysSection, AppearanceSettings, ModelSettings, AudioSettings, etc.
       statistics/      # StatsView
       images/          # ImagesView, ImageGrid
@@ -67,6 +68,7 @@ src/
 - `settings` — SettingsView (8 tabs, dont Audio)
 - `images` — ImagesView
 - `roles` — RolesView (bibliotheque de roles / system prompts)
+- `tasks` — TasksView (taches planifiees avec execution LLM automatique)
 - `statistics` — StatsView
 
 ## Flux principal — Chat
@@ -239,6 +241,30 @@ AudioPlayer click Play → useAudioPlayer hook lit ttsProvider depuis settings s
 - **CSP** : `media-src 'self' blob:` obligatoire dans index.html pour les blob URLs audio
 - **Google PCM→WAV** : Gemini TTS retourne `audio/L16;codec=pcm;rate=24000` — converti en WAV avec header 44 bytes cote main
 
+## Flux — Taches planifiees (session 15)
+
+```
+TasksView: CRUD taches → IPC invoke("tasks:*")
+→ Main: scheduled-tasks.ts queries — create/update/delete/getAll/toggle
+→ DB: table scheduledTasks (id, name, description, prompt, modelId, roleId, projectId, scheduleType, scheduleConfig, isEnabled, etc.)
+→ Main: schedulerService.init() au demarrage → scheduleAllEnabled()
+→ Timer (setTimeout/setInterval) → executeScheduledTask()
+  → Main: task-executor.ts — cree conversation + user message + streamText() + assistant message + cost
+  → Main: forward chunks avec conversationId (filtre cote renderer)
+  → Main: Electron notification a la fin
+  → Main: update lastRunAt, lastRunStatus, runCount, nextRunAt
+→ Renderer: useStreaming filtre chunks par conversationId (ignore si != activeConversationId)
+→ Renderer: TasksView ecoute 'task:executed' pour refresh UI
+```
+
+- **4 types de schedule** : manual, interval (toutes les X s/min/h), daily (chaque jour a HH:MM), weekly (jours + HH:MM)
+- **SchedulerService** : singleton, Map<taskId, NodeJS.Timeout>, init/stop au lifecycle Electron
+- **task-executor.ts** : execution programmatique sans interaction renderer — cree conversation, charge role, streamText(), sauve messages + cout
+- **Chunks isolees** : `conversationId` ajoute aux chunks, `useStreaming` filtre les chunks de taches background
+- **Notification Electron** : notifie a la fin de chaque execution reussie
+- **FK cleanup** : `deleteRole()` met aussi a null `roleId` des `scheduledTasks`
+- **Vue** : TasksView (grille + form inline), TaskCard (barre couleur par type), TaskForm (config conditionnelle par scheduleType)
+
 ## Flux — Persistance modele par conversation
 
 - Quand on envoie un message → `chat.ipc.ts` appelle `updateConversationModel(convId, 'providerId::modelId')`
@@ -248,7 +274,7 @@ AudioPlayer click Play → useAudioPlayer hook lit ttsProvider depuis settings s
 
 ## Donnees
 
-- SQLite WAL + FTS5, 12 tables (dont tts_usage)
+- SQLite WAL + FTS5, 13 tables (dont tts_usage, scheduledTasks)
 - Fichiers binaires sur filesystem (images, attachments)
 - Cles API chiffrees via Electron safeStorage (Keychain macOS)
 - Settings UI persistees via Zustand `persist` middleware (localStorage)

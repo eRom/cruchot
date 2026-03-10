@@ -10,6 +10,7 @@ interface StreamChunk {
   modelId?: string
   providerId?: string
   messageId?: string
+  conversationId?: string // Present on chunks from scheduled task executor
   error?: string
   category?: string
   suggestion?: string
@@ -48,6 +49,11 @@ export function useStreaming() {
 
   const handleChunk = useCallback(
     (chunk: StreamChunk) => {
+      // Ignore chunks from background scheduled tasks (they have a conversationId that differs from active)
+      if (chunk.conversationId && chunk.conversationId !== activeConversationId) {
+        return
+      }
+
       switch (chunk.type) {
         case 'start': {
           // Immediately create a placeholder assistant message with "processing" phase

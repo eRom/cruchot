@@ -8,7 +8,8 @@ import {
   messages,
   attachments,
   statistics,
-  images
+  images,
+  scheduledTasks
 } from './schema'
 
 // ---------------------------------------------------------------------------
@@ -34,14 +35,16 @@ export const modelsRelations = relations(models, ({ one }) => ({
 // ---------------------------------------------------------------------------
 export const projectsRelations = relations(projects, ({ many }) => ({
   conversations: many(conversations),
-  statistics: many(statistics)
+  statistics: many(statistics),
+  scheduledTasks: many(scheduledTasks)
 }))
 
 // ---------------------------------------------------------------------------
 // Roles relations
 // ---------------------------------------------------------------------------
 export const rolesRelations = relations(roles, ({ many }) => ({
-  conversations: many(conversations)
+  conversations: many(conversations),
+  scheduledTasks: many(scheduledTasks)
 }))
 
 // ---------------------------------------------------------------------------
@@ -98,6 +101,23 @@ export const statisticsRelations = relations(statistics, ({ one }) => ({
   }),
   project: one(projects, {
     fields: [statistics.projectId],
+    references: [projects.id]
+  })
+}))
+
+// ---------------------------------------------------------------------------
+// Images relations
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Scheduled Tasks relations
+// ---------------------------------------------------------------------------
+export const scheduledTasksRelations = relations(scheduledTasks, ({ one }) => ({
+  role: one(roles, {
+    fields: [scheduledTasks.roleId],
+    references: [roles.id]
+  }),
+  project: one(projects, {
+    fields: [scheduledTasks.projectId],
     references: [projects.id]
   })
 }))

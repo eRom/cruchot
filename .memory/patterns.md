@@ -1,6 +1,6 @@
 # Patterns — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 14)
+**Derniere mise a jour** : 2026-03-10 (session 15)
 
 ## Conventions de nommage
 
@@ -225,6 +225,26 @@
 - **Stats** : `totalTtsCost` sous-query dans `getGlobalStats()`, affiche dans StatCard "Cout total"
 - **CSP** : `media-src 'self' blob:` dans `index.html` — obligatoire pour `<audio>` avec blob URLs
 - **Settings store** : `ttsProvider: TtsProvider` (default `'browser'`, Zustand persist → `?? 'browser'`)
+
+### Scheduled Tasks Pattern (session 15)
+- **4 types de schedule** : `manual` (execution manuelle uniquement), `interval` (toutes les X s/min/h), `daily` (chaque jour a HH:MM), `weekly` (jours choisis + HH:MM)
+- **SchedulerService** : singleton avec `Map<taskId, NodeJS.Timeout>`, `init(mainWindow)` appele apres creation fenetre, `stopAll()` dans `will-quit`
+- **setTimeout pour daily/weekly** : calcule le delai jusqu'a la prochaine occurrence, re-schedule apres execution
+- **setTimeout-chain pour interval** : setTimeout recursivement (pas setInterval) pour pouvoir annuler proprement
+- **task-executor.ts** : execution programmatique isolee du chat interactif — `executeScheduledTask(taskId, mainWindow)`
+  - Resolve modelId (`split('::')` → `getModel()`), cree conversation, charge role optionnel, sauve user message (prompt)
+  - `streamText()` avec memes options que chat.ipc.ts (temperature, maxTokens, topP, providerOptions thinking)
+  - Forward chunks avec `conversationId` pour filtrage renderer
+  - Sauve assistant message + cout en DB, update conversation model
+  - `Notification` Electron native a la fin
+- **Isolation streaming** : chunks de tache background ont `conversationId` — `useStreaming` ignore si `!= activeConversationId`
+- **IPC** : Zod `discriminatedUnion` pour `scheduleConfig` (4 schemas par type) → conversion en objet plat pour DB (JSON)
+- **TasksView** : meme pattern que RolesView — `subView` ('grid' | 'create' | 'edit'), ecoute `task:executed` event pour refresh
+- **TaskCard** : barre couleur par type (manual=blue, interval=emerald, daily=orange, weekly=violet), toggle custom (pas de Switch shadcn)
+- **TaskForm** : config conditionnelle — pills pour scheduleType, champs dynamiques (interval: nombre+unite, daily: heure, weekly: jours+heure)
+- **FK cleanup** : `deleteRole()` met aussi a null `scheduledTasks.roleId`, `deleteScheduledTask()` possible meme si conversations existent
+- **DB** : table `scheduledTasks` (17 colonnes), `scheduleConfig` stocke en JSON text, `lastRunStatus` enum ('success'|'error')
+- **computeNextRunAt()** : calcule la prochaine date d'execution selon le type, gere le weekly avec recherche du prochain jour
 
 ### Data Pattern
 - Drizzle ORM avec schema-first

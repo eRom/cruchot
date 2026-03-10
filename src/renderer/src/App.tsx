@@ -15,6 +15,7 @@ import { ImagesView } from '@/components/images/ImagesView'
 import { ProjectsView } from '@/components/projects/ProjectsView'
 import { PromptsView } from '@/components/prompts/PromptsView'
 import { RolesView } from '@/components/roles/RolesView'
+import { TasksView } from '@/components/tasks/TasksView'
 import { useUiStore } from '@/stores/ui.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
@@ -130,6 +131,7 @@ function App(): React.JSX.Element {
             {currentView === 'projects' && <ProjectsView />}
             {currentView === 'prompts' && <PromptsView />}
             {currentView === 'roles' && <RolesView />}
+            {currentView === 'tasks' && <TasksView />}
           </AppLayout>
 
           {/* Command palette (Cmd+K) */}

@@ -86,7 +86,7 @@ export function ProjectSelector() {
         )}
 
         <span className="flex-1 truncate text-left">
-          {activeProject ? activeProject.name : 'Aucun projet'}
+          {activeProject ? activeProject.name : 'Playground'}
         </span>
 
         <ChevronDown className={cn(
@@ -114,7 +114,7 @@ export function ProjectSelector() {
               )}
             >
               <FolderOpen className="size-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground">Aucun projet</span>
+              <span className="text-muted-foreground">Playground</span>
             </button>
           </div>
 

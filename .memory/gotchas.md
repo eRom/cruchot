@@ -1,6 +1,6 @@
 # Gotchas — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 14)
+**Derniere mise a jour** : 2026-03-10 (session 15)
 
 ## Bugs resolus
 
@@ -307,6 +307,7 @@ Quand on ajoute un champ au settings store (ex: `favoriteModelIds`), il sera `un
 - ~~Workspace Co-Work~~ — **FAIT** (session 11) — WorkspaceService, FileWatcher, FileTree, FilePanel, FileOperationCard, context injection, toggle panel
 - ~~TTS Multi-Provider~~ — **FAIT** (session 12) — Browser + OpenAI (Coral) + Google (Aoede), AudioSettings, tts_usage table, stats TTS, cache audio
 - ~~DeepSeek + Alibaba Qwen~~ — **FAIT** (session 13) — 2 providers, 6 modeles, thinking DeepSeek, Qwen via OpenAI-compatible DashScope
+- ~~Taches planifiees~~ — **FAIT** (session 15) — SchedulerService, task-executor, TasksView, TaskCard, TaskForm, 4 types schedule, isolation streaming
 - T48 (Prompt Optimizer), T52 (Export PDF), T60 (Packaging)
 - i18n (T41) — configure mais `useTranslation` jamais utilise
 - SSH key GitHub non configuree — push en HTTPS uniquement
@@ -335,3 +336,14 @@ Les erreurs `AI_APICallError` du SDK ont un `statusCode` et un `message`, mais s
 
 ### 429 quota epuise vs rate limit (session 14)
 Certains providers (OpenAI notamment) retournent 429 pour le rate limit ET pour le quota epuise. La difference est dans le message d'erreur. `isQuotaExhausted()` dans `errors.ts` parse les patterns connus : "insufficient_quota", "quota exceeded", "billing hard limit", "credit", "plan limit".
+
+### shadcn Switch n'existe pas dans le projet (session 15)
+**Symptome** : `TS2307` — Cannot find module `@/components/ui/switch`.
+**Cause** : Le composant Switch de shadcn n'a jamais ete installe dans le projet.
+**Fix** : Utiliser un `<button>` custom avec Tailwind pour le track/thumb (meme rendu visuel). Voir `TaskCard.tsx` pour le pattern.
+**Regle** : Verifier l'existence des composants shadcn avant de les utiliser (`src/renderer/src/components/ui/`).
+
+### Import path profondeur tasks store (session 15)
+**Symptome** : `TS2307` — Cannot find module `../../../../src/preload/types`.
+**Cause** : `stores/` est a 3 niveaux de `preload/` (pas 4). Le path incorrect avait un `src/` en trop.
+**Fix** : Utiliser `../../../preload/types` (3 `../`) depuis `stores/tasks.store.ts` (meme profondeur que `workspace.store.ts`).
