@@ -1,9 +1,12 @@
 import React, { useCallback, useMemo, useState } from 'react'
 import type { Message } from '@/stores/messages.store'
+import { useMessagesStore } from '@/stores/messages.store'
 import { MessageContent } from './MessageContent'
 import { AudioPlayer } from './AudioPlayer'
+import { FileOperationCard } from '@/components/workspace/FileOperationCard'
 import { cn } from '@/lib/utils'
 import { Brain, Check, ChevronDown, ChevronRight, Copy, File as FileIcon, Image as ImageIcon, Loader2, Sparkles } from 'lucide-react'
+import type { FileOperation } from '../../../../preload/types'
 
 interface MessageItemProps {
   message: Message
@@ -155,6 +158,7 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
 
   const label = providerLabel(message.providerId, message.modelId)
   const tokens = formatTokens(message.tokensIn, message.tokensOut)
+  const fileOperations = (message.contentData?.fileOperations as FileOperation[] | undefined) ?? []
 
   return (
     <div
@@ -188,7 +192,7 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
         )}
 
         {/* Reasoning block — collapsible thinking phase */}
-        {message.reasoning && (
+        {typeof message.reasoning === 'string' && message.reasoning.length > 0 && (
           <ReasoningBlock reasoning={message.reasoning} isStreaming={isStreaming && message.streamPhase === 'reasoning'} />
         )}
 
@@ -218,6 +222,38 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
             attachments={message.contentData.attachments as Array<{ path: string; name: string; size: number; type: string; mimeType: string }>}
           />
         )}
+
+        {/* File operations proposed by LLM */}
+        {!isUser && fileOperations.map((op: FileOperation) => (
+          <FileOperationCard
+            key={op.id}
+            operation={op}
+            onApprove={async (operation) => {
+              try {
+                if (operation.type === 'delete') {
+                  await window.api.workspaceDeleteFile(operation.path)
+                } else if (operation.content) {
+                  await window.api.workspaceWriteFile({ path: operation.path, content: operation.content })
+                }
+                // Update status via store
+                const ops = (message.contentData?.fileOperations as FileOperation[]) || []
+                const updated = ops.map((o: FileOperation) => o.id === operation.id ? { ...o, status: 'approved' as const } : o)
+                useMessagesStore.getState().updateMessage(message.id, {
+                  contentData: { ...message.contentData, fileOperations: updated }
+                })
+              } catch (err) {
+                console.error('[FileOp] Apply failed:', err)
+              }
+            }}
+            onReject={(operation) => {
+              const ops = (message.contentData?.fileOperations as FileOperation[]) || []
+              const updated = ops.map((o: FileOperation) => o.id === operation.id ? { ...o, status: 'rejected' as const } : o)
+              useMessagesStore.getState().updateMessage(message.id, {
+                contentData: { ...message.contentData, fileOperations: updated }
+              })
+            }}
+          />
+        ))}
 
         {/* Streaming indicator — generating phase */}
         {isStreaming && message.streamPhase === 'generating' && (

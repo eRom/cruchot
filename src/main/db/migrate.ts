@@ -149,4 +149,16 @@ export function runMigrations(): void {
       // Column already exists — ignore
     }
   }
+
+  // Add workspace_path column to projects table
+  const projectMigrations = [
+    'ALTER TABLE projects ADD COLUMN workspace_path TEXT'
+  ]
+  for (const sql of projectMigrations) {
+    try {
+      sqlite.exec(sql)
+    } catch {
+      // Column already exists — ignore
+    }
+  }
 }

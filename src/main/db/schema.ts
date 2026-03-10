@@ -40,6 +40,7 @@ export const projects = sqliteTable('projects', {
   systemPrompt: text('system_prompt'),
   defaultModelId: text('default_model_id'),
   color: text('color'),
+  workspacePath: text('workspace_path'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
