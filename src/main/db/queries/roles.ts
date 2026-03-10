@@ -1,8 +1,7 @@
 import { eq, desc } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { getDatabase } from '../index'
-import { roles } from '../schema'
-import { conversations } from '../schema'
+import { roles, conversations, scheduledTasks } from '../schema'
 
 export function getAllRoles() {
   const db = getDatabase()
@@ -78,6 +77,11 @@ export function deleteRole(id: string) {
   db.update(conversations)
     .set({ roleId: null })
     .where(eq(conversations.roleId, id))
+    .run()
+  // Clear roleId on scheduled tasks that reference this role
+  db.update(scheduledTasks)
+    .set({ roleId: null })
+    .where(eq(scheduledTasks.roleId, id))
     .run()
   // Then delete the role
   db.delete(roles).where(eq(roles.id, id)).run()

@@ -5,6 +5,7 @@ import { initDatabase, closeDatabase } from './db'
 import { runMigrations } from './db/migrate'
 import { getDbPath } from './utils/paths'
 import { initAutoUpdater, stopAutoUpdater } from './services/updater.service'
+import { schedulerService } from './services/scheduler.service'
 import { pathToFileURL } from 'node:url'
 
 let mainWindow: BrowserWindow | null = null
@@ -27,6 +28,9 @@ app.whenReady().then(() => {
   registerAllIpcHandlers()
   mainWindow = createMainWindow()
 
+  // Scheduler — start timers for enabled scheduled tasks
+  schedulerService.init(mainWindow)
+
   // Auto-updater — only in packaged builds
   if (app.isPackaged) {
     initAutoUpdater()
@@ -46,6 +50,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  schedulerService.stopAll()
   stopAutoUpdater()
   closeDatabase()
 })

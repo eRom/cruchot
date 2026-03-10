@@ -254,6 +254,44 @@ export interface TtsProviderOption {
   name: string
 }
 
+// ── Scheduled Tasks ─────────────────────────────────────────
+export type ScheduleType = 'manual' | 'interval' | 'daily' | 'weekly'
+
+export interface ScheduleConfig {
+  value?: number
+  unit?: 'seconds' | 'minutes' | 'hours'
+  time?: string       // "HH:MM"
+  days?: number[]     // 0=dimanche, 1=lundi, ..., 6=samedi
+}
+
+export interface ScheduledTaskInfo {
+  id: string
+  name: string
+  description: string
+  prompt: string
+  modelId: string            // "providerId::modelId"
+  roleId?: string | null
+  projectId?: string | null
+  scheduleType: ScheduleType
+  scheduleConfig: ScheduleConfig | null
+  isEnabled: boolean
+  lastRunAt?: Date | null
+  nextRunAt?: Date | null
+  lastRunStatus?: 'success' | 'error' | null
+  lastRunError?: string | null
+  lastConversationId?: string | null
+  runCount: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface TaskExecutedEvent {
+  taskId: string
+  conversationId: string
+  success: boolean
+  error?: string
+}
+
 export interface ExportResult {
   exported: boolean
   filePath?: string
@@ -412,6 +450,36 @@ export interface ElectronAPI {
   // TTS
   ttsSynthesize: (payload: TtsSynthesizePayload) => Promise<TtsSynthesizeResult>
   ttsGetAvailableProviders: () => Promise<TtsProviderOption[]>
+
+  // Scheduled Tasks
+  getScheduledTasks: () => Promise<ScheduledTaskInfo[]>
+  getScheduledTask: (id: string) => Promise<ScheduledTaskInfo | undefined>
+  createScheduledTask: (data: {
+    name: string
+    description: string
+    prompt: string
+    modelId: string
+    roleId?: string | null
+    projectId?: string | null
+    scheduleType: ScheduleType
+    scheduleConfig: { type: string; value?: number; unit?: string; time?: string; days?: number[] }
+  }) => Promise<ScheduledTaskInfo>
+  updateScheduledTask: (id: string, data: {
+    name?: string
+    description?: string
+    prompt?: string
+    modelId?: string
+    roleId?: string | null
+    projectId?: string | null
+    scheduleType?: ScheduleType
+    scheduleConfig?: { type: string; value?: number; unit?: string; time?: string; days?: number[] }
+    isEnabled?: boolean
+  }) => Promise<ScheduledTaskInfo | undefined>
+  deleteScheduledTask: (id: string) => Promise<void>
+  executeScheduledTask: (id: string) => Promise<void>
+  toggleScheduledTask: (id: string) => Promise<ScheduledTaskInfo | undefined>
+  onTaskExecuted: (callback: (data: TaskExecutedEvent) => void) => void
+  offTaskExecuted: () => void
 
   // Settings
   getSetting: (key: string) => Promise<string | null>

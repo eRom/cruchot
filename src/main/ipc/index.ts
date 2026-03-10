@@ -20,6 +20,7 @@ import { registerImagesIpc } from './images.ipc'
 import { registerUpdaterIpc } from './updater.ipc'
 import { registerWorkspaceIpc } from './workspace.ipc'
 import { registerTtsIpc } from './tts.ipc'
+import { registerScheduledTasksIpc } from './scheduled-tasks.ipc'
 
 /**
  * Registre central des IPC handlers.
@@ -79,6 +80,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── TTS (text-to-speech) ─────────────────────
   registerTtsIpc()
+
+  // ── Scheduled Tasks ─────────────────────────
+  registerScheduledTasksIpc()
 
   // ── Settings ────────────────────────────────────────
   ipcMain.handle('settings:get', async (_event, key: string) => {

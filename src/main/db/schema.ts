@@ -165,6 +165,39 @@ export const ttsUsage = sqliteTable('tts_usage', {
 })
 
 // ---------------------------------------------------------------------------
+// Scheduled Tasks
+// ---------------------------------------------------------------------------
+export const scheduledTasks = sqliteTable('scheduled_tasks', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  prompt: text('prompt').notNull(),
+  modelId: text('model_id').notNull(),
+  roleId: text('role_id').references(() => roles.id),
+  projectId: text('project_id').references(() => projects.id),
+  scheduleType: text('schedule_type', {
+    enum: ['manual', 'interval', 'daily', 'weekly']
+  }).notNull(),
+  scheduleConfig: text('schedule_config', { mode: 'json' }).$type<{
+    value?: number
+    unit?: 'seconds' | 'minutes' | 'hours'
+    time?: string
+    days?: number[]
+  } | null>(),
+  isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(true),
+  lastRunAt: integer('last_run_at', { mode: 'timestamp' }),
+  nextRunAt: integer('next_run_at', { mode: 'timestamp' }),
+  lastRunStatus: text('last_run_status', {
+    enum: ['success', 'error']
+  }),
+  lastRunError: text('last_run_error'),
+  lastConversationId: text('last_conversation_id'),
+  runCount: integer('run_count').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+})
+
+// ---------------------------------------------------------------------------
 // Images
 // ---------------------------------------------------------------------------
 export const images = sqliteTable('images', {

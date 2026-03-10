@@ -8,7 +8,8 @@ import {
   Image,
   FolderOpen,
   BookOpen,
-  UserCircle
+  UserCircle,
+  Clock
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -214,6 +215,13 @@ export function Sidebar(): React.JSX.Element {
           isActive={currentView === 'roles'}
           isCollapsed={collapsed}
           onClick={() => handleNavClick('roles')}
+        />
+        <NavButton
+          icon={Clock}
+          label="Taches"
+          isActive={currentView === 'tasks'}
+          isCollapsed={collapsed}
+          onClick={() => handleNavClick('tasks')}
         />
         <NavButton
           icon={Settings}
