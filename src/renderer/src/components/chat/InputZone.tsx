@@ -79,6 +79,11 @@ export function InputZone({
     selectedModel?.contextWindow ?? 0
   )
 
+  const totalCost = useMemo(
+    () => conversationMessages.reduce((sum, m) => sum + (m.cost ?? 0), 0),
+    [conversationMessages]
+  )
+
   // ── Derived state ────────────────────────────────────────
   const isBusy = isStreaming || isGeneratingImage
   const canSend = content.trim().length > 0 && !isBusy && !!selectedModelId && !!selectedProviderId
@@ -493,7 +498,7 @@ export function InputZone({
 
         {/* Context window indicator — mode texte uniquement */}
         {!isImageMode && selectedModel && maxTokens > 0 && (
-          <ContextWindowIndicator currentTokens={currentTokens} maxTokens={maxTokens} />
+          <ContextWindowIndicator currentTokens={currentTokens} maxTokens={maxTokens} totalCost={totalCost} />
         )}
 
         {/* Bottom slot */}

@@ -31,7 +31,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     id: 'mistral',
     name: 'Mistral AI',
     type: 'cloud',
-    description: 'Mistral Large, Devstral',
+    description: 'Magistral Medium, Codestral, Devstral 2, Mistral Large 3',
     requiresApiKey: true,
     icon: 'wind'
   },
@@ -248,12 +248,38 @@ export const MODELS: ModelDefinition[] = [
 
   // Mistral
   {
+    id: 'magistral-medium-2509',
+    providerId: 'mistral',
+    name: 'magistral-medium-2509',
+    displayName: 'Magistral Medium',
+    type: 'text',
+    contextWindow: 128000,
+    inputPrice: 2.00,
+    outputPrice: 5.00,
+    supportsImages: true,
+    supportsStreaming: true,
+    supportsThinking: true
+  },
+  {
+    id: 'codestral-2508',
+    providerId: 'mistral',
+    name: 'codestral-2508',
+    displayName: 'Codestral',
+    type: 'text',
+    contextWindow: 256000,
+    inputPrice: 0.30,
+    outputPrice: 0.90,
+    supportsImages: false,
+    supportsStreaming: true,
+    supportsThinking: false
+  },
+  {
     id: 'devstral-2512',
     providerId: 'mistral',
     name: 'devstral-2512',
-    displayName: 'Devstral 2512',
+    displayName: 'Devstral 2',
     type: 'text',
-    contextWindow: 262000,
+    contextWindow: 256000,
     inputPrice: 0.40,
     outputPrice: 2.00,
     supportsImages: false,
@@ -264,7 +290,7 @@ export const MODELS: ModelDefinition[] = [
     id: 'mistral-large-2512',
     providerId: 'mistral',
     name: 'mistral-large-2512',
-    displayName: 'Mistral Large 2512',
+    displayName: 'Mistral Large 3',
     type: 'text',
     contextWindow: 262000,
     inputPrice: 0.50,
