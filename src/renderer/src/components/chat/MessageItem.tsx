@@ -1,9 +1,9 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import type { Message } from '@/stores/messages.store'
 import { MessageContent } from './MessageContent'
 import { AudioPlayer } from './AudioPlayer'
 import { cn } from '@/lib/utils'
-import { Brain, Check, ChevronDown, ChevronRight, Copy, Loader2, Sparkles } from 'lucide-react'
+import { Brain, Check, ChevronDown, ChevronRight, Copy, File as FileIcon, Image as ImageIcon, Loader2, Sparkles } from 'lucide-react'
 
 interface MessageItemProps {
   message: Message
@@ -74,6 +74,64 @@ function ReasoningBlock({ reasoning, isStreaming }: { reasoning: string; isStrea
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+/** Format file size for display */
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+/** Check if a file exists by trying to load it (for image thumbnails) */
+const IMAGE_MIME_SET = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+
+/** Display attachments on a user message */
+function MessageAttachments({ attachments }: { attachments: Array<{ path: string; name: string; size: number; type: string; mimeType: string }> }) {
+  if (!attachments || attachments.length === 0) return null
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      {attachments.map((att, i) => {
+        const isImage = IMAGE_MIME_SET.has(att.mimeType)
+
+        return (
+          <div
+            key={`${att.name}-${i}`}
+            className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-2.5 py-1.5"
+          >
+            {isImage ? (
+              <img
+                src={`local-image://${att.path}`}
+                alt={att.name}
+                className="size-10 shrink-0 rounded object-cover"
+                onError={(e) => {
+                  // File deleted — show fallback icon
+                  const target = e.currentTarget
+                  target.style.display = 'none'
+                  target.nextElementSibling?.classList.remove('hidden')
+                }}
+              />
+            ) : null}
+            {isImage && (
+              <div className="hidden size-10 shrink-0 items-center justify-center rounded bg-white/10">
+                <ImageIcon className="size-4 text-white/50" />
+              </div>
+            )}
+            {!isImage && (
+              <div className="flex size-10 shrink-0 items-center justify-center rounded bg-white/10">
+                <FileIcon className="size-4 text-white/70" />
+              </div>
+            )}
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-xs font-medium text-white/90 max-w-[120px]">{att.name}</span>
+              <span className="text-[10px] text-white/50">{formatFileSize(att.size)}</span>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -153,6 +211,13 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
         ) : message.content ? (
           <MessageContent content={message.content} role={message.role} />
         ) : null}
+
+        {/* Attached files on user messages */}
+        {isUser && message.contentData?.attachments && (
+          <MessageAttachments
+            attachments={message.contentData.attachments as Array<{ path: string; name: string; size: number; type: string; mimeType: string }>}
+          />
+        )}
 
         {/* Streaming indicator — generating phase */}
         {isStreaming && message.streamPhase === 'generating' && (

@@ -2,6 +2,14 @@
 
 export type ThinkingEffort = 'off' | 'low' | 'medium' | 'high'
 
+export interface AttachmentRef {
+  path: string
+  name: string
+  size: number
+  type: 'image' | 'document' | 'code'
+  mimeType: string
+}
+
 export interface SendMessagePayload {
   conversationId: string
   content: string
@@ -13,6 +21,7 @@ export interface SendMessagePayload {
   topP?: number
   thinkingEffort?: ThinkingEffort
   roleId?: string
+  attachments?: AttachmentRef[]
 }
 
 export interface StreamChunk {
@@ -300,7 +309,8 @@ export interface ElectronAPI {
   offNetworkChanged: () => void
 
   // Files (attachments)
-  fileSave: (data: { buffer: ArrayBuffer; filename: string }) => Promise<string>
+  filePick: () => Promise<AttachmentRef[]>
+  fileSave: (data: { buffer: ArrayBuffer; filename: string }) => Promise<{ path: string; size: number }>
   fileRead: (filePath: string) => Promise<ArrayBuffer>
 
   // Images (generation)
