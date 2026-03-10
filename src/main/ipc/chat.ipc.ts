@@ -1,9 +1,10 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import { z } from 'zod'
-import { streamText } from 'ai'
+import { streamText, NoOutputGeneratedError } from 'ai'
 import { getModel } from '../llm/router'
 import { calculateMessageCost } from '../llm/cost-calculator'
 import { classifyError } from '../llm/errors'
+import { buildThinkingProviderOptions } from '../llm/thinking'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
 import { touchConversation, renameConversation, getConversation } from '../db/queries/conversations'
 
@@ -15,7 +16,8 @@ const sendMessageSchema = z.object({
   systemPrompt: z.string().optional(),
   temperature: z.number().min(0).max(2).optional(),
   maxTokens: z.number().positive().optional(),
-  topP: z.number().min(0).max(1).optional()
+  topP: z.number().min(0).max(1).optional(),
+  thinkingEffort: z.enum(['off', 'low', 'medium', 'high']).optional()
 })
 
 let currentAbortController: AbortController | null = null
@@ -27,7 +29,7 @@ export function registerChatIpc(): void {
       throw new Error(`Invalid payload: ${parsed.error.message}`)
     }
 
-    const { conversationId, content, modelId, providerId, systemPrompt, temperature, maxTokens, topP } = parsed.data
+    const { conversationId, content, modelId, providerId, systemPrompt, temperature, maxTokens, topP, thinkingEffort } = parsed.data
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) throw new Error('No window found')
 
@@ -66,6 +68,13 @@ export function registerChatIpc(): void {
 
       const model = getModel(providerId, modelId)
 
+      // Signal the renderer that processing has started
+      win.webContents.send('chat:chunk', {
+        type: 'start',
+        modelId,
+        providerId
+      })
+
       // Load conversation history from DB
       const dbMessages = getMessagesForConversation(conversationId)
       const aiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = []
@@ -80,6 +89,14 @@ export function registerChatIpc(): void {
         }
       }
 
+      // Build providerOptions for thinking if supported
+      const providerOptions = thinkingEffort && thinkingEffort !== 'off'
+        ? buildThinkingProviderOptions(providerId, thinkingEffort)
+        : undefined
+
+      // Accumulate reasoning text during streaming
+      let accumulatedReasoning = ''
+
       const result = streamText({
         model,
         messages: aiMessages,
@@ -87,10 +104,17 @@ export function registerChatIpc(): void {
         temperature,
         maxTokens,
         topP,
+        providerOptions,
         onChunk({ chunk }) {
           if (chunk.type === 'text-delta') {
             win.webContents.send('chat:chunk', {
               type: 'text-delta',
+              content: chunk.text
+            })
+          } else if (chunk.type === 'reasoning-delta') {
+            accumulatedReasoning += chunk.text
+            win.webContents.send('chat:chunk', {
+              type: 'reasoning-delta',
               content: chunk.text
             })
           }
@@ -101,7 +125,11 @@ export function registerChatIpc(): void {
           const tokensOut = usage?.completionTokens ?? 0
           const cost = calculateMessageCost(modelId, tokensIn, tokensOut)
 
-          // Save assistant message to DB
+          // Save assistant message to DB (with reasoning in contentData if present)
+          const contentData = accumulatedReasoning
+            ? { reasoning: accumulatedReasoning }
+            : undefined
+
           const savedMessage = createMessage({
             conversationId,
             role: 'assistant',
@@ -111,7 +139,8 @@ export function registerChatIpc(): void {
             tokensIn,
             tokensOut,
             cost,
-            responseTimeMs
+            responseTimeMs,
+            contentData
           })
 
           win.webContents.send('chat:chunk', {
@@ -132,7 +161,16 @@ export function registerChatIpc(): void {
       })
 
       // Consume the stream (needed for onChunk/onFinish to fire)
-      await result.text
+      try {
+        await result.text
+      } catch (e) {
+        // NoOutputGeneratedError = stream completed but no text output
+        // (reasoning models may produce only reasoning tokens)
+        // onFinish already handled saving, so we can ignore this
+        if (!(e instanceof NoOutputGeneratedError)) {
+          throw e
+        }
+      }
 
     } catch (error: unknown) {
       currentAbortController = null
@@ -147,6 +185,7 @@ export function registerChatIpc(): void {
       }
 
       const classified = classifyError(error)
+      console.error('[Chat] Stream error:', error)
       win.webContents.send('chat:chunk', {
         type: 'error',
         error: classified.message,

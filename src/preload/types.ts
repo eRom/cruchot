@@ -1,5 +1,7 @@
 // Types partages pour l'API IPC entre main et renderer
 
+export type ThinkingEffort = 'off' | 'low' | 'medium' | 'high'
+
 export interface SendMessagePayload {
   conversationId: string
   content: string
@@ -9,10 +11,11 @@ export interface SendMessagePayload {
   temperature?: number
   maxTokens?: number
   topP?: number
+  thinkingEffort?: ThinkingEffort
 }
 
 export interface StreamChunk {
-  type: 'text-delta' | 'tool-call' | 'finish' | 'error'
+  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'finish' | 'error'
   content?: string
   error?: string
   usage?: {
@@ -44,6 +47,7 @@ export interface ModelInfo {
   outputPrice: number
   supportsImages: boolean
   supportsStreaming: boolean
+  supportsThinking: boolean
 }
 
 export interface ConversationInfo {
@@ -66,6 +70,7 @@ export interface MessageInfo {
   tokensOut?: number
   cost?: number
   responseTimeMs?: number
+  contentData?: Record<string, unknown>
   createdAt: Date
 }
 

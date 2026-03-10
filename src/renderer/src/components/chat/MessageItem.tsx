@@ -3,7 +3,7 @@ import type { Message } from '@/stores/messages.store'
 import { MessageContent } from './MessageContent'
 import { AudioPlayer } from './AudioPlayer'
 import { cn } from '@/lib/utils'
-import { Check, Copy, Sparkles } from 'lucide-react'
+import { Brain, Check, ChevronDown, ChevronRight, Copy, Loader2, Sparkles } from 'lucide-react'
 
 interface MessageItemProps {
   message: Message
@@ -41,6 +41,41 @@ function providerLabel(providerId?: string, modelId?: string): string | null {
     return `${provider} - ${model}`
   }
   return model
+}
+
+/** Collapsible reasoning/thinking block */
+function ReasoningBlock({ reasoning, isStreaming }: { reasoning: string; isStreaming: boolean }) {
+  const [expanded, setExpanded] = useState(isStreaming)
+
+  return (
+    <div className="mb-2">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-1.5 text-xs font-medium text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
+      >
+        {isStreaming ? (
+          <Brain className="size-3.5 animate-pulse" />
+        ) : expanded ? (
+          <ChevronDown className="size-3.5" />
+        ) : (
+          <ChevronRight className="size-3.5" />
+        )}
+        <span>{isStreaming ? 'Reflexion en cours...' : 'Reflexion'}</span>
+      </button>
+      {(expanded || isStreaming) && (
+        <div className="mt-1.5 rounded-lg border border-violet-200/40 dark:border-violet-500/20 bg-violet-50/50 dark:bg-violet-950/20 px-3 py-2 text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto">
+          {reasoning}
+          {isStreaming && (
+            <span className="inline-flex ml-0.5 gap-[2px] align-middle">
+              <span className="size-1 animate-pulse rounded-full bg-violet-500/50" style={{ animationDelay: '0ms' }} />
+              <span className="size-1 animate-pulse rounded-full bg-violet-500/50" style={{ animationDelay: '150ms' }} />
+              <span className="size-1 animate-pulse rounded-full bg-violet-500/50" style={{ animationDelay: '300ms' }} />
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 /**
@@ -86,6 +121,19 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
             : 'bg-card text-card-foreground shadow-[0_1px_3px_0_rgba(0,0,0,0.04)] ring-1 ring-border/60 dark:shadow-none'
         )}
       >
+        {/* Processing phase — spinner before any content arrives */}
+        {isStreaming && message.streamPhase === 'processing' && (
+          <div className="flex items-center gap-2 py-1 text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />
+            <span className="text-sm">Traitement en cours...</span>
+          </div>
+        )}
+
+        {/* Reasoning block — collapsible thinking phase */}
+        {message.reasoning && (
+          <ReasoningBlock reasoning={message.reasoning} isStreaming={isStreaming && message.streamPhase === 'reasoning'} />
+        )}
+
         {/* Content */}
         {message.contentData?.type === 'image' ? (
           <div className="flex flex-col gap-2">
@@ -102,13 +150,12 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
             />
             <p className="text-xs text-muted-foreground/70 italic">{message.content}</p>
           </div>
-        ) : (
+        ) : message.content ? (
           <MessageContent content={message.content} role={message.role} />
-        )}
+        ) : null}
 
-
-        {/* Streaming indicator */}
-        {isStreaming && (
+        {/* Streaming indicator — generating phase */}
+        {isStreaming && message.streamPhase === 'generating' && (
           <span className="mt-1 inline-flex gap-[3px]">
             <span className="size-1.5 animate-pulse rounded-full bg-current opacity-40" style={{ animationDelay: '0ms' }} />
             <span className="size-1.5 animate-pulse rounded-full bg-current opacity-40" style={{ animationDelay: '150ms' }} />
@@ -116,16 +163,14 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
           </span>
         )}
 
-        {/* Copy button — appears on hover */}
-        {!isStreaming && message.content.length > 0 && (
+        {/* User copy button — appears on hover */}
+        {isUser && !isStreaming && message.content.length > 0 && (
           <button
             onClick={handleCopy}
             title={copied ? 'Copié !' : 'Copier'}
             className={cn(
               'absolute -bottom-3 right-2 flex size-6 items-center justify-center rounded-md opacity-0 transition-all group-hover:opacity-100',
-              isUser
-                ? 'bg-blue-500/30 text-white/70 hover:bg-blue-500/50 hover:text-white'
-                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              'bg-blue-500/30 text-white/70 hover:bg-blue-500/50 hover:text-white'
             )}
             aria-label="Copier le message"
           >
@@ -136,31 +181,46 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
             )}
           </button>
         )}
-      </div>
 
-      {/* Metadata row — assistant only */}
-      {!isUser && !isStreaming && (label || tokens || message.cost != null || message.responseTimeMs != null) && (
-        <div className="mt-auto flex shrink-0 flex-col gap-0.5 self-end pb-1">
-          {label && (
-            <span className="text-[11px] font-medium text-muted-foreground/60">
-              {label}
-            </span>
-          )}
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground/50">
-            {tokens && <span>{tokens}</span>}
-            {message.cost != null && message.cost > 0 && (
-              <span>{formatCost(message.cost)}</span>
-            )}
-            {message.responseTimeMs != null && (
-              <span>{formatTime(message.responseTimeMs)}</span>
-            )}
+        {/* Assistant footer — actions left, model info right */}
+        {!isUser && !isStreaming && message.content.length > 0 && (
+          <div className="mt-2 flex items-center justify-between gap-3 border-t border-border/30 pt-2">
+            {/* Left — actions */}
+            <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+              {/* TTS — not for image messages */}
+              {message.contentData?.type !== 'image' && (
+                <AudioPlayer text={message.content} compact />
+              )}
+              <button
+                onClick={handleCopy}
+                title={copied ? 'Copié !' : 'Copier'}
+                className={cn(
+                  'flex size-6 items-center justify-center rounded-md',
+                  'text-muted-foreground/60 hover:bg-accent hover:text-accent-foreground',
+                  'transition-colors'
+                )}
+                aria-label="Copier le message"
+              >
+                {copied ? (
+                  <Check className="size-3.5" />
+                ) : (
+                  <Copy className="size-3.5" />
+                )}
+              </button>
+            </div>
+
+            {/* Right — model info */}
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground/40">
+              {label && (
+                <span className="font-medium">{label}</span>
+              )}
+              {message.responseTimeMs != null && (
+                <span>{formatTime(message.responseTimeMs)}</span>
+              )}
+            </div>
           </div>
-          {/* TTS — read message aloud (not for image messages) */}
-          {message.content.length > 0 && message.contentData?.type !== 'image' && (
-            <AudioPlayer text={message.content} compact />
-          )}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

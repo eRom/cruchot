@@ -28,7 +28,11 @@ export default function ChatView() {
     async function loadMessages() {
       try {
         const msgs = await window.api.getMessages(activeConversationId!)
-        setMessages(msgs.map((m): Message => ({ ...m, isStreaming: false })))
+        setMessages(msgs.map((m): Message => ({
+          ...m,
+          isStreaming: false,
+          reasoning: (m.contentData?.reasoning as string) || undefined
+        })))
       } catch (error) {
         console.error('Failed to load messages:', error)
       }

@@ -7,6 +7,7 @@ import { ContextWindowIndicator } from '@/components/chat/ContextWindowIndicator
 import { VoiceInput } from '@/components/chat/VoiceInput'
 import { PromptPicker } from '@/components/chat/PromptPicker'
 import { AspectRatioSelector, type AspectRatio } from '@/components/chat/AspectRatioSelector'
+import { ThinkingSelector } from '@/components/chat/ThinkingSelector'
 import { useProvidersStore } from '@/stores/providers.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
@@ -57,6 +58,7 @@ export function InputZone({
   const temperature = useSettingsStore((s) => s.temperature)
   const settingsMaxTokens = useSettingsStore((s) => s.maxTokens)
   const topP = useSettingsStore((s) => s.topP)
+  const thinkingEffort = useSettingsStore((s) => s.thinkingEffort)
 
   // ── Context window ────────────────────────────────────────
   const conversationMessages = useMemo(
@@ -229,6 +231,7 @@ export function InputZone({
         temperature,
         maxTokens: settingsMaxTokens,
         topP,
+        thinkingEffort: selectedModel?.supportsThinking ? thinkingEffort : undefined,
       })
     } catch {
       // Erreur geree par le stream handler dans le main
@@ -245,6 +248,8 @@ export function InputZone({
     temperature,
     settingsMaxTokens,
     topP,
+    thinkingEffort,
+    selectedModel?.supportsThinking,
     onMessageSent
   ])
 
@@ -385,18 +390,17 @@ export function InputZone({
             {/* Cote gauche — ModelSelector + VoiceInput */}
             <div className="flex items-center gap-1.5">
               <ModelSelector disabled={isBusy} />
-              {!isImageMode && (
-                <>
-                  <PromptPicker
-                    onInsert={handlePromptInsert}
-                    disabled={isBusy}
-                  />
-                  <VoiceInput
-                    onTranscript={(text) => setContent((prev) => prev ? `${prev} ${text}` : text)}
-                    disabled={isBusy}
-                  />
-                </>
+              {selectedModel?.supportsThinking && !isImageMode && (
+                <ThinkingSelector disabled={isBusy} />
               )}
+              <PromptPicker
+                onInsert={handlePromptInsert}
+                disabled={isBusy}
+              />
+              <VoiceInput
+                onTranscript={(text) => setContent((prev) => prev ? `${prev} ${text}` : text)}
+                disabled={isBusy}
+              />
             </div>
 
             {/* Cote droit — Bouton envoyer / annuler */}
