@@ -5,8 +5,17 @@ import { getModel } from '../llm/router'
 import { calculateMessageCost } from '../llm/cost-calculator'
 import { classifyError } from '../llm/errors'
 import { buildThinkingProviderOptions } from '../llm/thinking'
+import { validateAttachment, processAttachments, buildContentParts, MAX_FILES_PER_MESSAGE, type AttachmentRef } from '../llm/attachments'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
 import { touchConversation, renameConversation, getConversation, updateConversationModel, updateConversationRole } from '../db/queries/conversations'
+
+const attachmentSchema = z.object({
+  path: z.string().min(1),
+  name: z.string().min(1),
+  size: z.number().nonnegative(),
+  type: z.enum(['image', 'document', 'code']),
+  mimeType: z.string().min(1)
+})
 
 const sendMessageSchema = z.object({
   conversationId: z.string().min(1),
@@ -18,7 +27,8 @@ const sendMessageSchema = z.object({
   maxTokens: z.number().positive().optional(),
   topP: z.number().min(0).max(1).optional(),
   thinkingEffort: z.enum(['off', 'low', 'medium', 'high']).optional(),
-  roleId: z.string().optional()
+  roleId: z.string().optional(),
+  attachments: z.array(attachmentSchema).max(MAX_FILES_PER_MESSAGE).optional()
 })
 
 let currentAbortController: AbortController | null = null
@@ -30,7 +40,7 @@ export function registerChatIpc(): void {
       throw new Error(`Invalid payload: ${parsed.error.message}`)
     }
 
-    const { conversationId, content, modelId, providerId, systemPrompt, temperature, maxTokens, topP, thinkingEffort, roleId } = parsed.data
+    const { conversationId, content, modelId, providerId, systemPrompt, temperature, maxTokens, topP, thinkingEffort, roleId, attachments: attachmentRefs } = parsed.data
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) throw new Error('No window found')
 
@@ -43,13 +53,30 @@ export function registerChatIpc(): void {
     const startTime = Date.now()
 
     try {
-      // Save user message to DB
+      // Re-validate attachments (extension, size, existence) in the main process
+      const validatedRefs: AttachmentRef[] = []
+      if (attachmentRefs && attachmentRefs.length > 0) {
+        for (const ref of attachmentRefs) {
+          const result = validateAttachment(ref.path)
+          if (!result.valid) {
+            throw new Error(result.error)
+          }
+          validatedRefs.push(result.ref)
+        }
+      }
+
+      // Save user message to DB (with attachment references in contentData)
+      const userContentData = validatedRefs.length > 0
+        ? { attachments: validatedRefs.map(r => ({ path: r.path, name: r.name, size: r.size, type: r.type, mimeType: r.mimeType })) }
+        : undefined
+
       createMessage({
         conversationId,
         role: 'user',
         content,
         modelId,
-        providerId
+        providerId,
+        contentData: userContentData
       })
 
       // Touch conversation updatedAt
@@ -76,9 +103,16 @@ export function registerChatIpc(): void {
         providerId
       })
 
+      // Process attachments (extract text, encode images)
+      let processedAttachments: Awaited<ReturnType<typeof processAttachments>> = []
+      if (validatedRefs.length > 0) {
+        processedAttachments = await processAttachments(validatedRefs)
+      }
+      const { imageParts, inlineText } = buildContentParts(processedAttachments)
+
       // Load conversation history from DB
       const dbMessages = getMessagesForConversation(conversationId)
-      const aiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = []
+      const aiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<{ type: string; text?: string; image?: string; mimeType?: string }> }> = []
 
       if (systemPrompt) {
         aiMessages.push({ role: 'system', content: systemPrompt })
@@ -87,6 +121,28 @@ export function registerChatIpc(): void {
       for (const msg of dbMessages) {
         if (msg.role === 'user' || msg.role === 'assistant') {
           aiMessages.push({ role: msg.role, content: msg.content })
+        }
+      }
+
+      // Replace the last user message (just added above) with multi-part content if attachments
+      if (imageParts.length > 0 || inlineText) {
+        // Remove the last user message we just pushed from history
+        const lastIdx = aiMessages.length - 1
+        if (lastIdx >= 0 && aiMessages[lastIdx].role === 'user') {
+          const textWithAttachments = content + inlineText
+          if (imageParts.length > 0) {
+            // Multi-part: text + images
+            const parts: Array<{ type: string; text?: string; image?: string; mimeType?: string }> = [
+              { type: 'text', text: textWithAttachments }
+            ]
+            for (const img of imageParts) {
+              parts.push({ type: 'image', image: img.image, mimeType: img.mimeType })
+            }
+            aiMessages[lastIdx] = { role: 'user', content: parts }
+          } else {
+            // Text only (document/code attachments inlined)
+            aiMessages[lastIdx] = { role: 'user', content: textWithAttachments }
+          }
         }
       }
 

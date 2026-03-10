@@ -7,6 +7,10 @@ export interface AttachmentItem {
   type: string
   size: number
   url?: string
+  /** Absolute file path (from Electron File.path or drag event) */
+  path?: string
+  /** File category for IPC */
+  category?: 'image' | 'document' | 'code'
 }
 
 interface AttachmentPreviewProps {

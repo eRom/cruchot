@@ -155,6 +155,8 @@ const api: ElectronAPI = {
   },
 
   // ── Files (attachments) ─────────────────────────────
+  filePick: () => ipcRenderer.invoke('files:pick'),
+
   fileSave: (data) => ipcRenderer.invoke('files:save', data),
 
   fileRead: (filePath) => ipcRenderer.invoke('files:read', filePath),
