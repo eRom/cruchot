@@ -7,6 +7,14 @@ import { FileWatcherService } from '../services/file-watcher.service'
 let activeWorkspace: WorkspaceService | null = null
 let activeWatcher: FileWatcherService | null = null
 
+/**
+ * Returns the root path of the currently active workspace, or null.
+ * Used by other IPC modules for path validation.
+ */
+export function getActiveWorkspaceRoot(): string | null {
+  return activeWorkspace?.rootPath ?? null
+}
+
 export function registerWorkspaceIpc(): void {
   // ── Select folder (native dialog) ──────────────────────
   ipcMain.handle('workspace:selectFolder', async (event) => {

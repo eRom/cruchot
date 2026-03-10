@@ -1,6 +1,6 @@
 {
   "name": "multi-llm-desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Multi-LLM Desktop — Chat multi-provider avec support OpenAI, Anthropic, Gemini, Mistral, xAI, OpenRouter, Ollama, LM Studio",
   "main": "./out/main/index.js",
   "author": "Romain",
@@ -40,6 +40,7 @@
     "chokidar": "^5.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dompurify": "^3.3.2",
     "drizzle-orm": "^0.39.0",
     "electron-updater": "^6.3.0",
     "hotkeys-js": "^4.0.2",
@@ -67,6 +68,7 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
+    "@types/dompurify": "^3.0.5",
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
