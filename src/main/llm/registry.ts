@@ -44,6 +44,22 @@ export const PROVIDERS: ProviderDefinition[] = [
     icon: 'zap'
   },
   {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    type: 'cloud',
+    description: 'DeepSeek Chat, DeepSeek Reasoner',
+    requiresApiKey: true,
+    icon: 'layers'
+  },
+  {
+    id: 'qwen',
+    name: 'Alibaba Qwen',
+    type: 'cloud',
+    description: 'Qwen3 Max, Qwen3.5 Plus/Flash, QwQ Plus',
+    requiresApiKey: true,
+    icon: 'cloud'
+  },
+  {
     id: 'openrouter',
     name: 'OpenRouter',
     type: 'cloud',
@@ -298,6 +314,88 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: true,
     supportsStreaming: true,
     supportsThinking: false
+  },
+
+  // DeepSeek
+  {
+    id: 'deepseek-chat',
+    providerId: 'deepseek',
+    name: 'deepseek-chat',
+    displayName: 'DeepSeek Chat',
+    type: 'text',
+    contextWindow: 128000,
+    inputPrice: 0.28,
+    outputPrice: 0.42,
+    supportsImages: false,
+    supportsStreaming: true,
+    supportsThinking: true
+  },
+  {
+    id: 'deepseek-reasoner',
+    providerId: 'deepseek',
+    name: 'deepseek-reasoner',
+    displayName: 'DeepSeek Reasoner',
+    type: 'text',
+    contextWindow: 128000,
+    inputPrice: 0.28,
+    outputPrice: 0.42,
+    supportsImages: false,
+    supportsStreaming: true,
+    supportsThinking: true
+  },
+
+  // Alibaba Qwen
+  {
+    id: 'qwen3-max',
+    providerId: 'qwen',
+    name: 'qwen3-max',
+    displayName: 'Qwen3 Max',
+    type: 'text',
+    contextWindow: 262000,
+    inputPrice: 1.20,
+    outputPrice: 6.00,
+    supportsImages: false,
+    supportsStreaming: true,
+    supportsThinking: true
+  },
+  {
+    id: 'qwen3.5-plus',
+    providerId: 'qwen',
+    name: 'qwen3.5-plus',
+    displayName: 'Qwen3.5 Plus',
+    type: 'text',
+    contextWindow: 131000,
+    inputPrice: 0.40,
+    outputPrice: 2.40,
+    supportsImages: false,
+    supportsStreaming: true,
+    supportsThinking: true
+  },
+  {
+    id: 'qwen3.5-flash',
+    providerId: 'qwen',
+    name: 'qwen3.5-flash',
+    displayName: 'Qwen3.5 Flash',
+    type: 'text',
+    contextWindow: 131000,
+    inputPrice: 0.10,
+    outputPrice: 0.40,
+    supportsImages: false,
+    supportsStreaming: true,
+    supportsThinking: true
+  },
+  {
+    id: 'qwq-plus',
+    providerId: 'qwen',
+    name: 'qwq-plus',
+    displayName: 'QwQ Plus (Reasoning)',
+    type: 'text',
+    contextWindow: 131000,
+    inputPrice: 1.20,
+    outputPrice: 6.00,
+    supportsImages: false,
+    supportsStreaming: true,
+    supportsThinking: true
   },
 
   // ── Image Generation Models ─────────────────────────────────────────────

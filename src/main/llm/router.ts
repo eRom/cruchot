@@ -5,6 +5,8 @@ import {
   getGoogleProvider,
   getMistralProvider,
   getXaiProvider,
+  getDeepSeekProvider,
+  getQwenProvider,
   getPerplexityProvider,
   getOpenRouterProvider,
   getLmStudioProvider
@@ -30,6 +32,12 @@ export function getModel(providerId: string, modelId: string): LanguageModel {
 
     case 'xai':
       return getXaiProvider()(modelId)
+
+    case 'deepseek':
+      return getDeepSeekProvider()(modelId)
+
+    case 'qwen':
+      return getQwenProvider()(modelId)
 
     case 'perplexity':
       return getPerplexityProvider()(modelId)

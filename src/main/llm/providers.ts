@@ -3,6 +3,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createMistral } from '@ai-sdk/mistral'
 import { createXai } from '@ai-sdk/xai'
+import { createDeepSeek } from '@ai-sdk/deepseek'
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { getApiKeyForProvider } from '../ipc/providers.ipc'
 
@@ -39,6 +40,22 @@ export function getXaiProvider() {
   const apiKey = getApiKeyForProvider('xai')
   if (!apiKey) throw new Error('xAI API key not configured')
   return createXai({ apiKey })
+}
+
+export function getDeepSeekProvider() {
+  const apiKey = getApiKeyForProvider('deepseek')
+  if (!apiKey) throw new Error('DeepSeek API key not configured')
+  return createDeepSeek({ apiKey })
+}
+
+export function getQwenProvider() {
+  const apiKey = getApiKeyForProvider('qwen')
+  if (!apiKey) throw new Error('Qwen API key not configured')
+  return createOpenAICompatible({
+    name: 'qwen',
+    baseURL: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+    headers: { Authorization: `Bearer ${apiKey}` }
+  })
 }
 
 export function getPerplexityProvider() {
