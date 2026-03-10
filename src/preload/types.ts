@@ -23,6 +23,7 @@ export interface SendMessagePayload {
   roleId?: string
   attachments?: AttachmentRef[]
   fileContexts?: WorkspaceFileContext[]
+  hasWorkspace?: boolean
 }
 
 export interface FileNode {
@@ -73,6 +74,8 @@ export interface StreamChunk {
   type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'finish' | 'error'
   content?: string
   error?: string
+  toolName?: string
+  toolArgs?: Record<string, unknown>
   usage?: {
     promptTokens: number
     completionTokens: number
