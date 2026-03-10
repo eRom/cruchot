@@ -1,6 +1,6 @@
 # Gotchas — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 8)
+**Derniere mise a jour** : 2026-03-10 (session 9)
 
 ## Bugs resolus
 
@@ -106,6 +106,27 @@ Le Chat API xAI (`xai(modelId)`) supporte uniquement `reasoningEffort: 'low' | '
 Le Responses API (`xai.responses(modelId)`) supporte `'low' | 'medium' | 'high'`.
 Quand thinking est "off" pour xAI, ne pas envoyer de reasoningEffort (undefined).
 
+### Radix Select — SelectLabel exige SelectGroup (session 9)
+**Symptome** : Erreur React "SelectLabel must be used within SelectGroup".
+**Cause** : Les headers de section du RoleSelector utilisaient `<SelectLabel>` directement dans `<SelectContent>` sans `<SelectGroup>`.
+**Fix** : Remplacer `<SelectLabel>` par de simples `<div>` pour les headers de section. Pas besoin de Radix SelectGroup.
+**Regle** : Ne PAS utiliser `<SelectLabel>` sans `<SelectGroup>` dans les composants shadcn Select.
+
+### RoleSelector — hauteur inconsistante avec les autres pills (session 9)
+**Symptome** : Le RoleSelector pill etait plus haut que ModelSelector et ThinkingSelector (meme avec h-7, py-0, leading-none).
+**Cause** : Utiliser un `<button>` custom au lieu du composant `<SelectTrigger>` de shadcn. Le composant shadcn gere finement la hauteur interne.
+**Fix** : Rewrite complet avec `<Select>`/`<SelectTrigger>` de shadcn (meme pattern que ThinkingSelector). Copier le style exact.
+**Regle** : Pour les pill selectors dans InputZone, toujours utiliser shadcn Select, jamais de button custom.
+
+### RoleSelector popover coupe par overflow-hidden (session 9)
+**Symptome** : Le dropdown du RoleSelector etait tronque/invisible.
+**Cause** : Le conteneur parent de la textarea dans InputZone avait `overflow-hidden` qui clippait le popover Radix.
+**Fix** : Retirer `overflow-hidden` du div conteneur textarea dans InputZone.
+**Regle** : Ne pas mettre `overflow-hidden` sur un conteneur qui contient des Select/Popover Radix.
+
+### Roles — champs description/icone/categorie masques
+Romain veut que ces champs soient invisibles dans le formulaire ET les cartes. Ils sont gardes en DB (valeur vide par defaut) mais pas exposes dans l'UI.
+
 ## Composants non cables (session precedente)
 
 Probleme majeur decouvert : de nombreux composants crees par les agents P1/P2 n'etaient jamais importes. Session de cablage massif effectuee :
@@ -182,6 +203,12 @@ Dans `ai@^6.0.116`, `experimental_generateImage` est un alias deprece de `genera
 - Cout total conversation en gras dans le compteur de tokens (bas droite)
 - Blocs de code markdown : padding interne pour ne pas coller au bord
 
+## Preferences UI de Romain (complement session 9)
+
+- Roles : description, icone Lucide, categorie masques du formulaire ET des cartes
+- RoleSelector : doit etre APRES ThinkingSelector dans InputZone (pas avant)
+- Pills InputZone : toujours utiliser le meme composant shadcn Select (copier le pattern ThinkingSelector)
+
 ### MarkdownRenderer — blocs de code sans langage collent au bord
 **Symptome** : Texte colle a la bordure gauche dans les blocs de code sans langage specifie.
 **Cause** : `<pre>` n'avait pas de padding. Les blocs avec langage passaient par `ShikiCodeBlock` (qui a `p-4 pt-8`), mais les blocs sans langage tombaient dans le fallback inline `<code>` sans marge.
@@ -216,6 +243,7 @@ Quand on ajoute un champ au settings store (ex: `favoriteModelIds`), il sera `un
 - BranchNavigation dans MessageItem (T45)
 - a11y.ts utilitaires
 - ~~T56 (Advanced Stats)~~ — **FAIT** (session 8) — fix bugs + stats projet + global stats + 6 cards + 4 graphiques
+- ~~Roles (System Prompts)~~ — **FAIT** (session 9) — RolesView, RoleSelector, verrouillage, variables, persistance roleId
 - T48 (Prompt Optimizer), T52 (Export PDF), T60 (Packaging)
 - i18n (T41) — configure mais `useTranslation` jamais utilise
 - SSH key GitHub non configuree — push en HTTPS uniquement

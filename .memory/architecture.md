@@ -1,6 +1,6 @@
 # Architecture — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 8)
+**Derniere mise a jour** : 2026-03-10 (session 9)
 
 ## Vue d'ensemble
 
@@ -41,12 +41,13 @@ src/
     types.ts          # Types partages ElectronAPI + tous les DTO
   renderer/src/
     App.tsx            # Composant racine — routing par ViewMode
-    stores/            # Zustand: conversations, providers, projects, messages, settings, ui
+    stores/            # Zustand: conversations, providers, projects, messages, settings, ui, roles
     components/
       chat/            # ChatView, InputZone, MessageList, MessageItem, ModelSelector, etc.
       layout/          # Sidebar, AppLayout
       projects/        # ProjectsView (grille + form inline), ProjectSelector (dropdown sidebar)
       prompts/         # PromptsView (grille + form inline), bibliotheque de prompts
+      roles/           # RolesView (grille + form inline), RoleSelector (pill dans InputZone)
       settings/        # SettingsView (7 tabs), ApiKeysSection, AppearanceSettings, ModelSettings, etc.
       statistics/      # StatsView
       images/          # ImagesView, ImageGrid
@@ -64,6 +65,7 @@ src/
 - `prompts` — PromptsView (bibliotheque de prompts, types complet/complement)
 - `settings` — SettingsView (7 tabs)
 - `images` — ImagesView
+- `roles` — RolesView (bibliotheque de roles / system prompts)
 - `statistics` — StatsView
 
 ## Flux principal — Chat
@@ -152,6 +154,24 @@ StatsView mount → loadStats() → IPC invoke("statistics:*") avec days param
 - Si au moins 1 favori → seuls les favoris apparaissent dans le dropdown du chat
 - Gestion des favoris dans Settings > Modele > sous-onglet "Modeles LLM" / "Modeles Images" (etoile cliquable)
 - ProjectForm (modele par defaut projet) affiche TOUS les modeles, pas filtre par favoris
+
+## Flux — Roles (System Prompts) (session 9)
+
+```
+RolesView: CRUD roles (grille + form inline) → IPC invoke("roles:*")
+→ Main: roles.ts queries — create/update/delete/getAll/getById
+→ DB: table roles (id, name, systemPrompt, isBuiltin, category, tags, variables)
+```
+
+- **RoleSelector** : pill button dans InputZone (apres ThinkingSelector), shadcn Select identique a ThinkingSelector
+- **Sections dropdown** : "Aucun role", "Role projet" (virtuel, si projet a systemPrompt), "Integres", "Personnalises"
+- **Variables** : `{{varName}}` dans le systemPrompt, resolues via mini-formulaire popover
+- **Verrouillage** : `disabled` si la conversation a deja des messages (`messages.length > 0`)
+- **Persistance** : `conversation.roleId` sauve via `updateConversationRole()` apres le 1er message
+- **Restauration** : ChatView fetch le role via `getRole(roleId)` au switch de conversation, restaure activeSystemPrompt
+- **Role projet** : ID virtuel `__project__`, utilise `project.systemPrompt` — pre-selectionne pour les nouvelles convs dans un projet avec systemPrompt
+- **FK cleanup** : `deleteRole()` met a null le `roleId` des conversations avant suppression
+- **Formulaire** : nom + prompt systeme + variables + tags (description/icone/categorie masques)
 
 ## Flux — Persistance modele par conversation
 

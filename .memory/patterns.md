@@ -1,6 +1,6 @@
 # Patterns — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 8)
+**Derniere mise a jour** : 2026-03-10 (session 9)
 
 ## Conventions de nommage
 
@@ -98,6 +98,22 @@
 - Filtres : par type (pills), recherche texte, tri (activite/nom/creation)
 - Chaque prompt a : title, content, type, category, tags[], variables[]
 - Copier le contenu en un clic depuis la carte
+
+### Roles Pattern (session 9)
+- **RolesView** : meme pattern que PromptsView/ProjectsView — `subView` state ('grid' | 'create' | 'edit'), formulaire inline
+- **Role** : nom, systemPrompt, isBuiltin, category (masque), tags[], variables[] (avec name + description)
+- **Description/icone/categorie masques** du formulaire ET des cartes (Romain les veut caches)
+- **RoleSelector** : pill dans InputZone, utilise shadcn `Select`/`SelectTrigger` (meme structure que ThinkingSelector)
+- **Accent couleur** : emerald (vert) quand un role est actif (`bg-emerald-500/10 text-emerald-700`)
+- **Sections Select** : "Aucun role" → "Role projet" (si projet a systemPrompt) → "Integres" → "Personnalises"
+- **Headers de section** : `<div>` simple (PAS `<SelectLabel>` — Radix exige SelectGroup autour)
+- **Role projet** : ID virtuel `__project__`, utilise `project.systemPrompt`, pre-selectionne pour nouvelles convs
+- **Variables** : `{{varName}}` dans systemPrompt, popover overlay pour les remplir, `resolveVariables()` regex replace
+- **Verrouillage** : `isRoleLocked = conversationMessages.length > 0` → `disabled` prop sur RoleSelector
+- **Persistance** : `roleId` sauve via `updateConversationRole()` dans chat.ipc.ts apres le 1er message
+- **Restauration** : ChatView fetch role via `window.api.getRole(roleId)`, set `activeRole` + `activeSystemPrompt` dans roles.store
+- **FK cleanup** : `deleteRole()` dans queries met a null `roleId` des conversations avant suppression
+- **Store** : `roles.store.ts` — `activeRoleId`, `activeSystemPrompt` + setter, `roles[]`, `setRoles`
 
 ### Favorite Models Pattern (session 7)
 - `favoriteModelIds: string[]` dans settings.store (Zustand persist)
