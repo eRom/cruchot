@@ -1,6 +1,6 @@
 # Patterns — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 9)
+**Derniere mise a jour** : 2026-03-10 (session 11)
 
 ## Conventions de nommage
 
@@ -184,6 +184,21 @@
 - StatsView : 6 stat cards (grid 3x2), 4 graphiques Recharts (LineChart, 2x PieChart donut, BarChart horizontal)
 - PieChart projet utilise `project.color` comme couleur de segment
 - Formatage : `toLocaleString('fr-FR')` pour les nombres, `formatDuration(ms)` pour le temps
+
+### Workspace Co-Work Pattern (session 11)
+- **WorkspaceService** : classe avec `validatePath()` (anti path traversal), `isIgnored()` (.coworkignore), `isSensitive()` (blocklist), `scanTree()`, `readFile()`, `writeFile()`, `deleteFile()` (via `trash`)
+- **FileWatcherService** : Chokidar wrapper, `start(rootPath)` / `stop()`, `forwardToWindow(mainWindow)` static
+- **file-operations.ts** : regex parser pour blocs `` ```file:(create|modify|delete):path\ncontent``` `` → `ParsedFileOperation[]` avec nanoid IDs
+- **WorkspacePanel** : panneau droit collapsible — `isPanelOpen` toggle (pas close), `w-80` expanded / `w-10` collapsed, CSS `transition-[width] duration-200`
+- **ChatView** : auto-open workspace quand projet change (`useEffect` sur `activeProjectId`), file watcher sync avec debounce 300ms
+- **WorkspacePanel toujours rendu** : condition `workspaceRootPath && <WorkspacePanel />` (pas `isPanelOpen`), le panel gere son propre etat collapsed
+- **FileTree** : recursif, `matchesFilterDeep()` pour filtrage, right-click pour attacher, icones par extension
+- **FileOperationCard** : couleurs par type (green create, yellow modify, red delete), approve → `workspaceWriteFile`/`workspaceDeleteFile`, reject → update `contentData.fileOperations[].status`
+- **Injection contexte** : `fileContexts[]` envoyes depuis InputZone, injectes en system prompt comme `<workspace-files>` XML blocks dans `chat.ipc.ts`
+- **Format operations** : instructions dans le system prompt demandent au LLM d'utiliser `` ```file:create:path``` `` format
+- **Securite** : path traversal check (`..`), sensitive files blocklist (`.env`, credentials, etc.), 10MB file limit, binary detection
+- **Deps** : `chokidar` (ESM, `external` dans electron.vite.config), `trash` pour deletion safe
+- **Raccourci** : `Cmd+B` toggle workspace panel
 
 ### Data Pattern
 - Drizzle ORM avec schema-first

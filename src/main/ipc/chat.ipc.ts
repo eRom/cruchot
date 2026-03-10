@@ -6,6 +6,7 @@ import { calculateMessageCost } from '../llm/cost-calculator'
 import { classifyError } from '../llm/errors'
 import { buildThinkingProviderOptions } from '../llm/thinking'
 import { validateAttachment, processAttachments, buildContentParts, MAX_FILES_PER_MESSAGE, type AttachmentRef } from '../llm/attachments'
+import { parseFileOperations } from '../llm/file-operations'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
 import { touchConversation, renameConversation, getConversation, updateConversationModel, updateConversationRole } from '../db/queries/conversations'
 
@@ -28,7 +29,12 @@ const sendMessageSchema = z.object({
   topP: z.number().min(0).max(1).optional(),
   thinkingEffort: z.enum(['off', 'low', 'medium', 'high']).optional(),
   roleId: z.string().optional(),
-  attachments: z.array(attachmentSchema).max(MAX_FILES_PER_MESSAGE).optional()
+  attachments: z.array(attachmentSchema).max(MAX_FILES_PER_MESSAGE).optional(),
+  fileContexts: z.array(z.object({
+    path: z.string(),
+    content: z.string(),
+    language: z.string()
+  })).optional()
 })
 
 let currentAbortController: AbortController | null = null
@@ -40,7 +46,7 @@ export function registerChatIpc(): void {
       throw new Error(`Invalid payload: ${parsed.error.message}`)
     }
 
-    const { conversationId, content, modelId, providerId, systemPrompt, temperature, maxTokens, topP, thinkingEffort, roleId, attachments: attachmentRefs } = parsed.data
+    const { conversationId, content, modelId, providerId, systemPrompt, temperature, maxTokens, topP, thinkingEffort, roleId, attachments: attachmentRefs, fileContexts } = parsed.data
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) throw new Error('No window found')
 
@@ -124,6 +130,21 @@ export function registerChatIpc(): void {
         }
       }
 
+      // Inject workspace file context into system prompt
+      if (fileContexts && fileContexts.length > 0) {
+        const fileBlock = fileContexts.map(f =>
+          `<file path="${f.path}" language="${f.language}">\n${f.content}\n</file>`
+        ).join('\n\n')
+
+        const workspaceInstruction = `\n\n<workspace-files>\n${fileBlock}\n</workspace-files>\n\nQuand tu proposes des modifications de fichiers, utilise ce format :\n\`\`\`file:create:chemin/fichier.ext\ncontenu\n\`\`\`\n\`\`\`file:modify:chemin/fichier.ext\ncontenu complet modifie\n\`\`\`\n\`\`\`file:delete:chemin/fichier.ext\n\`\`\``
+
+        if (aiMessages.length > 0 && aiMessages[0].role === 'system') {
+          aiMessages[0].content += workspaceInstruction
+        } else {
+          aiMessages.unshift({ role: 'system', content: workspaceInstruction })
+        }
+      }
+
       // Replace the last user message (just added above) with multi-part content if attachments
       if (imageParts.length > 0 || inlineText) {
         // Remove the last user message we just pushed from history
@@ -203,10 +224,13 @@ export function registerChatIpc(): void {
         updateConversationRole(conversationId, roleId)
       }
 
-      // Save assistant message to DB
-      const contentData = accumulatedReasoning
-        ? { reasoning: accumulatedReasoning }
-        : undefined
+      // Parse file operations from assistant response
+      const fileOps = parseFileOperations(fullText)
+
+      // Build contentData
+      const contentData: Record<string, unknown> = {}
+      if (accumulatedReasoning) contentData.reasoning = accumulatedReasoning
+      if (fileOps.length > 0) contentData.fileOperations = fileOps.map(op => ({ ...op, status: 'pending' }))
 
       const savedMessage = createMessage({
         conversationId,
@@ -218,7 +242,7 @@ export function registerChatIpc(): void {
         tokensOut,
         cost,
         responseTimeMs,
-        contentData
+        contentData: Object.keys(contentData).length > 0 ? contentData : undefined
       })
 
       win.webContents.send('chat:chunk', {
@@ -231,7 +255,8 @@ export function registerChatIpc(): void {
           totalTokens: tokensIn + tokensOut
         },
         cost,
-        responseTimeMs
+        responseTimeMs,
+        fileOperations: fileOps.length > 0 ? fileOps.map(op => ({ ...op, status: 'pending' })) : undefined
       })
 
       currentAbortController = null

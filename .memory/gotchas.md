@@ -1,6 +1,6 @@
 # Gotchas — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 9)
+**Derniere mise a jour** : 2026-03-10 (session 11)
 
 ## Bugs resolus
 
@@ -127,6 +127,31 @@ Quand thinking est "off" pour xAI, ne pas envoyer de reasoningEffort (undefined)
 ### Roles — champs description/icone/categorie masques
 Romain veut que ces champs soient invisibles dans le formulaire ET les cartes. Ils sont gardes en DB (valeur vide par defaut) mais pas exposes dans l'UI.
 
+### Chokidar — doit etre en external dans electron.vite.config (session 11)
+**Cause** : Chokidar est un package ESM avec des deps natives. Si bundle par Vite, erreurs au runtime.
+**Fix** : Ajouter `'chokidar'` dans le tableau `external` de `electron.vite.config.ts` (section main).
+**Note** : Import dynamique `await import('chokidar')` dans `file-watcher.service.ts`.
+
+### Workspace — import paths depuis components/workspace/ (session 11)
+**Symptome** : Erreurs TS "Cannot find module" sur les imports de `preload/types`.
+**Cause** : Les composants dans `components/workspace/` sont a 4 niveaux de `preload/` (comme `components/chat/`), pas 5.
+**Fix** : Utiliser `../../../../preload/types` (4 `../`) depuis `components/workspace/*.tsx`, et `../../../preload/types` (3 `../`) depuis `stores/workspace.store.ts`.
+**Regle** : Verifier la profondeur reelle avant d'ecrire un import relatif vers preload.
+
+### Workspace — FileNode.children implicit any dans .map/.some (session 11)
+**Symptome** : `Parameter 'child' implicitly has an 'any' type` en TypeScript strict.
+**Cause** : `FileNode.children` est `FileNode[] | undefined`. Les callbacks `.map()` et `.some()` sur ce tableau necessitent des annotations de type explicites.
+**Fix** : Ajouter `(child: FileNode)`, `(part: string, i: number)`, `(node: FileNode)` aux callbacks.
+
+### Workspace — FileOperationCard TYPE_CONFIG index error (session 11)
+**Symptome** : `operation.type` ne peut pas indexer un plain object.
+**Fix** : Typer explicitement l'objet config : `Record<FileOperation['type'], { icon: typeof FilePlus; label: string; color: string }>`.
+
+### WorkspacePanel — toggle vs close (session 11)
+**Decision** : Romain veut un **toggle** (afficher/cacher le panneau) et PAS un bouton close (X) qui ferme le workspace.
+**Implementation** : `PanelRightClose` / `PanelRightOpen` icons, `togglePanel()` du store (pas `closeWorkspace()`).
+**ChatView** : condition `workspaceRootPath && <WorkspacePanel />` — le panneau est rendu des que le workspace est ouvert, il gere son propre etat collapsed.
+
 ## Composants non cables (session precedente)
 
 Probleme majeur decouvert : de nombreux composants crees par les agents P1/P2 n'etaient jamais importes. Session de cablage massif effectuee :
@@ -209,6 +234,11 @@ Dans `ai@^6.0.116`, `experimental_generateImage` est un alias deprece de `genera
 - RoleSelector : doit etre APRES ThinkingSelector dans InputZone (pas avant)
 - Pills InputZone : toujours utiliser le meme composant shadcn Select (copier le pattern ThinkingSelector)
 
+## Preferences UI de Romain (complement session 11)
+
+- WorkspacePanel : toggle (PanelRightClose/PanelRightOpen) au lieu de bouton fermer (X)
+- Le panneau se replie mais ne se ferme pas — le workspace reste ouvert tant que le projet en a un
+
 ### MarkdownRenderer — blocs de code sans langage collent au bord
 **Symptome** : Texte colle a la bordure gauche dans les blocs de code sans langage specifie.
 **Cause** : `<pre>` n'avait pas de padding. Les blocs avec langage passaient par `ShikiCodeBlock` (qui a `p-4 pt-8`), mais les blocs sans langage tombaient dans le fallback inline `<code>` sans marge.
@@ -244,6 +274,7 @@ Quand on ajoute un champ au settings store (ex: `favoriteModelIds`), il sera `un
 - a11y.ts utilitaires
 - ~~T56 (Advanced Stats)~~ — **FAIT** (session 8) — fix bugs + stats projet + global stats + 6 cards + 4 graphiques
 - ~~Roles (System Prompts)~~ — **FAIT** (session 9) — RolesView, RoleSelector, verrouillage, variables, persistance roleId
+- ~~Workspace Co-Work~~ — **FAIT** (session 11) — WorkspaceService, FileWatcher, FileTree, FilePanel, FileOperationCard, context injection, toggle panel
 - T48 (Prompt Optimizer), T52 (Export PDF), T60 (Packaging)
 - i18n (T41) — configure mais `useTranslation` jamais utilise
 - SSH key GitHub non configuree — push en HTTPS uniquement

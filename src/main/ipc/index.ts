@@ -18,6 +18,7 @@ import { registerNetworkIpc } from './network.ipc'
 import { registerFilesIpc } from './files.ipc'
 import { registerImagesIpc } from './images.ipc'
 import { registerUpdaterIpc } from './updater.ipc'
+import { registerWorkspaceIpc } from './workspace.ipc'
 
 /**
  * Registre central des IPC handlers.
@@ -71,6 +72,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Updater (auto-update) ──────────────────────
   registerUpdaterIpc()
+
+  // ── Workspace (file system) ────────────────────
+  registerWorkspaceIpc()
 
   // ── Settings ────────────────────────────────────────
   ipcMain.handle('settings:get', async (_event, key: string) => {

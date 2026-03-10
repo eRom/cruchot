@@ -10,6 +10,8 @@ export interface KeyboardShortcutCallbacks {
   onSettings?: () => void
   /** Cmd+M — open model list */
   onModelList?: () => void
+  /** Cmd+B — toggle workspace panel */
+  onToggleWorkspace?: () => void
   /** Escape — stop streaming */
   onEscape?: () => void
 }
@@ -38,6 +40,11 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
     if (callbacks.onModelList) {
       const handler = callbacks.onModelList
       bindings.push(['command+m,ctrl+m', handler])
+    }
+
+    if (callbacks.onToggleWorkspace) {
+      const handler = callbacks.onToggleWorkspace
+      bindings.push(['command+b,ctrl+b', handler])
     }
 
     if (callbacks.onEscape) {
@@ -75,6 +82,7 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
     callbacks.onCommandPalette,
     callbacks.onSettings,
     callbacks.onModelList,
+    callbacks.onToggleWorkspace,
     callbacks.onEscape,
   ])
 }

@@ -22,6 +22,51 @@ export interface SendMessagePayload {
   thinkingEffort?: ThinkingEffort
   roleId?: string
   attachments?: AttachmentRef[]
+  fileContexts?: WorkspaceFileContext[]
+}
+
+export interface FileNode {
+  name: string
+  path: string
+  type: 'file' | 'directory'
+  size?: number
+  extension?: string
+  children?: FileNode[]
+}
+
+export interface WorkspaceInfo {
+  rootPath: string
+  name: string
+  fileCount: number
+  totalSize: number
+}
+
+export interface FileContent {
+  path: string
+  content: string
+  language: string
+  size: number
+}
+
+export interface FileChangeEvent {
+  type: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir'
+  path: string
+}
+
+export type FileOperationType = 'create' | 'modify' | 'delete'
+
+export interface FileOperation {
+  id: string
+  type: FileOperationType
+  path: string
+  content?: string
+  status: 'pending' | 'approved' | 'rejected'
+}
+
+export interface WorkspaceFileContext {
+  path: string
+  content: string
+  language: string
 }
 
 export interface StreamChunk {
@@ -92,6 +137,7 @@ export interface ProjectInfo {
   systemPrompt?: string | null
   defaultModelId?: string | null
   color?: string | null
+  workspacePath?: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -250,8 +296,8 @@ export interface ElectronAPI {
 
   // Projects
   getProjects: () => Promise<ProjectInfo[]>
-  createProject: (data: { name: string; description?: string; systemPrompt?: string; defaultModelId?: string; color?: string }) => Promise<ProjectInfo>
-  updateProject: (id: string, data: { name?: string; description?: string | null; systemPrompt?: string | null; defaultModelId?: string | null; color?: string | null }) => Promise<ProjectInfo | undefined>
+  createProject: (data: { name: string; description?: string; systemPrompt?: string; defaultModelId?: string; color?: string; workspacePath?: string }) => Promise<ProjectInfo>
+  updateProject: (id: string, data: { name?: string; description?: string | null; systemPrompt?: string | null; defaultModelId?: string | null; color?: string | null; workspacePath?: string | null }) => Promise<ProjectInfo | undefined>
   deleteProject: (id: string) => Promise<void>
 
   // Prompts
@@ -326,6 +372,18 @@ export interface ElectronAPI {
   onUpdaterDownloaded: (callback: (data: { version: string }) => void) => void
   onUpdaterError: (callback: (data: { message: string }) => void) => void
   offUpdater: () => void
+
+  // Workspace
+  workspaceSelectFolder: () => Promise<string | null>
+  workspaceOpen: (data: { rootPath: string; projectId?: string }) => Promise<WorkspaceInfo>
+  workspaceClose: () => Promise<void>
+  workspaceGetTree: (relativePath?: string) => Promise<FileNode | FileNode[]>
+  workspaceReadFile: (path: string) => Promise<FileContent>
+  workspaceWriteFile: (data: { path: string; content: string }) => Promise<void>
+  workspaceDeleteFile: (path: string) => Promise<void>
+  workspaceGetInfo: () => Promise<WorkspaceInfo | null>
+  onWorkspaceFileChanged: (callback: (event: FileChangeEvent) => void) => void
+  offWorkspaceFileChanged: () => void
 
   // Settings
   getSetting: (key: string) => Promise<string | null>

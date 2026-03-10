@@ -23,6 +23,7 @@ export function createProject(data: {
   systemPrompt?: string
   defaultModelId?: string
   color?: string
+  workspacePath?: string
 }) {
   const db = getDatabase()
   const id = nanoid()
@@ -36,6 +37,7 @@ export function createProject(data: {
       systemPrompt: data.systemPrompt ?? null,
       defaultModelId: data.defaultModelId ?? null,
       color: data.color ?? null,
+      workspacePath: data.workspacePath ?? null,
       createdAt: now,
       updatedAt: now
     })
@@ -52,6 +54,7 @@ export function updateProject(
     systemPrompt?: string | null
     defaultModelId?: string | null
     color?: string | null
+    workspacePath?: string | null
   }
 ) {
   const db = getDatabase()

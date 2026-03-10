@@ -196,6 +196,36 @@ const api: ElectronAPI = {
     ipcRenderer.removeAllListeners('updater:error')
   },
 
+  // ── Workspace ────────────────────────────────────────
+  workspaceSelectFolder: () => ipcRenderer.invoke('workspace:selectFolder'),
+
+  workspaceOpen: (data: { rootPath: string; projectId?: string }) =>
+    ipcRenderer.invoke('workspace:open', data),
+
+  workspaceClose: () => ipcRenderer.invoke('workspace:close'),
+
+  workspaceGetTree: (relativePath?: string) =>
+    ipcRenderer.invoke('workspace:getTree', relativePath),
+
+  workspaceReadFile: (filePath: string) =>
+    ipcRenderer.invoke('workspace:readFile', filePath),
+
+  workspaceWriteFile: (data: { path: string; content: string }) =>
+    ipcRenderer.invoke('workspace:writeFile', data),
+
+  workspaceDeleteFile: (filePath: string) =>
+    ipcRenderer.invoke('workspace:deleteFile', filePath),
+
+  workspaceGetInfo: () => ipcRenderer.invoke('workspace:getInfo'),
+
+  onWorkspaceFileChanged: (cb: (event: { type: string; path: string }) => void): void => {
+    ipcRenderer.on('workspace:fileChanged', (_event, data) => cb(data))
+  },
+
+  offWorkspaceFileChanged: (): void => {
+    ipcRenderer.removeAllListeners('workspace:fileChanged')
+  },
+
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>
     ipcRenderer.invoke('settings:get', key),

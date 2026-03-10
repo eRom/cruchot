@@ -17,6 +17,7 @@ import { ConversationList } from '@/components/conversations/ConversationList'
 import { ProjectSelector } from '@/components/projects/ProjectSelector'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
+import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useUiStore, type ViewMode } from '@/stores/ui.store'
 
@@ -166,7 +167,13 @@ export function Sidebar(): React.JSX.Element {
       {/* ── Project selector ────────────────────────── */}
       {!collapsed && (
         <div className="shrink-0 border-b border-sidebar-border/50 px-3 py-2">
-          <ProjectSelector />
+          <div className="relative">
+            <ProjectSelector />
+            {/* Workspace active indicator */}
+            {useWorkspaceStore.getState().rootPath && (
+              <span className="absolute -right-1 -top-1 size-2 rounded-full bg-emerald-500" title="Workspace actif" />
+            )}
+          </div>
         </div>
       )}
 

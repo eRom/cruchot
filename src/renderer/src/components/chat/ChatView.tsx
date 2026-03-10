@@ -1,11 +1,13 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef, useCallback } from 'react'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useMessagesStore, type Message } from '@/stores/messages.store'
 import { useProvidersStore } from '@/stores/providers.store' // used via getState()
 import { useRolesStore } from '@/stores/roles.store'
 import { useProjectsStore } from '@/stores/projects.store'
+import { useWorkspaceStore } from '@/stores/workspace.store'
 import MessageList from './MessageList'
 import { InputZone } from './InputZone'
+import { WorkspacePanel } from '@/components/workspace/WorkspacePanel'
 import { MessageSquare, Sparkles } from 'lucide-react'
 
 /**
@@ -21,6 +23,40 @@ export default function ChatView() {
   const messages = useMessagesStore((s) => s.messages)
   const streamingMessageId = useMessagesStore((s) => s.streamingMessageId)
   const setMessages = useMessagesStore((s) => s.setMessages)
+
+  const workspaceRootPath = useWorkspaceStore((s) => s.rootPath)
+
+  // Auto-open/close workspace when project changes
+  useEffect(() => {
+    const activeProjectId = useProjectsStore.getState().activeProjectId
+    const project = useProjectsStore.getState().projects.find((p) => p.id === activeProjectId)
+
+    if (project?.workspacePath) {
+      useWorkspaceStore.getState().openWorkspace(project.workspacePath, project.id)
+    } else {
+      const currentRoot = useWorkspaceStore.getState().rootPath
+      if (currentRoot) {
+        useWorkspaceStore.getState().closeWorkspace()
+      }
+    }
+  }, [useProjectsStore((s) => s.activeProjectId)])
+
+  // File watcher sync
+  useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout>
+
+    window.api.onWorkspaceFileChanged(() => {
+      clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        useWorkspaceStore.getState().refreshTree()
+      }, 300)
+    })
+
+    return () => {
+      clearTimeout(debounceTimer)
+      window.api.offWorkspaceFileChanged()
+    }
+  }, [])
 
   // Load messages + restore model + restore role when switching conversations
   useEffect(() => {
@@ -96,21 +132,27 @@ export default function ChatView() {
   const hasMessages = conversationMessages.length > 0
 
   return (
-    <div className="flex h-full flex-col bg-background">
-      {/* Messages area */}
-      {activeConversationId && hasMessages ? (
-        <MessageList
-          messages={conversationMessages}
-          streamingMessageId={streamingMessageId}
-        />
-      ) : (
-        <EmptyState hasConversation={!!activeConversationId} />
-      )}
+    <div className="flex h-full">
+      {/* Chat area */}
+      <div className="flex flex-1 flex-col bg-background min-w-0">
+        {/* Messages area */}
+        {activeConversationId && hasMessages ? (
+          <MessageList
+            messages={conversationMessages}
+            streamingMessageId={streamingMessageId}
+          />
+        ) : (
+          <EmptyState hasConversation={!!activeConversationId} />
+        )}
 
-      {/* Zone B — Input */}
-      <div className="shrink-0">
-        <InputZone />
+        {/* Zone B — Input */}
+        <div className="shrink-0">
+          <InputZone />
+        </div>
       </div>
+
+      {/* Workspace panel — right side (always rendered when workspace is open, can be collapsed) */}
+      {workspaceRootPath && <WorkspacePanel />}
     </div>
   )
 }

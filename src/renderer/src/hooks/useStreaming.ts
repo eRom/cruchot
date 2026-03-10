@@ -20,6 +20,7 @@ interface StreamChunk {
   }
   cost?: number
   responseTimeMs?: number
+  fileOperations?: Array<{ id: string; type: string; path: string; content?: string; status: string }>
 }
 
 /**
@@ -108,12 +109,14 @@ export function useStreaming() {
             updateMessage(msgId, {
               isStreaming: false,
               streamPhase: null,
-              // Set full content from server as safety net (in case chunks were lost)
               ...(chunk.content ? { content: chunk.content } : {}),
               tokensIn: chunk.usage?.promptTokens,
               tokensOut: chunk.usage?.completionTokens,
               cost: chunk.cost,
-              responseTimeMs: chunk.responseTimeMs
+              responseTimeMs: chunk.responseTimeMs,
+              ...(chunk.fileOperations && chunk.fileOperations.length > 0
+                ? { contentData: { fileOperations: chunk.fileOperations } }
+                : {})
             })
           }
           streamingIdRef.current = null

@@ -12,7 +12,8 @@ const createProjectSchema = z.object({
   description: z.string().max(2000).optional(),
   systemPrompt: z.string().max(10000).optional(),
   defaultModelId: z.string().optional(),
-  color: z.string().max(20).optional()
+  color: z.string().max(20).optional(),
+  workspacePath: z.string().max(1000).optional()
 })
 
 const updateProjectSchema = z.object({
@@ -20,7 +21,8 @@ const updateProjectSchema = z.object({
   description: z.string().max(2000).nullable().optional(),
   systemPrompt: z.string().max(10000).nullable().optional(),
   defaultModelId: z.string().nullable().optional(),
-  color: z.string().max(20).nullable().optional()
+  color: z.string().max(20).nullable().optional(),
+  workspacePath: z.string().max(1000).nullable().optional()
 })
 
 export function registerProjectsIpc(): void {

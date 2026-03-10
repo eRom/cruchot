@@ -1,0 +1,130 @@
+import { create } from 'zustand'
+import type { FileNode, WorkspaceInfo, FileContent, WorkspaceFileContext } from '../../../preload/types'
+
+interface WorkspaceState {
+  rootPath: string | null
+  tree: FileNode | null
+  selectedFilePath: string | null
+  filePreview: FileContent | null
+  isPanelOpen: boolean
+  isLoading: boolean
+  attachedFiles: string[] // relative paths of files attached to current message
+
+  openWorkspace: (rootPath: string, projectId?: string) => Promise<void>
+  closeWorkspace: () => Promise<void>
+  refreshTree: () => Promise<void>
+  selectFile: (path: string) => Promise<void>
+  clearFilePreview: () => void
+  togglePanel: () => void
+  setIsPanelOpen: (open: boolean) => void
+  attachFile: (path: string) => void
+  detachFile: (path: string) => void
+  clearAttachedFiles: () => void
+  getAttachedFileContexts: () => Promise<WorkspaceFileContext[]>
+}
+
+export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
+  rootPath: null,
+  tree: null,
+  selectedFilePath: null,
+  filePreview: null,
+  isPanelOpen: false,
+  isLoading: false,
+  attachedFiles: [],
+
+  openWorkspace: async (rootPath, projectId) => {
+    set({ isLoading: true })
+    try {
+      await window.api.workspaceOpen({ rootPath, projectId })
+      const tree = await window.api.workspaceGetTree() as FileNode
+      set({ rootPath, tree, isPanelOpen: true, isLoading: false })
+    } catch (error) {
+      console.error('[Workspace] Failed to open:', error)
+      set({ isLoading: false })
+    }
+  },
+
+  closeWorkspace: async () => {
+    try {
+      await window.api.workspaceClose()
+    } catch { /* ignore */ }
+    set({
+      rootPath: null,
+      tree: null,
+      selectedFilePath: null,
+      filePreview: null,
+      isPanelOpen: false,
+      attachedFiles: []
+    })
+  },
+
+  refreshTree: async () => {
+    if (!get().rootPath) return
+    try {
+      const tree = await window.api.workspaceGetTree() as FileNode
+      set({ tree })
+    } catch (error) {
+      console.error('[Workspace] Failed to refresh tree:', error)
+    }
+  },
+
+  selectFile: async (path) => {
+    set({ selectedFilePath: path })
+    try {
+      const fileContent = await window.api.workspaceReadFile(path)
+      set({ filePreview: fileContent })
+    } catch (error) {
+      console.error('[Workspace] Failed to read file:', error)
+      set({ filePreview: null })
+    }
+  },
+
+  clearFilePreview: () => {
+    set({ selectedFilePath: null, filePreview: null })
+  },
+
+  togglePanel: () => {
+    set((s) => ({ isPanelOpen: !s.isPanelOpen }))
+  },
+
+  setIsPanelOpen: (open) => {
+    set({ isPanelOpen: open })
+  },
+
+  attachFile: (path) => {
+    set((s) => {
+      if (s.attachedFiles.includes(path)) return s
+      return { attachedFiles: [...s.attachedFiles, path] }
+    })
+  },
+
+  detachFile: (path) => {
+    set((s) => ({
+      attachedFiles: s.attachedFiles.filter((p) => p !== path)
+    }))
+  },
+
+  clearAttachedFiles: () => {
+    set({ attachedFiles: [] })
+  },
+
+  getAttachedFileContexts: async () => {
+    const { attachedFiles } = get()
+    const contexts: WorkspaceFileContext[] = []
+
+    for (const filePath of attachedFiles) {
+      try {
+        const file = await window.api.workspaceReadFile(filePath)
+        contexts.push({
+          path: file.path,
+          content: file.content,
+          language: file.language
+        })
+      } catch {
+        // Skip files that can't be read
+      }
+    }
+
+    return contexts
+  }
+}))
