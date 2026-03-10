@@ -3,7 +3,8 @@ import {
   getDailyStats,
   getProviderStats,
   getModelStats,
-  getTotalCost
+  getGlobalStats,
+  getProjectStats
 } from '../db/queries/statistics'
 
 export function registerStatisticsIpc(): void {
@@ -11,16 +12,20 @@ export function registerStatisticsIpc(): void {
     return getDailyStats(days ?? 30)
   })
 
-  ipcMain.handle('statistics:providers', async () => {
-    return getProviderStats()
+  ipcMain.handle('statistics:providers', async (_event, days?: number) => {
+    return getProviderStats(days)
   })
 
-  ipcMain.handle('statistics:models', async () => {
-    return getModelStats()
+  ipcMain.handle('statistics:models', async (_event, days?: number) => {
+    return getModelStats(days)
   })
 
-  ipcMain.handle('statistics:total', async () => {
-    return getTotalCost()
+  ipcMain.handle('statistics:total', async (_event, days?: number) => {
+    return getGlobalStats(days)
+  })
+
+  ipcMain.handle('statistics:projects', async (_event, days?: number) => {
+    return getProjectStats(days)
   })
 
   console.log('[IPC] Statistics handlers registered')

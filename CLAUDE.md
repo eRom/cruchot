@@ -249,6 +249,13 @@ npm run dist:win     # Package Windows (NSIS)
 npm run dist:linux   # Package Linux (AppImage + deb)
 ```
 
+## Specifications
+
+Les specs du projet sont organisees dans `specs/` :
+- `specs/phase-setup/` — Specs de la phase initiale (ARCH, FEATURES, PLAN, PRICING, STACK, TASKS, TEAM)
+
+Les nouvelles specs de fonctionnalites vont directement dans `specs/` (un fichier par feature).
+
 ## Contexte projet (.memory)
 
 Au démarrage de chaque session, lis ces fichiers pour charger le contexte du projet :

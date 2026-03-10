@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import {
   LineChart,
   Line,
@@ -14,12 +14,20 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts'
-import { DollarSign, MessageSquare, Zap, Loader2 } from 'lucide-react'
+import {
+  DollarSign,
+  MessageSquare,
+  FolderOpen,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Clock,
+  Loader2
+} from 'lucide-react'
 import { useStatsStore, type StatsPeriod } from '@/stores/stats.store'
 import { StatCard } from './StatCard'
 import { cn } from '@/lib/utils'
 
-const PIE_COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#f59e0b', '#ef4444']
+const PIE_COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#f59e0b', '#ef4444', '#10b981', '#f97316', '#ec4899']
 
 const PERIOD_OPTIONS: Array<{ value: StatsPeriod; label: string }> = [
   { value: '7d', label: '7 jours' },
@@ -28,43 +36,43 @@ const PERIOD_OPTIONS: Array<{ value: StatsPeriod; label: string }> = [
   { value: 'all', label: 'Tout' }
 ]
 
+function formatDuration(ms: number): string {
+  if (ms <= 0) return '0s'
+  const totalSeconds = Math.floor(ms / 1000)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  if (hours > 0) return `${hours}h ${minutes}min`
+  if (minutes > 0) return `${minutes}min ${seconds}s`
+  return `${seconds}s`
+}
+
+function formatNumber(n: number): string {
+  return n.toLocaleString('fr-FR')
+}
+
 export function StatsView() {
   const {
     dailyStats,
     providerStats,
     modelStats,
+    projectStats,
+    totalCost,
+    totalMessages,
+    totalTokensIn,
+    totalTokensOut,
+    totalResponseTimeMs,
+    totalConversations,
     selectedPeriod,
     isLoading,
     setSelectedPeriod,
     loadStats
   } = useStatsStore()
 
-  // Load real data on mount
   useEffect(() => {
     loadStats()
   }, [loadStats])
-
-  // Filtered daily stats by period
-  const filteredDaily = useMemo(() => {
-    if (selectedPeriod === 'all') return dailyStats
-    const days = selectedPeriod === '7d' ? 7 : selectedPeriod === '30d' ? 30 : 90
-    return dailyStats.slice(-days)
-  }, [dailyStats, selectedPeriod])
-
-  const totalMessages = useMemo(
-    () => filteredDaily.reduce((sum, d) => sum + d.messages, 0),
-    [filteredDaily]
-  )
-
-  const totalTokens = useMemo(
-    () => filteredDaily.reduce((sum, d) => sum + d.tokens, 0),
-    [filteredDaily]
-  )
-
-  const filteredCost = useMemo(
-    () => filteredDaily.reduce((sum, d) => sum + d.cost, 0),
-    [filteredDaily]
-  )
 
   if (isLoading) {
     return (
@@ -101,32 +109,47 @@ export function StatsView() {
         </div>
       </div>
 
-      {/* Stat cards */}
+      {/* Stat cards — 2 rows of 3 */}
       <div className="grid grid-cols-3 gap-4">
         <StatCard
           title="Cout total"
-          value={`$${filteredCost.toFixed(2)}`}
+          value={`$${totalCost.toFixed(2)}`}
           icon={<DollarSign className="size-4 text-muted-foreground" />}
         />
         <StatCard
           title="Messages envoyes"
-          value={totalMessages.toLocaleString()}
+          value={formatNumber(totalMessages)}
           icon={<MessageSquare className="size-4 text-muted-foreground" />}
         />
         <StatCard
-          title="Tokens utilises"
-          value={totalTokens.toLocaleString()}
-          icon={<Zap className="size-4 text-muted-foreground" />}
+          title="Conversations"
+          value={formatNumber(totalConversations)}
+          icon={<FolderOpen className="size-4 text-muted-foreground" />}
+        />
+        <StatCard
+          title="Tokens entree"
+          value={formatNumber(totalTokensIn)}
+          icon={<ArrowDownToLine className="size-4 text-muted-foreground" />}
+        />
+        <StatCard
+          title="Tokens sortie"
+          value={formatNumber(totalTokensOut)}
+          icon={<ArrowUpFromLine className="size-4 text-muted-foreground" />}
+        />
+        <StatCard
+          title="Temps total"
+          value={formatDuration(totalResponseTimeMs)}
+          icon={<Clock className="size-4 text-muted-foreground" />}
         />
       </div>
 
-      {/* Charts row */}
+      {/* Charts row — cost evolution + provider pie */}
       <div className="grid grid-cols-2 gap-4">
         {/* Line chart — cost evolution */}
         <div className="rounded-xl border border-border/40 bg-card p-4 shadow-sm">
           <h3 className="mb-3 text-sm font-medium text-foreground">Evolution des couts</h3>
           <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={filteredDaily}>
+            <LineChart data={dailyStats}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
               <XAxis
                 dataKey="date"
@@ -137,7 +160,7 @@ export function StatsView() {
               <YAxis
                 tick={{ fontSize: 10 }}
                 className="fill-muted-foreground"
-                tickFormatter={(v: number) => `$${v.toFixed(1)}`}
+                tickFormatter={(v: number) => `$${v.toFixed(2)}`}
               />
               <Tooltip
                 contentStyle={{
@@ -146,7 +169,7 @@ export function StatsView() {
                   borderRadius: '8px',
                   fontSize: '12px'
                 }}
-                formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Cout']}
+                formatter={(value) => [`$${Number(value).toFixed(4)}`, 'Cout']}
               />
               <Line
                 type="monotone"
@@ -176,7 +199,7 @@ export function StatsView() {
                 paddingAngle={3}
               >
                 {providerStats.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                  <Cell key={`provider-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip
@@ -186,45 +209,82 @@ export function StatsView() {
                   borderRadius: '8px',
                   fontSize: '12px'
                 }}
-                formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Cout']}
+                formatter={(value) => [`$${Number(value).toFixed(4)}`, 'Cout']}
               />
-              <Legend
-                wrapperStyle={{ fontSize: '11px' }}
-              />
+              <Legend wrapperStyle={{ fontSize: '11px' }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Bar chart — top models */}
-      <div className="rounded-xl border border-border/40 bg-card p-4 shadow-sm">
-        <h3 className="mb-3 text-sm font-medium text-foreground">Top modeles par utilisation</h3>
-        <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={modelStats} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-            <XAxis
-              type="number"
-              tick={{ fontSize: 10 }}
-              className="fill-muted-foreground"
-            />
-            <YAxis
-              type="category"
-              dataKey="model"
-              tick={{ fontSize: 10 }}
-              className="fill-muted-foreground"
-              width={120}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
-                fontSize: '12px'
-              }}
-            />
-            <Bar dataKey="messages" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+      {/* Charts row — project pie + top models bar */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Pie chart — project breakdown */}
+        <div className="rounded-xl border border-border/40 bg-card p-4 shadow-sm">
+          <h3 className="mb-3 text-sm font-medium text-foreground">Repartition par projet</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <PieChart>
+              <Pie
+                data={projectStats}
+                cx="50%"
+                cy="50%"
+                innerRadius={50}
+                outerRadius={80}
+                dataKey="cost"
+                nameKey="projectName"
+                paddingAngle={3}
+              >
+                {projectStats.map((p, index) => (
+                  <Cell
+                    key={`project-${index}`}
+                    fill={p.projectColor || PIE_COLORS[index % PIE_COLORS.length]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  fontSize: '12px'
+                }}
+                formatter={(value) => [`$${Number(value).toFixed(4)}`, 'Cout']}
+              />
+              <Legend wrapperStyle={{ fontSize: '11px' }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Bar chart — top models */}
+        <div className="rounded-xl border border-border/40 bg-card p-4 shadow-sm">
+          <h3 className="mb-3 text-sm font-medium text-foreground">Top modeles par utilisation</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={modelStats} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+              <XAxis
+                type="number"
+                tick={{ fontSize: 10 }}
+                className="fill-muted-foreground"
+              />
+              <YAxis
+                type="category"
+                dataKey="model"
+                tick={{ fontSize: 10 }}
+                className="fill-muted-foreground"
+                width={120}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  fontSize: '12px'
+                }}
+              />
+              <Bar dataKey="messages" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   )

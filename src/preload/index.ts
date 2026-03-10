@@ -104,11 +104,13 @@ const api: ElectronAPI = {
   // ── Statistics ────────────────────────────────────────
   getDailyStats: (days) => ipcRenderer.invoke('statistics:daily', days),
 
-  getProviderStats: () => ipcRenderer.invoke('statistics:providers'),
+  getProviderStats: (days) => ipcRenderer.invoke('statistics:providers', days),
 
-  getModelStats: () => ipcRenderer.invoke('statistics:models'),
+  getModelStats: (days) => ipcRenderer.invoke('statistics:models', days),
 
-  getTotalCost: () => ipcRenderer.invoke('statistics:total'),
+  getGlobalStats: (days) => ipcRenderer.invoke('statistics:total', days),
+
+  getProjectStats: (days) => ipcRenderer.invoke('statistics:projects', days),
 
   // ── Events ────────────────────────────────────────────
   onConversationUpdated: (callback: (data: { id: string; title: string }) => void): void => {

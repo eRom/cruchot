@@ -147,11 +147,24 @@ export interface ModelStat {
   totalCost: number
 }
 
-export interface TotalCost {
+export interface ProjectStat {
+  projectId: string | null
+  projectName: string
+  projectColor: string | null
+  messagesCount: number
+  tokensIn: number
+  tokensOut: number
+  totalCost: number
+  conversationsCount: number
+}
+
+export interface GlobalStats {
   totalCost: number
   totalMessages: number
   totalTokensIn: number
   totalTokensOut: number
+  totalResponseTimeMs: number
+  totalConversations: number
 }
 
 export interface ExportResult {
@@ -248,9 +261,10 @@ export interface ElectronAPI {
 
   // Statistics
   getDailyStats: (days?: number) => Promise<DailyStat[]>
-  getProviderStats: () => Promise<ProviderStat[]>
-  getModelStats: () => Promise<ModelStat[]>
-  getTotalCost: () => Promise<TotalCost>
+  getProviderStats: (days?: number) => Promise<ProviderStat[]>
+  getModelStats: (days?: number) => Promise<ModelStat[]>
+  getGlobalStats: (days?: number) => Promise<GlobalStats>
+  getProjectStats: (days?: number) => Promise<ProjectStat[]>
 
   // Events
   onConversationUpdated: (callback: (data: { id: string; title: string }) => void) => void
