@@ -213,7 +213,7 @@ const components: Partial<Components> = {
   },
   // Code blocks (pre wrapping code)
   pre: ({ children }) => (
-    <pre className="my-3 overflow-hidden rounded-xl bg-[#1e1e2e] text-[#cdd6f4] shadow-sm last:mb-0 dark:bg-[#11111b]">
+    <pre className="my-3 overflow-hidden rounded-xl bg-[#1e1e2e] p-4 text-[13px] leading-6 text-[#cdd6f4] shadow-sm last:mb-0 dark:bg-[#11111b] [&_code]:bg-transparent [&_code]:p-0 [&_code]:text-inherit">
       {children}
     </pre>
   ),
