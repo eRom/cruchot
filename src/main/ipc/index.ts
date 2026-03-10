@@ -86,14 +86,20 @@ export function registerAllIpcHandlers(): void {
 
   // ── Settings ────────────────────────────────────────
   ipcMain.handle('settings:get', async (_event, key: string) => {
-    if (!key) return null
+    if (!key || typeof key !== 'string') return null
+    if (key.startsWith('multi-llm:apikey:')) {
+      throw new Error('Access denied: use dedicated API key handlers')
+    }
     const db = getDatabase()
     const result = db.select().from(settings).where(eq(settings.key, key)).get()
     return result?.value ?? null
   })
 
   ipcMain.handle('settings:set', async (_event, key: string, value: string) => {
-    if (!key) throw new Error('Key is required')
+    if (!key || typeof key !== 'string') throw new Error('Key is required')
+    if (key.startsWith('multi-llm:apikey:')) {
+      throw new Error('Access denied: use dedicated API key handlers')
+    }
     const db = getDatabase()
     db.insert(settings)
       .values({ key, value, updatedAt: new Date() })

@@ -1,6 +1,6 @@
 # Patterns — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 15)
+**Derniere mise a jour** : 2026-03-10 (session 16 — audit securite)
 
 ## Conventions de nommage
 
@@ -57,7 +57,9 @@
 
 ### Custom Protocol Pattern (local-image://)
 - `protocol.registerSchemesAsPrivileged()` avant `app.whenReady()` dans `index.ts`
-- `protocol.handle('local-image', ...)` dans `app.whenReady()` — sert les fichiers via `net.fetch(pathToFileURL(...))`
+- **PAS de `bypassCSP: true`** — utiliser `img-src 'self' local-image:` dans la CSP a la place
+- `protocol.handle('local-image', ...)` avec **allowlist de repertoires** (`userData/images`, `userData/attachments`)
+- Path validation : `path.resolve()` + `startsWith(dir + path.sep)` — bloque traversal
 - Necessaire car `sandbox: true` bloque `file://` dans le renderer
 - Utilise dans : ImageGrid, ImageLightbox, MessageItem
 
@@ -251,6 +253,19 @@
 - WAL mode + foreign_keys ON
 - Stats calculees a la volee depuis la table messages (pas de pre-agregation)
 - Fichiers binaires sur filesystem, reference en DB
+
+### Security Hardening Pattern (session 16)
+- **Path allowlist** : `path.resolve(filePath)` + `resolved.startsWith(dir + path.sep)` pour toute operation fichier
+- **`assertPathInDir()`** : helper reutilisable par domaine (`assertPathInBackupsDir`, `isPathAllowed` dans files.ipc)
+- **Dangerous extension blocklist** : `.app`, `.command`, `.sh`, `.bat`, `.exe`, `.msi`, `.scpt`, etc. — bloque `shell.openPath()` sur executables
+- **Workspace root dynamique** : `getActiveWorkspaceRoot()` exporte depuis `workspace.ipc.ts` pour inclusion dans l'allowlist de `files.ipc.ts`
+- **CSP durcie** : `object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'` dans `index.html`
+- **DevTools gating** : `devTools: !app.isPackaged` dans BrowserWindow webPreferences
+- **Credential key blocklist** : `settings:get/set` bloque les cles `multi-llm:apikey:*` — force l'utilisation des handlers dedies
+- **DOMPurify** : sanitise le SVG Mermaid avant `dangerouslySetInnerHTML` avec `USE_PROFILES: { svg: true, svgFilters: true }`
+- **Mermaid** : `securityLevel: 'strict'` (jamais `'loose'`)
+- **Suppression** : toujours `trash` (ESM, `await import('trash')`) au lieu de `unlinkSync` — regle projet + securite
+- **prefix + path.sep** : toujours verifier `startsWith(dir + path.sep)` et NON `startsWith(dir)` pour eviter la confusion `/foo/bar` vs `/foo/bar-evil`
 
 ## Conventions projet
 
