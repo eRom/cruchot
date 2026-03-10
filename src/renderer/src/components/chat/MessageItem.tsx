@@ -290,7 +290,7 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
             <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
               {/* TTS — not for image messages */}
               {message.contentData?.type !== 'image' && (
-                <AudioPlayer text={message.content} compact />
+                <AudioPlayer text={message.content} messageId={message.id} compact />
               )}
               <button
                 onClick={handleCopy}

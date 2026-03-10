@@ -132,6 +132,16 @@ export function runMigrations(): void {
       created_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS tts_usage (
+      id TEXT PRIMARY KEY,
+      message_id TEXT,
+      provider TEXT NOT NULL,
+      model TEXT NOT NULL,
+      text_length INTEGER NOT NULL,
+      cost REAL NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    );
+
     CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(content);
   `)
 

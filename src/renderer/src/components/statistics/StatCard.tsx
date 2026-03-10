@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 interface StatCardProps {
   title: string
   value: string
+  subtitle?: string
   icon: ReactNode
   trend?: {
     value: number
@@ -11,7 +12,7 @@ interface StatCardProps {
   }
 }
 
-export function StatCard({ title, value, icon, trend }: StatCardProps) {
+export function StatCard({ title, value, subtitle, icon, trend }: StatCardProps) {
   return (
     <div
       className={cn(
@@ -27,10 +28,11 @@ export function StatCard({ title, value, icon, trend }: StatCardProps) {
         </div>
       </div>
 
-      <div className="flex items-end gap-2">
-        <span className="text-2xl font-bold tracking-tight text-foreground">{value}</span>
+      <div className="flex flex-col">
+        <div className="flex items-end gap-2">
+          <span className="text-2xl font-bold tracking-tight text-foreground">{value}</span>
 
-        {trend && (
+          {trend && (
           <span
             className={cn(
               'mb-0.5 text-xs font-medium',
@@ -40,6 +42,10 @@ export function StatCard({ title, value, icon, trend }: StatCardProps) {
             {trend.value >= 0 ? '+' : ''}
             {trend.value.toFixed(1)}% {trend.label}
           </span>
+        )}
+        </div>
+        {subtitle && (
+          <span className="text-[10px] text-muted-foreground/60">{subtitle}</span>
         )}
       </div>
     </div>

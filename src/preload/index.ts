@@ -230,6 +230,11 @@ const api: ElectronAPI = {
     ipcRenderer.removeAllListeners('workspace:fileChanged')
   },
 
+  // ── TTS ─────────────────────────────────────────────
+  ttsSynthesize: (payload) => ipcRenderer.invoke('tts:synthesize', payload),
+
+  ttsGetAvailableProviders: () => ipcRenderer.invoke('tts:getAvailableProviders'),
+
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>
     ipcRenderer.invoke('settings:get', key),

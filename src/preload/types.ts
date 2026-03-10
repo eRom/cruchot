@@ -230,6 +230,28 @@ export interface GlobalStats {
   totalTokensOut: number
   totalResponseTimeMs: number
   totalConversations: number
+  totalTtsCost: number
+}
+
+// ── TTS ─────────────────────────────────────────────
+export type TtsProvider = 'browser' | 'openai' | 'google'
+
+export interface TtsSynthesizePayload {
+  provider: Exclude<TtsProvider, 'browser'>
+  text: string
+  speed?: number
+  messageId?: string
+}
+
+export interface TtsSynthesizeResult {
+  audio: string    // base64
+  mimeType: string
+  cost: number
+}
+
+export interface TtsProviderOption {
+  id: TtsProvider
+  name: string
 }
 
 export interface ExportResult {
@@ -386,6 +408,10 @@ export interface ElectronAPI {
   workspaceGetInfo: () => Promise<WorkspaceInfo | null>
   onWorkspaceFileChanged: (callback: (event: FileChangeEvent) => void) => void
   offWorkspaceFileChanged: () => void
+
+  // TTS
+  ttsSynthesize: (payload: TtsSynthesizePayload) => Promise<TtsSynthesizeResult>
+  ttsGetAvailableProviders: () => Promise<TtsProviderOption[]>
 
   // Settings
   getSetting: (key: string) => Promise<string | null>

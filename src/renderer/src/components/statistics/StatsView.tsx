@@ -64,6 +64,7 @@ export function StatsView() {
     totalTokensOut,
     totalResponseTimeMs,
     totalConversations,
+    totalTtsCost,
     selectedPeriod,
     isLoading,
     setSelectedPeriod,
@@ -114,6 +115,7 @@ export function StatsView() {
         <StatCard
           title="Cout total"
           value={`$${totalCost.toFixed(2)}`}
+          subtitle={totalTtsCost > 0 ? `dont $${totalTtsCost.toFixed(2)} TTS` : undefined}
           icon={<DollarSign className="size-4 text-muted-foreground" />}
         />
         <StatCard

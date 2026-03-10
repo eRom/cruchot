@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware'
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type Density = 'compact' | 'normal' | 'comfortable'
 export type ThinkingEffort = 'off' | 'low' | 'medium' | 'high'
+export type TtsProvider = 'browser' | 'openai' | 'google'
 
 interface SettingsState {
   theme: ThemeMode
@@ -17,6 +18,7 @@ interface SettingsState {
   maxTokens: number
   topP: number
   thinkingEffort: ThinkingEffort
+  ttsProvider: TtsProvider
   favoriteModelIds: string[]
 
   setTheme: (theme: ThemeMode) => void
@@ -31,6 +33,7 @@ interface SettingsState {
   setMaxTokens: (value: number) => void
   setTopP: (value: number) => void
   setThinkingEffort: (value: ThinkingEffort) => void
+  setTtsProvider: (provider: TtsProvider) => void
   toggleFavoriteModel: (modelId: string) => void
 }
 
@@ -48,6 +51,7 @@ export const useSettingsStore = create<SettingsState>()(
       maxTokens: 4096,
       topP: 0.5,
       thinkingEffort: 'medium' as ThinkingEffort,
+      ttsProvider: 'browser' as TtsProvider,
       favoriteModelIds: [],
 
       setTheme: (theme) => set({ theme }),
@@ -64,6 +68,7 @@ export const useSettingsStore = create<SettingsState>()(
       setMaxTokens: (value) => set({ maxTokens: value }),
       setTopP: (value) => set({ topP: value }),
       setThinkingEffort: (value) => set({ thinkingEffort: value }),
+      setTtsProvider: (provider) => set({ ttsProvider: provider }),
       toggleFavoriteModel: (modelId) =>
         set((state) => ({
           favoriteModelIds: state.favoriteModelIds.includes(modelId)
