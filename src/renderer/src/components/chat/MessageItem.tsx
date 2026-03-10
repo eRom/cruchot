@@ -209,13 +209,19 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
               </button>
             </div>
 
-            {/* Right — model info */}
+            {/* Right — model info + cost */}
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground/40">
               {label && (
                 <span className="font-medium">{label}</span>
               )}
               {message.responseTimeMs != null && (
                 <span>{formatTime(message.responseTimeMs)}</span>
+              )}
+              {tokens && (
+                <span>{tokens}</span>
+              )}
+              {message.cost != null && message.cost > 0 && (
+                <span className="font-medium text-muted-foreground/60">{formatCost(message.cost)}</span>
               )}
             </div>
           </div>
