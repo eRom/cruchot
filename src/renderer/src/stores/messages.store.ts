@@ -19,6 +19,7 @@ export interface Message {
   createdAt: Date
   isStreaming?: boolean
   streamPhase?: StreamPhase
+  toolCall?: string // Current tool call label during streaming (e.g. "Lecture du fichier : README.md")
 }
 
 interface MessagesState {

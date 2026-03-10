@@ -15,6 +15,11 @@ export function getActiveWorkspaceRoot(): string | null {
   return activeWorkspace?.rootPath ?? null
 }
 
+/** Getter for other modules (e.g. chat tools) to access the active workspace */
+export function getActiveWorkspace(): WorkspaceService | null {
+  return activeWorkspace
+}
+
 export function registerWorkspaceIpc(): void {
   // ── Select folder (native dialog) ──────────────────────
   ipcMain.handle('workspace:selectFolder', async (event) => {
