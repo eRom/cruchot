@@ -80,6 +80,7 @@ export function ProjectsView() {
         systemPrompt: data.systemPrompt || undefined,
         defaultModelId: data.defaultModelId ?? undefined,
         color: data.color,
+        workspacePath: data.workspacePath || undefined,
       })
       addProject(project)
       setSubView('grid')
@@ -96,6 +97,7 @@ export function ProjectsView() {
         systemPrompt: data.systemPrompt || null,
         defaultModelId: data.defaultModelId,
         color: data.color,
+        workspacePath: data.workspacePath || null,
       })
       if (updated) updateProject(editingProject.id, updated)
       setEditingProject(null)

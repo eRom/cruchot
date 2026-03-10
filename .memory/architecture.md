@@ -1,10 +1,10 @@
 # Architecture — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 9)
+**Derniere mise a jour** : 2026-03-10 (session 11)
 
 ## Vue d'ensemble
 
-Application desktop locale de chat multi-LLM. Clone de Claude Desktop avec support multi-provider (7 cloud + OpenRouter + 2 locaux), generation d'images, recherche web, voix STT/TTS, statistiques de couts avancees (par provider, modele, projet). Aucun serveur backend — tout local.
+Application desktop locale de chat multi-LLM. Clone de Claude Desktop avec support multi-provider (7 cloud + OpenRouter + 2 locaux), generation d'images, recherche web, voix STT/TTS, statistiques de couts avancees (par provider, modele, projet), workspace co-work (LLM context-aware sur fichiers projet). Aucun serveur backend — tout local.
 
 ## Stack
 
@@ -30,18 +30,18 @@ Main (Node.js — DB, APIs, secrets)
 src/
   main/
     index.ts          # App lifecycle + auto-updater + custom protocol `local-image://`
-    ipc/              # Handlers IPC par domaine (chat, conversations, projects, prompts, roles, etc.)
-    llm/              # Routeur AI SDK + cost-calculator + image generation
+    ipc/              # Handlers IPC par domaine (chat, conversations, projects, prompts, roles, workspace, etc.)
+    llm/              # Routeur AI SDK + cost-calculator + image generation + file-operations parser
     db/
       schema.ts       # 11 tables Drizzle (providers, models, projects, conversations, messages, etc.)
       queries/        # Queries par domaine
-    services/         # Credential, backup, export, updater, network, notification
+    services/         # Credential, backup, export, updater, network, notification, workspace, file-watcher
   preload/
     index.ts          # contextBridge — expose window.api (~50 methodes)
     types.ts          # Types partages ElectronAPI + tous les DTO
   renderer/src/
     App.tsx            # Composant racine — routing par ViewMode
-    stores/            # Zustand: conversations, providers, projects, messages, settings, ui, roles
+    stores/            # Zustand: conversations, providers, projects, messages, settings, ui, roles, workspace
     components/
       chat/            # ChatView, InputZone, MessageList, MessageItem, ModelSelector, etc.
       layout/          # Sidebar, AppLayout
@@ -52,6 +52,7 @@ src/
       statistics/      # StatsView
       images/          # ImagesView, ImageGrid
       conversations/   # ConversationList, ConversationItem (rename/delete inline)
+      workspace/       # WorkspacePanel, FileTree, FilePanel, FileReference, FileOperationCard
       common/          # ThemeProvider, ErrorBoundary, UpdateNotification, OfflineIndicator, CommandPalette
       onboarding/      # OnboardingWizard
     hooks/             # useStreaming, useInitApp, useKeyboardShortcuts, useContextWindow, etc.
@@ -80,7 +81,7 @@ User saisit message → InputZone → IPC invoke("chat:send")
 
 ## Flux — Projets
 
-- Un **projet** a : nom, description, systemPrompt, defaultModelId (format `providerId::modelId`), couleur
+- Un **projet** a : nom, description, systemPrompt, defaultModelId (format `providerId::modelId`), couleur, workspacePath
 - Les **conversations** ont un `projectId` optionnel (FK vers projects)
 - **Boite de reception** : conversations sans projet (`projectId = null`)
 - Quand on selectionne un projet → filtre conversations sidebar + applique le modele par defaut
@@ -172,6 +173,32 @@ RolesView: CRUD roles (grille + form inline) → IPC invoke("roles:*")
 - **Role projet** : ID virtuel `__project__`, utilise `project.systemPrompt` — pre-selectionne pour les nouvelles convs dans un projet avec systemPrompt
 - **FK cleanup** : `deleteRole()` met a null le `roleId` des conversations avant suppression
 - **Formulaire** : nom + prompt systeme + variables + tags (description/icone/categorie masques)
+
+## Flux — Workspace Co-Work (session 11)
+
+```
+Projet avec workspacePath → ChatView auto-open workspace → WorkspaceService scan tree
+→ Chokidar watch → IPC events → debounced refreshTree()
+→ User attache fichiers (FileTree right-click / FilePanel bouton)
+→ InputZone envoie fileContexts[] avec le message
+→ Main: chat.ipc.ts injecte fichiers en system prompt (<workspace-files> XML)
+→ Main: instructions format file:create/modify/delete dans le prompt
+→ LLM repond avec blocs ```file:create:path``` dans le texte
+→ Main: parseFileOperations() extrait les operations (nanoid IDs)
+→ Renderer: FileOperationCard par operation (approve/reject)
+→ Approve: workspaceWriteFile/workspaceDeleteFile via IPC
+→ Reject: update status dans contentData
+```
+
+- **WorkspaceService** : scan tree, read/write/delete, securite (path traversal, sensitive files), `.coworkignore`
+- **FileWatcherService** : Chokidar wrapper, forward events vers renderer via IPC
+- **WorkspacePanel** : panneau droit collapsible (w-80 expanded, w-10 collapsed), toggle PanelRightClose/PanelRightOpen
+- **FileTree** : arbre recursif avec recherche, expand/collapse, right-click pour attacher
+- **FilePanel** : preview read-only avec breadcrumb, langage, taille
+- **FileOperationCard** : carte par operation (create=vert, modify=jaune, delete=rouge), approve/reject
+- **FileReference** : chip cyan dans InputZone pour les fichiers attaches
+- Auto-open workspace quand projet change (ChatView useEffect)
+- `Cmd+B` : toggle workspace panel
 
 ## Flux — Persistance modele par conversation
 

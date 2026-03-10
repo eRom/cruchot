@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MessageSquarePlus, Moon, Settings, Sun, FolderOpen, Cpu, UserCircle } from 'lucide-react'
+import { MessageSquarePlus, Moon, Settings, Sun, FolderOpen, FolderCode, Cpu, UserCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useConversationsStore, type Conversation } from '@/stores/conversations.store'
 import { useProjectsStore, type Project } from '@/stores/projects.store'
+import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useUiStore } from '@/stores/ui.store'
 
 // ── Types ────────────────────────────────────────────────────
@@ -108,6 +109,16 @@ function CommandPalette({
         icon: <UserCircle className="size-4" />,
         onSelect: () => {
           setCurrentView('roles')
+          onClose()
+        },
+      },
+      {
+        id: 'action:workspace',
+        label: useWorkspaceStore.getState().rootPath ? 'Fermer le workspace' : 'Ouvrir le workspace',
+        group: 'Actions',
+        icon: <FolderCode className="size-4" />,
+        onSelect: () => {
+          useWorkspaceStore.getState().togglePanel()
           onClose()
         },
       },

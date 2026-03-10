@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { ArrowLeft, Palette } from 'lucide-react'
+import { ArrowLeft, FolderOpen, Palette, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -41,6 +41,7 @@ export interface ProjectFormData {
   systemPrompt: string
   defaultModelId: string | null
   color: string
+  workspacePath: string
 }
 
 export interface ProjectFormProps {
@@ -58,6 +59,7 @@ export function ProjectForm({ project, onSave, onCancel }: ProjectFormProps) {
     systemPrompt: '',
     defaultModelId: null,
     color: PROJECT_COLORS[5],
+    workspacePath: '',
   })
   const [saving, setSaving] = useState(false)
 
@@ -70,6 +72,7 @@ export function ProjectForm({ project, onSave, onCancel }: ProjectFormProps) {
         systemPrompt: project.systemPrompt ?? '',
         defaultModelId: project.defaultModelId ?? null,
         color: project.color ?? PROJECT_COLORS[5],
+        workspacePath: project.workspacePath ?? '',
       })
     } else {
       setForm({
@@ -78,9 +81,17 @@ export function ProjectForm({ project, onSave, onCancel }: ProjectFormProps) {
         systemPrompt: '',
         defaultModelId: null,
         color: PROJECT_COLORS[5],
+        workspacePath: '',
       })
     }
   }, [project])
+
+  const handleSelectWorkspace = async () => {
+    const selected = await window.api.workspaceSelectFolder()
+    if (selected) {
+      setForm((f) => ({ ...f, workspacePath: selected }))
+    }
+  }
 
   // ── Models groupes par provider ────────────────────────────
   const { providers, models } = useProvidersStore()
@@ -209,6 +220,46 @@ export function ProjectForm({ project, onSave, onCancel }: ProjectFormProps) {
                 'scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border/40'
               )}
             />
+          </div>
+
+          {/* Workspace folder */}
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+              <FolderOpen className="size-3.5 text-muted-foreground" />
+              Dossier workspace
+            </label>
+            <p className="text-xs text-muted-foreground">
+              Associez un dossier pour que le LLM puisse lire et modifier vos fichiers.
+            </p>
+            <div className="flex items-center gap-2">
+              <Input
+                value={form.workspacePath}
+                readOnly
+                placeholder="Aucun dossier selectionne..."
+                className="flex-1 bg-muted/30 cursor-default"
+                onClick={handleSelectWorkspace}
+              />
+              {form.workspacePath ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setForm((f) => ({ ...f, workspacePath: '' }))}
+                  className="size-8 shrink-0"
+                  title="Retirer"
+                >
+                  <X className="size-4" />
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectWorkspace}
+                  className="shrink-0"
+                >
+                  Parcourir
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Modele par defaut */}
