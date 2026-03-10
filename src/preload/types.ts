@@ -203,6 +203,7 @@ export interface ElectronAPI {
   getConversations: (projectId?: string | null) => Promise<ConversationInfo[]>
   createConversation: (title?: string, projectId?: string) => Promise<ConversationInfo>
   deleteConversation: (id: string) => Promise<void>
+  deleteAllConversations: () => Promise<void>
   renameConversation: (id: string, title: string) => Promise<void>
   setConversationProject: (id: string, projectId: string | null) => Promise<void>
   getMessages: (conversationId: string) => Promise<MessageInfo[]>

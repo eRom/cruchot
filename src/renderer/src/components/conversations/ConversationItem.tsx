@@ -164,11 +164,14 @@ function ConversationItemBase({
 
   // ── Mode normal ────────────────────────────────────────
   const item = (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={handleClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClick() }}
       className={cn(
         'group relative flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left',
-        'transition-colors duration-150 ease-out',
+        'transition-colors duration-150 ease-out cursor-pointer',
         'outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
         isActive
           ? 'bg-sidebar-accent text-sidebar-accent-foreground'
@@ -187,14 +190,17 @@ function ConversationItemBase({
       />
       {!isCollapsed && (
         <>
-          <span className="flex-1 truncate text-[13px] leading-tight font-medium">
+          <span className="min-w-0 flex-1 truncate text-[13px] leading-tight font-medium">
             {conversation.title}
           </span>
 
-          {/* Actions au survol */}
+          {/* Actions au survol — positionnées en absolu pour éviter le débordement Radix ScrollArea */}
           <div className={cn(
-            'flex shrink-0 items-center gap-0.5',
-            'opacity-0 group-hover:opacity-100 transition-opacity duration-150'
+            'absolute right-0 top-0 bottom-0 flex items-center gap-0.5 pr-2 pl-6',
+            'opacity-0 group-hover:opacity-100 transition-opacity duration-150',
+            isActive
+              ? 'bg-gradient-to-l from-sidebar-accent from-60% to-transparent'
+              : 'bg-gradient-to-l from-sidebar from-60% to-transparent group-hover:from-sidebar-accent/50'
           )}>
             <button
               onClick={startRename}
@@ -213,7 +219,7 @@ function ConversationItemBase({
           </div>
         </>
       )}
-    </button>
+    </div>
   )
 
   if (isCollapsed) {

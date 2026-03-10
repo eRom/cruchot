@@ -3,11 +3,12 @@ import {
   getAllConversations,
   createConversation,
   deleteConversation,
+  deleteAllConversations,
   renameConversation,
   getConversationsByProject,
   setConversationProject
 } from '../db/queries/conversations'
-import { getMessagesForConversation, deleteMessagesForConversation } from '../db/queries/messages'
+import { getMessagesForConversation, deleteMessagesForConversation, deleteAllMessages } from '../db/queries/messages'
 
 export function registerConversationsIpc(): void {
   ipcMain.handle('conversations:list', async (_event, projectId?: string | null) => {
@@ -40,6 +41,11 @@ export function registerConversationsIpc(): void {
   ipcMain.handle('conversations:messages', async (_event, conversationId: string) => {
     if (!conversationId) throw new Error('Conversation ID required')
     return getMessagesForConversation(conversationId)
+  })
+
+  ipcMain.handle('conversations:deleteAll', async () => {
+    deleteAllMessages()
+    deleteAllConversations()
   })
 
   console.log('[IPC] Conversations handlers registered')
