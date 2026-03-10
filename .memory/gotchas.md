@@ -1,6 +1,6 @@
 # Gotchas — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 12)
+**Derniere mise a jour** : 2026-03-10 (session 13)
 
 ## Bugs resolus
 
@@ -225,6 +225,7 @@ Les `providerOptions` sont specifiques a chaque provider :
 - OpenAI : `{ openai: { reasoningEffort: 'low' | 'medium' | 'high' } }`
 - Google : `{ google: { thinkingConfig: { thinkingBudget: number } } }`
 - xAI : `{ xai: { reasoningEffort: 'low' | 'high' } }` (Chat API uniquement)
+- DeepSeek : `{ deepseek: { thinking: { type: 'enabled' } } }` — binaire (pas de budget)
 
 ### hotkeys-js — virgule comme separateur
 **Piege general** : `hotkeys-js` utilise `,` comme separateur de raccourcis. Tout raccourci impliquant la touche virgule doit etre gere via un listener natif `keydown`.
@@ -305,6 +306,19 @@ Quand on ajoute un champ au settings store (ex: `favoriteModelIds`), il sera `un
 - ~~Roles (System Prompts)~~ — **FAIT** (session 9) — RolesView, RoleSelector, verrouillage, variables, persistance roleId
 - ~~Workspace Co-Work~~ — **FAIT** (session 11) — WorkspaceService, FileWatcher, FileTree, FilePanel, FileOperationCard, context injection, toggle panel
 - ~~TTS Multi-Provider~~ — **FAIT** (session 12) — Browser + OpenAI (Coral) + Google (Aoede), AudioSettings, tts_usage table, stats TTS, cache audio
+- ~~DeepSeek + Alibaba Qwen~~ — **FAIT** (session 13) — 2 providers, 6 modeles, thinking DeepSeek, Qwen via OpenAI-compatible DashScope
 - T48 (Prompt Optimizer), T52 (Export PDF), T60 (Packaging)
 - i18n (T41) — configure mais `useTranslation` jamais utilise
 - SSH key GitHub non configuree — push en HTTPS uniquement
+
+### DeepSeek Reasoner — toujours en mode reasoning (session 13)
+Le modele `deepseek-reasoner` raisonne toujours, meme si ThinkingSelector est sur "off". Le providerOptions n'affecte que `deepseek-chat`.
+
+### Qwen thinking — decoratif uniquement (session 13)
+Le param non-standard `enable_thinking` n'est pas supportable via `createOpenAICompatible`. Les modeles `qwen3.5-*` et `qwq-plus` raisonnent par defaut. ThinkingSelector purement decoratif (meme pattern que Magistral).
+
+### Qwen endpoint — DashScope international (session 13)
+Utiliser `dashscope-intl.aliyuncs.com` (Singapore). L'endpoint Chine (`dashscope.aliyuncs.com`) est une amelioration future possible.
+
+### DeepSeek reasoning chunks — natifs (session 13)
+Le package `@ai-sdk/deepseek` emet des `reasoning-delta` chunks natifs, geres par le handler `onChunk` existant dans `chat.ipc.ts`. Pas de code supplementaire necessaire.

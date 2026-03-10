@@ -17,6 +17,8 @@ export function buildThinkingProviderOptions(
       return buildGoogleThinking(effort)
     case 'xai':
       return buildXaiThinking(effort)
+    case 'deepseek':
+      return buildDeepSeekThinking(effort)
     default:
       return undefined
   }
@@ -66,6 +68,14 @@ function buildXaiThinking(
     case 'high':
       return { xai: { reasoningEffort: 'high' } }
   }
+}
+
+function buildDeepSeekThinking(
+  effort: ThinkingEffort
+): Record<string, Record<string, unknown>> | undefined {
+  // DeepSeek thinking is binary: enabled or disabled (no budget)
+  if (effort === 'off') return undefined
+  return { deepseek: { thinking: { type: 'enabled' } } }
 }
 
 function buildGoogleThinking(

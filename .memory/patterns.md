@@ -1,6 +1,6 @@
 # Patterns — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 12)
+**Derniere mise a jour** : 2026-03-10 (session 13)
 
 ## Conventions de nommage
 
@@ -32,12 +32,14 @@
 
 ### Thinking / Reasoning Pattern
 - `supportsThinking: boolean` sur `ModelDefinition`, `ModelInfo`, `Model`
-- 8 modeles thinking : Opus, Sonnet (Anthropic), GPT-5.4, GPT-5.3 Codex (OpenAI), Gemini 3.1 Pro, Gemini 3 Flash (Google), Grok 4.1 Fast Reasoning (xAI), Magistral Medium (Mistral)
+- 14 modeles thinking : Opus, Sonnet (Anthropic), GPT-5.4, GPT-5.3 Codex (OpenAI), Gemini 3.1 Pro, Gemini 3 Flash (Google), Grok 4.1 Fast Reasoning (xAI), Magistral Medium (Mistral), DeepSeek Chat, DeepSeek Reasoner, Qwen3 Max, Qwen3.5 Plus, Qwen3.5 Flash, QwQ Plus
 - `thinking.ts` : `buildThinkingProviderOptions(providerId, effort)` — mapping unifie 4 niveaux → providerOptions specifiques
 - Anthropic : `thinking: { type: 'disabled' | 'enabled' | 'adaptive' }` avec `budgetTokens`
 - OpenAI : `reasoningEffort: 'none' | 'low' | 'medium' | 'high'`
 - Google : `thinkingConfig: { thinkingBudget: number }`
 - xAI : `reasoningEffort: 'low' | 'high'` (Chat API, pas de 'medium' ni 'none')
+- DeepSeek : `thinking: { type: 'enabled' }` — binaire, pas de budget (off → undefined, low/medium/high → enabled)
+- Qwen : pas de providerOptions (thinking decoratif, built-in comme Magistral)
 - Reasoning accumule dans closure `accumulatedReasoning` pendant `onChunk`, persiste dans `contentData.reasoning` dans `onFinish`
 - Au chargement historique (ChatView), `contentData.reasoning` mappe vers `message.reasoning`
 - ThinkingSelector visible uniquement si `selectedModel.supportsThinking && !isImageMode`

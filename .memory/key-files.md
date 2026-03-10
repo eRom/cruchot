@@ -1,6 +1,6 @@
 # Fichiers cles — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 12)
+**Derniere mise a jour** : 2026-03-10 (session 13)
 
 ## Main process
 
@@ -11,9 +11,9 @@
 | `src/main/ipc/conversations.ipc.ts` | CRUD conversations + filtre par projet + setConversationProject + setConversationRole + deleteAllConversations |
 | `src/main/ipc/index.ts` | Registre central de tous les IPC handlers |
 | `src/main/llm/router.ts` | Routeur getModel() — Vercel AI SDK |
-| `src/main/llm/registry.ts` | Registry des providers et modeles (text + image) + `isImageModel()` helper |
+| `src/main/llm/registry.ts` | Registry des 11 providers et modeles (text + image) + `isImageModel()` helper |
 | `src/main/llm/types.ts` | `ModelDefinition` (avec `type`, `supportsThinking`), `ProviderDefinition`, `ModelPricing` |
-| `src/main/llm/thinking.ts` | Mapper effort → providerOptions par provider (Anthropic, OpenAI, Google, xAI) |
+| `src/main/llm/thinking.ts` | Mapper effort → providerOptions par provider (Anthropic, OpenAI, Google, xAI, DeepSeek) |
 | `src/main/llm/image.ts` | Generation d'images multi-provider (Google Gemini + OpenAI GPT Image) |
 | `src/main/llm/cost-calculator.ts` | Table PRICING + calcul cout par message |
 | `src/main/ipc/images.ipc.ts` | Handler images:generate — genere, sauve fichier + DB images + DB messages |

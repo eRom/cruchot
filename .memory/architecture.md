@@ -1,10 +1,10 @@
 # Architecture — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 12)
+**Derniere mise a jour** : 2026-03-10 (session 13)
 
 ## Vue d'ensemble
 
-Application desktop locale de chat multi-LLM. Clone de Claude Desktop avec support multi-provider (7 cloud + OpenRouter + 2 locaux), generation d'images, recherche web, voix TTS cloud multi-provider (OpenAI/Google) + STT, statistiques de couts avancees (par provider, modele, projet, TTS), workspace co-work (LLM context-aware sur fichiers projet). Aucun serveur backend — tout local.
+Application desktop locale de chat multi-LLM. Clone de Claude Desktop avec support multi-provider (9 cloud + OpenRouter + 2 locaux), generation d'images, recherche web, voix TTS cloud multi-provider (OpenAI/Google) + STT, statistiques de couts avancees (par provider, modele, projet, TTS), workspace co-work (LLM context-aware sur fichiers projet). Aucun serveur backend — tout local.
 
 ## Stack
 
@@ -119,13 +119,15 @@ InputZone: thinkingEffort (settings store) → IPC payload
 - **ThinkingSelector** : dropdown pill (Brain icon) entre ModelSelector et PromptPicker
 - Visible uniquement si `selectedModel.supportsThinking && !isImageMode`
 - 4 niveaux unifies : off | low | medium | high
-- Mapping par provider dans `thinking.ts` (Anthropic, OpenAI, Google, xAI)
+- Mapping par provider dans `thinking.ts` (Anthropic, OpenAI, Google, xAI, DeepSeek)
+- DeepSeek : thinking binaire (enabled/disabled, pas de budget tokens). Reasoner raisonne toujours.
 - Mistral (Magistral) : reasoning built-in, pas de providerOptions — le ThinkingSelector est decoratif
+- Qwen : thinking decoratif (built-in comme Magistral), tombe dans `default: undefined`
 - Setting global `thinkingEffort` dans `settings.store.ts` (default: 'medium')
 
 ## LLM — Vercel AI SDK
 
-Providers : OpenAI, Anthropic, Google (+ images), Mistral, xAI, OpenRouter, Perplexity, LM Studio, Ollama.
+Providers : OpenAI, Anthropic, Google (+ images), Mistral, xAI, DeepSeek, Alibaba Qwen, OpenRouter, Perplexity, LM Studio, Ollama.
 Modeles : chaque modele a un `type: 'text' | 'image'` et `supportsThinking: boolean` dans `ModelDefinition`.
 Couts : table `PRICING` par modele dans `cost-calculator.ts`. Footer message affiche cout + tokens + temps.
 Cout total conversation affiche dans ContextWindowIndicator (bas droite de InputZone).
