@@ -112,13 +112,13 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
         </div>
       )}
 
-      {/* Message bubble */}
+      {/* Message bubble (user) / full-width block (assistant) */}
       <div
         className={cn(
-          'relative max-w-[75%] rounded-2xl px-4 py-3',
+          'relative',
           isUser
-            ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-sm dark:from-blue-500 dark:to-blue-600'
-            : 'bg-card text-card-foreground shadow-[0_1px_3px_0_rgba(0,0,0,0.04)] ring-1 ring-border/60 dark:shadow-none'
+            ? 'max-w-[75%] rounded-2xl px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-sm dark:from-blue-500 dark:to-blue-600'
+            : 'flex-1 min-w-0 py-2 text-foreground'
         )}
       >
         {/* Processing phase — spinner before any content arrives */}
@@ -184,7 +184,7 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
 
         {/* Assistant footer — actions left, model info right */}
         {!isUser && !isStreaming && message.content.length > 0 && (
-          <div className="mt-2 flex items-center justify-between gap-3 border-t border-border/30 pt-2">
+          <div className="mt-3 flex items-center justify-between gap-3 border-t border-border/20 pt-2">
             {/* Left — actions */}
             <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
               {/* TTS — not for image messages */}
