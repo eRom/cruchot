@@ -1,7 +1,8 @@
-import { ipcMain, dialog, shell, BrowserWindow } from 'electron'
+import { ipcMain, dialog, shell, BrowserWindow, app } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { saveAttachment, readAttachment } from '../services/file.service'
+import { getActiveWorkspaceRoot } from './workspace.ipc'
 
 // Allowed extensions for the file picker
 const ALLOWED_EXTENSIONS = [
@@ -54,6 +55,34 @@ function classifyFile(filePath: string): PickedFile | null {
     type,
     mimeType: EXT_TO_MIME[ext] ?? 'application/octet-stream'
   }
+}
+
+// ── Security: path validation ─────────────────────────────
+const DANGEROUS_EXTENSIONS = new Set([
+  '.app', '.command', '.sh', '.bat', '.cmd', '.exe', '.msi',
+  '.scpt', '.applescript', '.workflow', '.action'
+])
+
+function getAllowedDirs(): string[] {
+  const dirs = [
+    path.join(app.getPath('userData'), 'images') + path.sep,
+    path.join(app.getPath('userData'), 'attachments') + path.sep
+  ]
+  const workspaceRoot = getActiveWorkspaceRoot()
+  if (workspaceRoot) {
+    dirs.push(path.resolve(workspaceRoot) + path.sep)
+  }
+  return dirs
+}
+
+function isPathAllowed(filePath: string): boolean {
+  const resolved = path.resolve(filePath)
+  return getAllowedDirs().some((dir) => resolved.startsWith(dir) || resolved === dir.slice(0, -1))
+}
+
+function hasDangerousExtension(filePath: string): boolean {
+  const ext = path.extname(filePath).toLowerCase()
+  return DANGEROUS_EXTENSIONS.has(ext)
 }
 
 export function registerFilesIpc(): void {
@@ -125,6 +154,12 @@ export function registerFilesIpc(): void {
     if (!filePath || typeof filePath !== 'string') {
       throw new Error('File path is required')
     }
+    if (!isPathAllowed(filePath)) {
+      throw new Error('Access denied: path outside allowed directories')
+    }
+    if (hasDangerousExtension(filePath)) {
+      throw new Error('Access denied: file type not allowed')
+    }
     return shell.openPath(filePath)
   })
 
@@ -132,6 +167,9 @@ export function registerFilesIpc(): void {
   ipcMain.handle('files:showInFolder', async (_event, filePath: string) => {
     if (!filePath || typeof filePath !== 'string') {
       throw new Error('File path is required')
+    }
+    if (!isPathAllowed(filePath)) {
+      throw new Error('Access denied: path outside allowed directories')
     }
     shell.showItemInFolder(filePath)
   })

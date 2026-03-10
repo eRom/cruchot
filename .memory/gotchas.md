@@ -1,6 +1,6 @@
 # Gotchas — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 15)
+**Derniere mise a jour** : 2026-03-10 (session 16 — audit securite)
 
 ## Bugs resolus
 
@@ -347,3 +347,43 @@ Certains providers (OpenAI notamment) retournent 429 pour le rate limit ET pour 
 **Symptome** : `TS2307` — Cannot find module `../../../../src/preload/types`.
 **Cause** : `stores/` est a 3 niveaux de `preload/` (pas 4). Le path incorrect avait un `src/` en trop.
 **Fix** : Utiliser `../../../preload/types` (3 `../`) depuis `stores/tasks.store.ts` (meme profondeur que `workspace.store.ts`).
+
+### local-image:// protocol — LFI (Local File Inclusion) (session 16)
+**Symptome** : Le custom protocol servait n'importe quel fichier du systeme (lecture arbitraire).
+**Cause** : Pas de validation de chemin dans le handler `protocol.handle('local-image', ...)`. Un renderer compromis pouvait lire `/etc/passwd` etc.
+**Fix** : Allowlist de repertoires (`userData/images` + `userData/attachments`). `path.resolve()` + `startsWith(dir + path.sep)`. Retourne 403 si hors allowlist.
+**Bonus** : Retire `bypassCSP: true` du `registerSchemesAsPrivileged` — ajoute `img-src 'self' local-image:` dans la CSP.
+**Regle** : Tout custom protocol DOIT valider les chemins contre une allowlist. JAMAIS de `bypassCSP: true`.
+
+### shell.openPath — execution arbitraire via IPC (session 16)
+**Symptome** : `files:openInOS` permettait d'ouvrir n'importe quel fichier/app via `shell.openPath()`.
+**Cause** : Pas de validation de chemin ni d'extension. Un `.app` ou `.command` serait execute directement.
+**Fix** : `isPathAllowed()` (allowlist dynamique incluant workspace root) + `hasDangerousExtension()` (blocklist `.app`, `.sh`, `.exe`, etc.). Applique sur `files:openInOS` et `files:showInFolder`.
+
+### backup.service — path traversal (session 16)
+**Symptome** : `restoreBackup('../../important.db')` pouvait ecraser la DB avec un fichier arbitraire.
+**Cause** : Pas de validation de chemin dans `restoreBackup()` ni `deleteBackup()`.
+**Fix** : `assertPathInBackupsDir()` — `path.resolve()` + `startsWith(backupsDir + path.sep)`. Aussi remplace `unlinkSync` par `await trash()`.
+
+### Mermaid securityLevel: 'loose' = XSS (session 16)
+**Symptome** : Un diagramme Mermaid malicieux pouvait executer du JS via `<script>` dans le SVG.
+**Cause** : `securityLevel: 'loose'` autorise le HTML brut dans les labels + `dangerouslySetInnerHTML` sans sanitisation.
+**Fix** : `securityLevel: 'strict'` + `DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } })`.
+**Regle** : Toujours sanitiser le HTML avant `dangerouslySetInnerHTML`, meme si le contenu vient d'une lib.
+
+### settings:get — fuite de credentials chiffrees (session 16)
+**Symptome** : Le renderer pouvait lire les blobs safeStorage des cles API via `settings:get('multi-llm:apikey:...')`.
+**Cause** : Le handler `settings:get` dans `ipc/index.ts` ne filtrait pas les cles API.
+**Fix** : Bloquer les cles commençant par `multi-llm:apikey:` dans `settings:get` ET `settings:set` — throw Error.
+**Regle** : Le settings store generique ne doit JAMAIS donner acces aux secrets. Forcer les handlers dedies.
+
+### startsWith prefix confusion (session 16)
+**Piege** : `resolved.startsWith('/foo/bar')` matche aussi `/foo/bar-evil/file.txt`.
+**Fix** : Toujours ajouter `path.sep` : `resolved.startsWith(dir + path.sep)`. Ou checker `resolved === dir` pour le repertoire exact.
+**Regle** : Pattern canonique : `resolved.startsWith(dir + path.sep) || resolved === dir`.
+
+### getActiveWorkspaceRoot — ne pas appeler getWorkspaceInfo() (session 16)
+**Symptome** : `getWorkspaceInfo()` fait un scan filesystem complet (lent).
+**Cause** : On voulait juste lire `rootPath` pour l'allowlist de fichiers.
+**Fix** : Acceder directement a `activeWorkspace.rootPath` (change de `private` a `readonly` dans WorkspaceService).
+**Regle** : Pour des accesseurs simples, ne jamais appeler une methode qui fait du I/O lourd.

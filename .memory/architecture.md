@@ -1,6 +1,6 @@
 # Architecture — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 15)
+**Derniere mise a jour** : 2026-03-10 (session 16 — audit securite)
 
 ## Vue d'ensemble
 

@@ -1,15 +1,15 @@
 # Fichiers cles — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 15)
+**Derniere mise a jour** : 2026-03-10 (session 16 — audit securite)
 
 ## Main process
 
 | Fichier | Role |
 |---------|------|
-| `src/main/index.ts` | Entry point Electron, app lifecycle, auto-updater, custom protocol `local-image://` |
+| `src/main/index.ts` | Entry point Electron, app lifecycle, auto-updater, custom protocol `local-image://` (securise: allowlist dirs, pas de bypassCSP) |
 | `src/main/ipc/chat.ipc.ts` | Handler chat:send — streamText() AI SDK, forward chunks IPC, providerOptions thinking, reasoning persistence, cost calc, model + role persistence, workspace file context injection, file operations parsing |
 | `src/main/ipc/conversations.ipc.ts` | CRUD conversations + filtre par projet + setConversationProject + setConversationRole + deleteAllConversations |
-| `src/main/ipc/index.ts` | Registre central de tous les IPC handlers |
+| `src/main/ipc/index.ts` | Registre central de tous les IPC handlers + blocage `multi-llm:apikey:*` dans settings:get/set |
 | `src/main/llm/router.ts` | Routeur getModel() — Vercel AI SDK |
 | `src/main/llm/registry.ts` | Registry des 11 providers et modeles (text + image) + `isImageModel()` helper |
 | `src/main/llm/types.ts` | `ModelDefinition` (avec `type`, `supportsThinking`), `ProviderDefinition`, `ModelPricing` |
@@ -25,7 +25,7 @@
 | `src/main/services/credential.service.ts` | Wrapper safeStorage pour cles API |
 | `src/main/ipc/prompts.ipc.ts` | CRUD prompts — Zod validation, 7 handlers |
 | `src/main/db/queries/prompts.ts` | Queries prompts — getAllPrompts, searchPrompts, CRUD |
-| `src/main/window.ts` | Config BrowserWindow — titleBarStyle hiddenInset, trafficLights |
+| `src/main/window.ts` | Config BrowserWindow — titleBarStyle hiddenInset, trafficLights, devTools: !app.isPackaged |
 | `src/main/db/queries/statistics.ts` | Queries stats — getDailyStats, getProviderStats, getModelStats, getProjectStats, getGlobalStats (toutes avec param `days`) |
 | `src/main/ipc/statistics.ipc.ts` | 5 handlers stats — daily, providers, models, total, projects — tous avec param `days` |
 | `src/main/services/updater.service.ts` | electron-updater service |
@@ -40,6 +40,9 @@
 | `src/main/services/scheduler.service.ts` | Singleton SchedulerService — gestion timers (setTimeout/setInterval), init/stop lifecycle, scheduleAllEnabled() |
 | `src/main/services/task-executor.ts` | Execution programmatique LLM — cree conversation, charge role, streamText(), sauve messages + cout, notification Electron |
 | `src/main/ipc/scheduled-tasks.ipc.ts` | 7 handlers tasks:* — list, get, create, update, delete, execute, toggle — Zod discriminated union pour scheduleConfig |
+| `src/main/ipc/files.ipc.ts` | File operations IPC — isPathAllowed() allowlist, hasDangerousExtension() blocklist, securise openInOS/showInFolder |
+| `src/main/services/backup.service.ts` | Backup CRUD — assertPathInBackupsDir() path validation, trash au lieu de unlinkSync |
+| `src/main/services/file.service.ts` | File service attachments — path validation corrigee (prefix + path.sep) |
 
 ## Preload
 
@@ -123,3 +126,12 @@
 | `electron.vite.config.ts` | Config build main + preload + renderer |
 | `electron-builder.yml` | Config packaging multi-OS |
 | `CLAUDE.md` | Best practices stack + regles projet |
+| `SECURITY-2026-03-10.md` | Rapport audit securite initial — 4 vulns critiques (toutes fixees) |
+| `SECURITY-2026-03-10-FULL.md` | Audit securite complet 5 axes — score B-, actions prioritaires |
+
+## Renderer — Securite
+
+| Fichier | Role |
+|---------|------|
+| `src/renderer/src/components/chat/MermaidBlock.tsx` | Rendu Mermaid — securityLevel: 'strict' + DOMPurify sanitize SVG |
+| `src/renderer/index.html` | CSP durcie — object-src/base-uri/form-action/frame-src 'none', img-src local-image:, media-src blob: |
