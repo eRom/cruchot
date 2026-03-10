@@ -183,11 +183,11 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
             : 'flex-1 min-w-0 py-2 text-foreground'
         )}
       >
-        {/* Processing phase — spinner before any content arrives */}
+        {/* Processing phase — spinner before any content arrives, or tool call feedback */}
         {isStreaming && message.streamPhase === 'processing' && (
           <div className="flex items-center gap-2 py-1 text-muted-foreground">
             <Loader2 className="size-4 animate-spin" />
-            <span className="text-sm">Traitement en cours...</span>
+            <span className="text-sm">{message.toolCall || 'Traitement en cours...'}</span>
           </div>
         )}
 

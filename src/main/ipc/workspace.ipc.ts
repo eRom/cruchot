@@ -7,6 +7,11 @@ import { FileWatcherService } from '../services/file-watcher.service'
 let activeWorkspace: WorkspaceService | null = null
 let activeWatcher: FileWatcherService | null = null
 
+/** Getter for other modules (e.g. chat tools) to access the active workspace */
+export function getActiveWorkspace(): WorkspaceService | null {
+  return activeWorkspace
+}
+
 export function registerWorkspaceIpc(): void {
   // ── Select folder (native dialog) ──────────────────────
   ipcMain.handle('workspace:selectFolder', async (event) => {
