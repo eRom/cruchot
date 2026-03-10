@@ -86,11 +86,15 @@ const api: ElectronAPI = {
   // ── Roles ─────────────────────────────────────────────
   getRoles: () => ipcRenderer.invoke('roles:list'),
 
+  getRole: (id) => ipcRenderer.invoke('roles:get', id),
+
   createRole: (data) => ipcRenderer.invoke('roles:create', data),
 
   updateRole: (id, data) => ipcRenderer.invoke('roles:update', id, data),
 
   deleteRole: (id) => ipcRenderer.invoke('roles:delete', id),
+
+  setConversationRole: (id, roleId) => ipcRenderer.invoke('conversations:setRole', id, roleId),
 
   // ── Search ────────────────────────────────────────────
   searchMessages: (query) => ipcRenderer.invoke('search:messages', query),

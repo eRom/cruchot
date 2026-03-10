@@ -78,6 +78,14 @@ export function updateConversationModel(id: string, modelId: string) {
     .run()
 }
 
+export function updateConversationRole(id: string, roleId: string | null) {
+  const db = getDatabase()
+  db.update(conversations)
+    .set({ roleId, updatedAt: new Date() })
+    .where(eq(conversations.id, id))
+    .run()
+}
+
 export function touchConversation(id: string) {
   const db = getDatabase()
   db.update(conversations)

@@ -2,6 +2,7 @@ import { eq, desc } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { getDatabase } from '../index'
 import { roles } from '../schema'
+import { conversations } from '../schema'
 
 export function getAllRoles() {
   const db = getDatabase()
@@ -23,6 +24,9 @@ export function createRole(data: {
   systemPrompt?: string
   icon?: string
   isBuiltin?: boolean
+  category?: string
+  tags?: string[]
+  variables?: Array<{ name: string; description?: string }>
 }) {
   const db = getDatabase()
   const id = nanoid()
@@ -36,6 +40,9 @@ export function createRole(data: {
       systemPrompt: data.systemPrompt ?? null,
       icon: data.icon ?? null,
       isBuiltin: data.isBuiltin ?? false,
+      category: data.category ?? null,
+      tags: data.tags ?? null,
+      variables: data.variables ?? null,
       createdAt: now,
       updatedAt: now
     })
@@ -51,6 +58,9 @@ export function updateRole(
     description?: string | null
     systemPrompt?: string | null
     icon?: string | null
+    category?: string | null
+    tags?: string[] | null
+    variables?: Array<{ name: string; description?: string }> | null
   }
 ) {
   const db = getDatabase()
@@ -64,6 +74,12 @@ export function updateRole(
 
 export function deleteRole(id: string) {
   const db = getDatabase()
+  // Clear roleId on conversations that reference this role
+  db.update(conversations)
+    .set({ roleId: null })
+    .where(eq(conversations.roleId, id))
+    .run()
+  // Then delete the role
   db.delete(roles).where(eq(roles.id, id)).run()
 }
 
@@ -73,35 +89,40 @@ const BUILTIN_ROLES = [
     description: 'Développeur logiciel expert',
     systemPrompt:
       'Tu es un développeur logiciel senior expert. Tu écris du code propre, maintenable et bien documenté. Tu expliques tes choix techniques.',
-    icon: 'Code'
+    icon: 'Code',
+    category: 'Technique'
   },
   {
     name: 'Rédacteur',
     description: 'Rédacteur professionnel',
     systemPrompt:
       'Tu es un rédacteur professionnel. Tu écris des textes clairs, bien structurés et adaptés au public cible. Tu maîtrises les règles de grammaire et de style.',
-    icon: 'Pen'
+    icon: 'Pen',
+    category: 'Rédaction'
   },
   {
     name: 'Analyste',
     description: 'Analyste de données et stratégie',
     systemPrompt:
       'Tu es un analyste expert. Tu examines les données et situations avec rigueur, identifies les tendances et fournis des recommandations argumentées.',
-    icon: 'BarChart'
+    icon: 'BarChart',
+    category: 'Analyse'
   },
   {
     name: 'Traducteur',
     description: 'Traducteur multilingue',
     systemPrompt:
       'Tu es un traducteur professionnel multilingue. Tu traduis avec précision en préservant le sens, le ton et les nuances culturelles du texte original.',
-    icon: 'Languages'
+    icon: 'Languages',
+    category: 'Rédaction'
   },
   {
     name: 'Coach',
     description: 'Coach et mentor personnel',
     systemPrompt:
       'Tu es un coach professionnel bienveillant. Tu aides à clarifier les objectifs, surmonter les obstacles et développer le potentiel. Tu poses des questions pertinentes.',
-    icon: 'Heart'
+    icon: 'Heart',
+    category: 'Personnel'
   }
 ]
 

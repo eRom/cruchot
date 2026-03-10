@@ -8,12 +8,14 @@ import { VoiceInput } from '@/components/chat/VoiceInput'
 import { PromptPicker } from '@/components/chat/PromptPicker'
 import { AspectRatioSelector, type AspectRatio } from '@/components/chat/AspectRatioSelector'
 import { ThinkingSelector } from '@/components/chat/ThinkingSelector'
+import { RoleSelector } from '@/components/roles/RoleSelector'
 import { useProvidersStore } from '@/stores/providers.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
 import { useMessagesStore } from '@/stores/messages.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useUiStore } from '@/stores/ui.store'
+import { useRolesStore } from '@/stores/roles.store'
 import { useContextWindow } from '@/hooks/useContextWindow'
 import { cn } from '@/lib/utils'
 
@@ -59,6 +61,8 @@ export function InputZone({
   const settingsMaxTokens = useSettingsStore((s) => s.maxTokens)
   const topP = useSettingsStore((s) => s.topP)
   const thinkingEffort = useSettingsStore((s) => s.thinkingEffort)
+  const activeRoleId = useRolesStore((s) => s.activeRoleId)
+  const activeSystemPrompt = useRolesStore((s) => s.activeSystemPrompt)
 
   // ── Context window ────────────────────────────────────────
   const conversationMessages = useMemo(
@@ -88,6 +92,7 @@ export function InputZone({
   const isBusy = isStreaming || isGeneratingImage
   const canSend = content.trim().length > 0 && !isBusy && !!selectedModelId && !!selectedProviderId
   const isEmpty = content.trim().length === 0
+  const isRoleLocked = conversationMessages.length > 0
 
   // ── Auto-grow textarea ───────────────────────────────────
   const adjustHeight = useCallback(() => {
@@ -229,6 +234,9 @@ export function InputZone({
     // Update conversation model in store (DB is updated by chat.ipc.ts)
     updateConversation(conversationId, { modelId: `${selectedProviderId}::${selectedModelId}` })
 
+    // Resolve role ID for persistence (skip virtual __project__ id)
+    const roleIdForPersist = activeRoleId && activeRoleId !== '__project__' ? activeRoleId : undefined
+
     // Envoyer via IPC
     try {
       await window.api.sendMessage({
@@ -236,13 +244,24 @@ export function InputZone({
         content: trimmed,
         modelId: selectedModelId,
         providerId: selectedProviderId,
+        systemPrompt: activeSystemPrompt ?? undefined,
         temperature,
         maxTokens: settingsMaxTokens,
         topP,
         thinkingEffort: selectedModel?.supportsThinking ? thinkingEffort : undefined,
+        roleId: roleIdForPersist,
       })
     } catch {
       // Erreur geree par le stream handler dans le main
+    }
+
+    // Persist role on conversation after first message
+    if (activeRoleId && conversationMessages.length === 0) {
+      try {
+        await window.api.setConversationRole(conversationId, roleIdForPersist ?? null)
+      } catch {
+        // Silent
+      }
     }
 
     onMessageSent?.(trimmed)
@@ -259,6 +278,9 @@ export function InputZone({
     topP,
     thinkingEffort,
     selectedModel?.supportsThinking,
+    activeRoleId,
+    activeSystemPrompt,
+    conversationMessages.length,
     onMessageSent
   ])
 
@@ -336,7 +358,7 @@ export function InputZone({
         <div
           className={cn(
             // Conteneur du textarea — surface card
-            'group relative flex flex-col overflow-hidden rounded-2xl',
+            'group relative flex flex-col rounded-2xl',
             // Bordure et fond
             'border border-border/60 bg-card',
             // Ombre douce pour l'elevation
@@ -401,6 +423,9 @@ export function InputZone({
               <ModelSelector disabled={isBusy} />
               {selectedModel?.supportsThinking && !isImageMode && (
                 <ThinkingSelector disabled={isBusy} />
+              )}
+              {!isImageMode && (
+                <RoleSelector disabled={isBusy || isRoleLocked} />
               )}
               <PromptPicker
                 onInsert={handlePromptInsert}

@@ -6,7 +6,7 @@ import { calculateMessageCost } from '../llm/cost-calculator'
 import { classifyError } from '../llm/errors'
 import { buildThinkingProviderOptions } from '../llm/thinking'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
-import { touchConversation, renameConversation, getConversation, updateConversationModel } from '../db/queries/conversations'
+import { touchConversation, renameConversation, getConversation, updateConversationModel, updateConversationRole } from '../db/queries/conversations'
 
 const sendMessageSchema = z.object({
   conversationId: z.string().min(1),
@@ -17,7 +17,8 @@ const sendMessageSchema = z.object({
   temperature: z.number().min(0).max(2).optional(),
   maxTokens: z.number().positive().optional(),
   topP: z.number().min(0).max(1).optional(),
-  thinkingEffort: z.enum(['off', 'low', 'medium', 'high']).optional()
+  thinkingEffort: z.enum(['off', 'low', 'medium', 'high']).optional(),
+  roleId: z.string().optional()
 })
 
 let currentAbortController: AbortController | null = null
@@ -29,7 +30,7 @@ export function registerChatIpc(): void {
       throw new Error(`Invalid payload: ${parsed.error.message}`)
     }
 
-    const { conversationId, content, modelId, providerId, systemPrompt, temperature, maxTokens, topP, thinkingEffort } = parsed.data
+    const { conversationId, content, modelId, providerId, systemPrompt, temperature, maxTokens, topP, thinkingEffort, roleId } = parsed.data
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) throw new Error('No window found')
 
@@ -140,6 +141,11 @@ export function registerChatIpc(): void {
 
       // Save last used model on the conversation (for restore on switch)
       updateConversationModel(conversationId, `${providerId}::${modelId}`)
+
+      // Persist role on the conversation (first message only in practice)
+      if (roleId) {
+        updateConversationRole(conversationId, roleId)
+      }
 
       // Save assistant message to DB
       const contentData = accumulatedReasoning

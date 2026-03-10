@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MessageSquarePlus, Moon, Settings, Sun, FolderOpen, Cpu } from 'lucide-react'
+import { MessageSquarePlus, Moon, Settings, Sun, FolderOpen, Cpu, UserCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useConversationsStore, type Conversation } from '@/stores/conversations.store'
 import { useProjectsStore, type Project } from '@/stores/projects.store'
@@ -98,6 +98,16 @@ function CommandPalette({
         onSelect: () => {
           setSettingsTab('model')
           setCurrentView('settings')
+          onClose()
+        },
+      },
+      {
+        id: 'action:roles',
+        label: 'Roles',
+        group: 'Actions',
+        icon: <UserCircle className="size-4" />,
+        onSelect: () => {
+          setCurrentView('roles')
           onClose()
         },
       },

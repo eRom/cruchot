@@ -2,6 +2,8 @@ import React, { useEffect } from 'react'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useMessagesStore, type Message } from '@/stores/messages.store'
 import { useProvidersStore } from '@/stores/providers.store' // used via getState()
+import { useRolesStore } from '@/stores/roles.store'
+import { useProjectsStore } from '@/stores/projects.store'
 import MessageList from './MessageList'
 import { InputZone } from './InputZone'
 import { MessageSquare, Sparkles } from 'lucide-react'
@@ -20,10 +22,12 @@ export default function ChatView() {
   const streamingMessageId = useMessagesStore((s) => s.streamingMessageId)
   const setMessages = useMessagesStore((s) => s.setMessages)
 
-  // Load messages + restore model when switching conversations
+  // Load messages + restore model + restore role when switching conversations
   useEffect(() => {
     if (!activeConversationId) {
       setMessages([])
+      useRolesStore.getState().setActiveRole(null)
+      useRolesStore.getState().setActiveSystemPrompt(null)
       return
     }
 
@@ -37,11 +41,46 @@ export default function ChatView() {
     async function loadMessages() {
       try {
         const msgs = await window.api.getMessages(activeConversationId!)
-        setMessages(msgs.map((m): Message => ({
+        const loadedMessages = msgs.map((m): Message => ({
           ...m,
           isStreaming: false,
           reasoning: (m.contentData?.reasoning as string) || undefined
-        })))
+        }))
+        setMessages(loadedMessages)
+
+        // Restore role from conversation
+        const roleId = conv?.roleId
+        if (roleId) {
+          // Conversation has a persisted role — restore it
+          try {
+            const role = await window.api.getRole(roleId)
+            if (role) {
+              useRolesStore.getState().setActiveRole(roleId)
+              useRolesStore.getState().setActiveSystemPrompt(role.systemPrompt ?? null)
+            } else {
+              useRolesStore.getState().setActiveRole(null)
+              useRolesStore.getState().setActiveSystemPrompt(null)
+            }
+          } catch {
+            useRolesStore.getState().setActiveRole(null)
+            useRolesStore.getState().setActiveSystemPrompt(null)
+          }
+        } else if (loadedMessages.length === 0) {
+          // New conversation without role — check if project has a systemPrompt
+          const activeProjectId = useProjectsStore.getState().activeProjectId
+          const project = useProjectsStore.getState().projects.find((p) => p.id === activeProjectId)
+          if (project?.systemPrompt) {
+            useRolesStore.getState().setActiveRole('__project__')
+            useRolesStore.getState().setActiveSystemPrompt(project.systemPrompt)
+          } else {
+            useRolesStore.getState().setActiveRole(null)
+            useRolesStore.getState().setActiveSystemPrompt(null)
+          }
+        } else {
+          // Existing conversation without role — clear
+          useRolesStore.getState().setActiveRole(null)
+          useRolesStore.getState().setActiveSystemPrompt(null)
+        }
       } catch (error) {
         console.error('Failed to load messages:', error)
       }

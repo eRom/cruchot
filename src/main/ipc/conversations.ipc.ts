@@ -6,7 +6,8 @@ import {
   deleteAllConversations,
   renameConversation,
   getConversationsByProject,
-  setConversationProject
+  setConversationProject,
+  updateConversationRole
 } from '../db/queries/conversations'
 import { getMessagesForConversation, deleteMessagesForConversation, deleteAllMessages } from '../db/queries/messages'
 
@@ -46,6 +47,11 @@ export function registerConversationsIpc(): void {
   ipcMain.handle('conversations:deleteAll', async () => {
     deleteAllMessages()
     deleteAllConversations()
+  })
+
+  ipcMain.handle('conversations:setRole', async (_event, id: string, roleId: string | null) => {
+    if (!id) throw new Error('Conversation ID required')
+    updateConversationRole(id, roleId)
   })
 
   console.log('[IPC] Conversations handlers registered')
