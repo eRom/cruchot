@@ -109,11 +109,6 @@ function ShikiCodeBlock({ code, language }: { code: string; language: string }) 
   if (html) {
     return (
       <div className="group relative">
-        {language && (
-          <span className="absolute top-2.5 left-3 z-10 text-[11px] font-medium uppercase tracking-wider text-white/30">
-            {language}
-          </span>
-        )}
         <CopyCodeButton code={code} />
         <div
           className="overflow-x-auto [&_pre]:p-4 [&_pre]:pt-8 [&_pre]:text-[13px] [&_pre]:leading-6 [&_pre]:!bg-transparent [&_code]:!bg-transparent"
@@ -126,11 +121,6 @@ function ShikiCodeBlock({ code, language }: { code: string; language: string }) 
   // Fallback — plain text
   return (
     <div className="group relative">
-      {language && (
-        <span className="absolute top-2.5 left-3 text-[11px] font-medium uppercase tracking-wider text-white/30">
-          {language}
-        </span>
-      )}
       <CopyCodeButton code={code} />
       <code className="block overflow-x-auto whitespace-pre p-4 pt-8 text-[13px] leading-6">
         {code}

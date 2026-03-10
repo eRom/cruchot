@@ -1,4 +1,4 @@
-import { Paperclip } from 'lucide-react'
+import { Paperclip, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { cn } from '@/lib/utils'
@@ -11,6 +11,7 @@ function formatSize(bytes: number): string {
 
 export function FilePanel() {
   const filePreview = useWorkspaceStore((s) => s.filePreview)
+  const rootPath = useWorkspaceStore((s) => s.rootPath)
   const attachFile = useWorkspaceStore((s) => s.attachFile)
   const attachedFiles = useWorkspaceStore((s) => s.attachedFiles)
 
@@ -39,19 +40,34 @@ export function FilePanel() {
             </span>
           ))}
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => attachFile(filePreview.path)}
-          disabled={isAttached}
-          className={cn(
-            'h-6 gap-1 px-2 text-[11px]',
-            isAttached && 'text-cyan-600 dark:text-cyan-400'
-          )}
-        >
-          <Paperclip className="size-3" />
-          {isAttached ? 'Attache' : 'Attacher'}
-        </Button>
+        <div className="flex items-center gap-0.5">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              if (rootPath) {
+                window.api.fileOpenInOS(`${rootPath}/${filePreview.path}`)
+              }
+            }}
+            className="size-6"
+            title="Ouvrir avec l'app par defaut"
+          >
+            <ExternalLink className="size-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => attachFile(filePreview.path)}
+            disabled={isAttached}
+            className={cn(
+              'size-6',
+              isAttached && 'text-cyan-600 dark:text-cyan-400'
+            )}
+            title={isAttached ? 'Attache' : 'Attacher'}
+          >
+            <Paperclip className="size-3" />
+          </Button>
+        </div>
       </div>
 
       {/* Code content — read only with syntax highlighting via CSS */}

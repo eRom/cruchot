@@ -358,6 +358,8 @@ export interface ElectronAPI {
   filePick: () => Promise<AttachmentRef[]>
   fileSave: (data: { buffer: ArrayBuffer; filename: string }) => Promise<{ path: string; size: number }>
   fileRead: (filePath: string) => Promise<ArrayBuffer>
+  fileOpenInOS: (filePath: string) => Promise<string>
+  fileShowInFolder: (filePath: string) => Promise<void>
 
   // Images (generation)
   generateImage: (data: { prompt: string; model?: string; aspectRatio?: string; conversationId?: string; providerId?: string }) => Promise<ImageGenerateResult>

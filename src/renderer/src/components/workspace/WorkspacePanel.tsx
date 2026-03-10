@@ -1,4 +1,4 @@
-import { PanelRightClose, PanelRightOpen, FolderOpen, RefreshCw } from 'lucide-react'
+import { PanelRightClose, PanelRightOpen, FolderOpen, RefreshCw, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { FileTree } from './FileTree'
@@ -23,7 +23,7 @@ export function WorkspacePanel() {
         'flex h-full shrink-0 flex-col',
         'border-l border-border/40 bg-background',
         'transition-[width] duration-200 ease-out',
-        isPanelOpen ? 'w-80' : 'w-10'
+        isPanelOpen ? 'w-60' : 'w-10'
       )}
     >
       {/* Header */}
@@ -39,16 +39,27 @@ export function WorkspacePanel() {
         )}
         <div className="flex items-center gap-0.5">
           {isPanelOpen && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={refreshTree}
-              disabled={isLoading}
-              className="size-6"
-              title="Rafraichir"
-            >
-              <RefreshCw className={cn('size-3', isLoading && 'animate-spin')} />
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => window.api.fileOpenInOS(rootPath)}
+                className="size-6"
+                title="Ouvrir dans le Finder"
+              >
+                <ExternalLink className="size-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={refreshTree}
+                disabled={isLoading}
+                className="size-6"
+                title="Rafraichir"
+              >
+                <RefreshCw className={cn('size-3', isLoading && 'animate-spin')} />
+              </Button>
+            </>
           )}
           <Button
             variant="ghost"
