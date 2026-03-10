@@ -1,5 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from 'react'
 import mermaid from 'mermaid'
+import DOMPurify from 'dompurify'
 
 interface MermaidBlockProps {
   code: string
@@ -12,7 +13,7 @@ function ensureMermaidInit() {
   mermaid.initialize({
     startOnLoad: false,
     theme: 'dark',
-    securityLevel: 'loose',
+    securityLevel: 'strict',
     fontFamily: 'ui-sans-serif, system-ui, sans-serif',
   })
   mermaidInitialized = true
@@ -79,7 +80,7 @@ function MermaidBlock({ code }: MermaidBlockProps) {
     <div
       ref={containerRef}
       className="my-3 flex items-center justify-center overflow-x-auto rounded-xl bg-[#1e1e2e] p-4 dark:bg-[#11111b] [&_svg]:max-w-full"
-      dangerouslySetInnerHTML={{ __html: svg }}
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } }) }}
     />
   )
 }

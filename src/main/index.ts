@@ -7,19 +7,33 @@ import { getDbPath } from './utils/paths'
 import { initAutoUpdater, stopAutoUpdater } from './services/updater.service'
 import { schedulerService } from './services/scheduler.service'
 import { pathToFileURL } from 'node:url'
+import path from 'node:path'
 
 let mainWindow: BrowserWindow | null = null
 
-// Register custom protocol for serving local images
+// Register custom protocol for serving local images (no bypassCSP — use img-src in CSP instead)
 protocol.registerSchemesAsPrivileged([
-  { scheme: 'local-image', privileges: { bypassCSP: true, supportFetchAPI: true, stream: true } }
+  { scheme: 'local-image', privileges: { supportFetchAPI: true, stream: true, secure: true } }
 ])
 
 app.whenReady().then(() => {
-  // Handle local-image:// protocol — serves files from filesystem
+  // Allowed directories for local-image:// protocol
+  const allowedDirs = [
+    path.join(app.getPath('userData'), 'images') + path.sep,
+    path.join(app.getPath('userData'), 'attachments') + path.sep
+  ]
+
+  // Handle local-image:// protocol — serves files only from allowed directories
   protocol.handle('local-image', (request) => {
     const filePath = decodeURIComponent(request.url.replace('local-image://', ''))
-    return net.fetch(pathToFileURL(filePath).href)
+    const resolved = path.resolve(filePath)
+
+    if (!allowedDirs.some((dir) => resolved.startsWith(dir))) {
+      console.warn('[Protocol] Blocked access to file outside allowed dirs:', resolved)
+      return new Response('Forbidden', { status: 403 })
+    }
+
+    return net.fetch(pathToFileURL(resolved).href)
   })
   // Initialize database before anything else
   initDatabase(getDbPath())

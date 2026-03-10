@@ -115,7 +115,7 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
 
 // ── WorkspaceService ──────────────────────────────────────
 export class WorkspaceService {
-  private rootPath: string
+  readonly rootPath: string
   private ignorePatterns: string[] = []
 
   constructor(rootPath: string) {

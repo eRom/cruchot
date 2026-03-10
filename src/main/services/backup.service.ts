@@ -1,7 +1,19 @@
-import { copyFileSync, readdirSync, statSync, mkdirSync, unlinkSync } from 'fs'
-import { join } from 'path'
+import { copyFileSync, readdirSync, statSync, mkdirSync } from 'fs'
+import { join, resolve, sep } from 'path'
 import { getDbPath, getAppDataPath } from '../utils/paths'
 import { closeDatabase, initDatabase } from '../db'
+
+/**
+ * Validates that a path is within the backups directory.
+ * Prevents path traversal attacks.
+ */
+function assertPathInBackupsDir(filePath: string): void {
+  const backupsDir = getBackupsDir()
+  const resolved = resolve(filePath)
+  if (!resolved.startsWith(backupsDir + sep) && resolved !== backupsDir) {
+    throw new Error('Access denied: path outside backups directory')
+  }
+}
 
 export interface BackupEntry {
   path: string
@@ -56,6 +68,8 @@ export function createBackup(): BackupEntry {
  * Closes the current DB connection, replaces main.db, then re-opens.
  */
 export function restoreBackup(backupPath: string): void {
+  assertPathInBackupsDir(backupPath)
+
   const dbPath = getDbPath()
 
   // Validate the backup file exists
@@ -96,21 +110,25 @@ export function listBackups(): BackupEntry[] {
 /**
  * Deletes a specific backup file.
  */
-export function deleteBackup(backupPath: string): void {
+export async function deleteBackup(backupPath: string): Promise<void> {
+  assertPathInBackupsDir(backupPath)
   statSync(backupPath) // throws if not found
-  unlinkSync(backupPath)
+  const { default: trash } = await import('trash')
+  await trash(backupPath)
 }
 
 /**
  * Cleans old backups, keeping only the N most recent.
  */
-export function cleanOldBackups(keep: number = 7): number {
+export async function cleanOldBackups(keep: number = 7): Promise<number> {
   const backups = listBackups()
   if (backups.length <= keep) return 0
 
+  const { default: trash } = await import('trash')
   const toDelete = backups.slice(keep)
   for (const backup of toDelete) {
-    unlinkSync(backup.path)
+    assertPathInBackupsDir(backup.path)
+    await trash(backup.path)
   }
   return toDelete.length
 }

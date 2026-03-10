@@ -42,7 +42,7 @@ export function saveAttachment(
 export function readAttachment(filePath: string): Buffer | null {
   // Security: only allow reading from the attachments directory
   const resolved = path.resolve(filePath)
-  if (!resolved.startsWith(ATTACHMENTS_DIR)) {
+  if (!resolved.startsWith(ATTACHMENTS_DIR + path.sep) && resolved !== ATTACHMENTS_DIR) {
     throw new Error('Access denied: file outside attachments directory')
   }
 

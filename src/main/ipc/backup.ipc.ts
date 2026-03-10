@@ -51,14 +51,14 @@ export function registerBackupIpc(): void {
   ipcMain.handle('backup:delete', async (_event, data: unknown) => {
     const parsed = deleteSchema.safeParse(data)
     if (!parsed.success) throw new Error('Invalid delete data')
-    deleteBackup(parsed.data.backupPath)
+    await deleteBackup(parsed.data.backupPath)
     return { deleted: true }
   })
 
   ipcMain.handle('backup:clean', async (_event, data: unknown) => {
     const parsed = cleanSchema.safeParse(data)
     if (!parsed.success) throw new Error('Invalid clean data')
-    const removed = cleanOldBackups(parsed.data.keep ?? 7)
+    const removed = await cleanOldBackups(parsed.data.keep ?? 7)
     return { removed }
   })
 
