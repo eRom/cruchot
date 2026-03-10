@@ -58,9 +58,16 @@ function App(): React.JSX.Element {
     setCommandPaletteOpen(!commandPaletteOpen)
   }, [commandPaletteOpen, setCommandPaletteOpen])
 
+  const setSettingsTab = useUiStore((s) => s.setSettingsTab)
+
   const handleSettings = useCallback(() => {
     setCurrentView('settings')
   }, [setCurrentView])
+
+  const handleModelList = useCallback(() => {
+    setSettingsTab('model')
+    setCurrentView('settings')
+  }, [setSettingsTab, setCurrentView])
 
   const handleEscape = useCallback(async () => {
     if (commandPaletteOpen) {
@@ -76,6 +83,7 @@ function App(): React.JSX.Element {
     onNewConversation: handleNewConversation,
     onCommandPalette: handleCommandPalette,
     onSettings: handleSettings,
+    onModelList: handleModelList,
     onEscape: handleEscape,
   })
 

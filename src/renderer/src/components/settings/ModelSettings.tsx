@@ -1,7 +1,51 @@
-import { useCallback } from 'react'
-import { Sparkles, Target, Scale } from 'lucide-react'
+import { useState, useCallback } from 'react'
+import { Sparkles, Target, Scale, Cpu, ImageIcon, SlidersHorizontal } from 'lucide-react'
 import { useSettingsStore } from '@/stores/settings.store'
+import { ModelTableLLM } from './ModelTableLLM'
+import { ModelTableImages } from './ModelTableImages'
 import { cn } from '@/lib/utils'
+
+type SubTab = 'llm' | 'images' | 'params'
+
+const SUB_TABS: { id: SubTab; label: string; icon: React.ReactNode }[] = [
+  { id: 'llm', label: 'Modeles LLM', icon: <Cpu className="size-3.5" /> },
+  { id: 'images', label: 'Modeles Images', icon: <ImageIcon className="size-3.5" /> },
+  { id: 'params', label: 'Parametres', icon: <SlidersHorizontal className="size-3.5" /> }
+]
+
+export function ModelSettings() {
+  const [activeTab, setActiveTab] = useState<SubTab>('llm')
+
+  return (
+    <div className="space-y-6">
+      {/* Sub-tab bar */}
+      <div className="flex gap-2">
+        {SUB_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              'flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all',
+              activeTab === tab.id
+                ? 'border-primary bg-primary/5 text-foreground'
+                : 'border-border/60 text-muted-foreground hover:border-border hover:bg-accent/50'
+            )}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      {activeTab === 'llm' && <ModelTableLLM />}
+      {activeTab === 'images' && <ModelTableImages />}
+      {activeTab === 'params' && <ModelParamsSettings />}
+    </div>
+  )
+}
+
+// ── Params sub-tab (extracted from previous ModelSettings) ──────────────
 
 interface PresetConfig {
   label: string
@@ -16,7 +60,7 @@ const PRESETS: PresetConfig[] = [
   { label: 'Precis', icon: <Target className="size-3.5" />, temperature: 0.2, topP: 0.1 }
 ]
 
-export function ModelSettings() {
+function ModelParamsSettings() {
   const temperature = useSettingsStore((s) => s.temperature)
   const maxTokens = useSettingsStore((s) => s.maxTokens)
   const topP = useSettingsStore((s) => s.topP)

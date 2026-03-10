@@ -9,6 +9,7 @@ const KEYBINDINGS: Keybinding[] = [
   { action: 'Nouvelle conversation', shortcut: 'Cmd+N' },
   { action: 'Recherche rapide', shortcut: 'Cmd+K' },
   { action: 'Ouvrir les parametres', shortcut: 'Cmd+,' },
+  { action: 'Liste des modeles', shortcut: 'Cmd+M' },
   { action: 'Fermer / Annuler', shortcut: 'Escape' }
 ]
 
