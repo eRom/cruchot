@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { ChevronDown, Circle, Cpu, ImageIcon } from 'lucide-react'
+import { Cpu, ImageIcon, MessageSquare } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -12,59 +12,56 @@ import {
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useProvidersStore, type Provider, type Model } from '@/stores/providers.store'
+import { useSettingsStore } from '@/stores/settings.store'
 import { cn } from '@/lib/utils'
 
-// ── Types pour futures integrations ──────────────────────────
 export interface ModelSelectorProps {
   disabled?: boolean
   className?: string
 }
 
-// ── Grouped models helper ────────────────────────────────────
-interface ProviderGroup {
+interface FlatModel {
+  model: Model
   provider: Provider
-  models: Model[]
 }
 
 export function ModelSelector({ disabled = false, className }: ModelSelectorProps) {
   const { providers, models, selectedModelId, selectedProviderId, selectModel } =
     useProvidersStore()
 
-  // Separer modeles texte et image
-  const { textGroups, imageModels } = useMemo(() => {
-    const map = new Map<string, ProviderGroup>()
+  const favoriteModelIds = useSettingsStore((s) => s.favoriteModelIds) ?? []
+  const hasFavs = favoriteModelIds.length > 0
 
-    for (const provider of providers) {
-      if (!provider.isEnabled) continue
-      map.set(provider.id, { provider, models: [] })
+  // Liste plate : texte et image, filtres par favoris
+  const { textModels, imageModels } = useMemo(() => {
+    const providerMap = new Map<string, Provider>()
+    for (const p of providers) {
+      if (p.isEnabled) providerMap.set(p.id, p)
     }
 
-    const imgModels: { model: Model; provider: Provider }[] = []
+    const text: FlatModel[] = []
+    const image: FlatModel[] = []
 
     for (const model of models) {
-      const group = map.get(model.providerId)
-      if (!group) continue
+      const provider = providerMap.get(model.providerId)
+      if (!provider) continue
+      if (hasFavs && !favoriteModelIds.includes(model.id)) continue
 
       if (model.type === 'image') {
-        imgModels.push({ model, provider: group.provider })
+        image.push({ model, provider })
       } else {
-        group.models.push(model)
+        text.push({ model, provider })
       }
     }
 
-    // Ne garder que les groupes texte avec des modeles
-    const tGroups = Array.from(map.values()).filter((g) => g.models.length > 0)
+    return { textModels: text, imageModels: image }
+  }, [providers, models, favoriteModelIds, hasFavs])
 
-    return { textGroups: tGroups, imageModels: imgModels }
-  }, [providers, models])
-
-  // Valeur composite pour le Select: "providerId::modelId"
   const selectedValue =
     selectedProviderId && selectedModelId
       ? `${selectedProviderId}::${selectedModelId}`
       : undefined
 
-  // Trouver le modele et provider selectionnes pour l'affichage
   const selectedModel = models.find((m) => m.id === selectedModelId)
   const selectedProvider = providers.find((p) => p.id === selectedProviderId)
   const isImageSelected = selectedModel?.type === 'image'
@@ -85,17 +82,11 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
           <SelectTrigger
             size="sm"
             className={cn(
-              // Base — badge compact et discret
               'h-7 w-auto max-w-[220px] gap-1.5 rounded-full border-none px-2.5',
-              // Couleurs subtiles
               'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground',
-              // Transition douce
               'transition-all duration-200 ease-out',
-              // Focus ring discrete
               'focus-visible:ring-1 focus-visible:ring-ring/30',
-              // Ombre legere pour l'elevation
               'shadow-none hover:shadow-xs',
-              // Accent quand modele image selectionne
               isImageSelected && 'bg-violet-500/10 text-violet-600 hover:bg-violet-500/20 dark:text-violet-400',
               className
             )}
@@ -125,54 +116,37 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
         align="start"
         sideOffset={8}
         className={cn(
-          'min-w-[260px] max-w-[320px]',
-          // Fond avec backdrop blur pour profondeur
+          'min-w-[240px] max-w-[300px]',
           'border-border/50 bg-popover/95 backdrop-blur-xl',
-          // Ombre raffinee
           'shadow-lg shadow-black/10 dark:shadow-black/30'
         )}
       >
-        {/* Text models grouped by provider */}
-        {textGroups.map((group, index) => (
-          <div key={group.provider.id}>
-            {index > 0 && <SelectSeparator />}
-            <SelectGroup>
-              <SelectLabel className="flex items-center gap-2 px-2 py-1.5">
-                <ProviderStatusDot isConfigured={group.provider.isConfigured} />
-                <span className="font-semibold tracking-tight">
-                  {group.provider.name}
+        {/* Text models — flat list */}
+        {textModels.length > 0 && (
+          <SelectGroup>
+            <SelectLabel className="flex items-center gap-2 px-2 py-1.5">
+              <MessageSquare className="size-3.5 text-muted-foreground/60" />
+              <span className="font-semibold tracking-tight">Generation de textes</span>
+            </SelectLabel>
+            {textModels.map(({ model, provider }) => (
+              <SelectItem
+                key={`${provider.id}::${model.id}`}
+                value={`${provider.id}::${model.id}`}
+                disabled={!provider.isConfigured}
+                className="pl-5"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="truncate">{model.displayName}</span>
                 </span>
-                {!group.provider.isConfigured && (
-                  <span className="ml-auto text-[10px] text-muted-foreground/60">
-                    non configure
-                  </span>
-                )}
-              </SelectLabel>
-              {group.models.map((model) => (
-                <SelectItem
-                  key={`${group.provider.id}::${model.id}`}
-                  value={`${group.provider.id}::${model.id}`}
-                  disabled={!group.provider.isConfigured}
-                  className="pl-6"
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="truncate">{model.displayName}</span>
-                    {model.contextWindow > 0 && (
-                      <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground/50">
-                        {formatContextWindow(model.contextWindow)}
-                      </span>
-                    )}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </div>
-        ))}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        )}
 
-        {/* Image generation models */}
+        {/* Image models — flat list */}
         {imageModels.length > 0 && (
           <>
-            <SelectSeparator />
+            {textModels.length > 0 && <SelectSeparator />}
             <SelectGroup>
               <SelectLabel className="flex items-center gap-2 px-2 py-1.5">
                 <ImageIcon className="size-3.5 text-violet-500" />
@@ -183,13 +157,10 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
                   key={`${provider.id}::${model.id}`}
                   value={`${provider.id}::${model.id}`}
                   disabled={!provider.isConfigured}
-                  className="pl-6"
+                  className="pl-5"
                 >
                   <span className="flex items-center gap-2">
                     <span className="truncate">{model.displayName}</span>
-                    <span className="ml-auto shrink-0 text-[10px] text-muted-foreground/50">
-                      {provider.name}
-                    </span>
                   </span>
                 </SelectItem>
               ))}
@@ -197,7 +168,7 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
           </>
         )}
 
-        {textGroups.length === 0 && imageModels.length === 0 && (
+        {textModels.length === 0 && imageModels.length === 0 && (
           <div className="px-4 py-6 text-center text-xs text-muted-foreground">
             Aucun modele disponible.
             <br />
@@ -207,27 +178,4 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
       </SelectContent>
     </Select>
   )
-}
-
-// ── Composants internes ──────────────────────────────────────
-
-function ProviderStatusDot({ isConfigured }: { isConfigured: boolean }) {
-  return (
-    <Circle
-      className={cn(
-        'size-2 shrink-0',
-        isConfigured
-          ? 'fill-emerald-500 text-emerald-500'
-          : 'fill-muted-foreground/30 text-muted-foreground/30'
-      )}
-    />
-  )
-}
-
-// ── Helpers ──────────────────────────────────────────────────
-
-function formatContextWindow(tokens: number): string {
-  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(0)}M`
-  if (tokens >= 1_000) return `${(tokens / 1_000).toFixed(0)}K`
-  return `${tokens}`
 }

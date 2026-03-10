@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 interface ContextWindowIndicatorProps {
   currentTokens: number
   maxTokens: number
+  totalCost?: number
 }
 
 /** Format token count to a human-readable short form (e.g. 2.4k, 128k) */
@@ -12,13 +13,20 @@ function formatTokenCount(tokens: number): string {
   return `${tokens}`
 }
 
+function formatCost(cost: number): string {
+  if (cost < 0.01) return `<$0.01`
+  if (cost < 1) return `$${cost.toFixed(2)}`
+  return `$${cost.toFixed(2)}`
+}
+
 /**
  * Thin progress bar showing estimated token usage relative to the model's
  * context window. Green < 50%, yellow 50-80%, red > 80%.
  */
 export function ContextWindowIndicator({
   currentTokens,
-  maxTokens
+  maxTokens,
+  totalCost
 }: ContextWindowIndicatorProps) {
   if (maxTokens <= 0) return null
 
@@ -41,9 +49,15 @@ export function ContextWindowIndicator({
         />
       </div>
 
-      {/* Token count label */}
+      {/* Token count + total cost */}
       <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/50">
         ~{formatTokenCount(currentTokens)} / {formatTokenCount(maxTokens)} tokens
+        {totalCost != null && totalCost > 0 && (
+          <>
+            {' '}
+            <span className="font-semibold text-muted-foreground/70">{formatCost(totalCost)}</span>
+          </>
+        )}
       </span>
     </div>
   )

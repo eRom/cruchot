@@ -17,6 +17,7 @@ interface SettingsState {
   maxTokens: number
   topP: number
   thinkingEffort: ThinkingEffort
+  favoriteModelIds: string[]
 
   setTheme: (theme: ThemeMode) => void
   setLanguage: (language: 'fr' | 'en') => void
@@ -30,6 +31,7 @@ interface SettingsState {
   setMaxTokens: (value: number) => void
   setTopP: (value: number) => void
   setThinkingEffort: (value: ThinkingEffort) => void
+  toggleFavoriteModel: (modelId: string) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -46,6 +48,7 @@ export const useSettingsStore = create<SettingsState>()(
       maxTokens: 4096,
       topP: 0.5,
       thinkingEffort: 'medium' as ThinkingEffort,
+      favoriteModelIds: [],
 
       setTheme: (theme) => set({ theme }),
       setLanguage: (language) => set({ language }),
@@ -61,6 +64,12 @@ export const useSettingsStore = create<SettingsState>()(
       setMaxTokens: (value) => set({ maxTokens: value }),
       setTopP: (value) => set({ topP: value }),
       setThinkingEffort: (value) => set({ thinkingEffort: value }),
+      toggleFavoriteModel: (modelId) =>
+        set((state) => ({
+          favoriteModelIds: state.favoriteModelIds.includes(modelId)
+            ? state.favoriteModelIds.filter((id) => id !== modelId)
+            : [...state.favoriteModelIds, modelId]
+        })),
     }),
     {
       name: 'multi-llm-settings'

@@ -8,6 +8,8 @@ export interface KeyboardShortcutCallbacks {
   onCommandPalette?: () => void
   /** Cmd+, — open settings */
   onSettings?: () => void
+  /** Cmd+M — open model list */
+  onModelList?: () => void
   /** Escape — stop streaming */
   onEscape?: () => void
 }
@@ -31,6 +33,11 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
     if (callbacks.onCommandPalette) {
       const handler = callbacks.onCommandPalette
       bindings.push(['command+k,ctrl+k', handler])
+    }
+
+    if (callbacks.onModelList) {
+      const handler = callbacks.onModelList
+      bindings.push(['command+m,ctrl+m', handler])
     }
 
     if (callbacks.onEscape) {
@@ -67,6 +74,7 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
     callbacks.onNewConversation,
     callbacks.onCommandPalette,
     callbacks.onSettings,
+    callbacks.onModelList,
     callbacks.onEscape,
   ])
 }
