@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MessageSquarePlus, Moon, Settings, Sun, FolderOpen } from 'lucide-react'
+import { MessageSquarePlus, Moon, Settings, Sun, FolderOpen, Cpu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useConversationsStore, type Conversation } from '@/stores/conversations.store'
 import { useProjectsStore, type Project } from '@/stores/projects.store'
+import { useUiStore } from '@/stores/ui.store'
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -54,6 +55,8 @@ function CommandPalette({
 
   const conversations = useConversationsStore((s) => s.conversations)
   const projects = useProjectsStore((s) => s.projects)
+  const setCurrentView = useUiStore((s) => s.setCurrentView)
+  const setSettingsTab = useUiStore((s) => s.setSettingsTab)
 
   // Fetch ALL conversations when palette opens (store only has current project's)
   const [allConversations, setAllConversations] = useState<Conversation[]>([])
@@ -84,6 +87,17 @@ function CommandPalette({
         icon: <Settings className="size-4" />,
         onSelect: () => {
           onOpenSettings?.()
+          onClose()
+        },
+      },
+      {
+        id: 'action:models',
+        label: 'Liste des modeles',
+        group: 'Actions',
+        icon: <Cpu className="size-4" />,
+        onSelect: () => {
+          setSettingsTab('model')
+          setCurrentView('settings')
           onClose()
         },
       },
@@ -126,7 +140,7 @@ function CommandPalette({
     }))
 
     return [...actions, ...projectItems, ...recent]
-  }, [allConversations, projects, onNewConversation, onOpenSettings, onSelectConversation, onSelectProject, onClose])
+  }, [allConversations, projects, onNewConversation, onOpenSettings, onSelectConversation, onSelectProject, onClose, setCurrentView, setSettingsTab])
 
   // Filter items by query
   const filtered = useMemo(() => {

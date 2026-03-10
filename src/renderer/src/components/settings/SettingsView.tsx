@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ArrowLeft, Settings, Palette, Keyboard, Database, Archive, Key, SlidersHorizontal } from 'lucide-react'
-import { useUiStore } from '@/stores/ui.store'
+import { useUiStore, type SettingsTab } from '@/stores/ui.store'
 import { GeneralSettings } from './GeneralSettings'
 import { AppearanceSettings } from './AppearanceSettings'
 import { KeybindingsSettings } from './KeybindingsSettings'
@@ -9,8 +9,6 @@ import { BackupSettings } from './BackupSettings'
 import { ApiKeysSection } from './ApiKeysSection'
 import { ModelSettings } from './ModelSettings'
 import { cn } from '@/lib/utils'
-
-type SettingsTab = 'general' | 'appearance' | 'apikeys' | 'model' | 'keybindings' | 'data' | 'backup'
 
 const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
   { id: 'general', label: 'General', icon: <Settings className="size-4" /> },
@@ -24,7 +22,17 @@ const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
 
 export function SettingsView() {
   const setCurrentView = useUiStore((s) => s.setCurrentView)
-  const [activeTab, setActiveTab] = useState<SettingsTab>('general')
+  const settingsTab = useUiStore((s) => s.settingsTab)
+  const setSettingsTab = useUiStore((s) => s.setSettingsTab)
+  const [activeTab, setActiveTab] = useState<SettingsTab>(settingsTab ?? 'general')
+
+  // Consume settingsTab from ui store (set by CommandPalette) then clear it
+  useEffect(() => {
+    if (settingsTab) {
+      setActiveTab(settingsTab)
+      setSettingsTab(null)
+    }
+  }, [settingsTab, setSettingsTab])
 
   return (
     <div className="flex h-full flex-col bg-background">
