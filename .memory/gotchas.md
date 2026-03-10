@@ -1,6 +1,6 @@
 # Gotchas — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-09 (session 4)
+**Derniere mise a jour** : 2026-03-10 (session 5)
 
 ## Bugs resolus
 
@@ -61,6 +61,25 @@
 **Cause** : Le base64 d'une image (~2.4 MB en string) etait stocke dans le contentData du message Zustand.
 **Fix** : Ne stocker que le `path` dans contentData, afficher via `local-image://` protocol. Le base64 n'est plus dans le store.
 
+### AI SDK — `result.text` vs `result.consumeStream()` pour reasoning models
+**Symptome** : "No output generated. Check the stream for errors." quand un modele reasoning est utilise.
+**Cause** : `await result.text` lance `NoOutputGeneratedError` si le stream ne produit aucun step (erreur API silencieuse, ou modele reasoning sans text output).
+**Fix** : Garder `await result.text` mais attraper `NoOutputGeneratedError` specifiquement. NE PAS utiliser `consumeStream()` car il avale toutes les erreurs (y compris AbortError — casse le bouton cancel).
+**Attention** : `consumeStream()` catch en interne toutes les erreurs, rendant le cancel et la detection d'erreurs impossible.
+
+### AI SDK — `NoOutputGeneratedError` import
+L'erreur est exportee depuis `'ai'` : `import { NoOutputGeneratedError } from 'ai'`.
+
+### xAI — modeles Grok renommes (mars 2026)
+Les anciens IDs `grok-4.1-fast` et `grok-code-fast-1` n'existent plus.
+Nouveaux IDs : `grok-4-1-fast-reasoning` (supportsThinking: true) et `grok-4-1-fast-non-reasoning` (supportsThinking: false).
+Les tirets remplacent les points dans les IDs.
+
+### xAI — reasoningEffort Chat API
+Le Chat API xAI (`xai(modelId)`) supporte uniquement `reasoningEffort: 'low' | 'high'`. Pas de 'none', pas de 'medium'.
+Le Responses API (`xai.responses(modelId)`) supporte `'low' | 'medium' | 'high'`.
+Quand thinking est "off" pour xAI, ne pas envoyer de reasoningEffort (undefined).
+
 ## Composants non cables (session precedente)
 
 Probleme majeur decouvert : de nombreux composants crees par les agents P1/P2 n'etaient jamais importes. Session de cablage massif effectuee :
@@ -100,7 +119,11 @@ Le `defaultModelId` des projets est stocke au format `providerId::modelId`. Touj
 L'annulation stoppe la requete cote client mais le serveur continue a consommer des tokens.
 
 ### Vercel AI SDK — providerOptions
-Les `providerOptions` sont specifiques a chaque provider. Pour Anthropic Extended Thinking : `providerOptions: { anthropic: { thinking: { type: 'enabled', budgetTokens } } }`.
+Les `providerOptions` sont specifiques a chaque provider :
+- Anthropic : `{ anthropic: { thinking: { type: 'enabled', budgetTokens } } }`
+- OpenAI : `{ openai: { reasoningEffort: 'low' | 'medium' | 'high' } }`
+- Google : `{ google: { thinkingConfig: { thinkingBudget: number } } }`
+- xAI : `{ xai: { reasoningEffort: 'low' | 'high' } }` (Chat API uniquement)
 
 ### hotkeys-js — virgule comme separateur
 **Piege general** : `hotkeys-js` utilise `,` comme separateur de raccourcis. Tout raccourci impliquant la touche virgule doit etre gere via un listener natif `keydown`.
@@ -122,10 +145,16 @@ Dans `ai@^6.0.116`, `experimental_generateImage` est un alias deprece de `genera
 - Header sidebar : "Nouvelle discussion" (pas de label app), bouton cliquable qui cree une conv
 - Title bar macOS avec traffic lights natifs
 
+## Preferences UI de Romain (complement session 5)
+
+- Footer message assistant : actions (audio, copier) a gauche, info modele a droite — en bas de la bulle, pas dans une colonne separee
+- Hover-to-reveal pour les boutons d'action (pas toujours visibles)
+
 ## Elements toujours non cables / manquants
 
 - Search bar dans la sidebar (T34)
 - ~~PromptPicker pour InputZone (T29)~~ — **FAIT** (session 4, cable dans InputZone)
+- ~~ThinkingSelector pour InputZone~~ — **FAIT** (session 5)
 - BranchNavigation dans MessageItem (T45)
 - a11y.ts utilitaires
 - T48 (Prompt Optimizer), T52 (Export PDF), T56 (Advanced Stats), T60 (Packaging)

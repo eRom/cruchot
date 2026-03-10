@@ -22,6 +22,7 @@ export interface Model {
   outputPrice: number
   supportsImages: boolean
   supportsStreaming: boolean
+  supportsThinking: boolean
 }
 
 interface ProvidersState {

@@ -45,7 +45,7 @@ function MessageList({ messages, streamingMessageId }: MessageListProps) {
     if (streamingMessage) {
       virtualizer.scrollToIndex(messages.length - 1, { align: 'end', behavior: 'smooth' })
     }
-  }, [streamingMessage?.content.length])
+  }, [streamingMessage?.content.length, streamingMessage?.reasoning?.length, streamingMessage?.streamPhase])
 
   const measureElement = useCallback(
     (el: HTMLDivElement | null) => {

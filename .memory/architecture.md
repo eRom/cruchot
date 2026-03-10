@@ -1,6 +1,6 @@
 # Architecture — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-09 (session 4)
+**Derniere mise a jour** : 2026-03-10 (session 5)
 
 ## Vue d'ensemble
 
@@ -101,10 +101,28 @@ User saisit prompt → InputZone (mode image) → IPC invoke("images:generate")
 - 3 modeles image : Gemini Flash Image, Gemini Pro Image, GPT Image 1.5
 - Images servies via custom protocol `local-image://` (sandbox bloque `file://`)
 
+## Flux — Thinking / Reasoning
+
+```
+InputZone: thinkingEffort (settings store) → IPC payload
+→ Main: buildThinkingProviderOptions(providerId, effort) → providerOptions
+→ Main: streamText({ providerOptions }) → API
+→ Main: onChunk reasoning-delta → forward IPC + accumulate
+→ Main: onFinish → save reasoning in contentData.reasoning
+→ Renderer: useStreaming → appendReasoning() → ReasoningBlock (collapsible)
+→ Reload: ChatView mappe contentData.reasoning → message.reasoning
+```
+
+- **ThinkingSelector** : dropdown pill (Brain icon) entre ModelSelector et PromptPicker
+- Visible uniquement si `selectedModel.supportsThinking && !isImageMode`
+- 4 niveaux unifies : off | low | medium | high
+- Mapping par provider dans `thinking.ts` (Anthropic, OpenAI, Google, xAI)
+- Setting global `thinkingEffort` dans `settings.store.ts` (default: 'medium')
+
 ## LLM — Vercel AI SDK
 
 Providers : OpenAI, Anthropic, Google (+ images), Mistral, xAI, OpenRouter, Perplexity, LM Studio, Ollama.
-Modeles : chaque modele a un `type: 'text' | 'image'` dans `ModelDefinition`.
+Modeles : chaque modele a un `type: 'text' | 'image'` et `supportsThinking: boolean` dans `ModelDefinition`.
 Couts : table `PRICING` par modele dans `cost-calculator.ts`.
 
 ## Donnees

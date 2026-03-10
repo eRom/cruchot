@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type Density = 'compact' | 'normal' | 'comfortable'
+export type ThinkingEffort = 'off' | 'low' | 'medium' | 'high'
 
 interface SettingsState {
   theme: ThemeMode
@@ -15,6 +16,7 @@ interface SettingsState {
   temperature: number
   maxTokens: number
   topP: number
+  thinkingEffort: ThinkingEffort
 
   setTheme: (theme: ThemeMode) => void
   setLanguage: (language: 'fr' | 'en') => void
@@ -27,6 +29,7 @@ interface SettingsState {
   setTemperature: (value: number) => void
   setMaxTokens: (value: number) => void
   setTopP: (value: number) => void
+  setThinkingEffort: (value: ThinkingEffort) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -42,6 +45,7 @@ export const useSettingsStore = create<SettingsState>()(
       temperature: 0.7,
       maxTokens: 4096,
       topP: 0.5,
+      thinkingEffort: 'medium' as ThinkingEffort,
 
       setTheme: (theme) => set({ theme }),
       setLanguage: (language) => set({ language }),
@@ -56,6 +60,7 @@ export const useSettingsStore = create<SettingsState>()(
       setTemperature: (value) => set({ temperature: value }),
       setMaxTokens: (value) => set({ maxTokens: value }),
       setTopP: (value) => set({ topP: value }),
+      setThinkingEffort: (value) => set({ thinkingEffort: value }),
     }),
     {
       name: 'multi-llm-settings'

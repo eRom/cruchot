@@ -19,6 +19,7 @@ export interface ModelDefinition {
   outputPrice: number // USD per million tokens
   supportsImages: boolean
   supportsStreaming: boolean
+  supportsThinking: boolean
 }
 
 export interface ModelPricing {

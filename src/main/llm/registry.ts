@@ -39,7 +39,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     id: 'xai',
     name: 'xAI',
     type: 'cloud',
-    description: 'Grok 4.1 Fast, Grok Code Fast',
+    description: 'Grok 4.1 Fast Reasoning, Grok 4.1 Fast',
     requiresApiKey: true,
     icon: 'zap'
   },
@@ -93,7 +93,8 @@ export const MODELS: ModelDefinition[] = [
     inputPrice: 2.50,
     outputPrice: 15.00,
     supportsImages: true,
-    supportsStreaming: true
+    supportsStreaming: true,
+    supportsThinking: true
   },
   {
     id: 'gpt-5.3-codex',
@@ -105,7 +106,8 @@ export const MODELS: ModelDefinition[] = [
     inputPrice: 1.75,
     outputPrice: 14.00,
     supportsImages: false,
-    supportsStreaming: true
+    supportsStreaming: true,
+    supportsThinking: true
   },
   {
     id: 'gpt-5-mini',
@@ -117,7 +119,8 @@ export const MODELS: ModelDefinition[] = [
     inputPrice: 0.25,
     outputPrice: 2.00,
     supportsImages: true,
-    supportsStreaming: true
+    supportsStreaming: true,
+    supportsThinking: false
   },
   {
     id: 'gpt-5-nano',
@@ -129,7 +132,8 @@ export const MODELS: ModelDefinition[] = [
     inputPrice: 0.05,
     outputPrice: 0.40,
     supportsImages: false,
-    supportsStreaming: true
+    supportsStreaming: true,
+    supportsThinking: false
   },
   {
     id: 'gpt-4.1-mini',
@@ -141,7 +145,8 @@ export const MODELS: ModelDefinition[] = [
     inputPrice: 0.40,
     outputPrice: 1.60,
     supportsImages: true,
-    supportsStreaming: true
+    supportsStreaming: true,
+    supportsThinking: false
   },
 
   // Anthropic
@@ -155,7 +160,8 @@ export const MODELS: ModelDefinition[] = [
     inputPrice: 5.00,
     outputPrice: 25.00,
     supportsImages: true,
-    supportsStreaming: true
+    supportsStreaming: true,
+    supportsThinking: true
   },
   {
     id: 'claude-sonnet-4-6',
@@ -167,7 +173,8 @@ export const MODELS: ModelDefinition[] = [
     inputPrice: 3.00,
     outputPrice: 15.00,
     supportsImages: true,
-    supportsStreaming: true
+    supportsStreaming: true,
+    supportsThinking: true
   },
   {
     id: 'claude-haiku-4-5-20251001',
@@ -179,7 +186,8 @@ export const MODELS: ModelDefinition[] = [
     inputPrice: 1.00,
     outputPrice: 5.00,
     supportsImages: true,
-    supportsStreaming: true
+    supportsStreaming: true,
+    supportsThinking: false
   },
 
   // Google
@@ -193,7 +201,8 @@ export const MODELS: ModelDefinition[] = [
     inputPrice: 2.00,
     outputPrice: 12.00,
     supportsImages: true,
-    supportsStreaming: true
+    supportsStreaming: true,
+    supportsThinking: true
   },
   {
     id: 'gemini-3-flash-preview',
@@ -205,33 +214,36 @@ export const MODELS: ModelDefinition[] = [
     inputPrice: 0.50,
     outputPrice: 3.00,
     supportsImages: true,
-    supportsStreaming: true
+    supportsStreaming: true,
+    supportsThinking: true
   },
 
   // xAI
   {
-    id: 'grok-4.1-fast',
+    id: 'grok-4-1-fast-reasoning',
     providerId: 'xai',
-    name: 'grok-4.1-fast',
-    displayName: 'Grok 4.1 Fast',
+    name: 'grok-4-1-fast-reasoning',
+    displayName: 'Grok 4.1 Fast Reasoning',
     type: 'text',
     contextWindow: 2000000,
     inputPrice: 0.20,
     outputPrice: 0.50,
     supportsImages: true,
-    supportsStreaming: true
+    supportsStreaming: true,
+    supportsThinking: true
   },
   {
-    id: 'grok-code-fast-1',
+    id: 'grok-4-1-fast-non-reasoning',
     providerId: 'xai',
-    name: 'grok-code-fast-1',
-    displayName: 'Grok Code Fast 1',
+    name: 'grok-4-1-fast-non-reasoning',
+    displayName: 'Grok 4.1 Fast Non Reasoning',
     type: 'text',
     contextWindow: 256000,
     inputPrice: 0.20,
     outputPrice: 1.50,
     supportsImages: false,
-    supportsStreaming: true
+    supportsStreaming: true,
+    supportsThinking: false
   },
 
   // Mistral
@@ -245,7 +257,8 @@ export const MODELS: ModelDefinition[] = [
     inputPrice: 0.40,
     outputPrice: 2.00,
     supportsImages: false,
-    supportsStreaming: true
+    supportsStreaming: true,
+    supportsThinking: false
   },
   {
     id: 'mistral-large-2512',
@@ -257,7 +270,8 @@ export const MODELS: ModelDefinition[] = [
     inputPrice: 0.50,
     outputPrice: 1.50,
     supportsImages: true,
-    supportsStreaming: true
+    supportsStreaming: true,
+    supportsThinking: false
   },
 
   // ── Image Generation Models ─────────────────────────────────────────────
@@ -271,7 +285,8 @@ export const MODELS: ModelDefinition[] = [
     inputPrice: 0.04,
     outputPrice: 0.04,
     supportsImages: false,
-    supportsStreaming: false
+    supportsStreaming: false,
+    supportsThinking: false
   },
   {
     id: 'gemini-3-pro-image-preview',
@@ -283,7 +298,8 @@ export const MODELS: ModelDefinition[] = [
     inputPrice: 0.08,
     outputPrice: 0.08,
     supportsImages: false,
-    supportsStreaming: false
+    supportsStreaming: false,
+    supportsThinking: false
   },
   {
     id: 'gpt-image-1.5',
@@ -295,7 +311,8 @@ export const MODELS: ModelDefinition[] = [
     inputPrice: 0.02,
     outputPrice: 0.08,
     supportsImages: false,
-    supportsStreaming: false
+    supportsStreaming: false,
+    supportsThinking: false
   }
 ]
 

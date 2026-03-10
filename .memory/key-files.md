@@ -1,18 +1,19 @@
 # Fichiers cles — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-09 (session 4)
+**Derniere mise a jour** : 2026-03-10 (session 5)
 
 ## Main process
 
 | Fichier | Role |
 |---------|------|
 | `src/main/index.ts` | Entry point Electron, app lifecycle, auto-updater, custom protocol `local-image://` |
-| `src/main/ipc/chat.ipc.ts` | Handler chat:send — streamText() AI SDK, forward chunks IPC |
+| `src/main/ipc/chat.ipc.ts` | Handler chat:send — streamText() AI SDK, forward chunks IPC, providerOptions thinking, reasoning persistence |
 | `src/main/ipc/conversations.ipc.ts` | CRUD conversations + filtre par projet + setConversationProject |
 | `src/main/ipc/index.ts` | Registre central de tous les IPC handlers |
 | `src/main/llm/router.ts` | Routeur getModel() — Vercel AI SDK |
 | `src/main/llm/registry.ts` | Registry des providers et modeles (text + image) + `isImageModel()` helper |
-| `src/main/llm/types.ts` | `ModelDefinition` (avec `type: 'text' \| 'image'`), `ProviderDefinition`, `ModelPricing` |
+| `src/main/llm/types.ts` | `ModelDefinition` (avec `type`, `supportsThinking`), `ProviderDefinition`, `ModelPricing` |
+| `src/main/llm/thinking.ts` | Mapper effort → providerOptions par provider (Anthropic, OpenAI, Google, xAI) |
 | `src/main/llm/image.ts` | Generation d'images multi-provider (Google Gemini + OpenAI GPT Image) |
 | `src/main/llm/cost-calculator.ts` | Table PRICING + calcul cout par message |
 | `src/main/ipc/images.ipc.ts` | Handler images:generate — genere, sauve fichier + DB images + DB messages |
@@ -29,15 +30,16 @@
 | Fichier | Role |
 |---------|------|
 | `src/preload/index.ts` | contextBridge — expose ~50 methodes window.api |
-| `src/preload/types.ts` | Types partages ElectronAPI, tous les DTO (ProjectInfo, ConversationInfo, etc.) |
+| `src/preload/types.ts` | Types partages ElectronAPI, tous les DTO, ThinkingEffort, StreamChunk etendu |
 
 ## Renderer — Composants critiques
 
 | Fichier | Role |
 |---------|------|
 | `src/renderer/src/App.tsx` | Racine React — routing ViewMode, keyboard shortcuts, onboarding |
-| `src/renderer/src/components/chat/InputZone.tsx` | Zone de saisie — mode texte + mode image (AspectRatio, generateImage IPC), VoiceInput |
-| `src/renderer/src/components/chat/MessageItem.tsx` | Rendu d'un message — markdown, images via `local-image://`, TTS (masque sur images) |
+| `src/renderer/src/components/chat/InputZone.tsx` | Zone de saisie — mode texte + mode image, ThinkingSelector, VoiceInput, PromptPicker |
+| `src/renderer/src/components/chat/MessageItem.tsx` | Rendu message — markdown, images, ReasoningBlock, footer (audio+copier a gauche, model a droite) |
+| `src/renderer/src/components/chat/ThinkingSelector.tsx` | Dropdown pill effort de reflexion (off/low/medium/high), accent violet |
 | `src/renderer/src/components/chat/AspectRatioSelector.tsx` | Chips inline pour ratio d'image (1:1, 16:9, 9:16, 4:3, 3:4) |
 | `src/renderer/src/components/chat/MessageList.tsx` | Liste virtualisee — applique fontSizePx, density, messageWidth depuis settings store |
 | `src/renderer/src/components/chat/ModelSelector.tsx` | Select modele — textGroups par provider + section "Generation d'images" separee |
@@ -62,7 +64,7 @@
 | `src/renderer/src/stores/conversations.store.ts` | CRUD conversations — Conversation a projectId optionnel |
 | `src/renderer/src/stores/projects.store.ts` | CRUD projets — Project a systemPrompt, defaultModelId, color |
 | `src/renderer/src/stores/providers.store.ts` | Providers + models (avec `type: 'text' \| 'image'`) + selectModel(providerId, modelId) |
-| `src/renderer/src/stores/settings.store.ts` | Settings persistees (theme, fontSizePx, density, messageWidth, sidebar, temperature, maxTokens, topP) |
+| `src/renderer/src/stores/settings.store.ts` | Settings persistees (theme, fontSizePx, density, messageWidth, sidebar, temperature, maxTokens, topP, thinkingEffort) |
 | `src/renderer/src/stores/messages.store.ts` | Messages de la conversation active |
 
 ## Renderer — Hooks

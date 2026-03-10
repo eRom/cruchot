@@ -5,8 +5,10 @@ import { useConversationsStore } from '@/stores/conversations.store'
 import { useUiStore } from '@/stores/ui.store'
 
 interface StreamChunk {
-  type: 'text-delta' | 'tool-call' | 'finish' | 'error'
+  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'finish' | 'error'
   content?: string
+  modelId?: string
+  providerId?: string
   messageId?: string
   error?: string
   category?: string
@@ -23,10 +25,17 @@ interface StreamChunk {
 /**
  * Hook that listens for streaming chunks from the main process
  * and updates the messages store in real-time.
+ *
+ * Stream phases:
+ *  1. start         → create placeholder message (processing spinner)
+ *  2. reasoning-delta → accumulate reasoning text (thinking phase)
+ *  3. text-delta    → accumulate response text (generating phase)
+ *  4. finish/error  → finalize
  */
 export function useStreaming() {
   const addMessage = useMessagesStore((s) => s.addMessage)
   const appendToMessage = useMessagesStore((s) => s.appendToMessage)
+  const appendReasoning = useMessagesStore((s) => s.appendReasoning)
   const updateMessage = useMessagesStore((s) => s.updateMessage)
   const setStreamingMessageId = useMessagesStore((s) => s.setStreamingMessageId)
   const updateConversation = useConversationsStore((s) => s.updateConversation)
@@ -39,9 +48,39 @@ export function useStreaming() {
   const handleChunk = useCallback(
     (chunk: StreamChunk) => {
       switch (chunk.type) {
+        case 'start': {
+          // Immediately create a placeholder assistant message with "processing" phase
+          const id = crypto.randomUUID()
+          streamingIdRef.current = id
+          addMessage({
+            id,
+            conversationId: activeConversationId || '',
+            role: 'assistant',
+            content: '',
+            modelId: chunk.modelId,
+            providerId: chunk.providerId,
+            createdAt: new Date(),
+            isStreaming: true,
+            streamPhase: 'processing'
+          })
+          setStreamingMessageId(id)
+          setIsStreaming(true)
+          break
+        }
+
+        case 'reasoning-delta': {
+          const msgId = streamingIdRef.current
+          if (msgId) {
+            // Switch to reasoning phase on first reasoning chunk
+            updateMessage(msgId, { streamPhase: 'reasoning' })
+            appendReasoning(msgId, chunk.content || '')
+          }
+          break
+        }
+
         case 'text-delta': {
           if (!streamingIdRef.current) {
-            // First chunk — create streaming message
+            // Edge case: text-delta arrives without a prior start signal
             const id = crypto.randomUUID()
             streamingIdRef.current = id
             addMessage({
@@ -50,11 +89,14 @@ export function useStreaming() {
               role: 'assistant',
               content: chunk.content || '',
               createdAt: new Date(),
-              isStreaming: true
+              isStreaming: true,
+              streamPhase: 'generating'
             })
             setStreamingMessageId(id)
             setIsStreaming(true)
           } else {
+            // Switch to generating phase on first text chunk
+            updateMessage(streamingIdRef.current, { streamPhase: 'generating' })
             appendToMessage(streamingIdRef.current, chunk.content || '')
           }
           break
@@ -65,6 +107,7 @@ export function useStreaming() {
           if (msgId) {
             updateMessage(msgId, {
               isStreaming: false,
+              streamPhase: null,
               // Set full content from server as safety net (in case chunks were lost)
               ...(chunk.content ? { content: chunk.content } : {}),
               tokensIn: chunk.usage?.promptTokens,
@@ -84,6 +127,7 @@ export function useStreaming() {
           if (msgId) {
             updateMessage(msgId, {
               isStreaming: false,
+              streamPhase: null,
               content: `Erreur: ${chunk.error || 'Erreur inconnue'}${chunk.suggestion ? `\n\n${chunk.suggestion}` : ''}`
             })
           } else {
@@ -109,7 +153,7 @@ export function useStreaming() {
         }
       }
     },
-    [activeConversationId, addMessage, appendToMessage, updateMessage, setStreamingMessageId, setIsStreaming]
+    [activeConversationId, addMessage, appendToMessage, appendReasoning, updateMessage, setStreamingMessageId, setIsStreaming]
   )
 
   // Listen for streaming chunks

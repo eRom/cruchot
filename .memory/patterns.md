@@ -1,6 +1,6 @@
 # Patterns — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-09 (session 4)
+**Derniere mise a jour** : 2026-03-10 (session 5)
 
 ## Conventions de nommage
 
@@ -25,7 +25,22 @@
 - `onChunk` callback pour forward IPC — **ATTENTION: `chunk.text` pas `chunk.textDelta`** (AI SDK v6)
 - `onFinish` callback pour sauvegarde DB + calcul couts
 - `abortSignal` pour annulation
-- `providerOptions` pour features specifiques (ex: Anthropic thinking)
+- `providerOptions` pour features specifiques (thinking, reasoning)
+- `await result.text` pour consommer le stream — attraper `NoOutputGeneratedError` pour les modeles reasoning
+- `console.error('[Chat] Stream error:', error)` pour le debug
+
+### Thinking / Reasoning Pattern
+- `supportsThinking: boolean` sur `ModelDefinition`, `ModelInfo`, `Model`
+- 6 modeles : Opus, Sonnet (Anthropic), GPT-5.4, GPT-5.3 Codex (OpenAI), Gemini 3.1 Pro, Gemini 3 Flash (Google), Grok 4.1 Fast Reasoning (xAI)
+- `thinking.ts` : `buildThinkingProviderOptions(providerId, effort)` — mapping unifie 4 niveaux → providerOptions specifiques
+- Anthropic : `thinking: { type: 'disabled' | 'enabled' | 'adaptive' }` avec `budgetTokens`
+- OpenAI : `reasoningEffort: 'none' | 'low' | 'medium' | 'high'`
+- Google : `thinkingConfig: { thinkingBudget: number }`
+- xAI : `reasoningEffort: 'low' | 'high'` (Chat API, pas de 'medium' ni 'none')
+- Reasoning accumule dans closure `accumulatedReasoning` pendant `onChunk`, persiste dans `contentData.reasoning` dans `onFinish`
+- Au chargement historique (ChatView), `contentData.reasoning` mappe vers `message.reasoning`
+- ThinkingSelector visible uniquement si `selectedModel.supportsThinking && !isImageMode`
+- Setting global `thinkingEffort` dans settings.store (Zustand persist)
 
 ### Image Generation Pattern
 - Modeles avec `type: 'image'` dans `ModelDefinition` et `registry.ts`
@@ -81,10 +96,17 @@
 - Les callbacks (onNewConversation, onOpenSettings, etc.) sont passes en props depuis App.tsx
 
 ### Model Params Pattern
-- temperature, maxTokens, topP sont globaux (pas par modele)
+- temperature, maxTokens, topP, thinkingEffort sont globaux (pas par modele)
 - Persistes dans `settings.store.ts` (Zustand persist → localStorage)
 - Configures dans Settings > Modele (presets Creatif/Equilibre/Precis)
 - InputZone lit directement depuis le settings store (plus de state local)
+
+### MessageItem Footer Pattern (session 5)
+- Footer integre en bas de la bulle assistant (pas une colonne separee)
+- Separe par `border-t border-border/30`
+- Gauche : AudioPlayer (si pas image) + bouton Copier — apparaissent au hover (`opacity-0 group-hover:opacity-100`)
+- Droite : label provider-model + temps de reponse — toujours visible en `text-[10px] text-muted-foreground/40`
+- Messages user : bouton copier en position absolue `-bottom-3 right-2` (inchange)
 
 ### Title Bar Pattern (macOS)
 - `titleBarStyle: 'hiddenInset'` dans BrowserWindow
