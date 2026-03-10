@@ -70,12 +70,22 @@ export interface WorkspaceFileContext {
   language: string
 }
 
+/** Info about a single tool call (persisted in contentData.toolCalls) */
+export interface ToolCallInfo {
+  toolName: string
+  args?: Record<string, unknown>
+  status: 'running' | 'success' | 'error'
+  error?: string
+}
+
 export interface StreamChunk {
-  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'finish' | 'error'
+  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'tool-result' | 'finish' | 'error'
   content?: string
   error?: string
   toolName?: string
   toolArgs?: Record<string, unknown>
+  toolCallId?: string
+  toolIsError?: boolean
   usage?: {
     promptTokens: number
     completionTokens: number

@@ -5,8 +5,9 @@ import { MessageContent } from './MessageContent'
 import { AudioPlayer } from './AudioPlayer'
 import { FileOperationCard } from '@/components/workspace/FileOperationCard'
 import { cn } from '@/lib/utils'
-import { Brain, Check, ChevronDown, ChevronRight, Copy, File as FileIcon, Image as ImageIcon, Loader2, Sparkles } from 'lucide-react'
+import { Brain, Check, CheckCircle2, ChevronDown, ChevronRight, Copy, File as FileIcon, FolderSearch, Image as ImageIcon, Loader2, Search, Sparkles, FileText, XCircle, Wrench } from 'lucide-react'
 import type { FileOperation } from '../../../../preload/types'
+import type { ToolCallDisplay } from '@/stores/messages.store'
 
 interface MessageItemProps {
   message: Message
@@ -75,6 +76,76 @@ function ReasoningBlock({ reasoning, isStreaming }: { reasoning: string; isStrea
               <span className="size-1 animate-pulse rounded-full bg-violet-500/50" style={{ animationDelay: '300ms' }} />
             </span>
           )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Icon + label mapping for workspace tools */
+const TOOL_CONFIG: Record<string, { icon: typeof FileText; label: string }> = {
+  readFile: { icon: FileText, label: 'Lecture du fichier' },
+  listFiles: { icon: FolderSearch, label: 'Exploration des fichiers' },
+  searchInFiles: { icon: Search, label: 'Recherche dans les fichiers' }
+}
+
+/** Collapsible block showing tool calls with status */
+function ToolCallBlock({ toolCalls, isStreaming }: { toolCalls: ToolCallDisplay[]; isStreaming: boolean }) {
+  const [expanded, setExpanded] = useState(isStreaming)
+  const hasRunning = toolCalls.some(tc => tc.status === 'running')
+  const allSuccess = !hasRunning && toolCalls.every(tc => tc.status === 'success')
+  const hasError = toolCalls.some(tc => tc.status === 'error')
+
+  return (
+    <div className="mb-2">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-1.5 text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
+      >
+        {hasRunning ? (
+          <Wrench className="size-3.5 animate-pulse" />
+        ) : expanded ? (
+          <ChevronDown className="size-3.5" />
+        ) : (
+          <ChevronRight className="size-3.5" />
+        )}
+        <span>
+          {hasRunning
+            ? `Utilisation d'outils...`
+            : `${toolCalls.length} outil${toolCalls.length > 1 ? 's' : ''} utilise${toolCalls.length > 1 ? 's' : ''}`}
+        </span>
+        {!hasRunning && (
+          allSuccess
+            ? <CheckCircle2 className="size-3 text-emerald-500" />
+            : hasError
+              ? <XCircle className="size-3 text-red-500" />
+              : null
+        )}
+      </button>
+      {(expanded || hasRunning) && (
+        <div className="mt-1.5 rounded-lg border border-cyan-200/40 dark:border-cyan-500/20 bg-cyan-50/50 dark:bg-cyan-950/20 px-3 py-2 space-y-1">
+          {toolCalls.map((tc, i) => {
+            const config = TOOL_CONFIG[tc.toolName] || { icon: Wrench, label: tc.toolName }
+            const Icon = config.icon
+            const detail = tc.args?.path || tc.args?.query || ''
+
+            return (
+              <div key={i} className="flex items-center gap-2 text-xs">
+                {tc.status === 'running' ? (
+                  <Loader2 className="size-3 shrink-0 animate-spin text-cyan-500" />
+                ) : tc.status === 'success' ? (
+                  <CheckCircle2 className="size-3 shrink-0 text-emerald-500" />
+                ) : (
+                  <XCircle className="size-3 shrink-0 text-red-500" />
+                )}
+                <Icon className="size-3 shrink-0 text-muted-foreground/60" />
+                <span className="text-muted-foreground">
+                  {config.label}
+                  {detail ? <span className="text-foreground/70 ml-1">{String(detail)}</span> : null}
+                </span>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
@@ -196,8 +267,12 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
           <ReasoningBlock reasoning={message.reasoning} isStreaming={isStreaming && message.streamPhase === 'reasoning'} />
         )}
 
+        {message.toolCalls && message.toolCalls.length > 0 && (
+          <ToolCallBlock toolCalls={message.toolCalls} isStreaming={isStreaming} />
+        )}
+
         {/* Content */}
-        {message.contentData?.type === 'image' ? (
+        {(message.contentData?.type as string) === 'image' ? (
           <div className="flex flex-col gap-2">
             <img
               src={

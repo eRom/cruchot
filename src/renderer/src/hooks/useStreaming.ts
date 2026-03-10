@@ -5,7 +5,7 @@ import { useConversationsStore } from '@/stores/conversations.store'
 import { useUiStore } from '@/stores/ui.store'
 
 interface StreamChunk {
-  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'finish' | 'error'
+  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'tool-result' | 'finish' | 'error'
   content?: string
   modelId?: string
   providerId?: string
@@ -16,6 +16,8 @@ interface StreamChunk {
   suggestion?: string
   toolName?: string
   toolArgs?: Record<string, unknown>
+  toolCallId?: string
+  toolIsError?: boolean
   usage?: {
     promptTokens: number
     completionTokens: number
@@ -24,6 +26,7 @@ interface StreamChunk {
   cost?: number
   responseTimeMs?: number
   fileOperations?: Array<{ id: string; type: string; path: string; content?: string; status: string }>
+  toolCalls?: Array<{ toolName: string; args?: Record<string, unknown>; status: string; error?: string }>
 }
 
 /** Human-readable labels for workspace tool calls */
@@ -48,6 +51,8 @@ export function useStreaming() {
   const addMessage = useMessagesStore((s) => s.addMessage)
   const appendToMessage = useMessagesStore((s) => s.appendToMessage)
   const appendReasoning = useMessagesStore((s) => s.appendReasoning)
+  const addToolCall = useMessagesStore((s) => s.addToolCall)
+  const updateLastToolCallStatus = useMessagesStore((s) => s.updateLastToolCallStatus)
   const updateMessage = useMessagesStore((s) => s.updateMessage)
   const setStreamingMessageId = useMessagesStore((s) => s.setStreamingMessageId)
   const updateConversation = useConversationsStore((s) => s.updateConversation)
@@ -98,14 +103,28 @@ export function useStreaming() {
         case 'tool-call': {
           const msgId = streamingIdRef.current
           if (msgId && chunk.toolName) {
-            // Show tool call as a processing indicator
             const toolLabel = TOOL_LABELS[chunk.toolName] || chunk.toolName
             const argPath = (chunk.toolArgs?.path || chunk.toolArgs?.query || '') as string
             const detail = argPath ? ` : ${argPath}` : ''
+            // Add tool call to the persistent list with "running" status
+            addToolCall(msgId, {
+              toolName: chunk.toolName,
+              args: chunk.toolArgs,
+              status: 'running'
+            })
+            // Also update the processing indicator
             updateMessage(msgId, {
               streamPhase: 'processing',
               toolCall: `${toolLabel}${detail}`
             })
+          }
+          break
+        }
+
+        case 'tool-result': {
+          const msgId = streamingIdRef.current
+          if (msgId) {
+            updateLastToolCallStatus(msgId, chunk.toolIsError ? 'error' : 'success')
           }
           break
         }
@@ -137,6 +156,15 @@ export function useStreaming() {
         case 'finish': {
           const msgId = streamingIdRef.current
           if (msgId) {
+            // Build contentData from finish chunk
+            const finishContentData: Record<string, unknown> = {}
+            if (chunk.fileOperations && chunk.fileOperations.length > 0) {
+              finishContentData.fileOperations = chunk.fileOperations
+            }
+            if (chunk.toolCalls && chunk.toolCalls.length > 0) {
+              finishContentData.toolCalls = chunk.toolCalls
+            }
+
             updateMessage(msgId, {
               isStreaming: false,
               streamPhase: null,
@@ -146,8 +174,8 @@ export function useStreaming() {
               tokensOut: chunk.usage?.completionTokens,
               cost: chunk.cost,
               responseTimeMs: chunk.responseTimeMs,
-              ...(chunk.fileOperations && chunk.fileOperations.length > 0
-                ? { contentData: { fileOperations: chunk.fileOperations } }
+              ...(Object.keys(finishContentData).length > 0
+                ? { contentData: finishContentData }
                 : {})
             })
           }
@@ -188,7 +216,7 @@ export function useStreaming() {
         }
       }
     },
-    [activeConversationId, addMessage, appendToMessage, appendReasoning, updateMessage, setStreamingMessageId, setIsStreaming]
+    [activeConversationId, addMessage, appendToMessage, appendReasoning, addToolCall, updateLastToolCallStatus, updateMessage, setStreamingMessageId, setIsStreaming]
   )
 
   // Listen for streaming chunks

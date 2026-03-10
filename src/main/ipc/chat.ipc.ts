@@ -1,6 +1,6 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import { z } from 'zod'
-import { streamText, NoOutputGeneratedError } from 'ai'
+import { streamText, NoOutputGeneratedError, stepCountIs } from 'ai'
 import { getModel } from '../llm/router'
 import { calculateMessageCost } from '../llm/cost-calculator'
 import { classifyError } from '../llm/errors'
@@ -191,6 +191,7 @@ export function registerChatIpc(): void {
       // Accumulate text during streaming (needed because with maxSteps, result.text only has the last step)
       let accumulatedReasoning = ''
       let accumulatedText = ''
+      const accumulatedToolCalls: Array<{ toolName: string; args?: Record<string, unknown>; status: 'running' | 'success' | 'error'; error?: string }> = []
 
       const result = streamText({
         model,
@@ -200,7 +201,7 @@ export function registerChatIpc(): void {
         maxTokens,
         topP,
         providerOptions,
-        ...(tools ? { tools, maxSteps: 10 } : {}),
+        ...(tools ? { tools, maxSteps: 10, stopWhen: stepCountIs(10) } : {}),
         onChunk({ chunk }) {
           if (chunk.type === 'text-delta') {
             accumulatedText += chunk.text
@@ -215,10 +216,32 @@ export function registerChatIpc(): void {
               content: chunk.text
             })
           } else if (chunk.type === 'tool-call') {
+            // Track tool call as running
+            accumulatedToolCalls.push({
+              toolName: chunk.toolName,
+              args: chunk.args as Record<string, unknown>,
+              status: 'running'
+            })
             win.webContents.send('chat:chunk', {
               type: 'tool-call',
               toolName: chunk.toolName,
-              toolArgs: chunk.args
+              toolArgs: chunk.args,
+              toolCallId: chunk.toolCallId
+            })
+          } else if (chunk.type === 'tool-result') {
+            // Tool execution completed — update status
+            const toolResult = chunk as { type: 'tool-result'; toolName: string; toolCallId: string; output: unknown }
+            const isError = toolResult.output != null && typeof toolResult.output === 'object' && 'error' in (toolResult.output as Record<string, unknown>)
+            const tc = accumulatedToolCalls.find(t => t.toolName === toolResult.toolName && t.status === 'running')
+            if (tc) {
+              tc.status = isError ? 'error' : 'success'
+              if (isError) tc.error = String((toolResult.output as Record<string, unknown>).error)
+            }
+            win.webContents.send('chat:chunk', {
+              type: 'tool-result',
+              toolName: toolResult.toolName,
+              toolCallId: toolResult.toolCallId,
+              toolIsError: isError
             })
           }
         }
@@ -260,6 +283,13 @@ export function registerChatIpc(): void {
       // Build contentData
       const contentData: Record<string, unknown> = {}
       if (accumulatedReasoning) contentData.reasoning = accumulatedReasoning
+      if (accumulatedToolCalls.length > 0) {
+        // Finalize any still-running tool calls as success (in case onStepFinish didn't fire for them)
+        contentData.toolCalls = accumulatedToolCalls.map(tc => ({
+          ...tc,
+          status: tc.status === 'running' ? 'success' : tc.status
+        }))
+      }
       if (fileOps.length > 0) contentData.fileOperations = fileOps.map(op => ({ ...op, status: 'pending' }))
 
       const savedMessage = createMessage({
@@ -286,7 +316,11 @@ export function registerChatIpc(): void {
         },
         cost,
         responseTimeMs,
-        fileOperations: fileOps.length > 0 ? fileOps.map(op => ({ ...op, status: 'pending' })) : undefined
+        fileOperations: fileOps.length > 0 ? fileOps.map(op => ({ ...op, status: 'pending' })) : undefined,
+        toolCalls: accumulatedToolCalls.length > 0 ? accumulatedToolCalls.map(tc => ({
+          ...tc,
+          status: tc.status === 'running' ? 'success' : tc.status
+        })) : undefined
       })
 
       currentAbortController = null
