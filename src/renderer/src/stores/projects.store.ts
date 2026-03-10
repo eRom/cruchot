@@ -7,6 +7,7 @@ export interface Project {
   systemPrompt?: string | null
   defaultModelId?: string | null
   color?: string | null
+  workspacePath?: string | null
   createdAt: Date
   updatedAt: Date
 }

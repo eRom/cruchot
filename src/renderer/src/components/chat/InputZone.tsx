@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowUp, ImageIcon, Loader2, Paperclip, Square } from 'lucide-react'
+import { ArrowUp, FolderOpen, ImageIcon, Loader2, Paperclip, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ModelSelector } from '@/components/chat/ModelSelector'
@@ -17,8 +17,10 @@ import { useMessagesStore } from '@/stores/messages.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useUiStore } from '@/stores/ui.store'
 import { useRolesStore } from '@/stores/roles.store'
+import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useContextWindow } from '@/hooks/useContextWindow'
 import { cn } from '@/lib/utils'
+import { FileReference } from '@/components/workspace/FileReference'
 import type { AttachmentRef } from '../../../../preload/types'
 
 // ── Types pour futures integrations (ModelParams) ──
@@ -100,6 +102,10 @@ export function InputZone({
   const thinkingEffort = useSettingsStore((s) => s.thinkingEffort)
   const activeRoleId = useRolesStore((s) => s.activeRoleId)
   const activeSystemPrompt = useRolesStore((s) => s.activeSystemPrompt)
+  const workspaceRootPath = useWorkspaceStore((s) => s.rootPath)
+  const workspaceAttachedFiles = useWorkspaceStore((s) => s.attachedFiles)
+  const detachWorkspaceFile = useWorkspaceStore((s) => s.detachFile)
+  const toggleWorkspacePanel = useWorkspaceStore((s) => s.togglePanel)
 
   // ── Context window ────────────────────────────────────────
   const conversationMessages = useMemo(
@@ -488,6 +494,14 @@ export function InputZone({
     // Resolve role ID for persistence (skip virtual __project__ id)
     const roleIdForPersist = activeRoleId && activeRoleId !== '__project__' ? activeRoleId : undefined
 
+    // Load workspace file contexts if any
+    let fileContexts: { path: string; content: string; language: string }[] | undefined
+    if (workspaceAttachedFiles.length > 0) {
+      try {
+        fileContexts = await useWorkspaceStore.getState().getAttachedFileContexts()
+      } catch { /* ignore */ }
+    }
+
     // Envoyer via IPC
     try {
       await window.api.sendMessage({
@@ -501,10 +515,16 @@ export function InputZone({
         topP,
         thinkingEffort: selectedModel?.supportsThinking ? thinkingEffort : undefined,
         roleId: roleIdForPersist,
-        attachments: attachmentRefsForIpc.length > 0 ? attachmentRefsForIpc : undefined
+        attachments: attachmentRefsForIpc.length > 0 ? attachmentRefsForIpc : undefined,
+        fileContexts: fileContexts && fileContexts.length > 0 ? fileContexts : undefined
       })
     } catch {
       // Erreur geree par le stream handler dans le main
+    }
+
+    // Clear workspace attached files after send
+    if (workspaceAttachedFiles.length > 0) {
+      useWorkspaceStore.getState().clearAttachedFiles()
     }
 
     // Persist role on conversation after first message
@@ -641,6 +661,19 @@ export function InputZone({
             isImageMode && 'border-violet-500/30 focus-within:border-violet-500/40'
           )}
         >
+          {/* Workspace file references */}
+          {workspaceAttachedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 px-3 pt-2">
+              {workspaceAttachedFiles.map((path) => (
+                <FileReference
+                  key={path}
+                  path={path}
+                  onRemove={() => detachWorkspaceFile(path)}
+                />
+              ))}
+            </div>
+          )}
+
           {/* Attachment preview bar */}
           {hasAttachments && (
             <div className="px-3 pt-2">
@@ -691,6 +724,28 @@ export function InputZone({
           <div className="flex items-center justify-between gap-2 px-2 pb-2 pt-1">
             {/* Cote gauche — Paperclip + ModelSelector + pills */}
             <div className="flex items-center gap-1.5">
+              {/* Workspace toggle — visible only if workspace active */}
+              {!isImageMode && workspaceRootPath && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={toggleWorkspacePanel}
+                      disabled={isBusy}
+                      className={cn(
+                        'size-7 rounded-lg',
+                        'text-muted-foreground/60 hover:text-muted-foreground',
+                        'transition-colors',
+                        workspaceAttachedFiles.length > 0 && 'text-cyan-600 dark:text-cyan-400'
+                      )}
+                    >
+                      <FolderOpen className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Workspace (Cmd+B)</TooltipContent>
+                </Tooltip>
+              )}
               {/* Paperclip — attach files (hidden in image mode) */}
               {!isImageMode && (
                 <Tooltip>

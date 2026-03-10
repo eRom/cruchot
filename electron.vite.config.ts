@@ -12,7 +12,7 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'src/main/index.ts')
         },
-        external: ['fsevents']
+        external: ['fsevents', 'chokidar']
       }
     }
   },
