@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ConversationItem } from './ConversationItem'
 import type { Conversation } from '@/stores/conversations.store'
@@ -81,7 +82,7 @@ export function ConversationList({
 
   return (
     <ScrollArea className="flex-1">
-      <div className={isCollapsed ? 'px-1.5 py-2' : 'px-2 py-1'}>
+      <div className={cn(isCollapsed ? 'px-1.5 py-2' : 'px-2 py-1', 'overflow-hidden')}>
         {grouped.map((group) => (
           <div key={group.label} className="mb-1">
             {!isCollapsed && (

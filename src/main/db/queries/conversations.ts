@@ -91,3 +91,8 @@ export function deleteConversation(id: string) {
   // Messages are cascade-deleted via FK or we delete them explicitly
   db.delete(conversations).where(eq(conversations.id, id)).run()
 }
+
+export function deleteAllConversations() {
+  const db = getDatabase()
+  db.delete(conversations).run()
+}

@@ -28,6 +28,9 @@ const api: ElectronAPI = {
   deleteConversation: (id: string): Promise<void> =>
     ipcRenderer.invoke('conversations:delete', id),
 
+  deleteAllConversations: (): Promise<void> =>
+    ipcRenderer.invoke('conversations:deleteAll'),
+
   renameConversation: (id: string, title: string): Promise<void> =>
     ipcRenderer.invoke('conversations:rename', id, title),
 

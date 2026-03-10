@@ -24,9 +24,15 @@ export function DataSettings() {
     }
   }
 
-  const handleDeleteAll = () => {
-    // Actual deletion will be wired via IPC later
-    setShowDeleteConfirm(false)
+  const handleDeleteAll = async () => {
+    try {
+      await window.api.deleteAllConversations()
+      setShowDeleteConfirm(false)
+      // Reload pour rafraichir la sidebar
+      window.location.reload()
+    } catch (err) {
+      console.error('[DataSettings] Delete all failed:', err)
+    }
   }
 
   return (

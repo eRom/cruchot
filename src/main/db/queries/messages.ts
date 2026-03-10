@@ -69,3 +69,8 @@ export function deleteMessagesForConversation(conversationId: string) {
   const db = getDatabase()
   db.delete(messages).where(eq(messages.conversationId, conversationId)).run()
 }
+
+export function deleteAllMessages() {
+  const db = getDatabase()
+  db.delete(messages).run()
+}
