@@ -6,7 +6,7 @@ import { calculateMessageCost } from '../llm/cost-calculator'
 import { classifyError } from '../llm/errors'
 import { buildThinkingProviderOptions } from '../llm/thinking'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
-import { touchConversation, renameConversation, getConversation } from '../db/queries/conversations'
+import { touchConversation, renameConversation, getConversation, updateConversationModel } from '../db/queries/conversations'
 
 const sendMessageSchema = z.object({
   conversationId: z.string().min(1),
@@ -57,7 +57,7 @@ export function registerChatIpc(): void {
       // Auto-generate title from first message if title is still default
       const conv = getConversation(conversationId)
       if (conv && conv.title === 'Nouvelle conversation') {
-        const shortTitle = content.slice(0, 60) + (content.length > 60 ? '...' : '')
+        const shortTitle = content.slice(0, 35) + (content.length > 35 ? '...' : '')
         renameConversation(conversationId, shortTitle)
         // Notify renderer about the title update
         win.webContents.send('conversation:updated', {
@@ -118,59 +118,61 @@ export function registerChatIpc(): void {
               content: chunk.text
             })
           }
-        },
-        async onFinish({ text, usage }) {
-          const responseTimeMs = Date.now() - startTime
-          const tokensIn = usage?.promptTokens ?? 0
-          const tokensOut = usage?.completionTokens ?? 0
-          const cost = calculateMessageCost(modelId, tokensIn, tokensOut)
-
-          // Save assistant message to DB (with reasoning in contentData if present)
-          const contentData = accumulatedReasoning
-            ? { reasoning: accumulatedReasoning }
-            : undefined
-
-          const savedMessage = createMessage({
-            conversationId,
-            role: 'assistant',
-            content: text,
-            modelId,
-            providerId,
-            tokensIn,
-            tokensOut,
-            cost,
-            responseTimeMs,
-            contentData
-          })
-
-          win.webContents.send('chat:chunk', {
-            type: 'finish',
-            content: text,
-            messageId: savedMessage.id,
-            usage: {
-              promptTokens: tokensIn,
-              completionTokens: tokensOut,
-              totalTokens: tokensIn + tokensOut
-            },
-            cost,
-            responseTimeMs
-          })
-
-          currentAbortController = null
         }
       })
 
-      // Consume the stream (needed for onChunk/onFinish to fire)
+      // Consume the stream — usage is only available after full consumption
+      let fullText = ''
       try {
-        await result.text
+        fullText = await result.text
       } catch (e) {
-        // NoOutputGeneratedError = stream completed but no text output
-        // (reasoning models may produce only reasoning tokens)
-        // onFinish already handled saving, so we can ignore this
         if (!(e instanceof NoOutputGeneratedError)) {
           throw e
         }
       }
+
+      // Get usage from resolved promise (more reliable than onFinish for some providers)
+      const usage = await result.usage
+      const responseTimeMs = Date.now() - startTime
+      const tokensIn = usage?.inputTokens ?? 0
+      const tokensOut = usage?.outputTokens ?? 0
+      const cost = calculateMessageCost(modelId, tokensIn, tokensOut)
+
+      // Save last used model on the conversation (for restore on switch)
+      updateConversationModel(conversationId, `${providerId}::${modelId}`)
+
+      // Save assistant message to DB
+      const contentData = accumulatedReasoning
+        ? { reasoning: accumulatedReasoning }
+        : undefined
+
+      const savedMessage = createMessage({
+        conversationId,
+        role: 'assistant',
+        content: fullText,
+        modelId,
+        providerId,
+        tokensIn,
+        tokensOut,
+        cost,
+        responseTimeMs,
+        contentData
+      })
+
+      win.webContents.send('chat:chunk', {
+        type: 'finish',
+        content: fullText,
+        messageId: savedMessage.id,
+        usage: {
+          promptTokens: tokensIn,
+          completionTokens: tokensOut,
+          totalTokens: tokensIn + tokensOut
+        },
+        cost,
+        responseTimeMs
+      })
+
+      currentAbortController = null
 
     } catch (error: unknown) {
       currentAbortController = null
