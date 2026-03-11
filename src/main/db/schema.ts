@@ -184,6 +184,7 @@ export const scheduledTasks = sqliteTable('scheduled_tasks', {
     time?: string
     days?: number[]
   } | null>(),
+  useMemory: integer('use_memory', { mode: 'boolean' }).notNull().default(true),
   isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(true),
   lastRunAt: integer('last_run_at', { mode: 'timestamp' }),
   nextRunAt: integer('next_run_at', { mode: 'timestamp' }),

@@ -44,6 +44,7 @@ export function createScheduledTask(data: {
   projectId?: string | null
   scheduleType: ScheduleType
   scheduleConfig: ScheduleConfig | null
+  useMemory?: boolean
 }) {
   const db = getDatabase()
   const id = nanoid()
@@ -61,6 +62,7 @@ export function createScheduledTask(data: {
       projectId: data.projectId ?? null,
       scheduleType: data.scheduleType,
       scheduleConfig: data.scheduleConfig ?? null,
+      useMemory: data.useMemory ?? true,
       isEnabled: true,
       nextRunAt,
       runCount: 0,
@@ -84,6 +86,7 @@ export function updateScheduledTask(
     scheduleType?: ScheduleType
     scheduleConfig?: ScheduleConfig | null
     isEnabled?: boolean
+    useMemory?: boolean
   }
 ) {
   const db = getDatabase()

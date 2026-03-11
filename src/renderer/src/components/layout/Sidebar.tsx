@@ -7,6 +7,7 @@ import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useUiStore, type ViewMode } from '@/stores/ui.store'
+import { useTasksStore } from '@/stores/tasks.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import {
   BarChart3,
@@ -36,10 +37,19 @@ export function Sidebar(): React.JSX.Element {
   const activeProjectId = useProjectsStore((s) => s.activeProjectId)
   const { sidebarCollapsed, toggleSidebar } = useSettingsStore()
   const { currentView, setCurrentView } = useUiStore()
+  const enabledTasksCount = useTasksStore((s) => s.tasks.filter((t) => t.isEnabled).length)
 
   // ── Recharger les conversations quand le projet change ────
   useEffect(() => {
     window.api.getConversations(activeProjectId).then(setConversations).catch(console.error)
+  }, [activeProjectId, setConversations])
+
+  // ── Refresh sidebar quand une tache planifiee s'execute ────
+  useEffect(() => {
+    window.api.onTaskExecuted(() => {
+      window.api.getConversations(activeProjectId).then(setConversations).catch(console.error)
+    })
+    return () => { window.api.offTaskExecuted() }
   }, [activeProjectId, setConversations])
 
   // ── Filtrage local (securite, au cas ou le backend n'est pas sync) ──
@@ -212,6 +222,7 @@ export function Sidebar(): React.JSX.Element {
           isActive={currentView === 'tasks'}
           isCollapsed={collapsed}
           onClick={() => handleNavClick('tasks')}
+          badge={enabledTasksCount}
         />
         <NavGroup
           icon={UserPen}
@@ -288,9 +299,10 @@ interface NavButtonProps {
   isCollapsed: boolean
   onClick: () => void
   isNested?: boolean
+  badge?: number
 }
 
-function NavButton({ icon: Icon, label, isActive, isCollapsed, onClick, isNested }: NavButtonProps): React.JSX.Element {
+function NavButton({ icon: Icon, label, isActive, isCollapsed, onClick, isNested, badge }: NavButtonProps): React.JSX.Element {
   const button = (
     <button
       onClick={onClick}
@@ -311,7 +323,14 @@ function NavButton({ icon: Icon, label, isActive, isCollapsed, onClick, isNested
         )}
       />
       {!isCollapsed && (
-        <span className="text-[13px] font-medium leading-tight">{label}</span>
+        <>
+          <span className="text-[13px] font-medium leading-tight">{label}</span>
+          {badge != null && badge > 0 && (
+            <span className="ml-auto flex size-5 items-center justify-center rounded-full bg-sidebar-primary text-[10px] font-semibold text-sidebar-primary-foreground">
+              {badge}
+            </span>
+          )}
+        </>
       )}
     </button>
   )

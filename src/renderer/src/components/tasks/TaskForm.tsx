@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
   ArrowLeft,
+  Brain,
   Hand,
   Timer,
   CalendarDays,
@@ -22,6 +23,7 @@ export interface TaskFormData {
   modelId: string
   roleId: string
   projectId: string
+  useMemory: boolean
   scheduleType: ScheduleType
   intervalValue: number
   intervalUnit: 'seconds' | 'minutes' | 'hours'
@@ -86,6 +88,7 @@ export function TaskForm({ task, onSave, onCancel }: TaskFormProps) {
         modelId: task.modelId,
         roleId: task.roleId ?? '',
         projectId: task.projectId ?? '',
+        useMemory: task.useMemory ?? true,
         scheduleType: task.scheduleType,
         intervalValue: config?.value ?? 5,
         intervalUnit: (config?.unit as 'seconds' | 'minutes' | 'hours') ?? 'minutes',
@@ -101,6 +104,7 @@ export function TaskForm({ task, onSave, onCancel }: TaskFormProps) {
       modelId: '',
       roleId: '',
       projectId: '',
+      useMemory: true,
       scheduleType: 'manual',
       intervalValue: 5,
       intervalUnit: 'minutes',
@@ -255,6 +259,35 @@ export function TaskForm({ task, onSave, onCancel }: TaskFormProps) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Memory fragments */}
+          <div className="flex items-center justify-between rounded-lg border border-border/60 px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              <Brain className="size-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium text-foreground">Utiliser la memoire</p>
+                <p className="text-xs text-muted-foreground">Injecter les fragments memoire actifs dans le contexte</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.useMemory}
+              onClick={() => setForm((f) => ({ ...f, useMemory: !f.useMemory }))}
+              className={cn(
+                'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors',
+                form.useMemory ? 'bg-primary' : 'bg-muted'
+              )}
+            >
+              <span
+                className={cn(
+                  'pointer-events-none block size-4 rounded-full bg-background shadow-sm ring-0 transition-transform',
+                  form.useMemory ? 'translate-x-4.5' : 'translate-x-0.5'
+                )}
+                style={{ marginTop: '2px' }}
+              />
+            </button>
           </div>
 
           {/* Project (optional) */}

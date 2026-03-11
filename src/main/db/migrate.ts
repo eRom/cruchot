@@ -222,4 +222,11 @@ export function runMigrations(): void {
       // Column already exists — ignore
     }
   }
+
+  // Add use_memory column to scheduled_tasks table
+  try {
+    sqlite.exec('ALTER TABLE scheduled_tasks ADD COLUMN use_memory INTEGER NOT NULL DEFAULT 1')
+  } catch {
+    // Column already exists — ignore
+  }
 }

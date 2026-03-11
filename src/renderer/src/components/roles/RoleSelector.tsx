@@ -1,17 +1,17 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { UserCircle, Lock, X, FolderOpen, Shield } from 'lucide-react'
 import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
-  SelectValue,
-  SelectSeparator
+  SelectValue
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useRolesStore, type Role } from '@/stores/roles.store'
-import { useProjectsStore } from '@/stores/projects.store'
 import { cn } from '@/lib/utils'
+import { useProjectsStore } from '@/stores/projects.store'
+import { useRolesStore } from '@/stores/roles.store'
+import { FolderOpen, Lock, Shield, UserCircle, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 const PROJECT_ROLE_ID = '__project__'
 const NO_ROLE_ID = '__none__'
@@ -157,7 +157,7 @@ export function RoleSelector({ disabled = false, className }: RoleSelectorProps)
             </SelectTrigger>
           </TooltipTrigger>
           <TooltipContent side="top" className="text-xs">
-            {disabled ? 'Role verrouille' : 'Role (system prompt)'}
+            {disabled ? 'Role verrouille' : 'Choisir un rôle'}
           </TooltipContent>
         </Tooltip>
 
