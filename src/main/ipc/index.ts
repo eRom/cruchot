@@ -22,6 +22,7 @@ import { registerWorkspaceIpc } from './workspace.ipc'
 import { registerTtsIpc } from './tts.ipc'
 import { registerScheduledTasksIpc } from './scheduled-tasks.ipc'
 import { registerMcpIpc } from './mcp.ipc'
+import { registerMemoryFragmentsIpc } from './memory-fragments.ipc'
 
 /**
  * Registre central des IPC handlers.
@@ -87,6 +88,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── MCP Servers ────────────────────────────
   registerMcpIpc()
+
+  // ── Memory Fragments ─────────────────────
+  registerMemoryFragmentsIpc()
 
   // ── Settings ────────────────────────────────────────
   ipcMain.handle('settings:get', async (_event, key: string) => {

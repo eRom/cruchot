@@ -240,6 +240,18 @@ export const mcpServers = sqliteTable('mcp_servers', {
 })
 
 // ---------------------------------------------------------------------------
+// Memory Fragments
+// ---------------------------------------------------------------------------
+export const memoryFragments = sqliteTable('memory_fragments', {
+  id: text('id').primaryKey(),
+  content: text('content').notNull(),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  sortOrder: integer('sort_order').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+})
+
+// ---------------------------------------------------------------------------
 // Images
 // ---------------------------------------------------------------------------
 export const images = sqliteTable('images', {

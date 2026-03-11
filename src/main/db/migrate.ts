@@ -184,6 +184,15 @@ export function runMigrations(): void {
       updated_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS memory_fragments (
+      id TEXT PRIMARY KEY,
+      content TEXT NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
     CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(content);
   `)
 
