@@ -446,6 +446,16 @@ export interface AutoApproveSettings {
   autoApproveMcp: boolean
 }
 
+// ── Summary ─────────────────────────────────────────────────
+export interface SummarizePayload {
+  conversationId: string
+  modelId: string       // "providerId::modelId"
+  prompt: string
+}
+export interface SummarizeResult {
+  text: string
+}
+
 // ── Local Providers ─────────────────────────────────────────
 export interface LocalProviderStatus { ollama: boolean; lmstudio: boolean }
 export interface LocalProviderTestResult { reachable: boolean; modelCount: number; models: ModelInfo[] }
@@ -697,6 +707,9 @@ export interface ElectronAPI {
   remoteDeleteToken: () => Promise<void>
   onRemoteStatusChanged: (callback: (event: RemoteStatusEvent) => void) => void
   offRemoteStatusChanged: () => void
+
+  // Summary
+  summarizeConversation: (payload: SummarizePayload) => Promise<SummarizeResult>
 
   // Settings
   getSetting: (key: string) => Promise<string | null>

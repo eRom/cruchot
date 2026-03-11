@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 23 — Remote Telegram)
+> Derniere mise a jour : 2026-03-11 (session 24 — Summary + audit secu Remote)
 
 ## Main process
 
@@ -41,12 +41,13 @@
 | `src/main/services/telegram-bot.service.ts` | Singleton TelegramBotService — polling, pairing, streaming, tool approval, commands, sanitization, reconnexion (~550 lignes) |
 | `src/main/db/queries/remote-sessions.ts` | CRUD table remote_sessions (getActive, create, update, deactivate, touchActivity, updateAutoApprove) |
 | `src/main/services/git.service.ts` | Service Git standalone — execFile securise, env minimal, cache TTL 2s, parsing porcelain |
+| `src/main/ipc/summary.ipc.ts` | Handler summary:generate — generateText one-shot, Zod, whitelist providers, transcript serialize |
 
 ## Preload
 
 | Fichier | Role |
 |---------|------|
-| `src/preload/index.ts` | contextBridge ~103 methodes |
+| `src/preload/index.ts` | contextBridge ~105 methodes |
 | `src/preload/types.ts` | Types partages, DTOs |
 
 ## Renderer — Composants cles
@@ -63,8 +64,9 @@
 | `components/mcp/McpView.tsx` | Vue standalone MCP — grille serveurs, subView pattern |
 | `components/mcp/McpServerCard.tsx` | Card serveur MCP — toggle, status, tools count, hover actions |
 | `components/mcp/McpServerForm.tsx` | Formulaire create/edit serveur MCP — transport, env vars, projet, test |
-| `components/chat/ContextWindowIndicator.tsx` | Barre tokens + cout + RemoteBadge (status, pairing toast+clipboard, start/stop) |
-| `components/settings/SettingsView.tsx` | 9 tabs (General, Apparence, API, Modele, Audio, Raccourcis, Donnees, Sauvegardes, Remote) |
+| `components/chat/ContextWindowIndicator.tsx` | Barre tokens + cout + RemoteBadge + SummaryButton (status, pairing toast+clipboard, start/stop) |
+| `components/settings/SettingsView.tsx` | 10 tabs (General, Apparence, API, Modele, Audio, Raccourcis, Donnees, Sauvegardes, Remote, Resume) |
+| `components/settings/SummaryTab.tsx` | Config Resume — selecteur modele (text+configured), textarea prompt, bouton reinitialiser |
 | `components/settings/RemoteTab.tsx` | Config Remote — formulaire token+userId unifie, session start/stop, pairing code, auto-approve toggles |
 | `components/workspace/WorkspacePanel.tsx` | Panneau droit collapsible, FileTree + FilePanel + GitBranchBadge + tab Fichiers/Changes |
 | `components/workspace/GitBranchBadge.tsx` | Badge branche Git (nom, dot dirty/clean, count modifies) |
@@ -76,7 +78,7 @@
 
 | Fichier | Role |
 |---------|------|
-| `stores/settings.store.ts` | Persist localStorage : theme, font, density, temperature, maxTokens, topP, thinkingEffort, ttsProvider, favoriteModelIds |
+| `stores/settings.store.ts` | Persist localStorage : theme, font, density, temperature, maxTokens, topP, thinkingEffort, ttsProvider, favoriteModelIds, summaryModelId, summaryPrompt |
 | `stores/messages.store.ts` | Messages conversation active, ToolCallDisplay |
 | `stores/ui.store.ts` | ViewMode, isStreaming, commandPalette, settingsTab |
 | `stores/conversations.store.ts` | CRUD conversations (projectId, roleId) |

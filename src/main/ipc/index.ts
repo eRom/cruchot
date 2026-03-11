@@ -25,6 +25,7 @@ import { registerMcpIpc } from './mcp.ipc'
 import { registerMemoryFragmentsIpc } from './memory-fragments.ipc'
 import { registerGitIpc } from './git.ipc'
 import { registerRemoteIpc } from './remote.ipc'
+import { registerSummaryIpc } from './summary.ipc'
 
 /**
  * Registre central des IPC handlers.
@@ -99,6 +100,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Remote (Telegram) ────────────────────────
   registerRemoteIpc()
+
+  // ── Summary ─────────────────────────────────
+  registerSummaryIpc()
 
   // ── Settings ────────────────────────────────────────
   ipcMain.handle('settings:get', async (_event, key: string) => {

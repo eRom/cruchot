@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 23 — Remote Telegram)
+> Derniere mise a jour : 2026-03-11 (session 24 — Summary + audit secu Remote)
 
 ## AI SDK v6 — Breaking changes (checklist)
 
@@ -123,6 +123,22 @@
 - **MarkdownV2 Telegram** : les caracteres speciaux (`_*[]()~>#+=|{}.!-`) doivent etre echappes SAUF dans les code blocks. Fallback texte brut si erreur 400 "parse entities".
 - **Message split** : Telegram limite a 4096 chars. Split intelligent : paragraphe > ligne > hard cut. Les code blocks ouverts doivent etre fermes/rouverts aux frontieres de split.
 - **Rate limiting Telegram** : 429 avec `Retry-After` → respecter le delai, retry 1 fois. 401 → token revoque, disconnected. 403 → bot bloque.
+
+## Summary — pieges session 24
+
+- **"assistant message prefill"** : passer les messages user/assistant bruts a `generateText()` echoue si le dernier message est un assistant (certains providers comme Claude rejettent). Fix : serialiser toute la conversation en un seul message `user` (transcript texte).
+- **Zustand persist + nouveaux champs** : `summaryModelId` et `summaryPrompt` sont `undefined` au 1er chargement apres ajout. Utiliser `?? ''` et `?? DEFAULT_PROMPT` dans les composants.
+- **localStorage saturation** : un prompt tres long dans `summaryPrompt` pourrait saturer localStorage (5-10MB limite). Fix : cap a 10K chars dans le setter `setSummaryPrompt(prompt.slice(0, 10_000))`.
+
+## Securite Remote Telegram — corrections session 24
+
+- **Off-by-one pairing** : `this.pairingAttempts > MAX` autorisait 6 tentatives au lieu de 5. Fix : `>=` au lieu de `>`.
+- **allowedUserId optionnel** : si `allowedUserId` null, le filtre `if (this.allowedUserId && ...)` etait saute → n'importe quel user Telegram pouvait interagir. Fix : `if (!this.allowedUserId || ...)` = reject si pas configure. Guard dans `start()` aussi.
+- **Session restore sans allowedUserId** : au restart app, la session etait restauree meme sans `allowedUserId` configure → ouverte a tous. Fix : condition `&& this.allowedUserId` dans le bloc restore.
+- **Callback query sans chatId check** : un callback Telegram n'etait verifie que par `userId`, pas par `chatId`. Fix : `query.message?.chat?.id !== this.chatId` ajoute.
+- **Pairing code biaise** : `crypto.randomBytes(3).toString('hex')` convertissait hex→digits avec distribution non-uniforme (0-5 surrepresentes). Fix : `crypto.randomInt(0, 1_000_000)` → distribution uniforme 0-9.
+- **Erreurs brutes vers Telegram** : `classified.message` pouvait contenir des infos sensibles (cles partielles, stack traces). Fix : messages generiques par categorie d'erreur (fatal/actionable/transient).
+- **remote:start sans Zod** : `conversationId` passait directement sans validation. Fix : schema Zod `z.string().min(1).max(100).optional()`.
 
 ## Restant a faire
 

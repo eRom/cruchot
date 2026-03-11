@@ -1,5 +1,5 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 23 — Remote Telegram)
+> Derniere mise a jour : 2026-03-11 (session 24 — Summary + audit secu Remote)
 
 ## Vue d'ensemble
 
@@ -16,7 +16,7 @@ Renderer (React UI) → contextBridge IPC → Preload (bridge) → ipcMain → M
 ```
 
 - **Main** : cles API (safeStorage), appels LLM, DB SQLite, services
-- **Preload** : `window.api` via contextBridge (~94 methodes typees)
+- **Preload** : `window.api` via contextBridge (~105 methodes typees)
 - **Renderer** : UI React pure, aucun acces Node.js
 
 ## Arborescence
@@ -42,7 +42,7 @@ src/
 
 ## Navigation (ViewMode)
 
-`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (9 tabs), images, roles, tasks, mcp, memory, statistics
+`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (10 tabs), images, roles, tasks, mcp, memory, statistics
 
 Sidebar NavGroup "Personnalisation" regroupe : Prompts, Roles, MCP, Memoire
 
@@ -125,11 +125,26 @@ TelegramBotService (singleton, EventEmitter) → fetch() Telegram Bot API
 - **Split** : messages > 4096 chars coupes intelligemment (paragraphe > ligne > hard cut, code blocks)
 - **Sanitization** : SENSITIVE_PATTERNS masques avant envoi Telegram
 - **Reconnexion** : backoff exponentiel 1s→60s, expiration 10min inactivite
-- **Persistance** : session restauree au restart app si `isActive && chatId` en DB
+- **Persistance** : session restauree au restart app si `isActive && chatId && allowedUserId` en DB
+- **Securite renforcee (S24)** : `allowedUserId` obligatoire (plus optionnel) sur messages/callbacks/start/restore, off-by-one pairing corrige (`>=`), `crypto.randomInt()` pour entropie uniforme, callback chatId verifie, erreurs generiques vers Telegram, Zod sur `remote:start`
 - **UI** : badge status dans ContextWindowIndicator (bottom InputZone), Settings > Remote (9e tab), RemoteIndicator sidebar
 - **Toast + clipboard** : `/pair [code]` copie automatiquement au clipboard + toast sonner au demarrage pairing
 - **IPC** : 8 handlers dans `remote.ipc.ts` + events `remote:status-changed`
 - **DB** : table `remote_sessions` (16e table) — chatId, autoApprove x5, conversationId FK
+
+## Summary (Resume de conversation)
+
+```
+SummaryButton (ContextWindowIndicator) → IPC "summary:generate" → Main: generateText() one-shot
+  → serialize messages user/assistant en transcript texte
+  → system prompt configurable (Settings > Resume, 10e tab)
+  → result.text → clipboard + toast
+```
+
+- **Backend** : `summary.ipc.ts` — Zod validation, whitelist providers, verification conversation existe, transcript tronque 100K, temperature 0.3, maxTokens 4096
+- **Settings** : `summaryModelId` + `summaryPrompt` persistes dans settings.store.ts (localStorage), prompt cap 10K chars
+- **UI** : bouton `SummaryButton` dans ContextWindowIndicator (a cote de RemoteBadge), tooltip dynamique, loading pulse, disabled si non configure ou < 2 messages
+- **Securite** : pas de streaming (one-shot), pas de cost tracking, pas de save DB. Resultat copie au clipboard uniquement.
 
 ## Workspace Context Auto-Injection
 

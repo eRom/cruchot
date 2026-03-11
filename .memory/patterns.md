@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 23 — Remote Telegram)
+> Derniere mise a jour : 2026-03-11 (session 24 — Summary + audit secu Remote)
 
 ## Conventions de nommage
 
@@ -147,7 +147,7 @@
 - **TelegramBotService** : singleton extends `EventEmitter`, meme pattern que McpManagerService
 - **Token** : chiffre via `safeStorage` (meme pattern que cles API), stocke dans table `settings` cle `multi-llm:remote:telegram-token`
 - **allowedUserId** : stocke en clair dans `settings` cle `multi-llm:remote:allowed-user-id` (entier, pas un secret)
-- **Pairing** : `crypto.randomBytes(3)` → 6 chiffres, expiry 5min, max 5 tentatives
+- **Pairing** : `crypto.randomInt(0, 1_000_000)` → 6 chiffres uniformes, expiry 5min, max 5 tentatives (>=, pas >)
 - **Long polling** : boucle async `pollLoop()` avec `getUpdates(offset, timeout:30)`, AbortController pour cancellation
 - **Streaming Telegram** : `sendMessage('▍')` → `editMessageText(buffer + ' ▍')` debounce 500ms → `editMessage(finalText)` ou split si > 4096
 - **Tool approval** : `wrapToolsWithApproval()` wrape `execute` des outils AVANT `streamText()`. Auto-approve configurable par type (read, list, write, bash, mcp). Inline keyboard [Approve][Deny] → `Promise<boolean>` (timeout 5min = deny)
@@ -157,6 +157,17 @@
 - **UI badge** : `RemoteBadge` dans `ContextWindowIndicator.tsx` (bottom InputZone), pas dans la toolbar
 - **Formulaire unifie** : token + userId dans un seul bloc, un seul bouton "Valider", les deux champs obligatoires
 - **Toast + clipboard** : au demarrage pairing, `/pair [code]` copie au clipboard + toast sonner 8s
+- **Securite renforcee S24** : `allowedUserId` obligatoire (pas optionnel) — `!this.allowedUserId` = reject sur messages, callbacks, start(), restore session. Erreurs generiques vers Telegram (pas de raw error messages). Callback queries verifiees contre `this.chatId`. Zod sur `remote:start` conversationId.
+
+## Summary (Resume de conversation)
+
+- **Pattern one-shot** : meme pattern que AI Commit (generateText, pas streamText, pas de conversation DB)
+- **Serialization** : messages user/assistant serialises en transcript texte `[Utilisateur]/[Assistant]` dans un seul message user (evite "assistant message prefill" error sur certains providers)
+- **Truncation** : transcript tronque a 100K chars pour eviter l'explosion de tokens
+- **Resultat** : copie directe au clipboard via `navigator.clipboard.writeText()`, jamais rendu en HTML (zero risque XSS)
+- **Config** : `summaryModelId` (format `providerId::modelId`) + `summaryPrompt` dans settings.store.ts, cap 10K chars cote store ET Zod backend
+- **UI** : `SummaryButton` interne a `ContextWindowIndicator.tsx`, meme pattern visuel que `RemoteBadge` (icone + label, tooltip dynamique)
+- **Securite backend** : whitelist providers `VALID_PROVIDERS`, regex modelId, verification `getConversation()` avant chargement messages
 
 ## Conventions UI
 

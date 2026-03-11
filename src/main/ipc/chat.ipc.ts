@@ -578,9 +578,12 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       suggestion: classified.suggestion
     })
 
-    // Notify Telegram about error
+    // Notify Telegram about error (generic message — avoid leaking internal details)
     if (isRemoteConnected) {
-      telegramBotService.sendMessage(`Erreur : ${classified.message}`).catch(() => {})
+      const safeMsg = classified.category === 'fatal' ? 'Erreur d\'authentification API.'
+        : classified.category === 'actionable' ? 'Erreur : quota ou limite atteinte.'
+        : 'Erreur lors de la generation.'
+      telegramBotService.sendMessage(safeMsg).catch(() => {})
     }
   }
 }

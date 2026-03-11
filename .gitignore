@@ -18,3 +18,6 @@ dist/
 *.key
 electron-builder.env
 .claude/worktrees/*
+
+# Drizzle migrations (non utilisees — tables creees manuellement dans migrate.ts)
+drizzle/

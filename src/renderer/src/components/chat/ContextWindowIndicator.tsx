@@ -1,8 +1,11 @@
-import { Smartphone } from 'lucide-react'
+import { useState } from 'react'
+import { Smartphone, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useRemoteStore } from '@/stores/remote.store'
 import { useConversationsStore } from '@/stores/conversations.store'
+import { useMessagesStore } from '@/stores/messages.store'
+import { useSettingsStore } from '@/stores/settings.store'
 import { useUiStore } from '@/stores/ui.store'
 import { cn } from '@/lib/utils'
 
@@ -55,9 +58,12 @@ export function ContextWindowIndicator({
         : 'bg-emerald-500/70'
 
   return (
-    <div className="flex items-center gap-2 px-1">
+    <div className="flex items-center gap-2 px-4">
       {/* Remote badge — left side */}
       <RemoteBadge />
+
+      {/* Summary button */}
+      <SummaryButton />
 
       {/* Progress track */}
       <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-muted/40">
@@ -134,7 +140,7 @@ function RemoteBadge() {
               ? 'text-emerald-500'
               : isPairing
                 ? 'text-yellow-500'
-                : 'text-muted-foreground/40 hover:text-muted-foreground/60'
+                : 'text-muted-foreground/60 hover:text-muted-foreground/80'
           )}
         >
           <span className="relative">
@@ -146,7 +152,88 @@ function RemoteBadge() {
               <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-yellow-400 animate-pulse" />
             )}
           </span>
-          <span>{label}</span>
+          <span className="hidden sm:inline">{label}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        {tooltipText}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+/** Small clickable button to generate a conversation summary. */
+function SummaryButton() {
+  const [loading, setLoading] = useState(false)
+  const activeConversationId = useConversationsStore((s) => s.activeConversationId)
+  const messages = useMessagesStore((s) => s.messages)
+  const summaryModelId = useSettingsStore((s) => s.summaryModelId) ?? ''
+  const summaryPrompt = useSettingsStore((s) => s.summaryPrompt) ?? ''
+  const isStreaming = useUiStore((s) => s.isStreaming)
+  const setCurrentView = useUiStore((s) => s.setCurrentView)
+  const setSettingsTab = useUiStore((s) => s.setSettingsTab)
+
+  const nonSystemMessages = messages.filter((m) => m.role !== 'system')
+  const isConfigured = summaryModelId.length > 0
+  const hasEnoughMessages = nonSystemMessages.length >= 2
+  const canGenerate = isConfigured && hasEnoughMessages && !isStreaming && !loading && !!activeConversationId
+
+  const tooltipText = !isConfigured
+    ? 'Configurer le modele dans Parametres > Resume'
+    : !hasEnoughMessages
+      ? 'Pas assez de messages pour un resume'
+      : isStreaming
+        ? 'Generation en cours...'
+        : loading
+          ? 'Resume en cours de generation...'
+          : 'Generer un resume de la conversation'
+
+  const handleClick = async () => {
+    if (!canGenerate) {
+      if (!isConfigured) {
+        setSettingsTab('summary')
+        setCurrentView('settings')
+      }
+      return
+    }
+
+    setLoading(true)
+    try {
+      const result = await window.api.summarizeConversation({
+        conversationId: activeConversationId!,
+        modelId: summaryModelId,
+        prompt: summaryPrompt
+      })
+      await navigator.clipboard.writeText(result.text)
+      toast.success('Resume copie dans le presse-papier')
+    } catch (err) {
+      toast.error('Erreur lors de la generation du resume', {
+        description: err instanceof Error ? err.message : 'Erreur inconnue'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={handleClick}
+          disabled={isStreaming}
+          className={cn(
+            'flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5',
+            'text-[10px] font-medium transition-all duration-200',
+            'hover:bg-accent/60',
+            loading
+              ? 'text-blue-500 animate-pulse'
+              : canGenerate
+                ? 'text-muted-foreground/60 hover:text-muted-foreground/80'
+                : 'text-muted-foreground/40 cursor-default'
+          )}
+        >
+          <FileText className="size-3" />
+          <span className="hidden sm:inline">Resume</span>
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom">

@@ -621,7 +621,7 @@ export function InputZone({
         'relative flex w-full flex-col',
         'border-t border-border/40',
         'bg-background/80 backdrop-blur-sm',
-        'px-4 pb-4 pt-3',
+        'px-4 pb-6 pt-3',
         'before:pointer-events-none before:absolute before:inset-x-0 before:-top-6 before:h-6',
         'before:bg-gradient-to-t before:from-background/60 before:to-transparent',
         className

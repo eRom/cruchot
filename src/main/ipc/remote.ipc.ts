@@ -7,6 +7,10 @@ import { getActiveWorkspace } from './workspace.ipc'
 
 const tokenSchema = z.string().regex(/^\d+:[A-Za-z0-9_-]+$/, 'Format de token invalide')
 
+const startSchema = z.object({
+  conversationId: z.string().min(1).max(100).optional()
+})
+
 const autoApproveSchema = z.object({
   autoApproveRead: z.boolean(),
   autoApproveWrite: z.boolean(),
@@ -64,7 +68,8 @@ export function registerRemoteIpc(): void {
       })
     } catch (err) {
       console.error('[Remote] Failed to handle Telegram message:', err)
-      telegramBotService.sendMessage(`Erreur: ${err instanceof Error ? err.message : String(err)}`).catch(() => {})
+      // Generic error message — avoid leaking internal details to Telegram
+      telegramBotService.sendMessage('Erreur lors du traitement du message.').catch(() => {})
     }
   })
 
@@ -94,8 +99,10 @@ export function registerRemoteIpc(): void {
 
   // Start — begin pairing, returns pairing code
   // Optionally receives the active conversationId to continue on Telegram
-  ipcMain.handle('remote:start', async (_event, conversationId?: string) => {
-    return await telegramBotService.start(conversationId ?? undefined)
+  ipcMain.handle('remote:start', async (_event, conversationId?: unknown) => {
+    const parsed = startSchema.safeParse({ conversationId })
+    if (!parsed.success) throw new Error('Donnees invalides')
+    return await telegramBotService.start(parsed.data.conversationId)
   })
 
   // Stop — end session
