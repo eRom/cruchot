@@ -7,6 +7,7 @@ import { getDbPath } from './utils/paths'
 import { initAutoUpdater, stopAutoUpdater } from './services/updater.service'
 import { schedulerService } from './services/scheduler.service'
 import { mcpManagerService } from './services/mcp-manager.service'
+import { telegramBotService } from './services/telegram-bot.service'
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'
 
@@ -51,6 +52,11 @@ app.whenReady().then(() => {
     console.error('[MCP] Init failed:', err)
   })
 
+  // Telegram Remote — restore active session if any
+  telegramBotService.init(mainWindow).catch((err) => {
+    console.error('[Telegram] Init failed:', err)
+  })
+
   // Auto-updater — only in packaged builds
   if (app.isPackaged) {
     initAutoUpdater()
@@ -70,6 +76,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  telegramBotService.destroy().catch(() => {})
   mcpManagerService.stopAll().catch(() => {})
   schedulerService.stopAll()
   stopAutoUpdater()

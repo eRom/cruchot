@@ -3,6 +3,7 @@ import { useConversationsStore } from '@/stores/conversations.store'
 import { useProvidersStore, type Model } from '@/stores/providers.store'
 import { useMcpStore } from '@/stores/mcp.store'
 import { useMemoryStore } from '@/stores/memory.store'
+import { useRemoteStore } from '@/stores/remote.store'
 
 const LOCAL_PROVIDERS_POLL_MS = 30_000
 
@@ -18,6 +19,8 @@ export function useInitApp() {
   const setLocalModels = useProvidersStore((s) => s.setLocalModels)
   const loadMcpServers = useMcpStore((s) => s.loadServers)
   const loadMemoryFragments = useMemoryStore((s) => s.loadFragments)
+  const loadRemoteConfig = useRemoteStore((s) => s.loadConfig)
+  const handleRemoteStatusChange = useRemoteStore((s) => s.handleStatusChange)
 
   const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
 
@@ -60,6 +63,12 @@ export function useInitApp() {
 
         // Load memory fragments (non-blocking)
         loadMemoryFragments().catch((err) => console.warn('[Init] Memory load failed:', err))
+
+        // Load remote config (non-blocking)
+        loadRemoteConfig().catch((err) => console.warn('[Init] Remote load failed:', err))
+
+        // Listen for remote status changes
+        window.api.onRemoteStatusChanged(handleRemoteStatusChange)
       } catch (error) {
         console.error('Failed to initialize app:', error)
       }
@@ -68,6 +77,7 @@ export function useInitApp() {
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
+      window.api.offRemoteStatusChanged()
     }
-  }, [setConversations, setProviders, setModels, pollLocalProviders, loadMcpServers, loadMemoryFragments])
+  }, [setConversations, setProviders, setModels, pollLocalProviders, loadMcpServers, loadMemoryFragments, loadRemoteConfig, handleRemoteStatusChange])
 }
