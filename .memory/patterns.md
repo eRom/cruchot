@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11
+> Derniere mise a jour : 2026-03-11 (session 20 — audit securite)
 
 ## Conventions de nommage
 
@@ -62,7 +62,7 @@
 - **FileWatcherService** : Chokidar (ESM, `external` dans electron.vite.config), forward events renderer
 - **WorkspacePanel** : collapsible toggle (pas close), `Cmd+B`, auto-open quand projet change
 - **4 outils AI SDK** (`workspace-tools.ts`) :
-  - `bash` : shell exec async (child_process.exec), cwd=workspace, blocklist ~15 patterns, timeout 30s, ANSI off
+  - `bash` : shell exec async (child_process.exec), cwd=workspace, blocklist ~30 patterns, env minimal (PATH restreint, zero process.env), timeout 30s, ANSI off
   - `readFile` / `writeFile` (immediat) / `listFiles`
 - **ToolCallBlock** : collapsible cyan, icones par outil (Terminal/FileText/Pencil/FolderSearch)
 - Fichiers attaches injectes en system prompt (`<workspace-files>` XML)
@@ -92,15 +92,25 @@
 - fatal (401/403), actionable (402, 429+quota), transient (429 rate limit, 5xx)
 - Toast sonner : 10s actionable, 6s sinon
 
-## Security Hardening
+## Security Hardening (renforce session 20)
 
 - Path allowlist : `path.resolve()` + `startsWith(dir + path.sep)` (jamais sans `path.sep`)
-- Extension blocklist (.app, .sh, .exe...) pour `shell.openPath()`
-- CSP durcie : object-src/base-uri/form-action/frame-src 'none'
+- Extension blocklist (.app, .sh, .exe...) pour `shell.openPath()` et `files:save`
+- CSP durcie : script-src/connect-src 'self', object-src/base-uri/form-action/frame-src 'none'
 - Credential blocklist : settings:get/set bloque `multi-llm:apikey:*`
 - Mermaid : `securityLevel: 'strict'` + DOMPurify sanitize SVG
+- Shiki : DOMPurify sanitize HTML (`MarkdownRenderer.tsx`)
 - Suppression : toujours `trash` (jamais rm/unlink)
 - DevTools : `!app.isPackaged` seulement
+- **Bash tool** : env minimal (PATH=/usr/local/bin:/usr/bin:/bin, HOME=workspace), blocklist ~30 patterns (rm -rf ., bash -c, scp, rsync, nc, tee /, base64|bash, python -c, etc.)
+- **Attachments** : path confine a userData/attachments + userData/images + workspace root
+- **MCP** : headers HTTP masques du renderer (`hasHeaders: boolean`), testConnection timeout 30s via Promise.race
+- **shell.openExternal** : confirmation dialog pour domaines hors TRUSTED_DOMAINS allowlist
+- **Workspace** : rootPath valide (isDirectory + rejet paths systeme /, /etc, /usr, /System, /Library)
+- **Import** : limite taille fichier 50MB avant JSON.parse
+- **fileContexts** : sanitize path/language (suppression `"<>&`) avant injection XML system prompt
+- **SENSITIVE_PATTERNS** : case-insensitive (`/i` flag) — couvre .ENV, .Key, Credentials.json sur HFS+
+- **Zod partout** : conversations, statistics (days 1-3650), search (max 500 chars) — plus aucun handler sans validation
 
 ## MCP Integration
 
@@ -108,7 +118,7 @@
 - **Transport** : stdio principal (subprocess `Experimental_StdioMCPTransport`), HTTP/SSE secondaire
 - **Prefixage outils** : `servername__toolname` (double underscore) pour eviter collisions inter-serveurs
 - **Env vars chiffrees** : JSON.stringify → `safeStorage.encryptString()` → base64 (meme pattern que cles API)
-- **Securite renderer** : `envEncrypted` jamais expose, remplace par `hasEnvVars: boolean` dans IPC
+- **Securite renderer** : `envEncrypted` + `headers` jamais exposes, remplaces par `hasEnvVars`/`hasHeaders: boolean` dans IPC
 - **Status push** : `mcp:status-changed` IPC event → renderer met a jour le store
 - **Scope projet** : `projectId` nullable — global si null, sinon lie a un projet
 - **Chat integration** : MCP tools merges avec workspace tools dans `chat.ipc.ts`, fallback silencieux si erreur

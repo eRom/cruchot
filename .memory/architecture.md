@@ -1,5 +1,5 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-12
+> Derniere mise a jour : 2026-03-11 (session 20 — audit securite)
 
 ## Vue d'ensemble
 
@@ -84,6 +84,20 @@ streamText({ messages: [{ role: 'system', content: combined }] })
 - Stocke en DB (pas localStorage), charge via `memory.store.ts` au demarrage
 - Max 50 fragments, 2000 chars/fragment, alerte UI > 5000 chars total
 - Drag & drop HTML5 natif pour reordonner (`sortOrder`)
+
+## Securite (audit session 20)
+
+Couches de protection :
+- **Renderer** : sandbox true, CSP stricte (connect-src 'self'), DOMPurify sur Shiki + Mermaid
+- **Preload** : contextBridge uniquement, jamais ipcRenderer direct
+- **IPC** : Zod validation sur tous les handlers (conversations, statistics, search inclus depuis S20)
+- **Bash tool** : env minimal (PATH restreint, zero heritage process.env), blocklist ~30 patterns, timeout 30s
+- **MCP** : env vars chiffrees, headers HTTP masques du renderer (`hasHeaders: boolean`), testConnection timeout 30s
+- **Attachments** : path confine (userData + workspace uniquement)
+- **Files** : path traversal (resolve + startsWith), SENSITIVE_PATTERNS case-insensitive, extension blocklist
+- **Links** : shell.openExternal avec confirmation dialog pour domaines non-trusted (TRUSTED_DOMAINS allowlist)
+- **Workspace** : rootPath valide (isDirectory + rejet paths systeme)
+- **Import** : limite taille fichier 50MB
 
 ## Donnees
 

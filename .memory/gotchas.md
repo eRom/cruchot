@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11
+> Derniere mise a jour : 2026-03-11 (session 20 — audit securite)
 
 ## AI SDK v6 — Breaking changes (checklist)
 
@@ -75,6 +75,17 @@
 - WorkspacePanel : toggle (pas close)
 - Blocs de code : padding interne
 
+## Securite — pieges decouverts session 20
+
+- **Bash tool blocklist** : une blocklist (deny list) est fondamentalement insuffisante — contournements triviaux (variables shell, base64, heredocs). L'env minimal (PATH restreint, zero process.env) est la vraie protection. La blocklist est un filet supplementaire, pas la securite primaire.
+- **MCP headers HTTP** : stockes en clair en DB (pas chiffres contrairement aux env vars) — masques du renderer mais pas chiffres au repos. Inconsistance a corriger eventuellement.
+- **connect-src 'none'** casse le HMR Vite (websocket) → utiliser `connect-src 'self'`
+- **BrowserWindow.getFocusedWindow()** peut retourner une fenetre differente de la source IPC → toujours utiliser `BrowserWindow.fromWebContents(event.sender)`
+- **validateAttachment** : acceptait n'importe quel path (y compris ~/.ssh/id_rsa) → confine maintenant a userData + workspace
+- **`removeAllListeners(channel)`** est global — supprime TOUS les listeners, pas seulement celui de l'instance. Risque en multi-fenetre. Amelioration future : `removeListener` avec ref stockee.
+- **Signature de code absente** dans electron-builder.yml — macOS notarisation + Windows SmartScreen non configures. Bloquant pour distribution publique.
+- **pdf-parse v1.1.1** non maintenu depuis 2018 — surveiller ou migrer vers pdfjs-dist
+
 ## Restant a faire
 
 - Search bar sidebar (T34)
@@ -83,3 +94,5 @@
 - i18n (T41) — configure mais pas utilise
 - SSH key GitHub non configuree
 - MCP : presets serveurs, import config Claude Desktop
+- MCP : chiffrer les headers HTTP comme les env vars
+- Signature de code macOS/Windows pour distribution
