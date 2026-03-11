@@ -24,7 +24,8 @@ const createTaskSchema = z.object({
   roleId: z.string().nullable().optional(),
   projectId: z.string().nullable().optional(),
   scheduleType: z.enum(['manual', 'interval', 'daily', 'weekly']),
-  scheduleConfig: scheduleConfigSchema
+  scheduleConfig: scheduleConfigSchema,
+  useMemory: z.boolean().optional().default(true)
 })
 
 const updateTaskSchema = z.object({
@@ -36,7 +37,8 @@ const updateTaskSchema = z.object({
   projectId: z.string().nullable().optional(),
   scheduleType: z.enum(['manual', 'interval', 'daily', 'weekly']).optional(),
   scheduleConfig: scheduleConfigSchema.optional(),
-  isEnabled: z.boolean().optional()
+  isEnabled: z.boolean().optional(),
+  useMemory: z.boolean().optional()
 })
 
 export function registerScheduledTasksIpc(): void {
@@ -58,7 +60,7 @@ export function registerScheduledTasksIpc(): void {
       throw new Error(`Invalid payload: ${parsed.error.message}`)
     }
 
-    const { scheduleConfig, ...rest } = parsed.data
+    const { scheduleConfig, useMemory, ...rest } = parsed.data
 
     // Convert discriminated union to flat config
     const flatConfig = scheduleConfig.type === 'manual'
@@ -71,7 +73,8 @@ export function registerScheduledTasksIpc(): void {
 
     const task = createScheduledTask({
       ...rest,
-      scheduleConfig: flatConfig
+      scheduleConfig: flatConfig,
+      useMemory
     })
 
     // Schedule if enabled

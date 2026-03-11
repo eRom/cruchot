@@ -84,7 +84,8 @@ export function TasksView() {
         roleId: data.roleId || null,
         projectId: data.projectId || null,
         scheduleType: data.scheduleType,
-        scheduleConfig: buildScheduleConfig(data)
+        scheduleConfig: buildScheduleConfig(data),
+        useMemory: data.useMemory
       })
       addTask(task)
       setSubView('grid')
@@ -103,7 +104,8 @@ export function TasksView() {
         roleId: data.roleId || null,
         projectId: data.projectId || null,
         scheduleType: data.scheduleType,
-        scheduleConfig: buildScheduleConfig(data)
+        scheduleConfig: buildScheduleConfig(data),
+        useMemory: data.useMemory
       })
       if (updated) updateTask(editingTask.id, updated)
       setEditingTask(null)

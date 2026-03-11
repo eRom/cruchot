@@ -287,6 +287,7 @@ export interface ScheduledTaskInfo {
   projectId?: string | null
   scheduleType: ScheduleType
   scheduleConfig: ScheduleConfig | null
+  useMemory: boolean
   isEnabled: boolean
   lastRunAt?: Date | null
   nextRunAt?: Date | null
@@ -528,6 +529,7 @@ export interface ElectronAPI {
     projectId?: string | null
     scheduleType: ScheduleType
     scheduleConfig: { type: string; value?: number; unit?: string; time?: string; days?: number[] }
+    useMemory?: boolean
   }) => Promise<ScheduledTaskInfo>
   updateScheduledTask: (id: string, data: {
     name?: string
@@ -539,6 +541,7 @@ export interface ElectronAPI {
     scheduleType?: ScheduleType
     scheduleConfig?: { type: string; value?: number; unit?: string; time?: string; days?: number[] }
     isEnabled?: boolean
+    useMemory?: boolean
   }) => Promise<ScheduledTaskInfo | undefined>
   deleteScheduledTask: (id: string) => Promise<void>
   executeScheduledTask: (id: string) => Promise<void>

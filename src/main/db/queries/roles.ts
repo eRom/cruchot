@@ -1,7 +1,7 @@
-import { eq, desc } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { getDatabase } from '../index'
-import { roles, conversations, scheduledTasks } from '../schema'
+import { conversations, roles, scheduledTasks } from '../schema'
 
 export function getAllRoles() {
   const db = getDatabase()
@@ -111,22 +111,6 @@ const BUILTIN_ROLES = [
       'Tu es un analyste expert. Tu examines les données et situations avec rigueur, identifies les tendances et fournis des recommandations argumentées.',
     icon: 'BarChart',
     category: 'Analyse'
-  },
-  {
-    name: 'Traducteur',
-    description: 'Traducteur multilingue',
-    systemPrompt:
-      'Tu es un traducteur professionnel multilingue. Tu traduis avec précision en préservant le sens, le ton et les nuances culturelles du texte original.',
-    icon: 'Languages',
-    category: 'Rédaction'
-  },
-  {
-    name: 'Coach',
-    description: 'Coach et mentor personnel',
-    systemPrompt:
-      'Tu es un coach professionnel bienveillant. Tu aides à clarifier les objectifs, surmonter les obstacles et développer le potentiel. Tu poses des questions pertinentes.',
-    icon: 'Heart',
-    category: 'Personnel'
   }
 ]
 

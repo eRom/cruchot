@@ -8,6 +8,7 @@ import { parseFileOperations } from '../llm/file-operations'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
 import { createConversation, renameConversation, updateConversationModel, updateConversationRole } from '../db/queries/conversations'
 import { getRole } from '../db/queries/roles'
+import { buildMemoryBlock } from '../db/queries/memory-fragments'
 import { updateTaskRunStatus, incrementRunCount, getScheduledTask } from '../db/queries/scheduled-tasks'
 import { getDatabase } from '../db'
 import { settings } from '../db/schema'
@@ -47,12 +48,19 @@ export async function executeScheduledTask(
     // Rename with the task name
     renameConversation(conversationId, task.name)
 
-    // Build system prompt from role if set
-    let systemPrompt: string | undefined
+    // Build combined system prompt: memory fragments + role prompt
+    let combinedSystemPrompt = ''
+
+    if (task.useMemory) {
+      const memoryBlock = buildMemoryBlock()
+      if (memoryBlock) combinedSystemPrompt += memoryBlock
+    }
+
     if (task.roleId) {
       const role = getRole(task.roleId)
       if (role?.systemPrompt) {
-        systemPrompt = role.systemPrompt
+        if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
+        combinedSystemPrompt += role.systemPrompt
       }
     }
 
@@ -71,8 +79,8 @@ export async function executeScheduledTask(
     // Build messages array
     const aiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = []
 
-    if (systemPrompt) {
-      aiMessages.push({ role: 'system', content: systemPrompt })
+    if (combinedSystemPrompt) {
+      aiMessages.push({ role: 'system', content: combinedSystemPrompt })
     }
     aiMessages.push({ role: 'user', content: task.prompt })
 
