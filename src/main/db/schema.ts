@@ -253,6 +253,25 @@ export const memoryFragments = sqliteTable('memory_fragments', {
 })
 
 // ---------------------------------------------------------------------------
+// Remote Sessions (Telegram)
+// ---------------------------------------------------------------------------
+export const remoteSessions = sqliteTable('remote_sessions', {
+  id: text('id').primaryKey(),
+  telegramChatId: text('telegram_chat_id'),
+  botUsername: text('bot_username'),
+  pairedAt: integer('paired_at', { mode: 'timestamp' }),
+  lastActivity: integer('last_activity', { mode: 'timestamp' }),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(false),
+  conversationId: text('conversation_id').references(() => conversations.id),
+  autoApproveRead: integer('auto_approve_read', { mode: 'boolean' }).notNull().default(true),
+  autoApproveWrite: integer('auto_approve_write', { mode: 'boolean' }).notNull().default(false),
+  autoApproveBash: integer('auto_approve_bash', { mode: 'boolean' }).notNull().default(false),
+  autoApproveList: integer('auto_approve_list', { mode: 'boolean' }).notNull().default(true),
+  autoApproveMcp: integer('auto_approve_mcp', { mode: 'boolean' }).notNull().default(false),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+})
+
+// ---------------------------------------------------------------------------
 // Images
 // ---------------------------------------------------------------------------
 export const images = sqliteTable('images', {

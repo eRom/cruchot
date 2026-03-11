@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { ArrowLeft, Settings, Palette, Keyboard, Database, Archive, Key, SlidersHorizontal, Volume2 } from 'lucide-react'
+import { ArrowLeft, Settings, Palette, Keyboard, Database, Archive, Key, SlidersHorizontal, Volume2, Smartphone } from 'lucide-react'
 import { useUiStore, type SettingsTab } from '@/stores/ui.store'
 import { GeneralSettings } from './GeneralSettings'
 import { AppearanceSettings } from './AppearanceSettings'
@@ -9,6 +9,7 @@ import { BackupSettings } from './BackupSettings'
 import { ApiKeysSection } from './ApiKeysSection'
 import { ModelSettings } from './ModelSettings'
 import { AudioSettings } from './AudioSettings'
+import { RemoteTab } from './RemoteTab'
 import { LocalProvidersSection } from './LocalProvidersSection'
 import { cn } from '@/lib/utils'
 
@@ -21,6 +22,7 @@ const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
   { id: 'keybindings', label: 'Raccourcis', icon: <Keyboard className="size-4" /> },
   { id: 'data', label: 'Donnees', icon: <Database className="size-4" /> },
   { id: 'backup', label: 'Sauvegardes', icon: <Archive className="size-4" /> },
+  { id: 'remote', label: 'Remote', icon: <Smartphone className="size-4" /> },
 ]
 
 export function SettingsView() {
@@ -89,6 +91,7 @@ export function SettingsView() {
             {activeTab === 'keybindings' && <KeybindingsSettings />}
             {activeTab === 'data' && <DataSettings />}
             {activeTab === 'backup' && <BackupSettings />}
+            {activeTab === 'remote' && <RemoteTab />}
           </div>
         </div>
       </div>
