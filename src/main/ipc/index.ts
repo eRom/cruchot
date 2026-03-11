@@ -24,6 +24,7 @@ import { registerScheduledTasksIpc } from './scheduled-tasks.ipc'
 import { registerMcpIpc } from './mcp.ipc'
 import { registerMemoryFragmentsIpc } from './memory-fragments.ipc'
 import { registerGitIpc } from './git.ipc'
+import { registerRemoteIpc } from './remote.ipc'
 
 /**
  * Registre central des IPC handlers.
@@ -95,6 +96,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Git ──────────────────────────────────
   registerGitIpc()
+
+  // ── Remote (Telegram) ────────────────────────
+  registerRemoteIpc()
 
   // ── Settings ────────────────────────────────────────
   ipcMain.handle('settings:get', async (_event, key: string) => {

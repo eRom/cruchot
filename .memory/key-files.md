@@ -1,12 +1,12 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 22 — Git integration, workspace intelligence)
+> Derniere mise a jour : 2026-03-11 (session 23 — Remote Telegram)
 
 ## Main process
 
 | Fichier | Role |
 |---------|------|
 | `src/main/index.ts` | Lifecycle Electron, auto-updater, protocol `local-image://` (allowlist securise) |
-| `src/main/ipc/chat.ipc.ts` | Handler chat:send — streamText, chunks IPC, thinking, cost, tools multi-step |
+| `src/main/ipc/chat.ipc.ts` | Handler chat:send + `handleChatMessage()` exportee (dual desktop/telegram), streamText, dual-forward chunks, tool approval gate |
 | `src/main/ipc/index.ts` | Registre IPC + blocage `multi-llm:apikey:*` dans settings |
 | `src/main/ipc/conversations.ipc.ts` | CRUD conversations (Zod), filtre projet, roles |
 | `src/main/ipc/images.ipc.ts` | Generation images — save fichier + DB |
@@ -29,7 +29,7 @@
 | `src/main/llm/cost-calculator.ts` | Table PRICING + calcul cout |
 | `src/main/llm/image.ts` | Generation images multi-provider (Google + OpenAI) |
 | `src/main/llm/file-operations.ts` | Parser blocs `file:create/modify/delete` |
-| `src/main/db/schema.ts` | 15 tables Drizzle (dont mcp_servers, memory_fragments) |
+| `src/main/db/schema.ts` | 16 tables Drizzle (dont mcp_servers, memory_fragments, remote_sessions) |
 | `src/main/services/workspace.service.ts` | Scan, read/write/delete, securite, .coworkignore |
 | `src/main/services/file-watcher.service.ts` | Chokidar wrapper |
 | `src/main/services/tts.service.ts` | TTS OpenAI (MP3) + Google (PCM→WAV) |
@@ -37,13 +37,16 @@
 | `src/main/services/task-executor.ts` | Execution LLM programmatique |
 | `src/main/services/credential.service.ts` | Wrapper safeStorage |
 | `src/main/services/backup.service.ts` | Backup CRUD (path validation, trash) |
+| `src/main/ipc/remote.ipc.ts` | 8 handlers Remote Telegram (configure, start, stop, status, config, auto-approve, allowed-user, delete-token) + event wiring message→handleChatMessage |
+| `src/main/services/telegram-bot.service.ts` | Singleton TelegramBotService — polling, pairing, streaming, tool approval, commands, sanitization, reconnexion (~550 lignes) |
+| `src/main/db/queries/remote-sessions.ts` | CRUD table remote_sessions (getActive, create, update, deactivate, touchActivity, updateAutoApprove) |
 | `src/main/services/git.service.ts` | Service Git standalone — execFile securise, env minimal, cache TTL 2s, parsing porcelain |
 
 ## Preload
 
 | Fichier | Role |
 |---------|------|
-| `src/preload/index.ts` | contextBridge ~94 methodes |
+| `src/preload/index.ts` | contextBridge ~103 methodes |
 | `src/preload/types.ts` | Types partages, DTOs |
 
 ## Renderer — Composants cles
@@ -60,7 +63,9 @@
 | `components/mcp/McpView.tsx` | Vue standalone MCP — grille serveurs, subView pattern |
 | `components/mcp/McpServerCard.tsx` | Card serveur MCP — toggle, status, tools count, hover actions |
 | `components/mcp/McpServerForm.tsx` | Formulaire create/edit serveur MCP — transport, env vars, projet, test |
-| `components/settings/SettingsView.tsx` | 8 tabs (General, Apparence, API, Modele, Audio, Raccourcis, Donnees, Sauvegardes) |
+| `components/chat/ContextWindowIndicator.tsx` | Barre tokens + cout + RemoteBadge (status, pairing toast+clipboard, start/stop) |
+| `components/settings/SettingsView.tsx` | 9 tabs (General, Apparence, API, Modele, Audio, Raccourcis, Donnees, Sauvegardes, Remote) |
+| `components/settings/RemoteTab.tsx` | Config Remote — formulaire token+userId unifie, session start/stop, pairing code, auto-approve toggles |
 | `components/workspace/WorkspacePanel.tsx` | Panneau droit collapsible, FileTree + FilePanel + GitBranchBadge + tab Fichiers/Changes |
 | `components/workspace/GitBranchBadge.tsx` | Badge branche Git (nom, dot dirty/clean, count modifies) |
 | `components/workspace/ChangesPanel.tsx` | Vue Changes (staged/unstaged, stage/unstage, diff inline, commit + AI message) |
@@ -81,6 +86,7 @@
 | `stores/tasks.store.ts` | Taches planifiees (DB-backed, pas persist) |
 | `stores/mcp.store.ts` | Serveurs MCP — CRUD, toggle, start/stop/restart, status events |
 | `stores/git.store.ts` | Git state — info, status, diff, stage/unstage/commit, generateMessage |
+| `stores/remote.store.ts` | Remote Telegram — status, config, pairingCode, loadConfig, start/stop, auto-approve |
 
 ## Renderer — Hooks
 
@@ -96,6 +102,7 @@
 |---------|------|
 | `electron.vite.config.ts` | Build main + preload + renderer |
 | `CLAUDE.md` | Regles projet |
+| `specs/feature-remote-control/` | Spec Remote Telegram (7 fichiers, implementee session 23) |
 | `specs/feature-mcp-integration.md` | Spec MCP (implementee session 18-19) |
 | `src/main/window.ts` | BrowserWindow config (sandbox, CSP), shell.openExternal avec confirmation dialog |
 | `src/main/llm/attachments.ts` | Validation attachments (extension, taille, confinement path userData+workspace) |
