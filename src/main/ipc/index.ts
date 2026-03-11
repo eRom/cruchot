@@ -25,6 +25,7 @@ import { registerMcpIpc } from './mcp.ipc'
 import { registerMemoryFragmentsIpc } from './memory-fragments.ipc'
 import { registerGitIpc } from './git.ipc'
 import { registerRemoteIpc } from './remote.ipc'
+import { registerRemoteServerIpc } from './remote-server.ipc'
 import { registerSummaryIpc } from './summary.ipc'
 
 /**
@@ -100,6 +101,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Remote (Telegram) ────────────────────────
   registerRemoteIpc()
+
+  // ── Remote Server (WebSocket) ───────────────
+  registerRemoteServerIpc()
 
   // ── Summary ─────────────────────────────────
   registerSummaryIpc()

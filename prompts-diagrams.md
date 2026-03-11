@@ -79,6 +79,7 @@ Relations FK à montrer avec des flèches :
 
 Style : ERD classique, fond sombre, groupes logiques par couleur : bleu pour le coeur chat (conversations, messages, attachments), violet pour la config (providers, models, settings), vert pour les features (prompts, roles, projects), orange pour les extensions (scheduled_tasks, mcp_servers, memory_fragments, remote_sessions), rouge pour le tracking (statistics, tts_usage, images).
 
+---
 
 ## Prompt pour infographie sur les fonctionnalités
 
@@ -208,3 +209,8 @@ Catégories et fonctionnalités :
 Bandeau bas : **Stack technique** — Electron 35 · React 19 · TypeScript · Tailwind CSS 4 · SQLite · Drizzle ORM · Vercel AI SDK 6
 
 Style : infographie moderne, fond sombre, mise en page en grille (3-4 colonnes), chaque catégorie dans une carte avec icône colorée en haut, titre en gras, bullet points concis en dessous. Palette de couleurs : bleu électrique pour le chat, violet pour la personnalisation, vert pour le workspace et Git, orange pour les extensions (MCP, tâches), cyan pour les médias (images, TTS), rouge pour la sécurité, indigo pour LM Studio. Aspect premium et épuré, pas surchargé.
+
+---
+
+## Prompts pour la fonctionnalité de "Remote Telegram | Web" (Architecture & sécurité)
+

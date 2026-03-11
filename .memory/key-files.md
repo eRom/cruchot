@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 24 — Summary + audit secu Remote)
+> Derniere mise a jour : 2026-03-11 (session 25 — Remote Web)
 
 ## Main process
 
@@ -42,6 +42,9 @@
 | `src/main/db/queries/remote-sessions.ts` | CRUD table remote_sessions (getActive, create, update, deactivate, touchActivity, updateAutoApprove) |
 | `src/main/services/git.service.ts` | Service Git standalone — execFile securise, env minimal, cache TTL 2s, parsing porcelain |
 | `src/main/ipc/summary.ipc.ts` | Handler summary:generate — generateText one-shot, Zod, whitelist providers, transcript serialize |
+| `src/main/services/remote-server.service.ts` | Singleton RemoteServerService — WebSocket server ws://, pairing, dual-forward, CloudFlare tunnel (~960 lignes) |
+| `src/main/ipc/remote-server.ipc.ts` | Handlers Remote Web (start, stop, generate-pairing, status, config) |
+| `src/main/db/queries/remote-server.ts` | CRUD table remote_server_sessions |
 
 ## Preload
 
@@ -114,3 +117,20 @@
 | `.github/workflows/release.yml` | CI/CD release — tag v* → build + signe + notarise + publie GitHub Release |
 | `.github/workflows/ci.yml` | CI — typecheck + audit + build sur push/PR main |
 | `DISTRIBUTION.md` | Guide complet packaging, signature, notarisation, releases, auto-updater |
+
+## Remote Web (SPA standalone)
+
+| Fichier | Role |
+|---------|------|
+| `src/remote-web/vite.config.ts` | Config Vite standalone — React + Tailwind CSS 4, build dans `out/remote-web/` |
+| `src/remote-web/src/App.tsx` | Entree SPA — useReducer state machine, WebSocket connect, pairing flow |
+| `src/remote-web/src/index.css` | Theme CSS — palette OKLCH identique desktop dark mode, prose-msg, animations |
+| `src/remote-web/src/hooks/useWebSocket.ts` | Hook WebSocket — connect/reconnect, dispatch actions, send messages |
+| `src/remote-web/src/types/protocol.ts` | Types partages — Message, ToolApproval, AppState, AppAction |
+| `src/remote-web/src/components/ChatView.tsx` | Vue chat — messages + input, calque exact desktop (InputZone pattern) |
+| `src/remote-web/src/components/PairingScreen.tsx` | Ecran pairing — saisie 6 digits + URL serveur, auto-submit via URL params |
+| `src/remote-web/src/components/StatusBar.tsx` | Barre status — dot connexion + titre conversation |
+| `src/remote-web/src/components/ToolCallCard.tsx` | Card approbation outil — timer, args, boutons approve/deny |
+| `src/remote-web/src/components/ReasoningBlock.tsx` | Bloc reasoning collapsible |
+| `src/remote-web/src/components/Markdown.tsx` | Renderer markdown leger (regex, pas de deps) |
+| `src/renderer/src/stores/remote-server.store.ts` | Store Zustand Remote Web cote desktop — status, pairingCode, pairingWsUrl |
