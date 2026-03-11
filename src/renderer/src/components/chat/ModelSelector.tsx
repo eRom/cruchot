@@ -135,7 +135,7 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
               <SelectItem
                 key={`${provider.id}::${model.id}`}
                 value={`${provider.id}::${model.id}`}
-                disabled={!provider.isConfigured}
+                disabled={!provider.isConfigured || (provider.type === 'local' && provider.isOnline === false)}
                 className="pl-5"
               >
                 <span className="flex items-center gap-2">

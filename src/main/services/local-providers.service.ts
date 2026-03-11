@@ -3,9 +3,40 @@
  * Uses native fetch with short timeouts (local servers respond fast or not at all).
  */
 
+import { eq } from 'drizzle-orm'
+import { getDatabase } from '../db'
+import { settings } from '../db/schema'
+
 const OLLAMA_BASE_URL = 'http://localhost:11434'
-const LMSTUDIO_BASE_URL = 'http://localhost:1234'
+const LMSTUDIO_DEFAULT_BASE_URL = 'http://localhost:1234'
 const DETECT_TIMEOUT_MS = 3_000
+
+// ---------------------------------------------------------------------------
+// Base URL management (DB-backed, fallback to default)
+// ---------------------------------------------------------------------------
+
+const SETTING_KEY_LMSTUDIO_URL = 'lmstudio:baseUrl'
+
+export function getLmStudioBaseUrl(): string {
+  try {
+    const db = getDatabase()
+    const result = db.select().from(settings).where(eq(settings.key, SETTING_KEY_LMSTUDIO_URL)).get()
+    return result?.value || LMSTUDIO_DEFAULT_BASE_URL
+  } catch {
+    return LMSTUDIO_DEFAULT_BASE_URL
+  }
+}
+
+export function setLmStudioBaseUrl(baseUrl: string): void {
+  const db = getDatabase()
+  db.insert(settings)
+    .values({ key: SETTING_KEY_LMSTUDIO_URL, value: baseUrl, updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: settings.key,
+      set: { value: baseUrl, updatedAt: new Date() }
+    })
+    .run()
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -90,7 +121,7 @@ async function isReachable(url: string): Promise<boolean> {
 export async function detectLocalProviders(): Promise<LocalProviderStatus> {
   const [ollama, lmstudio] = await Promise.all([
     isReachable(`${OLLAMA_BASE_URL}/api/tags`),
-    isReachable(`${LMSTUDIO_BASE_URL}/v1/models`),
+    isReachable(`${getLmStudioBaseUrl()}/v1/models`),
   ])
 
   return { ollama, lmstudio }
@@ -116,8 +147,9 @@ export async function getOllamaModels(): Promise<OllamaModel[]> {
  * Fetches the list of models available in a local LM Studio instance.
  * Throws if LM Studio is not running or unreachable.
  */
-export async function getLMStudioModels(): Promise<LMStudioModel[]> {
-  const response = await fetchWithTimeout(`${LMSTUDIO_BASE_URL}/v1/models`)
+export async function getLMStudioModels(baseUrl?: string): Promise<LMStudioModel[]> {
+  const url = baseUrl ?? getLmStudioBaseUrl()
+  const response = await fetchWithTimeout(`${url}/v1/models`)
 
   if (!response.ok) {
     const body = await response.text().catch(() => '')

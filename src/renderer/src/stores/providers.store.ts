@@ -9,6 +9,7 @@ export interface Provider {
   requiresApiKey: boolean
   isConfigured: boolean
   isEnabled: boolean
+  isOnline?: boolean
 }
 
 export interface Model {
@@ -35,6 +36,8 @@ interface ProvidersState {
   setModels: (models: Model[]) => void
   selectModel: (providerId: string, modelId: string) => void
   updateProviderStatus: (providerId: string, isConfigured: boolean) => void
+  setProviderOnline: (providerId: string, online: boolean) => void
+  setLocalModels: (providerId: string, models: Model[]) => void
 }
 
 export const useProvidersStore = create<ProvidersState>((set) => ({
@@ -54,5 +57,20 @@ export const useProvidersStore = create<ProvidersState>((set) => ({
       providers: state.providers.map((p) =>
         p.id === providerId ? { ...p, isConfigured } : p
       )
+    })),
+
+  setProviderOnline: (providerId, online) =>
+    set((state) => ({
+      providers: state.providers.map((p) =>
+        p.id === providerId ? { ...p, isOnline: online } : p
+      )
+    })),
+
+  setLocalModels: (providerId, models) =>
+    set((state) => ({
+      models: [
+        ...state.models.filter((m) => m.providerId !== providerId),
+        ...models
+      ]
     }))
 }))

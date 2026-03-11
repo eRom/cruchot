@@ -11,6 +11,12 @@ import {
   isEncryptionAvailable
 } from '../services/credential.service'
 import { PROVIDERS, MODELS } from '../llm/registry'
+import {
+  detectLocalProviders,
+  getLMStudioModels,
+  setLmStudioBaseUrl,
+  getLmStudioBaseUrl
+} from '../services/local-providers.service'
 
 const setApiKeySchema = z.object({
   providerId: z.string().min(1),
@@ -49,11 +55,34 @@ export function registerProvidersIpc(): void {
   })
 
   // ── List models (optionally filtered by provider) ───
+  // Includes dynamic LM Studio models when server is reachable
   ipcMain.handle('providers:models', async (_event, providerId?: string) => {
-    if (providerId) {
-      return MODELS.filter(m => m.providerId === providerId)
+    const staticModels = providerId ? MODELS.filter(m => m.providerId === providerId) : [...MODELS]
+
+    // Attempt to fetch LM Studio models (non-blocking, silent fail)
+    if (!providerId || providerId === 'lmstudio') {
+      try {
+        const lmModels = await getLMStudioModels()
+        const dynamicModels = lmModels.map(m => ({
+          id: m.id,
+          providerId: 'lmstudio',
+          name: m.id,
+          displayName: m.id,
+          type: 'text' as const,
+          contextWindow: 0,
+          inputPrice: 0,
+          outputPrice: 0,
+          supportsImages: false,
+          supportsStreaming: true,
+          supportsThinking: false
+        }))
+        return [...staticModels, ...dynamicModels]
+      } catch {
+        // LM Studio offline — return static models only
+      }
     }
-    return MODELS
+
+    return staticModels
   })
 
   // ── Set API Key ─────────────────────────────────────
@@ -114,6 +143,90 @@ export function registerProvidersIpc(): void {
     const result = db.select().from(settings).where(eq(settings.key, key)).get()
 
     return !!result?.value
+  })
+
+  // ── Local Providers — detect, models, URL config, test ──
+
+  ipcMain.handle('localProviders:detect', async () => {
+    return detectLocalProviders()
+  })
+
+  ipcMain.handle('localProviders:models', async (_event, providerId: string) => {
+    const parsed = z.string().min(1).safeParse(providerId)
+    if (!parsed.success) throw new Error('Invalid providerId')
+
+    if (parsed.data === 'lmstudio') {
+      const lmModels = await getLMStudioModels()
+      return lmModels.map(m => ({
+        id: m.id,
+        providerId: 'lmstudio',
+        name: m.id,
+        displayName: m.id,
+        type: 'text' as const,
+        contextWindow: 0,
+        inputPrice: 0,
+        outputPrice: 0,
+        supportsImages: false,
+        supportsStreaming: true,
+        supportsThinking: false
+      }))
+    }
+
+    return []
+  })
+
+  const setBaseUrlSchema = z.object({
+    providerId: z.string().min(1),
+    baseUrl: z.string().url().startsWith('http')
+  })
+
+  ipcMain.handle('localProviders:setBaseUrl', async (_event, payload: unknown) => {
+    const parsed = setBaseUrlSchema.safeParse(payload)
+    if (!parsed.success) throw new Error('Invalid payload: ' + parsed.error.message)
+
+    if (parsed.data.providerId === 'lmstudio') {
+      // Remove trailing slash
+      const cleanUrl = parsed.data.baseUrl.replace(/\/+$/, '')
+      setLmStudioBaseUrl(cleanUrl)
+    }
+  })
+
+  const testConnectionSchema = z.object({
+    providerId: z.string().min(1),
+    baseUrl: z.string().url().startsWith('http').optional()
+  })
+
+  ipcMain.handle('localProviders:testConnection', async (_event, payload: unknown) => {
+    const parsed = testConnectionSchema.safeParse(payload)
+    if (!parsed.success) throw new Error('Invalid payload: ' + parsed.error.message)
+
+    if (parsed.data.providerId === 'lmstudio') {
+      const url = parsed.data.baseUrl?.replace(/\/+$/, '') ?? getLmStudioBaseUrl()
+      try {
+        const models = await getLMStudioModels(url)
+        return {
+          reachable: true,
+          modelCount: models.length,
+          models: models.map(m => ({
+            id: m.id,
+            providerId: 'lmstudio',
+            name: m.id,
+            displayName: m.id,
+            type: 'text' as const,
+            contextWindow: 0,
+            inputPrice: 0,
+            outputPrice: 0,
+            supportsImages: false,
+            supportsStreaming: true,
+            supportsThinking: false
+          }))
+        }
+      } catch {
+        return { reachable: false, modelCount: 0, models: [] }
+      }
+    }
+
+    return { reachable: false, modelCount: 0, models: [] }
   })
 
   console.log('[IPC] Providers handlers registered')

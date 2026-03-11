@@ -9,6 +9,7 @@ import { BackupSettings } from './BackupSettings'
 import { ApiKeysSection } from './ApiKeysSection'
 import { ModelSettings } from './ModelSettings'
 import { AudioSettings } from './AudioSettings'
+import { LocalProvidersSection } from './LocalProvidersSection'
 import { cn } from '@/lib/utils'
 
 const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
@@ -77,7 +78,12 @@ export function SettingsView() {
           <div className="mx-auto max-w-2xl">
             {activeTab === 'general' && <GeneralSettings />}
             {activeTab === 'appearance' && <AppearanceSettings />}
-            {activeTab === 'apikeys' && <ApiKeysSection />}
+            {activeTab === 'apikeys' && (
+              <div className="space-y-8">
+                <ApiKeysSection />
+                <LocalProvidersSection />
+              </div>
+            )}
             {activeTab === 'model' && <ModelSettings />}
             {activeTab === 'audio' && <AudioSettings />}
             {activeTab === 'keybindings' && <KeybindingsSettings />}

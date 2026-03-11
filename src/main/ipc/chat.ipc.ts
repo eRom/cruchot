@@ -218,6 +218,76 @@ export function registerChatIpc(): void {
       let accumulatedText = ''
       const accumulatedToolCalls: Array<{ toolName: string; args?: Record<string, unknown>; status: 'running' | 'success' | 'error'; error?: string }> = []
 
+      // State machine for parsing <think> tags from open-source models (LM Studio, Ollama, etc.)
+      // These models emit reasoning inside <think>...</think> as plain text-delta chunks.
+      let insideThinkTag = false
+      let pendingBuffer = '' // Buffer for partial tag detection
+
+      function emitTextOrThinking(text: string) {
+        let remaining = text
+
+        while (remaining.length > 0) {
+          if (!insideThinkTag) {
+            // Look for <think> opening tag
+            const openIdx = remaining.indexOf('<think>')
+            if (openIdx === -1) {
+              // Check for partial tag at the end (e.g. "<thi")
+              const partialIdx = remaining.lastIndexOf('<')
+              if (partialIdx !== -1 && partialIdx > remaining.length - 8 && '<think>'.startsWith(remaining.slice(partialIdx))) {
+                // Buffer the potential partial tag
+                const safeText = remaining.slice(0, partialIdx)
+                if (safeText) {
+                  accumulatedText += safeText
+                  win.webContents.send('chat:chunk', { type: 'text-delta', content: safeText })
+                }
+                pendingBuffer = remaining.slice(partialIdx)
+                return
+              }
+              // No tag at all — emit as text
+              accumulatedText += remaining
+              win.webContents.send('chat:chunk', { type: 'text-delta', content: remaining })
+              return
+            }
+            // Emit text before the tag
+            if (openIdx > 0) {
+              const before = remaining.slice(0, openIdx)
+              accumulatedText += before
+              win.webContents.send('chat:chunk', { type: 'text-delta', content: before })
+            }
+            insideThinkTag = true
+            remaining = remaining.slice(openIdx + 7) // skip "<think>"
+          } else {
+            // Inside <think> — look for </think> closing tag
+            const closeIdx = remaining.indexOf('</think>')
+            if (closeIdx === -1) {
+              // Check for partial closing tag
+              const partialIdx = remaining.lastIndexOf('<')
+              if (partialIdx !== -1 && partialIdx > remaining.length - 9 && '</think>'.startsWith(remaining.slice(partialIdx))) {
+                const safeText = remaining.slice(0, partialIdx)
+                if (safeText) {
+                  accumulatedReasoning += safeText
+                  win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: safeText })
+                }
+                pendingBuffer = remaining.slice(partialIdx)
+                return
+              }
+              // All reasoning content
+              accumulatedReasoning += remaining
+              win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: remaining })
+              return
+            }
+            // Emit reasoning before the close tag
+            if (closeIdx > 0) {
+              const reasoning = remaining.slice(0, closeIdx)
+              accumulatedReasoning += reasoning
+              win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: reasoning })
+            }
+            insideThinkTag = false
+            remaining = remaining.slice(closeIdx + 8) // skip "</think>"
+          }
+        }
+      }
+
       const result = streamText({
         model,
         messages: aiMessages,
@@ -229,11 +299,10 @@ export function registerChatIpc(): void {
         ...(hasTools ? { tools, maxSteps: 10, stopWhen: stepCountIs(10) } : {}),
         onChunk({ chunk }) {
           if (chunk.type === 'text-delta') {
-            accumulatedText += chunk.text
-            win.webContents.send('chat:chunk', {
-              type: 'text-delta',
-              content: chunk.text
-            })
+            // Prepend any buffered partial tag content
+            const text = pendingBuffer + chunk.text
+            pendingBuffer = ''
+            emitTextOrThinking(text)
           } else if (chunk.type === 'reasoning-delta') {
             accumulatedReasoning += chunk.text
             win.webContents.send('chat:chunk', {
@@ -276,6 +345,17 @@ export function registerChatIpc(): void {
       let fullText = ''
       try {
         await result.text
+        // Flush any remaining buffered content (e.g. partial <think> tag that never completed)
+        if (pendingBuffer) {
+          if (insideThinkTag) {
+            accumulatedReasoning += pendingBuffer
+            win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: pendingBuffer })
+          } else {
+            accumulatedText += pendingBuffer
+            win.webContents.send('chat:chunk', { type: 'text-delta', content: pendingBuffer })
+          }
+          pendingBuffer = ''
+        }
         fullText = accumulatedText
       } catch (e) {
         if (e instanceof NoOutputGeneratedError) {
