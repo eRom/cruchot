@@ -56,18 +56,18 @@ const DEFAULT_IGNORE_EXTENSIONS = [
 ]
 
 const SENSITIVE_PATTERNS = [
-  /^\.env/,
-  /\.key$/,
-  /\.pem$/,
-  /\.cert$/,
-  /\.p12$/,
-  /\.pfx$/,
-  /^credentials\.json$/,
-  /^service-account.*\.json$/,
-  /^\.npmrc$/,
-  /^\.pypirc$/,
-  /^id_rsa/,
-  /^id_ed25519/
+  /^\.env/i,
+  /\.key$/i,
+  /\.pem$/i,
+  /\.cert$/i,
+  /\.p12$/i,
+  /\.pfx$/i,
+  /^credentials\.json$/i,
+  /^service-account.*\.json$/i,
+  /^\.npmrc$/i,
+  /^\.pypirc$/i,
+  /^id_rsa/i,
+  /^id_ed25519/i
 ]
 
 const EXTENSION_TO_LANGUAGE: Record<string, string> = {

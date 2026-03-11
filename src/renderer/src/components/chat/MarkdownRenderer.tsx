@@ -4,6 +4,7 @@ import { remarkGfm, remarkMath, rehypeKatex } from '@/lib/markdown'
 import { cn } from '@/lib/utils'
 import { Check, Copy } from 'lucide-react'
 import { createHighlighter, type Highlighter } from 'shiki'
+import DOMPurify from 'dompurify'
 import MermaidBlock from './MermaidBlock'
 import 'katex/dist/katex.min.css'
 
@@ -112,7 +113,7 @@ function ShikiCodeBlock({ code, language }: { code: string; language: string }) 
         <CopyCodeButton code={code} />
         <div
           className="overflow-x-auto [&_pre]:p-4 [&_pre]:pt-8 [&_pre]:text-[13px] [&_pre]:leading-6 [&_pre]:!bg-transparent [&_code]:!bg-transparent"
-          dangerouslySetInnerHTML={{ __html: html }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
         />
       </div>
     )

@@ -1,7 +1,12 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron'
+import * as fs from 'fs'
+import * as path from 'path'
 import { z } from 'zod'
 import { WorkspaceService } from '../services/workspace.service'
 import { FileWatcherService } from '../services/file-watcher.service'
+
+// System paths that should never be used as workspace root
+const BLOCKED_ROOTS = ['/', '/etc', '/usr', '/System', '/Library', '/var', '/bin', '/sbin', '/tmp']
 
 // ── Module-level state ────────────────────────────────────
 let activeWorkspace: WorkspaceService | null = null
@@ -45,6 +50,19 @@ export function registerWorkspaceIpc(): void {
     if (!parsed.success) throw new Error('Invalid workspace:open payload')
 
     const { rootPath } = parsed.data
+    const resolvedRoot = path.resolve(rootPath)
+
+    // Validate rootPath is a safe directory
+    if (BLOCKED_ROOTS.includes(resolvedRoot) || BLOCKED_ROOTS.some(r => resolvedRoot === r)) {
+      throw new Error(`Repertoire systeme refuse comme workspace : ${resolvedRoot}`)
+    }
+    try {
+      const stat = fs.statSync(resolvedRoot)
+      if (!stat.isDirectory()) throw new Error(`Le chemin n'est pas un repertoire : ${resolvedRoot}`)
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === 'ENOENT') throw new Error(`Repertoire introuvable : ${resolvedRoot}`)
+      throw e
+    }
 
     // Close previous workspace if any
     if (activeWatcher) {

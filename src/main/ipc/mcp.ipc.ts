@@ -64,9 +64,11 @@ export function registerMcpIpc(): void {
 
     return servers.map((s) => ({
       ...s,
-      // Never return encrypted env to renderer — just indicate if set
+      // Never return secrets to renderer — just indicate if set
       envEncrypted: undefined,
       hasEnvVars: !!s.envEncrypted,
+      headers: undefined,
+      hasHeaders: !!s.headers && Object.keys(s.headers).length > 0,
       ...(statuses[s.id] ?? { status: 'stopped', toolCount: 0 })
     }))
   })
@@ -82,6 +84,8 @@ export function registerMcpIpc(): void {
       ...server,
       envEncrypted: undefined,
       hasEnvVars: !!server.envEncrypted,
+      headers: undefined,
+      hasHeaders: !!server.headers && Object.keys(server.headers).length > 0,
       ...status
     }
   })
@@ -137,6 +141,8 @@ export function registerMcpIpc(): void {
       ...server,
       envEncrypted: undefined,
       hasEnvVars: !!server.envEncrypted,
+      headers: undefined,
+      hasHeaders: !!server.headers && Object.keys(server.headers).length > 0,
       ...status
     }
   })
@@ -178,6 +184,8 @@ export function registerMcpIpc(): void {
       ...server,
       envEncrypted: undefined,
       hasEnvVars: !!server.envEncrypted,
+      headers: undefined,
+      hasHeaders: !!server.headers && Object.keys(server.headers).length > 0,
       ...status
     } : undefined
   })
@@ -210,6 +218,8 @@ export function registerMcpIpc(): void {
       ...server,
       envEncrypted: undefined,
       hasEnvVars: !!server.envEncrypted,
+      headers: undefined,
+      hasHeaders: !!server.headers && Object.keys(server.headers).length > 0,
       ...status
     }
   })

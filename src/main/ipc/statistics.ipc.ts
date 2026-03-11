@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron'
+import { z } from 'zod'
 import {
   getDailyStats,
   getProviderStats,
@@ -7,25 +8,33 @@ import {
   getProjectStats
 } from '../db/queries/statistics'
 
+const daysSchema = z.number().int().min(1).max(3650).optional()
+
+function parseDays(days?: unknown): number | undefined {
+  if (days === undefined || days === null) return undefined
+  const parsed = daysSchema.safeParse(days)
+  return parsed.success ? parsed.data : 30
+}
+
 export function registerStatisticsIpc(): void {
   ipcMain.handle('statistics:daily', async (_event, days?: number) => {
-    return getDailyStats(days ?? 30)
+    return getDailyStats(parseDays(days) ?? 30)
   })
 
   ipcMain.handle('statistics:providers', async (_event, days?: number) => {
-    return getProviderStats(days)
+    return getProviderStats(parseDays(days))
   })
 
   ipcMain.handle('statistics:models', async (_event, days?: number) => {
-    return getModelStats(days)
+    return getModelStats(parseDays(days))
   })
 
   ipcMain.handle('statistics:total', async (_event, days?: number) => {
-    return getGlobalStats(days)
+    return getGlobalStats(parseDays(days))
   })
 
   ipcMain.handle('statistics:projects', async (_event, days?: number) => {
-    return getProjectStats(days)
+    return getProjectStats(parseDays(days))
   })
 
   console.log('[IPC] Statistics handlers registered')
