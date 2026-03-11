@@ -114,19 +114,19 @@
 
 ## Tableau récapitulatif — Actions prioritaires
 
-| # | Priorité | Axe | Action | Effort |
-|---|----------|-----|--------|--------|
-| 1 | 🔴 | Auth | Bloquer `multi-llm:apikey:*` dans `settings:get` | 5 min |
-| 2 | 🔴 | Anti-RE | Désactiver DevTools en production | 1 min |
-| 3 | 🔴 | Update | Implémenter code signing + notarization | 1-2j |
-| 4 | 🟠 | Validation | Borner `chat:send` (content, systemPrompt, fileContexts) | 15 min |
-| 5 | 🟠 | Validation | Sécuriser `workspace:open` (whitelist ou blocklist système) | 15 min |
-| 6 | 🟠 | Permissions | Durcir la CSP (object-src, base-uri, form-action, frame-src) | 5 min |
-| 7 | 🟠 | Auth | Google TTS key → header au lieu de query param | 10 min |
-| 8 | 🟠 | Anti-RE | Minifier le main process (Terser) | 10 min |
-| 9 | 🟡 | Validation | Ajouter Zod sur conversations:*, settings:*, files:save | 30 min |
-| 10 | 🟡 | Update | Remplacer pdf-parse par unpdf | 30 min |
-| 11 | 🟡 | Update | Setup CI/CD GitHub Actions | 2-4h |
+| # | Priorité | Axe | Action | Effort | Statut |
+|---|----------|-----|--------|--------|--------|
+| 1 | 🔴 | Auth | Bloquer `multi-llm:apikey:*` dans `settings:get` | 5 min | **Fait** (S20) |
+| 2 | 🔴 | Anti-RE | Désactiver DevTools en production | 1 min | **Fait** (S20) |
+| 3 | 🔴 | Update | Implémenter code signing + notarization | 1-2j | En attente (Apple Developer Program) |
+| 4 | 🟠 | Validation | Borner `chat:send` (content, systemPrompt, fileContexts) | 15 min | **Fait** (S21) |
+| 5 | 🟠 | Validation | Sécuriser `workspace:open` (whitelist ou blocklist système) | 15 min | **Fait** (S20) |
+| 6 | 🟠 | Permissions | Durcir la CSP (object-src, base-uri, form-action, frame-src) | 5 min | **Fait** (S20) |
+| 7 | 🟠 | Auth | Google TTS key → header au lieu de query param | 10 min | **Fait** (S21) |
+| 8 | 🟠 | Anti-RE | Minifier le main process (Terser) | 10 min | **Fait** (S21) |
+| 9 | 🟡 | Validation | Ajouter Zod sur conversations:*, settings:*, files:save | 30 min | **Fait** (S20) |
+| 10 | 🟡 | Update | Remplacer pdf-parse par unpdf | 30 min | Non fait |
+| 11 | 🟡 | Update | Setup CI/CD GitHub Actions | 2-4h | **Fait** (S21) |
 
 ---
 

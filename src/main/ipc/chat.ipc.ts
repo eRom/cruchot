@@ -24,10 +24,10 @@ const attachmentSchema = z.object({
 
 const sendMessageSchema = z.object({
   conversationId: z.string().min(1),
-  content: z.string().min(1),
+  content: z.string().min(1).max(100_000),
   modelId: z.string().min(1),
   providerId: z.string().min(1),
-  systemPrompt: z.string().optional(),
+  systemPrompt: z.string().max(50_000).optional(),
   temperature: z.number().min(0).max(2).optional(),
   maxTokens: z.number().positive().optional(),
   topP: z.number().min(0).max(1).optional(),
@@ -35,10 +35,10 @@ const sendMessageSchema = z.object({
   roleId: z.string().optional(),
   attachments: z.array(attachmentSchema).max(MAX_FILES_PER_MESSAGE).optional(),
   fileContexts: z.array(z.object({
-    path: z.string(),
-    content: z.string(),
-    language: z.string()
-  })).optional(),
+    path: z.string().max(1000),
+    content: z.string().max(500_000),
+    language: z.string().max(50)
+  })).max(20).optional(),
   hasWorkspace: z.boolean().optional()
 })
 
