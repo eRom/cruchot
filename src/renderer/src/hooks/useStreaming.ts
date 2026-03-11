@@ -31,7 +31,9 @@ interface StreamChunk {
 
 /** Human-readable labels for workspace tool calls */
 const TOOL_LABELS: Record<string, string> = {
+  bash: 'Commande shell',
   readFile: 'Lecture du fichier',
+  writeFile: 'Ecriture du fichier',
   listFiles: 'Exploration des fichiers',
   searchInFiles: 'Recherche dans les fichiers'
 }
@@ -104,7 +106,7 @@ export function useStreaming() {
           const msgId = streamingIdRef.current
           if (msgId && chunk.toolName) {
             const toolLabel = TOOL_LABELS[chunk.toolName] || chunk.toolName
-            const argPath = (chunk.toolArgs?.path || chunk.toolArgs?.query || '') as string
+            const argPath = (chunk.toolArgs?.command || chunk.toolArgs?.path || chunk.toolArgs?.query || '') as string
             const detail = argPath ? ` : ${argPath}` : ''
             // Add tool call to the persistent list with "running" status
             addToolCall(msgId, {
