@@ -1,13 +1,12 @@
-import React, { useCallback, useMemo, useState } from 'react'
-import type { Message } from '@/stores/messages.store'
-import { useMessagesStore } from '@/stores/messages.store'
-import { MessageContent } from './MessageContent'
-import { AudioPlayer } from './AudioPlayer'
 import { FileOperationCard } from '@/components/workspace/FileOperationCard'
 import { cn } from '@/lib/utils'
-import { Brain, Check, CheckCircle2, ChevronDown, ChevronRight, Copy, File as FileIcon, FolderSearch, Image as ImageIcon, Loader2, Search, Sparkles, FileText, XCircle, Wrench } from 'lucide-react'
+import type { Message, ToolCallDisplay } from '@/stores/messages.store'
+import { useMessagesStore } from '@/stores/messages.store'
+import { Brain, Check, CheckCircle2, ChevronDown, ChevronRight, Copy, File as FileIcon, FileText, FolderSearch, Image as ImageIcon, Loader2, Search, Sparkles, Wrench, XCircle } from 'lucide-react'
+import { useCallback, useState } from 'react'
 import type { FileOperation } from '../../../../preload/types'
-import type { ToolCallDisplay } from '@/stores/messages.store'
+import { AudioPlayer } from './AudioPlayer'
+import { MessageContent } from './MessageContent'
 
 interface MessageItemProps {
   message: Message
@@ -55,7 +54,7 @@ function ReasoningBlock({ reasoning, isStreaming }: { reasoning: string; isStrea
     <div className="mb-2">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1.5 text-xs font-medium text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
+        className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
       >
         {isStreaming ? (
           <Brain className="size-3.5 animate-pulse" />
@@ -67,13 +66,13 @@ function ReasoningBlock({ reasoning, isStreaming }: { reasoning: string; isStrea
         <span>{isStreaming ? 'Reflexion en cours...' : 'Reflexion'}</span>
       </button>
       {(expanded || isStreaming) && (
-        <div className="mt-1.5 rounded-lg border border-violet-200/40 dark:border-violet-500/20 bg-violet-50/50 dark:bg-violet-950/20 px-3 py-2 text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto">
+        <div className="mt-1.5 rounded-lg border border-border/40 bg-muted/30 px-3 py-2 text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto">
           {reasoning}
           {isStreaming && (
             <span className="inline-flex ml-0.5 gap-[2px] align-middle">
-              <span className="size-1 animate-pulse rounded-full bg-violet-500/50" style={{ animationDelay: '0ms' }} />
-              <span className="size-1 animate-pulse rounded-full bg-violet-500/50" style={{ animationDelay: '150ms' }} />
-              <span className="size-1 animate-pulse rounded-full bg-violet-500/50" style={{ animationDelay: '300ms' }} />
+              <span className="size-1 animate-pulse rounded-full bg-muted-foreground/50" style={{ animationDelay: '0ms' }} />
+              <span className="size-1 animate-pulse rounded-full bg-muted-foreground/50" style={{ animationDelay: '150ms' }} />
+              <span className="size-1 animate-pulse rounded-full bg-muted-foreground/50" style={{ animationDelay: '300ms' }} />
             </span>
           )}
         </div>
@@ -240,7 +239,7 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
     >
       {/* Assistant avatar */}
       {!isUser && (
-        <div className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 text-violet-600 ring-1 ring-violet-500/10 dark:from-violet-400/15 dark:to-fuchsia-400/15 dark:text-violet-400 dark:ring-violet-400/10">
+        <div className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted/60 text-muted-foreground ring-1 ring-border/30">
           <Sparkles className="size-4" />
         </div>
       )}
@@ -250,8 +249,8 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
         className={cn(
           'relative',
           isUser
-            ? 'max-w-[75%] rounded-2xl px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-sm dark:from-blue-500 dark:to-blue-600'
-            : 'flex-1 min-w-0 py-2 text-foreground'
+            ? 'max-w-[75%] rounded-2xl px-4 py-3 bg-sidebar text-sidebar-foreground shadow-sm'
+            : 'flex-1 min-w-0 py-2 text-foreground' 
         )}
       >
         {/* Processing phase — spinner before any content arrives, or tool call feedback */}
@@ -346,7 +345,7 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
             title={copied ? 'Copié !' : 'Copier'}
             className={cn(
               'absolute -bottom-3 right-2 flex size-6 items-center justify-center rounded-md opacity-0 transition-all group-hover:opacity-100',
-              'bg-blue-500/30 text-white/70 hover:bg-blue-500/50 hover:text-white'
+              'bg-sidebar-accent text-sidebar-foreground/70 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground'
             )}
             aria-label="Copier le message"
           >

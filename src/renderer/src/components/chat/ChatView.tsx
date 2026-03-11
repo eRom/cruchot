@@ -165,15 +165,15 @@ function EmptyState({ hasConversation }: { hasConversation: boolean }) {
       <div className="flex flex-col items-center gap-5 text-center">
         {/* Icon cluster */}
         <div className="relative">
-          <div className="flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 shadow-sm ring-1 ring-violet-500/10 dark:from-violet-400/10 dark:to-fuchsia-400/10 dark:ring-violet-400/10">
+          <div className="flex size-16 items-center justify-center rounded-2xl bg-muted/60 shadow-sm ring-1 ring-border/30">
             {hasConversation ? (
-              <MessageSquare className="size-7 text-violet-500/60 dark:text-violet-400/60" />
+              <MessageSquare className="size-7 text-muted-foreground/60" />
             ) : (
-              <Sparkles className="size-7 text-violet-500/60 dark:text-violet-400/60" />
+              <Sparkles className="size-7 text-muted-foreground/60" />
             )}
           </div>
           {/* Decorative glow */}
-          <div className="absolute -inset-4 -z-10 rounded-3xl bg-gradient-to-br from-violet-500/5 to-fuchsia-500/5 blur-xl" />
+          <div className="absolute -inset-4 -z-10 rounded-3xl bg-muted/5 blur-xl" />
         </div>
 
         {/* Text */}

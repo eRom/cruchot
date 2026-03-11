@@ -86,7 +86,7 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
               'transition-all duration-200 ease-out',
               'focus-visible:ring-1 focus-visible:ring-ring/30',
               'shadow-none hover:shadow-xs',
-              isImageSelected && 'bg-violet-500/10 text-violet-600 hover:bg-violet-500/20 dark:text-violet-400',
+              isImageSelected && 'bg-primary/10 text-foreground hover:bg-primary/15',
               className
             )}
           >
@@ -153,7 +153,7 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
             {textModels.length > 0 && <SelectSeparator />}
             <SelectGroup>
               <SelectLabel className="flex items-center gap-2 px-2 py-1.5">
-                <ImageIcon className="size-3.5 text-violet-500" />
+                <ImageIcon className="size-3.5 text-muted-foreground/60" />
                 <span className="font-semibold tracking-tight">Generation d'images</span>
               </SelectLabel>
               {imageModels.map(({ model, provider }) => (
