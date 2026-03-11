@@ -1,9 +1,9 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 21 — distribution/packaging)
+> Derniere mise a jour : 2026-03-11 (session 22 — Git integration, workspace intelligence)
 
 ## Vue d'ensemble
 
-App desktop locale de chat multi-LLM (Electron). 11 providers (9 cloud + OpenRouter + 2 locaux), generation d'images, TTS cloud (OpenAI/Google), statistiques de couts, workspace co-work (LLM context-aware sur fichiers), taches planifiees, **integration MCP** (serveurs externes), **memory fragments** (contexte utilisateur persistant). Zero serveur backend.
+App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud (OpenAI/Google), statistiques de couts, workspace co-work (LLM context-aware sur fichiers), **integration Git** (branche, status, diff, AI commit), taches planifiees, **integration MCP** (serveurs externes), **memory fragments** (contexte utilisateur persistant). Zero serveur backend.
 
 ## Stack
 
@@ -16,7 +16,7 @@ Renderer (React UI) → contextBridge IPC → Preload (bridge) → ipcMain → M
 ```
 
 - **Main** : cles API (safeStorage), appels LLM, DB SQLite, services
-- **Preload** : `window.api` via contextBridge (~84 methodes typees)
+- **Preload** : `window.api` via contextBridge (~94 methodes typees)
 - **Renderer** : UI React pure, aucun acces Node.js
 
 ## Arborescence
@@ -25,17 +25,17 @@ Renderer (React UI) → contextBridge IPC → Preload (bridge) → ipcMain → M
 src/
   main/
     index.ts              # Lifecycle, auto-updater, custom protocol local-image://
-    ipc/                  # Handlers IPC par domaine (dont mcp.ipc.ts, memory-fragments.ipc.ts)
+    ipc/                  # Handlers IPC par domaine (dont mcp.ipc.ts, memory-fragments.ipc.ts, git.ipc.ts)
     llm/                  # Router AI SDK, cost-calculator, image gen, workspace-tools, errors, thinking
     db/schema.ts          # 15 tables Drizzle
     db/queries/           # Queries par domaine (dont mcp-servers.ts, memory-fragments.ts)
-    services/             # Credential, backup, workspace, file-watcher, tts, scheduler, task-executor, mcp-manager
+    services/             # Credential, backup, workspace, file-watcher, tts, scheduler, task-executor, mcp-manager, git
   preload/
     index.ts              # contextBridge
     types.ts              # Types partages + DTOs
   renderer/src/
     App.tsx               # Routing par ViewMode
-    stores/               # Zustand (conversations, providers, projects, messages, settings, ui, roles, workspace, tasks, mcp, memory)
+    stores/               # Zustand (conversations, providers, projects, messages, settings, ui, roles, workspace, tasks, mcp, memory, git)
     components/           # chat/, layout/, projects/, prompts/, roles/, tasks/, mcp/, memory/, settings/, statistics/, images/, conversations/, workspace/, common/
     hooks/                # useStreaming, useInitApp, useKeyboardShortcuts, useAudioPlayer, useContextWindow
 ```
@@ -80,10 +80,40 @@ chat.ipc.ts : memoryBlock + systemPrompt (role) + workspace-files + tools prompt
 streamText({ messages: [{ role: 'system', content: combined }] })
 ```
 
-- Ordre injection : memory fragments → role → workspace files → tools prompt
+- Ordre injection : memory fragments → role → workspace files → workspace context (auto-read) → tools prompt
 - Stocke en DB (pas localStorage), charge via `memory.store.ts` au demarrage
 - Max 50 fragments, 2000 chars/fragment, alerte UI > 5000 chars total
 - Drag & drop HTML5 natif pour reordonner (`sortOrder`)
+
+## Git Integration
+
+```
+GitService (standalone, per workspace) → execFile('git', args, { env minimal })
+  ├── getInfo() → branch, isDirty, modifiedCount (cache TTL 2s)
+  ├── getStatus() → GitFileStatus[] (porcelain v1 parse)
+  ├── getDiff(path?, staged?) → unified diff string
+  ├── stageFiles/unstageFiles/stageAll/commit
+  └── invalidateCache() ← called by FileWatcher on change
+```
+
+- **GitService** : `execFile` (pas `exec`), env minimal, timeout 10-30s, cache TTL 2s
+- **git.ipc.ts** : 8 handlers + `git:changed` push event (debounce 500ms)
+- **AI Commit Message** : `generateText()` one-shot, diff tronque 20K chars, pas de conversation DB
+- **Couplage workspace** : FileWatcher → `onWorkspaceFileChanged()` → invalidateCache + push `git:changed`
+- **UI** : GitBranchBadge (header), tab switcher Fichiers/Changes, ChangesPanel (staged/unstaged + commit), DiffView (colore)
+- **FileTree** : indicateurs Git par fichier (M/A/D/?), dot colore sur dossiers
+
+## Workspace Context Auto-Injection
+
+```
+buildWorkspaceContextBlock(rootPath) → <workspace-context> XML block
+  ↓
+chat.ipc.ts : contextBlock + WORKSPACE_TOOLS_PROMPT → system prompt
+```
+
+- Fichiers auto-lus a la racine : CLAUDE.md, AGENTS.md, GEMINI.md, COPILOT.md, .cursorrules, README.md, CONTRIBUTING.md, CHANGELOG.md
+- Max 50KB/fichier, 200KB total
+- Le LLM recoit le contexte projet sans utiliser d'outils → zero tool calls pour decouvrir le projet
 
 ## Securite (audit session 20)
 

@@ -343,6 +343,22 @@ export interface ImageRecord {
   createdAt: Date
 }
 
+// ── Git ─────────────────────────────────────────────────────
+export type GitFileStatusCode = 'M' | 'A' | 'D' | 'R' | '?' | 'C' | 'U' | ' '
+
+export interface GitFileStatus {
+  path: string
+  staging: GitFileStatusCode
+  working: GitFileStatusCode
+}
+
+export interface GitInfo {
+  isRepo: boolean
+  branch: string | null
+  isDirty: boolean
+  modifiedCount: number
+}
+
 // ── Memory Fragments ─────────────────────────────────────────
 export interface MemoryFragment {
   id: string
@@ -622,6 +638,18 @@ export interface ElectronAPI {
   }) => Promise<McpTestResult>
   onMcpStatusChanged: (callback: (event: McpStatusEvent) => void) => void
   offMcpStatusChanged: () => void
+
+  // Git
+  gitGetInfo: () => Promise<GitInfo | null>
+  gitGetStatus: () => Promise<GitFileStatus[]>
+  gitGetDiff: (data: { path?: string; staged?: boolean }) => Promise<string>
+  gitStageFiles: (data: { paths: string[] }) => Promise<void>
+  gitStageAll: () => Promise<void>
+  gitUnstageFiles: (data: { paths: string[] }) => Promise<void>
+  gitCommit: (data: { message: string }) => Promise<{ hash: string }>
+  gitGenerateCommitMessage: (data: { providerId: string; modelId: string }) => Promise<{ message: string; cost: number }>
+  onGitChanged: (callback: (info: GitInfo) => void) => void
+  offGitChanged: () => void
 
   // Settings
   getSetting: (key: string) => Promise<string | null>

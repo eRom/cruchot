@@ -85,8 +85,8 @@ Titre principal : **Multi-LLM Desktop** — "Tous vos LLMs, une seule interface"
 Catégories et fonctionnalités :
 
 **Chat Multi-Provider** (icône : bulles de conversation)
-- 11 providers : OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek, Alibaba Qwen, Perplexity, OpenRouter, Ollama, LM Studio
-- 9 providers cloud + 2 locaux (Ollama, LM Studio)
+- 10 providers : OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek, Alibaba Qwen, Perplexity, Ollama, LM Studio
+- 8 providers cloud + 2 locaux (Ollama, LM Studio)
 - Streaming temps réel token par token
 - Historique illimité avec recherche full-text (FTS5)
 - Mode Thinking/Reasoning avec 14 modèles supportés (Anthropic, OpenAI, Google, xAI, DeepSeek)
@@ -99,11 +99,25 @@ Catégories et fonctionnalités :
 - Stockage local sécurisé via protocole custom local-image://
 
 **Workspace Co-Work** (icône : dossier avec engrenage)
-- Arborescence de fichiers interactive (FileTree)
+- Arborescence de fichiers interactive (FileTree) avec indicateurs Git (M/A/D/?)
 - 4 outils IA : bash (terminal sandboxé), readFile, writeFile, listFiles
 - Le LLM lit, écrit et exécute des commandes dans le workspace
 - Détection de changements en temps réel (Chokidar file watcher)
 - Propositions de modifications de fichiers avec approbation (FileOperationCard)
+- Auto-injection des fichiers de contexte (CLAUDE.md, README.md, AGENTS.md, GEMINI.md)
+
+**Intégration Git** (icône : branches/merge)
+- Branche courante, indicateur dirty/clean, compteur de fichiers modifiés
+- Vue Changes : fichiers staged/unstaged avec actions stage/unstage
+- Diff viewer coloré intégré (ajouts vert, suppressions rouge, hunks bleu)
+- AI Commit Message : génération one-shot du message via le LLM sélectionné
+- Commit direct depuis l'interface avec toast de confirmation
+
+**LM Studio** (icône : serveur local)
+- URL configurable (auto-détection sur localhost)
+- Liste dynamique des modèles chargés
+- Parsing des tags \<think\> pour le mode raisonnement
+- Provider OpenAI-compatible (zéro configuration API)
 
 **Projets** (icône : cube/boîte)
 - Organisation par projets avec modèle par défaut
@@ -176,4 +190,4 @@ Catégories et fonctionnalités :
 
 Bandeau bas : **Stack technique** — Electron 35 · React 19 · TypeScript · Tailwind CSS 4 · SQLite · Drizzle ORM · Vercel AI SDK 6
 
-Style : infographie moderne, fond sombre, mise en page en grille (3-4 colonnes), chaque catégorie dans une carte avec icône colorée en haut, titre en gras, bullet points concis en dessous. Palette de couleurs : bleu électrique pour le chat, violet pour la personnalisation, vert pour le workspace, orange pour les extensions (MCP, tâches), cyan pour les médias (images, TTS), rouge pour la sécurité. Aspect premium et épuré, pas surchargé.
+Style : infographie moderne, fond sombre, mise en page en grille (3-4 colonnes), chaque catégorie dans une carte avec icône colorée en haut, titre en gras, bullet points concis en dessous. Palette de couleurs : bleu électrique pour le chat, violet pour la personnalisation, vert pour le workspace et Git, orange pour les extensions (MCP, tâches), cyan pour les médias (images, TTS), rouge pour la sécurité, indigo pour LM Studio. Aspect premium et épuré, pas surchargé.

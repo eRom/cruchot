@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 21 — distribution/packaging)
+> Derniere mise a jour : 2026-03-11 (session 22 — Git integration, workspace intelligence)
 
 ## Conventions de nommage
 
@@ -19,7 +19,7 @@
 - `result.usage` → `{ inputTokens, outputTokens }` (pas `promptTokens`/`completionTokens`)
 - `NoOutputGeneratedError` : catch autour de `result.text`, verifier `.cause` (wrape souvent l'erreur API)
 - `inputSchema` (pas `parameters`) pour definir les outils
-- **`stopWhen: stepCountIs(N)`** obligatoire pour multi-step tools (default v6 = `stepCountIs(1)`)
+- **`stopWhen: stepCountIs(50)`** — limite haute (50 steps) car app locale. Default v6 = `stepCountIs(1)`
 - `tool-call` et `tool-result` chunks dans `onChunk` (pas `onStepFinish`)
 - `abortSignal` pour annulation (cote client seulement)
 
@@ -63,9 +63,24 @@
 - **WorkspacePanel** : collapsible toggle (pas close), `Cmd+B`, auto-open quand projet change
 - **4 outils AI SDK** (`workspace-tools.ts`) :
   - `bash` : shell exec async (child_process.exec), cwd=workspace, blocklist ~30 patterns, env minimal (PATH restreint, zero process.env), timeout 30s, ANSI off
-  - `readFile` / `writeFile` (immediat) / `listFiles`
-- **ToolCallBlock** : collapsible cyan, icones par outil (Terminal/FileText/Pencil/FolderSearch)
+  - `readFile` : **whitelist d'extensions textuelles** (~80 ext), blocklist fichiers sensibles (.env*, .pem, .key), blocklist segments gitignore (node_modules, .git, dist, build, .cache, .venv...)
+  - `writeFile` (immediat) / `listFiles`
+- **Auto-injection contexte** : `buildWorkspaceContextBlock()` lit CLAUDE.md, AGENTS.md, GEMINI.md, README.md etc. a la racine et les injecte dans le system prompt → le LLM n'a pas besoin de tool calls pour decouvrir le projet
+- **ToolCallBlock** : collapsible cyan, icones par outil (Terminal/FileText/Pencil/FolderSearch), **auto-collapse quand stream finit** (useRef + useEffect sur isStreaming transition)
+- **ReasoningBlock** : idem auto-collapse a la fin du stream
 - Fichiers attaches injectes en system prompt (`<workspace-files>` XML)
+
+## Git Integration
+
+- **GitService** : standalone (pas dans WorkspaceService), `execFile` (pas `exec` → zero injection shell)
+- **Env minimal** : `PATH` restreint, `GIT_TERMINAL_PROMPT=0`, `NO_COLOR=1`, `LANG=en_US.UTF-8`
+- **Cache** : `getStatus()` + `getInfo()` avec TTL 2s, invalide par `invalidateCache()` (appele par FileWatcher)
+- **Parsing porcelain v1** : `XY path` → `{ path, staging: X, working: Y }`, gestion renommages (`R old -> new`)
+- **Debounce** : `git:changed` push au renderer debounce 500ms apres file change
+- **AI Commit** : `generateText()` one-shot (pas de conversation DB), diff tronque 20K chars, temperature 0.3
+- **UI pattern** : tab switcher dans WorkspacePanel header (Fichiers/Changes), visible seulement si `isGitRepo`
+- **FileTree** : `statusMap` (Map<path, GitFileStatus>) memoize pour lookup O(1), `dirHasGitStatus()` pour dot colore sur dossiers
+- **FilePanel** : toggle Diff (icone GitCompare) visible si fichier a un statut Git modifie
 
 ## TTS Multi-Provider
 

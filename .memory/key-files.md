@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 21 — distribution/packaging)
+> Derniere mise a jour : 2026-03-11 (session 22 — Git integration, workspace intelligence)
 
 ## Main process
 
@@ -12,7 +12,8 @@
 | `src/main/ipc/images.ipc.ts` | Generation images — save fichier + DB |
 | `src/main/ipc/roles.ipc.ts` | CRUD roles (Zod) |
 | `src/main/ipc/prompts.ipc.ts` | CRUD prompts (Zod) |
-| `src/main/ipc/workspace.ipc.ts` | 8 handlers workspace |
+| `src/main/ipc/workspace.ipc.ts` | 8 handlers workspace + couplage Git (invalidateCache + push git:changed) |
+| `src/main/ipc/git.ipc.ts` | 8 handlers Git (info, status, diff, stage, unstage, commit, generateCommitMessage) + push git:changed |
 | `src/main/ipc/scheduled-tasks.ipc.ts` | CRUD taches planifiees (Zod discriminatedUnion) |
 | `src/main/ipc/tts.ipc.ts` | TTS synthesize + getAvailableProviders |
 | `src/main/ipc/statistics.ipc.ts` | 5 handlers stats (Zod, days valide 1-3650) |
@@ -23,7 +24,7 @@
 | `src/main/llm/router.ts` | Routeur getModel() — AI SDK |
 | `src/main/llm/registry.ts` | 11 providers, modeles (text + image), `isImageModel()` |
 | `src/main/llm/thinking.ts` | Mapping effort → providerOptions par provider |
-| `src/main/llm/workspace-tools.ts` | 4 outils AI SDK : bash, readFile, writeFile, listFiles |
+| `src/main/llm/workspace-tools.ts` | 4 outils AI SDK : bash, readFile (whitelist ext), writeFile, listFiles + buildWorkspaceContextBlock() |
 | `src/main/llm/errors.ts` | Classification erreurs (unwrapCause, isInvalidApiKey, isQuotaExhausted) |
 | `src/main/llm/cost-calculator.ts` | Table PRICING + calcul cout |
 | `src/main/llm/image.ts` | Generation images multi-provider (Google + OpenAI) |
@@ -36,12 +37,13 @@
 | `src/main/services/task-executor.ts` | Execution LLM programmatique |
 | `src/main/services/credential.service.ts` | Wrapper safeStorage |
 | `src/main/services/backup.service.ts` | Backup CRUD (path validation, trash) |
+| `src/main/services/git.service.ts` | Service Git standalone — execFile securise, env minimal, cache TTL 2s, parsing porcelain |
 
 ## Preload
 
 | Fichier | Role |
 |---------|------|
-| `src/preload/index.ts` | contextBridge ~84 methodes |
+| `src/preload/index.ts` | contextBridge ~94 methodes |
 | `src/preload/types.ts` | Types partages, DTOs |
 
 ## Renderer — Composants cles
@@ -59,7 +61,10 @@
 | `components/mcp/McpServerCard.tsx` | Card serveur MCP — toggle, status, tools count, hover actions |
 | `components/mcp/McpServerForm.tsx` | Formulaire create/edit serveur MCP — transport, env vars, projet, test |
 | `components/settings/SettingsView.tsx` | 8 tabs (General, Apparence, API, Modele, Audio, Raccourcis, Donnees, Sauvegardes) |
-| `components/workspace/WorkspacePanel.tsx` | Panneau droit collapsible, FileTree + FilePanel |
+| `components/workspace/WorkspacePanel.tsx` | Panneau droit collapsible, FileTree + FilePanel + GitBranchBadge + tab Fichiers/Changes |
+| `components/workspace/GitBranchBadge.tsx` | Badge branche Git (nom, dot dirty/clean, count modifies) |
+| `components/workspace/ChangesPanel.tsx` | Vue Changes (staged/unstaged, stage/unstage, diff inline, commit + AI message) |
+| `components/workspace/DiffView.tsx` | Viewer diff unifie colore (+/vert, -/rouge, @@/bleu) |
 | `components/common/CommandPalette.tsx` | Cmd+K — recherche globale |
 
 ## Renderer — Stores
@@ -75,6 +80,7 @@
 | `stores/roles.store.ts` | Roles, activeRoleId, activeSystemPrompt |
 | `stores/tasks.store.ts` | Taches planifiees (DB-backed, pas persist) |
 | `stores/mcp.store.ts` | Serveurs MCP — CRUD, toggle, start/stop/restart, status events |
+| `stores/git.store.ts` | Git state — info, status, diff, stage/unstage/commit, generateMessage |
 
 ## Renderer — Hooks
 

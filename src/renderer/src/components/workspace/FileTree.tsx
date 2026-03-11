@@ -2,8 +2,10 @@ import { useState, useCallback, useMemo } from 'react'
 import { File, Folder, FolderOpen, FileCode, FileText, FileJson, FileImage, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { useWorkspaceStore } from '@/stores/workspace.store'
+import { useGitStore } from '@/stores/git.store'
 import { cn } from '@/lib/utils'
 import type { FileNode } from '../../../../preload/types'
+import type { GitFileStatus, GitFileStatusCode } from '../../../../preload/types'
 
 // ── File icon by extension ──────────────────────────────
 function getFileIcon(extension?: string) {
@@ -25,17 +27,60 @@ function getFileIcon(extension?: string) {
   }
 }
 
+// ── Git status helpers ──────────────────────────────────
+function gitStatusColor(code: GitFileStatusCode): string {
+  switch (code) {
+    case 'M': return 'text-orange-400'
+    case 'A': return 'text-emerald-400'
+    case 'D': return 'text-red-400'
+    case 'R': return 'text-blue-400'
+    case '?': return 'text-muted-foreground/50'
+    default: return ''
+  }
+}
+
+function gitStatusLabel(code: GitFileStatusCode): string {
+  switch (code) {
+    case 'M': return 'M'
+    case 'A': return 'A'
+    case 'D': return 'D'
+    case 'R': return 'R'
+    case '?': return '?'
+    default: return ''
+  }
+}
+
+function getEffectiveStatus(file: GitFileStatus): GitFileStatusCode {
+  // Working tree status has priority for display, fallback to staging
+  if (file.working !== ' ') return file.working
+  if (file.staging !== ' ') return file.staging
+  return ' '
+}
+
+/** Check if a directory path has any children with git status */
+function dirHasGitStatus(dirPath: string, statusMap: Map<string, GitFileStatus>): GitFileStatusCode | null {
+  for (const [filePath, status] of statusMap) {
+    if (filePath.startsWith(dirPath + '/')) {
+      const code = getEffectiveStatus(status)
+      if (code !== ' ') return code
+    }
+  }
+  return null
+}
+
 // ── FileTreeItem ─────────────────────────────────────────
 function FileTreeItem({
   node,
   depth,
-  filter
+  filter,
+  statusMap
 }: {
   node: FileNode
   depth: number
   filter: string
+  statusMap: Map<string, GitFileStatus>
 }) {
-  const [expanded, setExpanded] = useState(depth < 2)
+  const [expanded, setExpanded] = useState(false)
   const selectFile = useWorkspaceStore((s) => s.selectFile)
   const selectedFilePath = useWorkspaceStore((s) => s.selectedFilePath)
   const attachFile = useWorkspaceStore((s) => s.attachFile)
@@ -43,6 +88,11 @@ function FileTreeItem({
 
   const isAttached = attachedFiles.includes(node.path)
   const isSelected = selectedFilePath === node.path
+
+  // Git status for this node
+  const fileStatus = statusMap.get(node.path)
+  const effectiveCode = fileStatus ? getEffectiveStatus(fileStatus) : null
+  const dirStatus = node.type === 'directory' ? dirHasGitStatus(node.path, statusMap) : null
 
   const matchesFilter = useMemo(() => {
     if (!filter) return true
@@ -93,9 +143,24 @@ function FileTreeItem({
           'size-3.5 shrink-0',
           node.type === 'directory' ? 'text-amber-500/70' : 'text-muted-foreground/60'
         )} />
-        <span className="truncate">{node.name}</span>
+        <span className="truncate flex-1">{node.name}</span>
         {isAttached && (
-          <span className="ml-auto shrink-0 text-[10px] text-cyan-500/70">attache</span>
+          <span className="shrink-0 text-[10px] text-cyan-500/70">attache</span>
+        )}
+        {/* Git status indicator for files */}
+        {effectiveCode && effectiveCode !== ' ' && (
+          <span className={cn('shrink-0 text-[10px] font-mono font-bold', gitStatusColor(effectiveCode))}>
+            {gitStatusLabel(effectiveCode)}
+          </span>
+        )}
+        {/* Git status indicator for directories */}
+        {!effectiveCode && dirStatus && (
+          <span className={cn('size-1.5 rounded-full shrink-0', {
+            'bg-orange-400': dirStatus === 'M',
+            'bg-emerald-400': dirStatus === 'A',
+            'bg-red-400': dirStatus === 'D',
+            'bg-muted-foreground/40': dirStatus === '?'
+          })} />
         )}
       </button>
       {node.type === 'directory' && expanded && node.children?.map((child: FileNode) => (
@@ -104,6 +169,7 @@ function FileTreeItem({
           node={child}
           depth={depth + 1}
           filter={filter}
+          statusMap={statusMap}
         />
       ))}
     </>
@@ -122,6 +188,18 @@ function matchesFilterDeep(node: FileNode, filter: string): boolean {
 export function FileTree() {
   const [filter, setFilter] = useState('')
   const tree = useWorkspaceStore((s) => s.tree)
+  const gitStatus = useGitStore((s) => s.status)
+
+  // Build status map for O(1) lookup
+  const statusMap = useMemo(() => {
+    const map = new Map<string, GitFileStatus>()
+    if (gitStatus) {
+      for (const file of gitStatus) {
+        map.set(file.path, file)
+      }
+    }
+    return map
+  }, [gitStatus])
 
   if (!tree) return null
 
@@ -150,6 +228,7 @@ export function FileTree() {
             node={node}
             depth={0}
             filter={filter}
+            statusMap={statusMap}
           />
         ))}
         {children.length === 0 && (

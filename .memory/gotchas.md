@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 21 — distribution/packaging)
+> Derniere mise a jour : 2026-03-11 (session 22 — Git integration, workspace intelligence)
 
 ## AI SDK v6 — Breaking changes (checklist)
 
@@ -94,6 +94,22 @@
 - **`drizzle/` migrations** : warning `file source doesn't exist` dans electron-builder car le dossier n'existe pas encore (extraResources). Non bloquant.
 - **Certificat Apple Developer ID** requis pour distribution publique — sans lui, seul le dev local fonctionne (ad-hoc + codesign + xattr)
 - **Secrets GitHub** a configurer pour CI release : `MAC_CERTIFICATE_P12_BASE64`, `MAC_CERTIFICATE_PASSWORD`, `APPLE_API_KEY`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`
+
+## Workspace Tools — pieges session 22
+
+- **readFile sans filtre** : le LLM lisait n'importe quoi (binaires, .env, node_modules) → crash "Binary file detected". Fix : whitelist d'extensions textuelles + blocklist fichiers sensibles + blocklist segments gitignore
+- **maxSteps: 10 trop bas** : le LLM atteignait la limite sur des taches simples (20 tool calls pour un "bonjour"). Fix : monte a 50 (app locale, pas de risque de cout)
+- **LLM lit tout le workspace au premier message** : sans contexte initial, le LLM passe 20+ tool calls a decouvrir le projet. Fix : `buildWorkspaceContextBlock()` injecte automatiquement CLAUDE.md, README.md, etc. dans le system prompt
+- **ToolCallBlock/ReasoningBlock restent ouverts** : `useState(isStreaming)` ne se replie jamais quand `isStreaming` passe a false. Fix : `useRef` + `useEffect` pour detecter la transition true→false et `setExpanded(false)`
+- **FileTree replie par defaut** : `useState(depth < 2)` ouvrait trop de dossiers → `useState(false)` pour tout replier
+
+## Git Integration — pieges session 22
+
+- **exec vs execFile** : `exec` permet l'injection shell (`; rm -rf /`), `execFile` ne passe que des arguments → toujours `execFile` pour Git
+- **GIT_TERMINAL_PROMPT=0** : sans ca, git peut bloquer en attendant un mot de passe (ex: repo prive sans SSH key)
+- **git status --porcelain=v1** : le format est `XY path` avec X=staging, Y=working. Pour les renommages, le format est `R  old -> new` → parser la fleche
+- **Cache invalidation** : le FileWatcher ignore `.git/` → les changements Git internes (stage, commit) ne declenchent pas de file change. Le cache est invalide manuellement dans les methodes stage/unstage/commit
+- **Debounce git:changed** : sans debounce, un `git add -A` sur 50 fichiers enverrait 50 events. Debounce 500ms dans `onWorkspaceFileChanged()`
 
 ## Restant a faire
 

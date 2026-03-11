@@ -23,6 +23,7 @@ import { registerTtsIpc } from './tts.ipc'
 import { registerScheduledTasksIpc } from './scheduled-tasks.ipc'
 import { registerMcpIpc } from './mcp.ipc'
 import { registerMemoryFragmentsIpc } from './memory-fragments.ipc'
+import { registerGitIpc } from './git.ipc'
 
 /**
  * Registre central des IPC handlers.
@@ -91,6 +92,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Memory Fragments ─────────────────────
   registerMemoryFragmentsIpc()
+
+  // ── Git ──────────────────────────────────
+  registerGitIpc()
 
   // ── Settings ────────────────────────────────────────
   ipcMain.handle('settings:get', async (_event, key: string) => {
