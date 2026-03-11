@@ -74,3 +74,106 @@ Relations FK à montrer avec des flèches :
 - mcp_servers → projects
 
 Style : ERD classique, fond sombre, groupes logiques par couleur : bleu pour le coeur chat (conversations, messages, attachments), violet pour la config (providers, models, settings), vert pour les features (prompts, roles, projects), orange pour les extensions (scheduled_tasks, mcp_servers, memory_fragments), rouge pour le tracking (statistics, tts_usage, images).
+
+
+## Prompt pour infographie sur les fonctionnalités
+
+Crée une infographie des fonctionnalités pour une app desktop de chat multi-LLM appelée "Multi-LLM Desktop". L'infographie doit présenter visuellement toutes les capacités de l'application, organisées par catégories, avec des icônes et des descriptions courtes.
+
+Titre principal : **Multi-LLM Desktop** — "Tous vos LLMs, une seule interface"
+
+Catégories et fonctionnalités :
+
+**Chat Multi-Provider** (icône : bulles de conversation)
+- 11 providers : OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek, Alibaba Qwen, Perplexity, OpenRouter, Ollama, LM Studio
+- 9 providers cloud + 2 locaux (Ollama, LM Studio)
+- Streaming temps réel token par token
+- Historique illimité avec recherche full-text (FTS5)
+- Mode Thinking/Reasoning avec 14 modèles supportés (Anthropic, OpenAI, Google, xAI, DeepSeek)
+- Annulation de stream en cours
+
+**Génération d'images** (icône : palette/pinceau)
+- 3 modèles : Gemini Flash, Gemini Pro, GPT Image
+- Sélection d'aspect ratio (1:1, 16:9, 9:16, 4:3, 3:4)
+- Galerie d'images avec aperçu
+- Stockage local sécurisé via protocole custom local-image://
+
+**Workspace Co-Work** (icône : dossier avec engrenage)
+- Arborescence de fichiers interactive (FileTree)
+- 4 outils IA : bash (terminal sandboxé), readFile, writeFile, listFiles
+- Le LLM lit, écrit et exécute des commandes dans le workspace
+- Détection de changements en temps réel (Chokidar file watcher)
+- Propositions de modifications de fichiers avec approbation (FileOperationCard)
+
+**Projets** (icône : cube/boîte)
+- Organisation par projets avec modèle par défaut
+- Conversations filtrées par projet
+- Workspace lié au projet (auto-ouverture)
+- System prompt par projet
+
+**Rôles / System Prompts** (icône : masque de théâtre)
+- Rôles intégrés et personnalisés
+- Variables dynamiques {{varName}} avec popover de saisie
+- Verrouillage du rôle après le premier message
+- Sélection via pill dans la zone de saisie
+
+**Prompts** (icône : éclair)
+- Bibliothèque de prompts réutilisables
+- 3 types : complet, complément, system
+- Variables dynamiques, catégories et tags
+- Injection rapide dans la conversation
+
+**Attachments** (icône : trombone)
+- Images (PNG, JPG, GIF, WebP), PDF, DOCX, fichiers code
+- Drag & drop + Cmd+V (coller)
+- Extraction de texte (PDF, DOCX) et injection dans le contexte
+- Images encodées en base64 pour les modèles vision
+
+**MCP (Model Context Protocol)** (icône : réseau/puzzle)
+- Connexion à des serveurs MCP externes (outils tiers)
+- Transport stdio (subprocess), HTTP, SSE
+- Variables d'environnement chiffrées
+- Scope par projet (global ou spécifique)
+- Test de connexion intégré
+- Outils MCP fusionnés avec les workspace tools dans le chat
+
+**Memory Fragments** (icône : cerveau)
+- Contexte personnel persistant injecté dans toutes les conversations
+- Max 50 fragments, drag & drop pour réordonner
+- Activable/désactivable individuellement
+- Injection automatique dans le system prompt
+
+**Tâches planifiées** (icône : horloge)
+- 4 types de planification : manuelle, intervalle, quotidienne, hebdomadaire
+- Exécution LLM automatique avec notifications
+- Conversation dédiée par exécution
+- Historique des runs avec statut
+
+**Synthèse vocale (TTS)** (icône : haut-parleur)
+- 3 providers : navigateur (Web Speech), OpenAI (Coral), Google (Aoede)
+- Lecture audio des réponses du LLM
+- Cache audio par message
+
+**Statistiques & Coûts** (icône : graphique)
+- Suivi des coûts par provider, modèle et projet
+- 6 cartes de stats + 4 graphiques (barres, lignes, camemberts)
+- Filtrage par période (7j, 30j, 90j, 1an, tout)
+- Compteurs de tokens in/out
+
+**Personnalisation** (icône : sliders)
+- Thème clair/sombre
+- Paramètres modèle globaux (temperature, maxTokens, topP)
+- Modèles favoris pour accès rapide
+- Raccourcis clavier (Cmd+N, Cmd+K, Cmd+M, Cmd+B)
+- Palette de commandes (Cmd+K)
+
+**Sécurité** (icône : bouclier)
+- Clés API chiffrées via safeStorage (Keychain macOS)
+- Sandbox Electron (nodeIntegration: false, contextIsolation: true)
+- CSP stricte, DOMPurify, validation Zod sur tous les IPC
+- Bash tool sandboxé (env minimal, blocklist ~30 patterns)
+- Données 100% locales, zéro télémétrie
+
+Bandeau bas : **Stack technique** — Electron 35 · React 19 · TypeScript · Tailwind CSS 4 · SQLite · Drizzle ORM · Vercel AI SDK 6
+
+Style : infographie moderne, fond sombre, mise en page en grille (3-4 colonnes), chaque catégorie dans une carte avec icône colorée en haut, titre en gras, bullet points concis en dessous. Palette de couleurs : bleu électrique pour le chat, violet pour la personnalisation, vert pour le workspace, orange pour les extensions (MCP, tâches), cyan pour les médias (images, TTS), rouge pour la sécurité. Aspect premium et épuré, pas surchargé.
