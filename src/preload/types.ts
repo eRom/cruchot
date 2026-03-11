@@ -342,6 +342,16 @@ export interface ImageRecord {
   createdAt: Date
 }
 
+// ── Memory Fragments ─────────────────────────────────────────
+export interface MemoryFragment {
+  id: string
+  content: string
+  isActive: boolean
+  sortOrder: number
+  createdAt: Date
+  updatedAt: Date
+}
+
 // ── MCP Servers ─────────────────────────────────────────
 export type McpTransportType = 'stdio' | 'http' | 'sse'
 export type McpServerStatus = 'connected' | 'error' | 'stopped'
@@ -535,6 +545,15 @@ export interface ElectronAPI {
   toggleScheduledTask: (id: string) => Promise<ScheduledTaskInfo | undefined>
   onTaskExecuted: (callback: (data: TaskExecutedEvent) => void) => void
   offTaskExecuted: () => void
+
+  // Memory Fragments
+  listMemoryFragments: () => Promise<MemoryFragment[]>
+  getActiveMemoryBlock: () => Promise<string | null>
+  createMemoryFragment: (payload: { content: string; isActive?: boolean }) => Promise<MemoryFragment>
+  updateMemoryFragment: (payload: { id: string; content?: string; isActive?: boolean }) => Promise<MemoryFragment | undefined>
+  deleteMemoryFragment: (payload: { id: string }) => Promise<void>
+  reorderMemoryFragments: (payload: { orderedIds: string[] }) => Promise<void>
+  toggleMemoryFragment: (payload: { id: string }) => Promise<MemoryFragment | undefined>
 
   // MCP Servers
   mcpList: () => Promise<McpServerInfo[]>

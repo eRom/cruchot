@@ -11,6 +11,7 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import {
   BarChart3,
   BookOpen,
+  Brain,
   ChevronRight,
   Clock,
   FolderOpen,
@@ -216,7 +217,7 @@ export function Sidebar(): React.JSX.Element {
           icon={UserPen}
           label="Personnalisation"
           isCollapsed={collapsed}
-          isActive={currentView === 'prompts' || currentView === 'roles' || currentView === 'mcp'}
+          isActive={currentView === 'prompts' || currentView === 'roles' || currentView === 'mcp' || currentView === 'memory'}
         >
           <NavButton
             icon={BookOpen}
@@ -240,6 +241,14 @@ export function Sidebar(): React.JSX.Element {
             isActive={currentView === 'mcp'}
             isCollapsed={collapsed}
             onClick={() => handleNavClick('mcp')}
+            isNested
+          />
+          <NavButton
+            icon={Brain}
+            label="Memoire"
+            isActive={currentView === 'memory'}
+            isCollapsed={collapsed}
+            onClick={() => handleNavClick('memory')}
             isNested
           />
         </NavGroup>

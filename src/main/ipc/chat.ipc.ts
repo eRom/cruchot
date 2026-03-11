@@ -10,6 +10,7 @@ import { parseFileOperations } from '../llm/file-operations'
 import { buildWorkspaceTools, WORKSPACE_TOOLS_PROMPT } from '../llm/workspace-tools'
 import { getActiveWorkspace } from './workspace.ipc'
 import { mcpManagerService } from '../services/mcp-manager.service'
+import { buildMemoryBlock } from '../db/queries/memory-fragments'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
 import { touchConversation, renameConversation, getConversation, updateConversationModel, updateConversationRole } from '../db/queries/conversations'
 
@@ -124,8 +125,16 @@ export function registerChatIpc(): void {
       const dbMessages = getMessagesForConversation(conversationId)
       const aiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<{ type: string; text?: string; image?: string; mimeType?: string }> }> = []
 
+      // Build combined system prompt: memory fragments + role prompt
+      const memoryBlock = buildMemoryBlock()
+      let combinedSystemPrompt = ''
+      if (memoryBlock) combinedSystemPrompt += memoryBlock
       if (systemPrompt) {
-        aiMessages.push({ role: 'system', content: systemPrompt })
+        if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
+        combinedSystemPrompt += systemPrompt
+      }
+      if (combinedSystemPrompt) {
+        aiMessages.push({ role: 'system', content: combinedSystemPrompt })
       }
 
       for (const msg of dbMessages) {
