@@ -9,14 +9,14 @@ const exportSchema = z.object({
 })
 
 export function registerExportIpc(): void {
-  ipcMain.handle('export:conversation', async (_event, data: unknown) => {
+  ipcMain.handle('export:conversation', async (event, data: unknown) => {
     const parsed = exportSchema.safeParse(data)
     if (!parsed.success) throw new Error('Invalid export data')
 
     const { conversationId, format } = parsed.data
     const result = exportConversation(conversationId, format as ExportFormat)
 
-    const win = BrowserWindow.getFocusedWindow()
+    const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) throw new Error('No active window')
 
     const filters: { name: string; extensions: string[] }[] = []

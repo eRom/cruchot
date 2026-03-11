@@ -194,6 +194,8 @@ class McpManagerService {
     return result
   }
 
+  private static readonly TEST_TIMEOUT = 30_000 // 30s
+
   async testConnection(config: {
     transportType: 'stdio' | 'http' | 'sse'
     command?: string
@@ -204,40 +206,13 @@ class McpManagerService {
     env?: Record<string, string>
   }): Promise<{ success: boolean; toolCount: number; toolNames: string[]; error?: string }> {
     try {
-      const { createMCPClient } = await import('@ai-sdk/mcp')
-
-      let transport: unknown
-
-      if (config.transportType === 'stdio') {
-        if (!config.command) throw new Error('Command is required')
-        const { Experimental_StdioMCPTransport } = await import('@ai-sdk/mcp/mcp-stdio')
-        transport = new Experimental_StdioMCPTransport({
-          command: config.command,
-          args: config.args ?? [],
-          env: config.env,
-          cwd: config.cwd ?? undefined
-        })
-      } else {
-        if (!config.url) throw new Error('URL is required')
-        transport = {
-          type: config.transportType === 'http' ? 'http' : 'sse',
-          url: config.url,
-          headers: config.headers ?? undefined
-        }
-      }
-
-      const client = await createMCPClient({
-        transport: transport as Parameters<typeof createMCPClient>[0]['transport'],
-        name: 'multi-llm-test'
-      })
-
-      try {
-        const tools = await client.tools()
-        const toolNames = Object.keys(tools)
-        return { success: true, toolCount: toolNames.length, toolNames }
-      } finally {
-        await client.close()
-      }
+      const result = await Promise.race([
+        this.doTestConnection(config),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Test connection timeout (30s)')), McpManagerService.TEST_TIMEOUT)
+        )
+      ])
+      return result
     } catch (err) {
       return {
         success: false,
@@ -245,6 +220,51 @@ class McpManagerService {
         toolNames: [],
         error: err instanceof Error ? err.message : String(err)
       }
+    }
+  }
+
+  private async doTestConnection(config: {
+    transportType: 'stdio' | 'http' | 'sse'
+    command?: string
+    args?: string[]
+    cwd?: string
+    url?: string
+    headers?: Record<string, string>
+    env?: Record<string, string>
+  }): Promise<{ success: boolean; toolCount: number; toolNames: string[] }> {
+    const { createMCPClient } = await import('@ai-sdk/mcp')
+
+    let transport: unknown
+
+    if (config.transportType === 'stdio') {
+      if (!config.command) throw new Error('Command is required')
+      const { Experimental_StdioMCPTransport } = await import('@ai-sdk/mcp/mcp-stdio')
+      transport = new Experimental_StdioMCPTransport({
+        command: config.command,
+        args: config.args ?? [],
+        env: config.env,
+        cwd: config.cwd ?? undefined
+      })
+    } else {
+      if (!config.url) throw new Error('URL is required')
+      transport = {
+        type: config.transportType === 'http' ? 'http' : 'sse',
+        url: config.url,
+        headers: config.headers ?? undefined
+      }
+    }
+
+    const client = await createMCPClient({
+      transport: transport as Parameters<typeof createMCPClient>[0]['transport'],
+      name: 'multi-llm-test'
+    })
+
+    try {
+      const tools = await client.tools()
+      const toolNames = Object.keys(tools)
+      return { success: true, toolCount: toolNames.length, toolNames }
+    } finally {
+      await client.close()
     }
   }
 

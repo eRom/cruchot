@@ -8,7 +8,7 @@ import { buildThinkingProviderOptions } from '../llm/thinking'
 import { validateAttachment, processAttachments, buildContentParts, MAX_FILES_PER_MESSAGE, type AttachmentRef } from '../llm/attachments'
 import { parseFileOperations } from '../llm/file-operations'
 import { buildWorkspaceTools, WORKSPACE_TOOLS_PROMPT } from '../llm/workspace-tools'
-import { getActiveWorkspace } from './workspace.ipc'
+import { getActiveWorkspace, getActiveWorkspaceRoot } from './workspace.ipc'
 import { mcpManagerService } from '../services/mcp-manager.service'
 import { buildMemoryBlock } from '../db/queries/memory-fragments'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
@@ -64,11 +64,12 @@ export function registerChatIpc(): void {
     const startTime = Date.now()
 
     try {
-      // Re-validate attachments (extension, size, existence) in the main process
+      // Re-validate attachments (extension, size, existence, path confinement) in the main process
       const validatedRefs: AttachmentRef[] = []
+      const workspaceRoot = getActiveWorkspaceRoot()
       if (attachmentRefs && attachmentRefs.length > 0) {
         for (const ref of attachmentRefs) {
-          const result = validateAttachment(ref.path)
+          const result = validateAttachment(ref.path, workspaceRoot)
           if (!result.valid) {
             throw new Error(result.error)
           }
@@ -145,8 +146,10 @@ export function registerChatIpc(): void {
 
       // Inject workspace file context into system prompt
       if (fileContexts && fileContexts.length > 0) {
+        // Sanitize path and language to prevent XML attribute injection
+        const sanitizeAttr = (s: string) => s.replace(/["<>&]/g, '')
         const fileBlock = fileContexts.map(f =>
-          `<file path="${f.path}" language="${f.language}">\n${f.content}\n</file>`
+          `<file path="${sanitizeAttr(f.path)}" language="${sanitizeAttr(f.language)}">\n${f.content}\n</file>`
         ).join('\n\n')
 
         const workspaceInstruction = `\n\n<workspace-files>\n${fileBlock}\n</workspace-files>\n\nQuand tu proposes des modifications de fichiers, utilise ce format :\n\`\`\`file:create:chemin/fichier.ext\ncontenu\n\`\`\`\n\`\`\`file:modify:chemin/fichier.ext\ncontenu complet modifie\n\`\`\`\n\`\`\`file:delete:chemin/fichier.ext\n\`\`\``

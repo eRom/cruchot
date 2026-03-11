@@ -114,6 +114,8 @@ export function registerFilesIpc(): void {
   })
 
   // ── Save dropped/pasted file (buffer → disk) ─────────
+  const MAX_SAVE_BUFFER_SIZE = 10 * 1024 * 1024 // 10 MB
+
   ipcMain.handle(
     'files:save',
     async (_event, data: { buffer: ArrayBuffer; filename: string }) => {
@@ -128,6 +130,16 @@ export function registerFilesIpc(): void {
       }
 
       const buf = Buffer.from(data.buffer)
+      if (buf.byteLength > MAX_SAVE_BUFFER_SIZE) {
+        throw new Error(`Fichier trop volumineux (${(buf.byteLength / 1024 / 1024).toFixed(1)} MB > 10 MB)`)
+      }
+
+      // Validate extension
+      const ext = path.extname(data.filename).toLowerCase()
+      if (DANGEROUS_EXTENSIONS.has(ext)) {
+        throw new Error('Extension de fichier non autorisee')
+      }
+
       return saveAttachment(buf, data.filename)
     }
   )

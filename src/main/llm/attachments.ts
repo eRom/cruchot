@@ -5,6 +5,7 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import { app } from 'electron'
 
 // ── Constants ────────────────────────────────────────────────────
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
@@ -67,7 +68,29 @@ function getMimeType(ext: string): string {
 
 // ── Validation ───────────────────────────────────────────────────
 
-export function validateAttachment(filePath: string): { valid: true; ref: AttachmentRef } | { valid: false; error: string } {
+/**
+ * Returns the list of directories from which attachments can be loaded.
+ * Includes userData/attachments, userData/images, and the active workspace root if set.
+ */
+function getAttachmentAllowedDirs(workspaceRoot?: string | null): string[] {
+  const dirs = [
+    path.join(app.getPath('userData'), 'attachments') + path.sep,
+    path.join(app.getPath('userData'), 'images') + path.sep
+  ]
+  if (workspaceRoot) {
+    dirs.push(path.resolve(workspaceRoot) + path.sep)
+  }
+  return dirs
+}
+
+function isAttachmentPathAllowed(filePath: string, workspaceRoot?: string | null): boolean {
+  const resolved = path.resolve(filePath)
+  return getAttachmentAllowedDirs(workspaceRoot).some(
+    (dir) => resolved.startsWith(dir) || resolved === dir.slice(0, -1)
+  )
+}
+
+export function validateAttachment(filePath: string, workspaceRoot?: string | null): { valid: true; ref: AttachmentRef } | { valid: false; error: string } {
   const name = path.basename(filePath)
 
   // Hidden files
@@ -79,6 +102,11 @@ export function validateAttachment(filePath: string): { valid: true; ref: Attach
   const ext = path.extname(name).toLowerCase()
   if (!ALL_ALLOWED.has(ext)) {
     return { valid: false, error: `Extension non supportee : ${ext}` }
+  }
+
+  // Path confinement — must be within allowed directories
+  if (!isAttachmentPathAllowed(filePath, workspaceRoot)) {
+    return { valid: false, error: `Acces refuse : fichier en dehors des repertoires autorises` }
   }
 
   // File exists

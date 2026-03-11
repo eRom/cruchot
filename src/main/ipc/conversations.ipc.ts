@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron'
+import { z } from 'zod'
 import {
   getAllConversations,
   createConversation,
@@ -11,36 +12,46 @@ import {
 } from '../db/queries/conversations'
 import { getMessagesForConversation, deleteMessagesForConversation, deleteAllMessages } from '../db/queries/messages'
 
+const idSchema = z.string().min(1).max(100)
+const titleSchema = z.string().min(1).max(500)
+
 export function registerConversationsIpc(): void {
   ipcMain.handle('conversations:list', async (_event, projectId?: string | null) => {
-    if (projectId !== undefined) {
-      return getConversationsByProject(projectId)
+    if (projectId !== undefined && projectId !== null) {
+      const parsed = idSchema.safeParse(projectId)
+      if (!parsed.success) throw new Error('Invalid project ID')
+      return getConversationsByProject(parsed.data)
     }
+    if (projectId === null) return getConversationsByProject(null)
     return getAllConversations()
   })
 
   ipcMain.handle('conversations:create', async (_event, title?: string, projectId?: string) => {
-    return createConversation(title, projectId)
+    const safeTitle = title ? titleSchema.parse(title) : undefined
+    const safeProjectId = projectId ? idSchema.parse(projectId) : undefined
+    return createConversation(safeTitle, safeProjectId)
   })
 
   ipcMain.handle('conversations:setProject', async (_event, id: string, projectId: string | null) => {
-    if (!id) throw new Error('Conversation ID required')
+    idSchema.parse(id)
+    if (projectId !== null) idSchema.parse(projectId)
     setConversationProject(id, projectId)
   })
 
   ipcMain.handle('conversations:delete', async (_event, id: string) => {
-    if (!id) throw new Error('Conversation ID required')
+    idSchema.parse(id)
     deleteMessagesForConversation(id)
     deleteConversation(id)
   })
 
   ipcMain.handle('conversations:rename', async (_event, id: string, title: string) => {
-    if (!id || !title) throw new Error('ID and title required')
+    idSchema.parse(id)
+    titleSchema.parse(title)
     renameConversation(id, title)
   })
 
   ipcMain.handle('conversations:messages', async (_event, conversationId: string) => {
-    if (!conversationId) throw new Error('Conversation ID required')
+    idSchema.parse(conversationId)
     return getMessagesForConversation(conversationId)
   })
 
@@ -50,7 +61,8 @@ export function registerConversationsIpc(): void {
   })
 
   ipcMain.handle('conversations:setRole', async (_event, id: string, roleId: string | null) => {
-    if (!id) throw new Error('Conversation ID required')
+    idSchema.parse(id)
+    if (roleId !== null) idSchema.parse(roleId)
     updateConversationRole(id, roleId)
   })
 

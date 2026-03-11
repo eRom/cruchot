@@ -8,13 +8,13 @@ const importSchema = z.object({
 })
 
 export function registerImportIpc(): void {
-  ipcMain.handle('import:conversation', async (_event, data: unknown) => {
+  ipcMain.handle('import:conversation', async (event, data: unknown) => {
     const parsed = importSchema.safeParse(data)
     if (!parsed.success) throw new Error('Invalid import data')
 
     const { format } = parsed.data
 
-    const win = BrowserWindow.getFocusedWindow()
+    const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) throw new Error('No active window')
 
     const { filePaths, canceled } = await dialog.showOpenDialog(win, {
@@ -30,6 +30,10 @@ export function registerImportIpc(): void {
     }
 
     const filePath = filePaths[0]
+    const stats = (await import('fs')).statSync(filePath)
+    if (stats.size > 50 * 1024 * 1024) {
+      throw new Error('Fichier trop volumineux (max 50 MB)')
+    }
     const fileContent = readFileSync(filePath, 'utf-8')
 
     const result = importConversation(fileContent, format as ImportFormat)

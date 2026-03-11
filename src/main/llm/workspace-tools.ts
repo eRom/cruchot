@@ -9,9 +9,21 @@ const execAsync = promisify(exec)
 // ── Bash Security ────────────────────────────────────────
 
 const BLOCKED_PATTERNS = [
+  // ── Destructive file operations ────────────────────────
   /\brm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?[\/~]/,   // rm -rf / or ~ (absolute paths)
+  /\brm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?\./,       // rm -rf . or ./ (current dir)
+  /\brm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?\*/,       // rm -rf * (glob everything)
+  /\bfind\b.*-delete\b/,                         // find . -delete
+  /\bfind\b.*-exec\s+rm\b/,                     // find . -exec rm
+  /\btruncate\b/,                                // truncate files
+  /\bshred\b/,                                   // secure delete
+
+  // ── Privilege escalation ───────────────────────────────
   /\bsudo\b/,
   /\bsu\s+/,
+  /\bdoas\b/,
+
+  // ── System commands ────────────────────────────────────
   /\bshutdown\b/,
   /\breboot\b/,
   /\bhalt\b/,
@@ -19,16 +31,37 @@ const BLOCKED_PATTERNS = [
   /\bdd\s+if=/,
   /\bformat\b.*[A-Z]:/i,
   />\s*\/dev\//,
-  /\b(launchctl|systemctl|service)\s+(stop|disable|remove)/,
+  /\b(launchctl|systemctl|service)\s+(stop|disable|remove|load)\b/,
   /\bchmod\s+777\s+\//,
   /\bchown\s+.*\//,
   /\bkillall\b/,
   /\bpkill\s+-9\s+/,
-  /\bcurl\b.*\|\s*\b(bash|sh|zsh)\b/,          // curl | bash (pipe to shell)
-  /\bwget\b.*\|\s*\b(bash|sh|zsh)\b/,
+
+  // ── Code execution / shell escapes ─────────────────────
+  /\bcurl\b.*\|\s*\b(bash|sh|zsh)\b/,           // curl | bash
+  /\bwget\b.*\|\s*\b(bash|sh|zsh)\b/,           // wget | bash
   /\beval\b.*\$\(/,                              // eval $(...)
-  />\s*\/etc\//,                                  // write to /etc
-  />\s*\/usr\//,                                  // write to /usr
+  /\bbash\s+-c\b/,                               // bash -c "..."
+  /\bsh\s+-c\b/,                                 // sh -c "..."
+  /\bzsh\s+-c\b/,                                // zsh -c "..."
+  /\bbase64\b.*\|\s*\b(bash|sh|zsh)\b/,         // base64 | bash
+  /\bpython[23]?\s+-c\b/,                       // python -c "..."
+  /\bnode\s+-e\b/,                               // node -e "..."
+  /\bperl\s+-e\b/,                               // perl -e "..."
+
+  // ── Data exfiltration ──────────────────────────────────
+  /\bscp\b/,                                     // scp (remote copy)
+  /\brsync\b.*@/,                                // rsync to remote
+  /\bsftp\b/,                                    // sftp
+  /\bnc\s+-/,                                    // netcat
+  /\bncat\b/,                                    // ncat
+  /\btee\s+\//,                                  // tee /system/path
+
+  // ── Write to system paths ──────────────────────────────
+  />\s*\/etc\//,
+  />\s*\/usr\//,
+  />\s*\/System\//,
+  />\s*~\//,                                     // write to home dir
 ]
 
 const COMMAND_TIMEOUT = 30_000   // 30s
@@ -76,7 +109,14 @@ export function buildWorkspaceTools(workspace: WorkspaceService) {
             cwd: rootPath,
             timeout: COMMAND_TIMEOUT,
             maxBuffer: 1024 * 1024, // 1MB
-            env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' }
+            env: {
+              PATH: '/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
+              HOME: rootPath,
+              TMPDIR: rootPath,
+              LANG: process.env.LANG ?? 'en_US.UTF-8',
+              FORCE_COLOR: '0',
+              NO_COLOR: '1'
+            }
           })
           return {
             stdout: truncateOutput(stdout),
