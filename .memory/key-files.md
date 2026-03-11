@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 20 — audit securite)
+> Derniere mise a jour : 2026-03-11 (session 21 — distribution/packaging)
 
 ## Main process
 
@@ -93,3 +93,9 @@
 | `specs/feature-mcp-integration.md` | Spec MCP (implementee session 18-19) |
 | `src/main/window.ts` | BrowserWindow config (sandbox, CSP), shell.openExternal avec confirmation dialog |
 | `src/main/llm/attachments.ts` | Validation attachments (extension, taille, confinement path userData+workspace) |
+| `src/main/services/updater.service.ts` | Auto-updater electron-updater — check periodique, download, install, IPC broadcast |
+| `electron-builder.yml` | Config packaging — targets, signature, notarisation, publish GitHub, extraResources |
+| `electron.vite.config.ts` | Build main + preload + renderer, externalizeDepsPlugin avec exclude list |
+| `.github/workflows/release.yml` | CI/CD release — tag v* → build + signe + notarise + publie GitHub Release |
+| `.github/workflows/ci.yml` | CI — typecheck + audit + build sur push/PR main |
+| `DISTRIBUTION.md` | Guide complet packaging, signature, notarisation, releases, auto-updater |

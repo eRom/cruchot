@@ -5,7 +5,28 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [
+      externalizeDepsPlugin({
+        exclude: [
+          'ai',
+          '@ai-sdk/anthropic',
+          '@ai-sdk/openai',
+          '@ai-sdk/openai-compatible',
+          '@ai-sdk/google',
+          '@ai-sdk/mistral',
+          '@ai-sdk/xai',
+          '@ai-sdk/deepseek',
+          '@ai-sdk/provider',
+          '@ai-sdk/provider-utils',
+          'drizzle-orm',
+          'nanoid',
+          'sonner',
+          'zod',
+          'mammoth',
+          'pdf-parse'
+        ]
+      })
+    ],
     build: {
       outDir: 'out/main',
       minify: 'terser',

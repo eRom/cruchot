@@ -1,5 +1,5 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 20 — audit securite)
+> Derniere mise a jour : 2026-03-11 (session 21 — distribution/packaging)
 
 ## Vue d'ensemble
 
@@ -105,6 +105,17 @@ Couches de protection :
 - Cles API chiffrees via safeStorage (Keychain macOS)
 - Settings UI via Zustand persist (localStorage)
 - Images/attachments sur filesystem, servis via `local-image://` protocol
+
+## Distribution / Packaging
+
+- **electron-builder** v26.8.1 (devDependency) — config dans `electron-builder.yml`
+- **Targets macOS** : DMG + ZIP (universal = Intel + Apple Silicon), ~200 MB
+- **Auto-updater** : `electron-updater` → `updater.service.ts` wired dans `index.ts` (production only)
+- **Publish** : GitHub Releases (`eRom/app-desktop-llmx`), manifeste `latest-mac.yml`
+- **CI/CD** : workflow `release.yml` — trigger sur tag `v*`, build + signe + notarise + publie
+- **Bundling** : `externalizeDepsPlugin` avec exclude list (deps JS pures bundlees), seuls `better-sqlite3`, `chokidar`, `@ai-sdk/mcp`, `electron-updater`, `trash` restent en node_modules
+- **Signature** : pas encore de certificat Apple Developer ID — ad-hoc + `codesign --force --deep` pour dev local
+- **Scripts** : `dist:mac`, `dist:win`, `dist:linux`, `dist:publish`, `release`
 
 ## GitHub
 

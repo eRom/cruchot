@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 20 — audit securite)
+> Derniere mise a jour : 2026-03-11 (session 21 — distribution/packaging)
 
 ## Conventions de nommage
 
@@ -134,3 +134,12 @@
 - Footer message : actions (audio/copier) hover a gauche, info (model/cout/temps) a droite
 - ConversationList : `overflow-y-auto` (PAS Radix ScrollArea — display:table casse flex)
 - Title bar macOS : `hiddenInset`, traffic lights `{x:15, y:10}`, drag zones 38px
+
+## Distribution / Packaging
+
+- **externalizeDepsPlugin** : externalise tout par defaut, `exclude` liste les deps JS pures a bundler (ai, drizzle-orm, zod, nanoid, etc.)
+- **Modules natifs/ESM** restent external : `better-sqlite3`, `chokidar`, `@ai-sdk/mcp`, `electron-updater`, `trash` → inclus via `files` dans electron-builder.yml
+- **electron-builder.yml** : `files` whitelist node_modules specifiques (pas `!node_modules` global puis re-include)
+- **Build universal** macOS : `arch: [universal]` — Intel + Apple Silicon en un binaire, rebuild better-sqlite3 pour les 2 arches
+- **Auto-updater** : `autoDownload: false`, broadcast IPC vers renderer, check toutes les 4h, `app.isPackaged` guard
+- **Release workflow** : tag `v*` → CI build + `--publish always` → GitHub Release auto avec manifeste `latest-mac.yml`

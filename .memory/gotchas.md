@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 20 — audit securite)
+> Derniere mise a jour : 2026-03-11 (session 21 — distribution/packaging)
 
 ## AI SDK v6 — Breaking changes (checklist)
 
@@ -83,16 +83,26 @@
 - **BrowserWindow.getFocusedWindow()** peut retourner une fenetre differente de la source IPC → toujours utiliser `BrowserWindow.fromWebContents(event.sender)`
 - **validateAttachment** : acceptait n'importe quel path (y compris ~/.ssh/id_rsa) → confine maintenant a userData + workspace
 - **`removeAllListeners(channel)`** est global — supprime TOUS les listeners, pas seulement celui de l'instance. Risque en multi-fenetre. Amelioration future : `removeListener` avec ref stockee.
-- **Signature de code absente** dans electron-builder.yml — macOS notarisation + Windows SmartScreen non configures. Bloquant pour distribution publique.
 - **pdf-parse v1.1.1** non maintenu depuis 2018 — surveiller ou migrer vers pdfjs-dist
+
+## Distribution / Packaging (session 21)
+
+- **electron-builder pas installe** par defaut — doit etre en devDependency, sinon `npm run dist:mac` echoue (exit 127)
+- **externalizeDepsPlugin()** sans args externalise TOUT (drizzle-orm, ai, zod...) → crash "Cannot find module" en production. Solution : `exclude` liste explicite des deps JS pures a bundler
+- **Build universal + ad-hoc signature** : Team IDs differents entre binaire principal et Electron Framework → `dyld: Library not loaded`. Fix : `codesign --force --deep --sign -` apres copie dans /Applications
+- **Gatekeeper bloque silencieusement** les apps non signees/non notarisees (pas de dialog, juste rien) → `xattr -cr` pour supprimer la quarantaine en dev
+- **`drizzle/` migrations** : warning `file source doesn't exist` dans electron-builder car le dossier n'existe pas encore (extraResources). Non bloquant.
+- **Certificat Apple Developer ID** requis pour distribution publique — sans lui, seul le dev local fonctionne (ad-hoc + codesign + xattr)
+- **Secrets GitHub** a configurer pour CI release : `MAC_CERTIFICATE_P12_BASE64`, `MAC_CERTIFICATE_PASSWORD`, `APPLE_API_KEY`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`
 
 ## Restant a faire
 
 - Search bar sidebar (T34)
 - BranchNavigation dans MessageItem (T45)
-- Prompt Optimizer (T48), Export PDF (T52), Packaging (T60)
+- Prompt Optimizer (T48), Export PDF (T52)
 - i18n (T41) — configure mais pas utilise
 - SSH key GitHub non configuree
 - MCP : presets serveurs, import config Claude Desktop
 - MCP : chiffrer les headers HTTP comme les env vars
-- Signature de code macOS/Windows pour distribution
+- Certificat Apple Developer ID (99$/an) pour signature + notarisation
+- Test app packagee (crash au lancement a investiguer — probablement lie aux node_modules manquants, a retester apres fix externals)
