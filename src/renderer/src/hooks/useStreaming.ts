@@ -38,6 +38,17 @@ const TOOL_LABELS: Record<string, string> = {
   searchInFiles: 'Recherche dans les fichiers'
 }
 
+/** Parse MCP tool name (prefix__toolName) into readable label */
+function getToolLabel(toolName: string): string {
+  if (TOOL_LABELS[toolName]) return TOOL_LABELS[toolName]
+  // MCP tools: "servername__toolname" → "[servername] toolname"
+  const mcpMatch = toolName.match(/^([^_]+)__(.+)$/)
+  if (mcpMatch) {
+    return `[${mcpMatch[1]}] ${mcpMatch[2]}`
+  }
+  return toolName
+}
+
 /**
  * Hook that listens for streaming chunks from the main process
  * and updates the messages store in real-time.
@@ -105,7 +116,7 @@ export function useStreaming() {
         case 'tool-call': {
           const msgId = streamingIdRef.current
           if (msgId && chunk.toolName) {
-            const toolLabel = TOOL_LABELS[chunk.toolName] || chunk.toolName
+            const toolLabel = getToolLabel(chunk.toolName)
             const argPath = (chunk.toolArgs?.command || chunk.toolArgs?.path || chunk.toolArgs?.query || '') as string
             const detail = argPath ? ` : ${argPath}` : ''
             // Add tool call to the persistent list with "running" status

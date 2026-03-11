@@ -1,4 +1,5 @@
 # Gotchas — Multi-LLM Desktop
+> Derniere mise a jour : 2026-03-11
 
 ## AI SDK v6 — Breaking changes (checklist)
 
@@ -23,7 +24,8 @@
 - **Preload** : non recharge en HMR → restart app complet apres modif `src/preload/` ou `src/main/`
 - **Chokidar** : ESM + deps natives → `external` dans electron.vite.config, import dynamique
 - **shadcn Switch** : n'existe pas dans le projet → button custom (cf TaskCard)
-- **Import paths** : stores/ = 3 `../` vers preload, components/chat|workspace = 4 `../`
+- **Import paths** : stores/ = 3 `../` vers preload, components/chat|workspace|mcp = 4 `../`
+- **@ai-sdk/mcp** : ESM → dynamic import obligatoire + `external` dans electron.vite.config (comme chokidar)
 - **Electron main** : jamais d'API sync bloquantes (execSync, etc.) → toujours async
 - **ANSI codes** : `FORCE_COLOR=0 NO_COLOR=1` dans env child_process quand output consomme par du code
 
@@ -77,7 +79,7 @@
 
 - Search bar sidebar (T34)
 - BranchNavigation dans MessageItem (T45)
-- MCP Integration (spec ecrite, `specs/feature-mcp-integration.md`)
 - Prompt Optimizer (T48), Export PDF (T52), Packaging (T60)
 - i18n (T41) — configure mais pas utilise
 - SSH key GitHub non configuree
+- MCP : presets serveurs, import config Claude Desktop

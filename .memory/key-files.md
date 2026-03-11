@@ -1,4 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
+> Derniere mise a jour : 2026-03-11
 
 ## Main process
 
@@ -16,6 +17,9 @@
 | `src/main/ipc/tts.ipc.ts` | TTS synthesize + getAvailableProviders |
 | `src/main/ipc/statistics.ipc.ts` | 5 handlers stats (tous avec param `days`) |
 | `src/main/ipc/files.ipc.ts` | openInOS/showInFolder securises (allowlist + extension blocklist) |
+| `src/main/ipc/mcp.ipc.ts` | 12 handlers MCP (CRUD, toggle, start/stop/restart, test) — Zod, env jamais expose |
+| `src/main/db/queries/mcp-servers.ts` | Queries CRUD table mcp_servers (getAll, getEnabled, create, update, delete, toggle) |
+| `src/main/services/mcp-manager.service.ts` | Singleton MCP lifecycle — Map<serverId, MCPClient>, prefixage outils, env chiffre |
 | `src/main/llm/router.ts` | Routeur getModel() — AI SDK |
 | `src/main/llm/registry.ts` | 11 providers, modeles (text + image), `isImageModel()` |
 | `src/main/llm/thinking.ts` | Mapping effort → providerOptions par provider |
@@ -24,7 +28,7 @@
 | `src/main/llm/cost-calculator.ts` | Table PRICING + calcul cout |
 | `src/main/llm/image.ts` | Generation images multi-provider (Google + OpenAI) |
 | `src/main/llm/file-operations.ts` | Parser blocs `file:create/modify/delete` |
-| `src/main/db/schema.ts` | 13 tables Drizzle |
+| `src/main/db/schema.ts` | 14 tables Drizzle (dont mcp_servers) |
 | `src/main/services/workspace.service.ts` | Scan, read/write/delete, securite, .coworkignore |
 | `src/main/services/file-watcher.service.ts` | Chokidar wrapper |
 | `src/main/services/tts.service.ts` | TTS OpenAI (MP3) + Google (PCM→WAV) |
@@ -37,7 +41,7 @@
 
 | Fichier | Role |
 |---------|------|
-| `src/preload/index.ts` | contextBridge ~71 methodes |
+| `src/preload/index.ts` | contextBridge ~84 methodes |
 | `src/preload/types.ts` | Types partages, DTOs |
 
 ## Renderer — Composants cles
@@ -50,7 +54,10 @@
 | `components/chat/MessageItem.tsx` | Markdown, images, ReasoningBlock, ToolCallBlock, FileOperationCards, footer |
 | `components/chat/ModelSelector.tsx` | Liste plate 2 sections, filtre favoris |
 | `components/chat/MarkdownRenderer.tsx` | react-markdown + Shiki + KaTeX + Mermaid |
-| `components/layout/Sidebar.tsx` | Drag zone, ProjectSelector, ConversationList, nav 8 vues |
+| `components/layout/Sidebar.tsx` | Drag zone, ProjectSelector, ConversationList, nav 9 vues (dont MCP) |
+| `components/mcp/McpView.tsx` | Vue standalone MCP — grille serveurs, subView pattern |
+| `components/mcp/McpServerCard.tsx` | Card serveur MCP — toggle, status, tools count, hover actions |
+| `components/mcp/McpServerForm.tsx` | Formulaire create/edit serveur MCP — transport, env vars, projet, test |
 | `components/settings/SettingsView.tsx` | 8 tabs (General, Apparence, API, Modele, Audio, Raccourcis, Donnees, Sauvegardes) |
 | `components/workspace/WorkspacePanel.tsx` | Panneau droit collapsible, FileTree + FilePanel |
 | `components/common/CommandPalette.tsx` | Cmd+K — recherche globale |
@@ -67,6 +74,7 @@
 | `stores/workspace.store.ts` | rootPath, tree, attachedFiles, isPanelOpen |
 | `stores/roles.store.ts` | Roles, activeRoleId, activeSystemPrompt |
 | `stores/tasks.store.ts` | Taches planifiees (DB-backed, pas persist) |
+| `stores/mcp.store.ts` | Serveurs MCP — CRUD, toggle, start/stop/restart, status events |
 
 ## Renderer — Hooks
 
@@ -82,4 +90,4 @@
 |---------|------|
 | `electron.vite.config.ts` | Build main + preload + renderer |
 | `CLAUDE.md` | Regles projet |
-| `specs/feature-mcp-integration.md` | Spec MCP (prochaine feature) |
+| `specs/feature-mcp-integration.md` | Spec MCP (implementee session 18-19) |
