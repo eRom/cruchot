@@ -2,7 +2,7 @@ import { FileOperationCard } from '@/components/workspace/FileOperationCard'
 import { cn } from '@/lib/utils'
 import type { Message, ToolCallDisplay } from '@/stores/messages.store'
 import { useMessagesStore } from '@/stores/messages.store'
-import { Brain, Check, CheckCircle2, ChevronDown, ChevronRight, Copy, File as FileIcon, FileText, FolderSearch, Image as ImageIcon, Loader2, Search, Sparkles, Wrench, XCircle } from 'lucide-react'
+import { Brain, Check, CheckCircle2, ChevronDown, ChevronRight, Copy, File as FileIcon, FileText, FolderSearch, Image as ImageIcon, Loader2, Pencil, Search, Sparkles, Terminal, Wrench, XCircle } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import type { FileOperation } from '../../../../preload/types'
 import { AudioPlayer } from './AudioPlayer'
@@ -83,7 +83,9 @@ function ReasoningBlock({ reasoning, isStreaming }: { reasoning: string; isStrea
 
 /** Icon + label mapping for workspace tools */
 const TOOL_CONFIG: Record<string, { icon: typeof FileText; label: string }> = {
+  bash: { icon: Terminal, label: 'Commande shell' },
   readFile: { icon: FileText, label: 'Lecture du fichier' },
+  writeFile: { icon: Pencil, label: 'Ecriture du fichier' },
   listFiles: { icon: FolderSearch, label: 'Exploration des fichiers' },
   searchInFiles: { icon: Search, label: 'Recherche dans les fichiers' }
 }
@@ -126,7 +128,7 @@ function ToolCallBlock({ toolCalls, isStreaming }: { toolCalls: ToolCallDisplay[
           {toolCalls.map((tc, i) => {
             const config = TOOL_CONFIG[tc.toolName] || { icon: Wrench, label: tc.toolName }
             const Icon = config.icon
-            const detail = tc.args?.path || tc.args?.query || ''
+            const detail = tc.args?.command || tc.args?.path || tc.args?.query || ''
 
             return (
               <div key={i} className="flex items-center gap-2 text-xs">
