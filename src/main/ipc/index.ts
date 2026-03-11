@@ -21,6 +21,7 @@ import { registerUpdaterIpc } from './updater.ipc'
 import { registerWorkspaceIpc } from './workspace.ipc'
 import { registerTtsIpc } from './tts.ipc'
 import { registerScheduledTasksIpc } from './scheduled-tasks.ipc'
+import { registerMcpIpc } from './mcp.ipc'
 
 /**
  * Registre central des IPC handlers.
@@ -83,6 +84,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Scheduled Tasks ─────────────────────────
   registerScheduledTasksIpc()
+
+  // ── MCP Servers ────────────────────────────
+  registerMcpIpc()
 
   // ── Settings ────────────────────────────────────────
   ipcMain.handle('settings:get', async (_event, key: string) => {

@@ -1,4 +1,5 @@
 # Patterns — Multi-LLM Desktop
+> Derniere mise a jour : 2026-03-11
 
 ## Conventions de nommage
 
@@ -100,6 +101,21 @@
 - Mermaid : `securityLevel: 'strict'` + DOMPurify sanitize SVG
 - Suppression : toujours `trash` (jamais rm/unlink)
 - DevTools : `!app.isPackaged` seulement
+
+## MCP Integration
+
+- **McpManagerService** : singleton, `Map<serverId, MCPClient>`, lifecycle (start/stop/restart)
+- **Transport** : stdio principal (subprocess `Experimental_StdioMCPTransport`), HTTP/SSE secondaire
+- **Prefixage outils** : `servername__toolname` (double underscore) pour eviter collisions inter-serveurs
+- **Env vars chiffrees** : JSON.stringify → `safeStorage.encryptString()` → base64 (meme pattern que cles API)
+- **Securite renderer** : `envEncrypted` jamais expose, remplace par `hasEnvVars: boolean` dans IPC
+- **Status push** : `mcp:status-changed` IPC event → renderer met a jour le store
+- **Scope projet** : `projectId` nullable — global si null, sinon lie a un projet
+- **Chat integration** : MCP tools merges avec workspace tools dans `chat.ipc.ts`, fallback silencieux si erreur
+- **Dynamic imports** : `await import('@ai-sdk/mcp')` et `@ai-sdk/mcp/mcp-stdio` (ESM dans Electron main)
+- **Externals** : `@ai-sdk/mcp` et `@ai-sdk/mcp/mcp-stdio` dans rollup externals (comme chokidar)
+- **UI** : vue standalone dans NavGroup "Personnalisation" (pas dans Settings tabs)
+- **Tool label MCP** : regex `^([^_]+)__(.+)$` → `[serverName] toolName` dans useStreaming
 
 ## Conventions UI
 

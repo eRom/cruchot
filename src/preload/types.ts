@@ -342,6 +342,48 @@ export interface ImageRecord {
   createdAt: Date
 }
 
+// ── MCP Servers ─────────────────────────────────────────
+export type McpTransportType = 'stdio' | 'http' | 'sse'
+export type McpServerStatus = 'connected' | 'error' | 'stopped'
+
+export interface McpServerInfo {
+  id: string
+  name: string
+  description?: string | null
+  transportType: McpTransportType
+  command?: string | null
+  args?: string[] | null
+  cwd?: string | null
+  url?: string | null
+  headers?: Record<string, string> | null
+  hasEnvVars: boolean
+  isEnabled: boolean
+  projectId?: string | null
+  icon?: string | null
+  color?: string | null
+  toolTimeout: number
+  autoConfirm: boolean
+  status: McpServerStatus
+  error?: string
+  toolCount: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface McpStatusEvent {
+  serverId: string
+  status: McpServerStatus
+  error?: string
+  toolCount: number
+}
+
+export interface McpTestResult {
+  success: boolean
+  toolCount: number
+  toolNames: string[]
+  error?: string
+}
+
 // L'API exposee au renderer via contextBridge
 export interface ElectronAPI {
   // Chat
@@ -493,6 +535,61 @@ export interface ElectronAPI {
   toggleScheduledTask: (id: string) => Promise<ScheduledTaskInfo | undefined>
   onTaskExecuted: (callback: (data: TaskExecutedEvent) => void) => void
   offTaskExecuted: () => void
+
+  // MCP Servers
+  mcpList: () => Promise<McpServerInfo[]>
+  mcpGet: (id: string) => Promise<McpServerInfo | undefined>
+  mcpGetEnvKeys: (id: string) => Promise<string[]>
+  mcpCreate: (data: {
+    name: string
+    description?: string
+    transportType: McpTransportType
+    command?: string
+    args?: string[]
+    cwd?: string
+    url?: string
+    headers?: Record<string, string>
+    envVars?: Record<string, string>
+    isEnabled?: boolean
+    projectId?: string | null
+    icon?: string
+    color?: string
+    toolTimeout?: number
+    autoConfirm?: boolean
+  }) => Promise<McpServerInfo>
+  mcpUpdate: (id: string, data: {
+    name?: string
+    description?: string | null
+    transportType?: McpTransportType
+    command?: string | null
+    args?: string[] | null
+    cwd?: string | null
+    url?: string | null
+    headers?: Record<string, string> | null
+    envVars?: Record<string, string> | null
+    isEnabled?: boolean
+    projectId?: string | null
+    icon?: string | null
+    color?: string | null
+    toolTimeout?: number
+    autoConfirm?: boolean
+  }) => Promise<McpServerInfo | undefined>
+  mcpDelete: (id: string) => Promise<void>
+  mcpToggle: (id: string) => Promise<McpServerInfo | undefined>
+  mcpStart: (id: string) => Promise<void>
+  mcpStop: (id: string) => Promise<void>
+  mcpRestart: (id: string) => Promise<void>
+  mcpTest: (data: {
+    transportType: McpTransportType
+    command?: string
+    args?: string[]
+    cwd?: string
+    url?: string
+    headers?: Record<string, string>
+    envVars?: Record<string, string>
+  }) => Promise<McpTestResult>
+  onMcpStatusChanged: (callback: (event: McpStatusEvent) => void) => void
+  offMcpStatusChanged: () => void
 
   // Settings
   getSetting: (key: string) => Promise<string | null>

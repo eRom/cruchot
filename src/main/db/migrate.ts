@@ -163,6 +163,27 @@ export function runMigrations(): void {
       updated_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS mcp_servers (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      transport_type TEXT NOT NULL CHECK(transport_type IN ('stdio', 'http', 'sse')),
+      command TEXT,
+      args TEXT,
+      cwd TEXT,
+      url TEXT,
+      headers TEXT,
+      env_encrypted TEXT,
+      is_enabled INTEGER NOT NULL DEFAULT 1,
+      project_id TEXT REFERENCES projects(id),
+      icon TEXT,
+      color TEXT,
+      tool_timeout INTEGER DEFAULT 30000,
+      auto_confirm INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
     CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(content);
   `)
 

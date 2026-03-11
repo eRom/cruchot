@@ -198,6 +198,48 @@ export const scheduledTasks = sqliteTable('scheduled_tasks', {
 })
 
 // ---------------------------------------------------------------------------
+// MCP Servers
+// ---------------------------------------------------------------------------
+export const mcpServers = sqliteTable('mcp_servers', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+
+  // Transport
+  transportType: text('transport_type', {
+    enum: ['stdio', 'http', 'sse']
+  }).notNull(),
+
+  // Config stdio
+  command: text('command'),
+  args: text('args', { mode: 'json' }).$type<string[]>(),
+  cwd: text('cwd'),
+
+  // Config HTTP/SSE
+  url: text('url'),
+  headers: text('headers', { mode: 'json' }).$type<Record<string, string>>(),
+
+  // Env vars (chiffrees via safeStorage, stockees comme JSON chiffre)
+  envEncrypted: text('env_encrypted'),
+
+  // Etat
+  isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(true),
+
+  // Scope
+  projectId: text('project_id').references(() => projects.id),
+
+  // Metadata
+  icon: text('icon'),
+  color: text('color'),
+  toolTimeout: integer('tool_timeout').default(30000),
+  autoConfirm: integer('auto_confirm', { mode: 'boolean' }).notNull().default(true),
+
+  // Timestamps
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+})
+
+// ---------------------------------------------------------------------------
 // Images
 // ---------------------------------------------------------------------------
 export const images = sqliteTable('images', {
