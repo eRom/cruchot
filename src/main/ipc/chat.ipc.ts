@@ -9,6 +9,7 @@ import { validateAttachment, processAttachments, buildContentParts, MAX_FILES_PE
 import { parseFileOperations } from '../llm/file-operations'
 import { buildWorkspaceTools, WORKSPACE_TOOLS_PROMPT } from '../llm/workspace-tools'
 import { getActiveWorkspace } from './workspace.ipc'
+import { mcpManagerService } from '../services/mcp-manager.service'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
 import { touchConversation, renameConversation, getConversation, updateConversationModel, updateConversationRole } from '../db/queries/conversations'
 
@@ -172,7 +173,19 @@ export function registerChatIpc(): void {
 
       // Build workspace tools if workspace is active
       const activeWorkspace = hasWorkspace ? getActiveWorkspace() : null
-      const tools = activeWorkspace ? buildWorkspaceTools(activeWorkspace) : undefined
+      const workspaceTools = activeWorkspace ? buildWorkspaceTools(activeWorkspace) : {}
+
+      // Build MCP tools (from connected MCP servers, scoped to project)
+      let mcpTools: Record<string, unknown> = {}
+      try {
+        mcpTools = await mcpManagerService.getToolsForChat(conv?.projectId)
+      } catch (err) {
+        console.warn('[Chat] Failed to get MCP tools:', err)
+      }
+
+      // Merge all tools
+      const tools = { ...workspaceTools, ...mcpTools }
+      const hasTools = Object.keys(tools).length > 0
 
       // Inject workspace tools system prompt when workspace is active
       if (activeWorkspace) {
@@ -201,7 +214,7 @@ export function registerChatIpc(): void {
         maxTokens,
         topP,
         providerOptions,
-        ...(tools ? { tools, maxSteps: 10, stopWhen: stepCountIs(10) } : {}),
+        ...(hasTools ? { tools, maxSteps: 10, stopWhen: stepCountIs(10) } : {}),
         onChunk({ chunk }) {
           if (chunk.type === 'text-delta') {
             accumulatedText += chunk.text

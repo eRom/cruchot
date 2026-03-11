@@ -15,6 +15,7 @@ import {
   Clock,
   FolderOpen,
   Image,
+  Network,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -215,7 +216,7 @@ export function Sidebar(): React.JSX.Element {
           icon={UserPen}
           label="Personnalisation"
           isCollapsed={collapsed}
-          isActive={currentView === 'prompts' || currentView === 'roles'}
+          isActive={currentView === 'prompts' || currentView === 'roles' || currentView === 'mcp'}
         >
           <NavButton
             icon={BookOpen}
@@ -231,6 +232,14 @@ export function Sidebar(): React.JSX.Element {
             isActive={currentView === 'roles'}
             isCollapsed={collapsed}
             onClick={() => handleNavClick('roles')}
+            isNested
+          />
+          <NavButton
+            icon={Network}
+            label="MCP"
+            isActive={currentView === 'mcp'}
+            isCollapsed={collapsed}
+            onClick={() => handleNavClick('mcp')}
             isNested
           />
         </NavGroup>
