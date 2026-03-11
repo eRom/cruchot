@@ -258,6 +258,37 @@ const api: ElectronAPI = {
     ipcRenderer.removeAllListeners('task:executed')
   },
 
+  // ── MCP Servers ─────────────────────────────────────────
+  mcpList: () => ipcRenderer.invoke('mcp:list'),
+
+  mcpGet: (id) => ipcRenderer.invoke('mcp:get', id),
+
+  mcpGetEnvKeys: (id) => ipcRenderer.invoke('mcp:getEnvKeys', id),
+
+  mcpCreate: (data) => ipcRenderer.invoke('mcp:create', data),
+
+  mcpUpdate: (id, data) => ipcRenderer.invoke('mcp:update', id, data),
+
+  mcpDelete: (id) => ipcRenderer.invoke('mcp:delete', id),
+
+  mcpToggle: (id) => ipcRenderer.invoke('mcp:toggle', id),
+
+  mcpStart: (id) => ipcRenderer.invoke('mcp:start', id),
+
+  mcpStop: (id) => ipcRenderer.invoke('mcp:stop', id),
+
+  mcpRestart: (id) => ipcRenderer.invoke('mcp:restart', id),
+
+  mcpTest: (data) => ipcRenderer.invoke('mcp:test', data),
+
+  onMcpStatusChanged: (cb) => {
+    ipcRenderer.on('mcp:status-changed', (_event, data) => cb(data))
+  },
+
+  offMcpStatusChanged: () => {
+    ipcRenderer.removeAllListeners('mcp:status-changed')
+  },
+
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>
     ipcRenderer.invoke('settings:get', key),

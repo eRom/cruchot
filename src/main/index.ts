@@ -6,6 +6,7 @@ import { runMigrations } from './db/migrate'
 import { getDbPath } from './utils/paths'
 import { initAutoUpdater, stopAutoUpdater } from './services/updater.service'
 import { schedulerService } from './services/scheduler.service'
+import { mcpManagerService } from './services/mcp-manager.service'
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'
 
@@ -45,6 +46,11 @@ app.whenReady().then(() => {
   // Scheduler — start timers for enabled scheduled tasks
   schedulerService.init(mainWindow)
 
+  // MCP — start enabled MCP servers
+  mcpManagerService.init(mainWindow).catch((err) => {
+    console.error('[MCP] Init failed:', err)
+  })
+
   // Auto-updater — only in packaged builds
   if (app.isPackaged) {
     initAutoUpdater()
@@ -64,6 +70,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  mcpManagerService.stopAll().catch(() => {})
   schedulerService.stopAll()
   stopAutoUpdater()
   closeDatabase()

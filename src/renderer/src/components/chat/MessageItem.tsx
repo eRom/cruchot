@@ -2,7 +2,7 @@ import { FileOperationCard } from '@/components/workspace/FileOperationCard'
 import { cn } from '@/lib/utils'
 import type { Message, ToolCallDisplay } from '@/stores/messages.store'
 import { useMessagesStore } from '@/stores/messages.store'
-import { Brain, Check, CheckCircle2, ChevronDown, ChevronRight, Copy, File as FileIcon, FileText, FolderSearch, Image as ImageIcon, Loader2, Pencil, Search, Sparkles, Terminal, Wrench, XCircle } from 'lucide-react'
+import { Brain, Check, CheckCircle2, ChevronDown, ChevronRight, Copy, File as FileIcon, FileText, FolderSearch, Image as ImageIcon, Loader2, Network, Pencil, Search, Sparkles, Terminal, Wrench, XCircle } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import type { FileOperation } from '../../../../preload/types'
 import { AudioPlayer } from './AudioPlayer'
@@ -90,6 +90,17 @@ const TOOL_CONFIG: Record<string, { icon: typeof FileText; label: string }> = {
   searchInFiles: { icon: Search, label: 'Recherche dans les fichiers' }
 }
 
+/** Resolve tool config — handles MCP prefixed tools (e.g. github__create_issue) */
+function getToolConfig(toolName: string): { icon: typeof FileText; label: string } {
+  if (TOOL_CONFIG[toolName]) return TOOL_CONFIG[toolName]
+  // MCP tools: "prefix__name" → Network icon + readable label
+  const mcpMatch = toolName.match(/^([^_]+)__(.+)$/)
+  if (mcpMatch) {
+    return { icon: Network, label: `[${mcpMatch[1]}] ${mcpMatch[2]}` }
+  }
+  return { icon: Wrench, label: toolName }
+}
+
 /** Collapsible block showing tool calls with status */
 function ToolCallBlock({ toolCalls, isStreaming }: { toolCalls: ToolCallDisplay[]; isStreaming: boolean }) {
   const [expanded, setExpanded] = useState(isStreaming)
@@ -126,7 +137,7 @@ function ToolCallBlock({ toolCalls, isStreaming }: { toolCalls: ToolCallDisplay[
       {(expanded || hasRunning) && (
         <div className="mt-1.5 rounded-lg border border-cyan-200/40 dark:border-cyan-500/20 bg-cyan-50/50 dark:bg-cyan-950/20 px-3 py-2 space-y-1">
           {toolCalls.map((tc, i) => {
-            const config = TOOL_CONFIG[tc.toolName] || { icon: Wrench, label: tc.toolName }
+            const config = getToolConfig(tc.toolName)
             const Icon = config.icon
             const detail = tc.args?.command || tc.args?.path || tc.args?.query || ''
 
