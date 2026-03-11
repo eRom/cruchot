@@ -1,6 +1,6 @@
 # Patterns — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 17 — workspace tools & tool call UI)
+**Derniere mise a jour** : 2026-03-11 (session 18 — bash tool + writeFile + MCP spec)
 
 ## Conventions de nommage
 
@@ -212,14 +212,23 @@
 - **Deps** : `chokidar` (ESM, `external` dans electron.vite.config), `trash` pour deletion safe
 - **Raccourci** : `Cmd+B` toggle workspace panel
 
-### Workspace Tools Pattern (session 17)
-- **3 outils AI SDK** dans `workspace-tools.ts` : `readFile(path)`, `listFiles(path?)`, `searchInFiles(query, path?)`
-- **`inputSchema`** (PAS `parameters`) — AI SDK v6 breaking change. `tool()` est une fonction identite, pas de transformation
+### Workspace Tools Pattern (session 17+18)
+- **4 outils AI SDK** dans `workspace-tools.ts` :
+  - `bash(command)` — execution shell reelle via `child_process.exec` (async, non-bloquant). cwd verrouille au workspace root. Blocklist ~15 patterns dangereux (sudo, rm -rf /, shutdown, curl|bash, etc.). Timeout 30s, output tronque 50KB, ANSI desactive (`FORCE_COLOR=0 NO_COLOR=1`). Retourne `{ stdout, stderr, exitCode }`.
+  - `readFile(path)` — lecture fichier via WorkspaceService (path traversal + sensitive files protection)
+  - `writeFile(path, content)` — ecriture immediate via WorkspaceService (dirs auto-crees). Remplace le format `file:create/modify` markdown.
+  - `listFiles(path?)` — liste repertoire via WorkspaceService.scanDirectory()
+- **`searchInFiles` supprime** (session 18) — le LLM utilise `bash("grep -rn 'pattern' src/")` a la place
+- **`inputSchema`** (PAS `parameters`) — AI SDK v6 breaking change
 - **`stopWhen: stepCountIs(10)`** obligatoire dans `streamText()` — sans ca, default `stepCountIs(1)` empeche le multi-step
-- **System prompt** : `WORKSPACE_TOOLS_PROMPT` injecte quand workspace actif, instructions fortes pour utiliser les outils immediatement
+- **System prompt** : `WORKSPACE_TOOLS_PROMPT` injecte quand workspace actif, instructions pour bash (npm, git, grep, tests), writeFile (contenu complet), enchainement d'outils
+- **Bash security** : `isCommandAllowed()` avec `BLOCKED_PATTERNS[]` (regex). `truncateOutput()` pour limiter la taille. `execAsync = promisify(exec)` pour ne pas bloquer le main process.
 - **Tool Call UI** : `ToolCallBlock` dans MessageItem (collapsible, accent cyan `bg-cyan-500/10 text-cyan-700`)
-  - Chaque outil affiche : icone par nom (FileText/FolderSearch/Search), label traduit, argument, spinner/check/erreur
+  - Icones par outil : Terminal (bash), FileText (readFile), Pencil (writeFile), FolderSearch (listFiles)
+  - Detail affiche : `command` pour bash, `path` pour readFile/writeFile/listFiles
   - Header : "Utilisation d'outils..." (running) ou "N outil(s) utilise(s)" (done) avec icone globale
+- **TOOL_LABELS** dans `useStreaming.ts` : bash → "Commande shell", writeFile → "Ecriture du fichier"
+- **TOOL_CONFIG** dans `MessageItem.tsx` : mapping icone + label par nom d'outil
 - **Streaming** : `useStreaming` gere `tool-call` (addToolCall avec status 'running') + `tool-result` (updateLastToolCallStatus)
 - **Persistance** : `contentData.toolCalls` sur le message assistant, restaure au chargement historique (ChatView)
 - **Store** : `ToolCallDisplay` type + `addToolCall()` + `updateLastToolCallStatus()` dans messages.store

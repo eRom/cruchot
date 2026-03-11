@@ -1,6 +1,6 @@
 # Fichiers cles — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 17 — workspace tools & tool call UI)
+**Derniere mise a jour** : 2026-03-11 (session 18 — bash tool + writeFile + MCP spec)
 
 ## Main process
 
@@ -8,7 +8,7 @@
 |---------|------|
 | `src/main/index.ts` | Entry point Electron, app lifecycle, auto-updater, custom protocol `local-image://` (securise: allowlist dirs, pas de bypassCSP) |
 | `src/main/ipc/chat.ipc.ts` | Handler chat:send — streamText() AI SDK, forward chunks IPC, providerOptions thinking, reasoning persistence, cost calc, model + role persistence, workspace file context injection, file operations parsing, workspace tools multi-step (stopWhen), tool call tracking (accumulatedToolCalls) |
-| `src/main/llm/workspace-tools.ts` | 3 outils AI SDK workspace (readFile, listFiles, searchInFiles) + WORKSPACE_TOOLS_PROMPT — utilise `inputSchema` (pas `parameters`, AI SDK v6) |
+| `src/main/llm/workspace-tools.ts` | 4 outils AI SDK workspace — bash (shell exec via child_process.exec, blocklist securite ~15 patterns, timeout 30s, output 50KB max), readFile, writeFile (ecriture immediate), listFiles + WORKSPACE_TOOLS_PROMPT enrichi |
 | `src/main/ipc/conversations.ipc.ts` | CRUD conversations + filtre par projet + setConversationProject + setConversationRole + deleteAllConversations |
 | `src/main/ipc/index.ts` | Registre central de tous les IPC handlers + blocage `multi-llm:apikey:*` dans settings:get/set |
 | `src/main/llm/router.ts` | Routeur getModel() — Vercel AI SDK |
@@ -129,6 +129,7 @@
 | `CLAUDE.md` | Best practices stack + regles projet |
 | `SECURITY-2026-03-10.md` | Rapport audit securite initial — 4 vulns critiques (toutes fixees) |
 | `SECURITY-2026-03-10-FULL.md` | Audit securite complet 5 axes — score B-, actions prioritaires |
+| `specs/feature-mcp-integration.md` | Spec complete integration MCP (Model Context Protocol) — architecture, @ai-sdk/mcp, securite, modele de donnees, UI, plan implementation 3 phases |
 
 ## Renderer — Securite
 

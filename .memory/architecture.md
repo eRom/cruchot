@@ -1,6 +1,6 @@
 # Architecture — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 17 — workspace tools & tool call UI)
+**Derniere mise a jour** : 2026-03-11 (session 18 — bash tool + writeFile + MCP spec)
 
 ## Vue d'ensemble
 
@@ -211,8 +211,8 @@ Projet avec workspacePath → ChatView auto-open workspace → WorkspaceService 
 ```
 
 - **WorkspaceService** : scan tree, read/write/delete, securite (path traversal, sensitive files), `.coworkignore`
-- **Workspace Tools** : 3 outils AI SDK (readFile, listFiles, searchInFiles) dans `workspace-tools.ts`, injectes via `buildWorkspaceTools()` dans `streamText()` avec `maxSteps: 10` + `stopWhen: stepCountIs(10)` pour le multi-step
-- **Tool Call UI** : ToolCallBlock dans MessageItem (collapsible, accent cyan), affiche chaque outil avec statut (running/success/error), accumule via `accumulatedToolCalls` dans chat.ipc.ts, persiste dans `contentData.toolCalls`
+- **Workspace Tools** : 4 outils AI SDK dans `workspace-tools.ts` — **bash** (execution shell reelle via child_process.exec, blocklist securite, timeout 30s), **readFile**, **writeFile** (ecriture immediate), **listFiles**. Injectes via `buildWorkspaceTools()` dans `streamText()` avec `maxSteps: 10` + `stopWhen: stepCountIs(10)` pour le multi-step. `searchInFiles` supprime — le LLM utilise `bash("grep -rn ...")`.
+- **Tool Call UI** : ToolCallBlock dans MessageItem (collapsible, accent cyan), affiche chaque outil avec statut (running/success/error), icones par outil (Terminal/FileText/Pencil/FolderSearch), accumule via `accumulatedToolCalls` dans chat.ipc.ts, persiste dans `contentData.toolCalls`
 - **FileWatcherService** : Chokidar wrapper, forward events vers renderer via IPC
 - **WorkspacePanel** : panneau droit collapsible (w-80 expanded, w-10 collapsed), toggle PanelRightClose/PanelRightOpen
 - **FileTree** : arbre recursif avec recherche, expand/collapse, right-click pour attacher
@@ -291,7 +291,7 @@ TasksView: CRUD taches → IPC invoke("tasks:*")
 ## Specifications
 
 - `specs/phase-setup/` — Specs initiales archivees (ARCH, FEATURES, PLAN, PRICING, STACK, TASKS, TEAM)
-- `specs/` — Nouvelles specs de fonctionnalites (un fichier par feature)
+- `specs/` — Nouvelles specs de fonctionnalites (un fichier par feature, dont `feature-mcp-integration.md`)
 
 ## GitHub
 

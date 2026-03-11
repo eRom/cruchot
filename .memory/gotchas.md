@@ -1,6 +1,6 @@
 # Gotchas — Multi-LLM Desktop
 
-**Derniere mise a jour** : 2026-03-10 (session 17 — workspace tools & tool call UI)
+**Derniere mise a jour** : 2026-03-11 (session 18 — bash tool + writeFile + MCP spec)
 
 ## Bugs resolus
 
@@ -309,6 +309,8 @@ Quand on ajoute un champ au settings store (ex: `favoriteModelIds`), il sera `un
 - ~~DeepSeek + Alibaba Qwen~~ — **FAIT** (session 13) — 2 providers, 6 modeles, thinking DeepSeek, Qwen via OpenAI-compatible DashScope
 - ~~Taches planifiees~~ — **FAIT** (session 15) — SchedulerService, task-executor, TasksView, TaskCard, TaskForm, 4 types schedule, isolation streaming
 - ~~Workspace Tools multi-step + Tool Call UI~~ — **FAIT** (session 17) — fix inputSchema/stopWhen, ToolCallBlock, tool-call/tool-result streaming, persistance contentData.toolCalls
+- ~~Bash shell + writeFile tools~~ — **FAIT** (session 18) — bash exec reel, writeFile immediat, searchInFiles supprime, blocklist securite, icones Terminal/Pencil
+- MCP Integration — **SPEC ECRITE** (session 18) — `specs/feature-mcp-integration.md`, implementation a venir
 - T48 (Prompt Optimizer), T52 (Export PDF), T60 (Packaging)
 - i18n (T41) — configure mais `useTranslation` jamais utilise
 - SSH key GitHub non configuree — push en HTTPS uniquement
@@ -404,6 +406,20 @@ Certains providers (OpenAI notamment) retournent 429 pour le rate limit ET pour 
 
 ### AI SDK v6 — tool-result chunks dans onChunk (session 17)
 **Confirmation** : Les chunks `tool-result` SONT forwarded dans `onChunk` (ligne 6537 du AI SDK source). `onStepFinish` n'est pas fiable pour le tracking des resultats d'outils en streaming. Utiliser `onChunk` pour les deux (`tool-call` et `tool-result`).
+
+### Bash tool — execSync bloque le main process Electron (session 18)
+**Piege** : `child_process.execSync()` bloque l'event loop du main process Electron — l'UI freeze pendant l'execution de la commande.
+**Fix** : Utiliser `execAsync = promisify(exec)` (async) au lieu de `execSync`.
+**Regle** : Ne JAMAIS utiliser d'API synchrones bloquantes dans le main process Electron pour des operations potentiellement longues.
+
+### Bash tool — ANSI escape codes polluent les resultats (session 18)
+**Symptome** : Les resultats de commandes contiennent des codes ANSI (`\x1b[32m`, etc.) illisibles pour le LLM.
+**Fix** : Passer `FORCE_COLOR: '0'` et `NO_COLOR: '1'` dans l'env du child process.
+**Regle** : Toujours desactiver les couleurs ANSI quand la sortie est consommee par du code (pas un terminal humain).
+
+### Bash tool — ne PAS bloquer les commandes dans le workspace (session 18)
+**Decision** : La blocklist ne bloque que les commandes systeme destructives (sudo, rm -rf /, shutdown, etc.). Les commandes dans le workspace (rm d'un fichier, npm install, etc.) sont autorisees — l'utilisateur a choisi d'activer le workspace.
+**Pattern** : Les regex de `BLOCKED_PATTERNS` ciblent les paths absolus (`/`, `~`) et les commandes systeme, pas les operations relatives.
 
 ### React 19 types — contentData Record<string,unknown> empoisonne JSX children (session 17)
 **Symptome** : `TS2322: Type 'unknown' is not assignable to type (valid ReactNode types)` sur N'IMPORTE QUEL enfant JSX, meme `{null}`.
