@@ -317,6 +317,36 @@ const api: ElectronAPI = {
     ipcRenderer.removeAllListeners('mcp:status-changed')
   },
 
+  // ── Git ────────────────────────────────────────────────
+  gitGetInfo: () => ipcRenderer.invoke('git:getInfo'),
+
+  gitGetStatus: () => ipcRenderer.invoke('git:getStatus'),
+
+  gitGetDiff: (data: { path?: string; staged?: boolean }) =>
+    ipcRenderer.invoke('git:getDiff', data),
+
+  gitStageFiles: (data: { paths: string[] }) =>
+    ipcRenderer.invoke('git:stageFiles', data),
+
+  gitStageAll: () => ipcRenderer.invoke('git:stageAll'),
+
+  gitUnstageFiles: (data: { paths: string[] }) =>
+    ipcRenderer.invoke('git:unstageFiles', data),
+
+  gitCommit: (data: { message: string }) =>
+    ipcRenderer.invoke('git:commit', data),
+
+  gitGenerateCommitMessage: (data: { providerId: string; modelId: string }) =>
+    ipcRenderer.invoke('git:generateCommitMessage', data),
+
+  onGitChanged: (cb: (info: { isRepo: boolean; branch: string | null; isDirty: boolean; modifiedCount: number }) => void): void => {
+    ipcRenderer.on('git:changed', (_event, data) => cb(data))
+  },
+
+  offGitChanged: (): void => {
+    ipcRenderer.removeAllListeners('git:changed')
+  },
+
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>
     ipcRenderer.invoke('settings:get', key),

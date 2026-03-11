@@ -7,7 +7,7 @@ import { classifyError } from '../llm/errors'
 import { buildThinkingProviderOptions } from '../llm/thinking'
 import { validateAttachment, processAttachments, buildContentParts, MAX_FILES_PER_MESSAGE, type AttachmentRef } from '../llm/attachments'
 import { parseFileOperations } from '../llm/file-operations'
-import { buildWorkspaceTools, WORKSPACE_TOOLS_PROMPT } from '../llm/workspace-tools'
+import { buildWorkspaceTools, buildWorkspaceContextBlock, WORKSPACE_TOOLS_PROMPT } from '../llm/workspace-tools'
 import { getActiveWorkspace, getActiveWorkspaceRoot } from './workspace.ipc'
 import { mcpManagerService } from '../services/mcp-manager.service'
 import { buildMemoryBlock } from '../db/queries/memory-fragments'
@@ -199,12 +199,17 @@ export function registerChatIpc(): void {
       const tools = { ...workspaceTools, ...mcpTools }
       const hasTools = Object.keys(tools).length > 0
 
-      // Inject workspace tools system prompt when workspace is active
+      // Inject workspace context + tools system prompt when workspace is active
       if (activeWorkspace) {
+        const contextBlock = buildWorkspaceContextBlock(activeWorkspace.rootPath)
+        const workspacePrompt = contextBlock
+          ? contextBlock + '\n\n' + WORKSPACE_TOOLS_PROMPT
+          : WORKSPACE_TOOLS_PROMPT
+
         if (aiMessages.length > 0 && aiMessages[0].role === 'system') {
-          aiMessages[0].content += '\n\n' + WORKSPACE_TOOLS_PROMPT
+          aiMessages[0].content += '\n\n' + workspacePrompt
         } else {
-          aiMessages.unshift({ role: 'system', content: WORKSPACE_TOOLS_PROMPT })
+          aiMessages.unshift({ role: 'system', content: workspacePrompt })
         }
       }
 
@@ -296,7 +301,7 @@ export function registerChatIpc(): void {
         maxTokens,
         topP,
         providerOptions,
-        ...(hasTools ? { tools, maxSteps: 10, stopWhen: stepCountIs(10) } : {}),
+        ...(hasTools ? { tools, maxSteps: 50, stopWhen: stepCountIs(50) } : {}),
         onChunk({ chunk }) {
           if (chunk.type === 'text-delta') {
             // Prepend any buffered partial tag content

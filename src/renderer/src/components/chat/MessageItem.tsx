@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import type { Message, ToolCallDisplay } from '@/stores/messages.store'
 import { useMessagesStore } from '@/stores/messages.store'
 import { Brain, Check, CheckCircle2, ChevronDown, ChevronRight, Copy, File as FileIcon, FileText, FolderSearch, Image as ImageIcon, Loader2, Network, Pencil, Search, Sparkles, Terminal, Wrench, XCircle } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FileOperation } from '../../../../preload/types'
 import { AudioPlayer } from './AudioPlayer'
 import { MessageContent } from './MessageContent'
@@ -49,6 +49,14 @@ function providerLabel(providerId?: string, modelId?: string): string | null {
 /** Collapsible reasoning/thinking block */
 function ReasoningBlock({ reasoning, isStreaming }: { reasoning: string; isStreaming: boolean }) {
   const [expanded, setExpanded] = useState(isStreaming)
+  const prevStreaming = useRef(isStreaming)
+
+  useEffect(() => {
+    if (prevStreaming.current && !isStreaming) {
+      setExpanded(false)
+    }
+    prevStreaming.current = isStreaming
+  }, [isStreaming])
 
   return (
     <div className="mb-2">
@@ -105,6 +113,16 @@ function getToolConfig(toolName: string): { icon: typeof FileText; label: string
 function ToolCallBlock({ toolCalls, isStreaming }: { toolCalls: ToolCallDisplay[]; isStreaming: boolean }) {
   const [expanded, setExpanded] = useState(isStreaming)
   const hasRunning = toolCalls.some(tc => tc.status === 'running')
+  const prevRunning = useRef(hasRunning || isStreaming)
+
+  useEffect(() => {
+    const wasActive = prevRunning.current
+    const isActive = hasRunning || isStreaming
+    if (wasActive && !isActive) {
+      setExpanded(false)
+    }
+    prevRunning.current = isActive
+  }, [hasRunning, isStreaming])
   const allSuccess = !hasRunning && toolCalls.every(tc => tc.status === 'success')
   const hasError = toolCalls.some(tc => tc.status === 'error')
 

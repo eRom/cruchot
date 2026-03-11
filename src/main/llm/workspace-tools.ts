@@ -2,6 +2,8 @@ import { tool } from 'ai'
 import { z } from 'zod'
 import { exec } from 'child_process'
 import { promisify } from 'util'
+import { existsSync, readFileSync } from 'fs'
+import { join } from 'path'
 import type { WorkspaceService } from '../services/workspace.service'
 
 const execAsync = promisify(exec)
@@ -63,6 +65,89 @@ const BLOCKED_PATTERNS = [
   />\s*\/System\//,
   />\s*~\//,                                     // write to home dir
 ]
+
+// ── readFile Security ────────────────────────────────────
+// Extensions textuelles autorisees (lecture seule par le LLM)
+const TEXT_EXTENSIONS = new Set([
+  // Documents
+  '.md', '.txt', '.rst', '.adoc', '.org', '.csv', '.tsv', '.log',
+  // Config
+  '.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.conf',
+  '.xml', '.plist', '.properties',
+  // Code
+  '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs',
+  '.py', '.rb', '.go', '.rs', '.java', '.kt', '.kts',
+  '.c', '.cpp', '.cc', '.h', '.hpp', '.cs', '.swift',
+  '.php', '.lua', '.r', '.R', '.m', '.mm',
+  '.sh', '.bash', '.zsh', '.fish', '.ps1', '.bat', '.cmd',
+  '.sql', '.graphql', '.gql', '.prisma',
+  // Web
+  '.html', '.htm', '.css', '.scss', '.sass', '.less', '.vue', '.svelte',
+  // Misc dev
+  '.dockerfile', '.containerfile', '.tf', '.hcl',
+  '.makefile', '.cmake', '.gradle', '.sbt',
+  '.gitignore', '.gitattributes', '.editorconfig',
+  '.eslintrc', '.prettierrc', '.babelrc',
+  '.env.example', '.env.sample',
+  // Data
+  '.jsonl', '.ndjson',
+])
+
+// Fichiers/dossiers bloques (sensibles ou gitignore classiques)
+const BLOCKED_FILE_PATTERNS = [
+  /^\.env$/,                      // .env
+  /^\.env\..+$/,                  // .env.local, .env.production, etc. (sauf .env.example/.env.sample)
+  /\.pem$/i, /\.key$/i, /\.p12$/i, /\.pfx$/i, /\.jks$/i,
+  /\.keystore$/i, /\.credentials$/i,
+  /^id_rsa/, /^id_ed25519/, /^id_ecdsa/,
+]
+
+const BLOCKED_PATH_SEGMENTS = [
+  'node_modules', '.git', 'dist', 'build', '.next', '__pycache__',
+  '.cache', '.venv', 'venv', '.tox', '.mypy_cache', '.pytest_cache',
+  '.DS_Store', 'Thumbs.db', '.idea', '.vscode',
+  'coverage', '.nyc_output', '.turbo',
+  '.terraform', '.serverless',
+]
+
+function isReadableFile(filePath: string): { allowed: boolean; reason?: string } {
+  const segments = filePath.split('/')
+  const filename = segments[segments.length - 1] || ''
+  const ext = filename.includes('.') ? '.' + filename.split('.').pop()!.toLowerCase() : ''
+
+  // Block sensitive file patterns
+  for (const pattern of BLOCKED_FILE_PATTERNS) {
+    if (pattern.test(filename)) {
+      // Allow .env.example and .env.sample explicitly
+      if (filename === '.env.example' || filename === '.env.sample') continue
+      return { allowed: false, reason: `Fichier sensible bloque : ${filename}` }
+    }
+  }
+
+  // Block paths containing gitignore-style segments
+  for (const seg of segments) {
+    if (BLOCKED_PATH_SEGMENTS.includes(seg)) {
+      return { allowed: false, reason: `Chemin bloque (${seg}) : ${filePath}` }
+    }
+  }
+
+  // Allow files without extension if they look like common text files
+  if (!ext) {
+    const KNOWN_EXTENSIONLESS = ['Makefile', 'Dockerfile', 'Containerfile', 'LICENSE', 'README', 'CHANGELOG', 'AUTHORS', 'CODEOWNERS', 'Procfile', 'Gemfile', 'Rakefile', 'Vagrantfile', 'CLAUDE']
+    if (KNOWN_EXTENSIONLESS.some(n => filename === n || filename.startsWith(n + '.'))) {
+      return { allowed: true }
+    }
+    // Unknown extensionless file — block to be safe
+    return { allowed: false, reason: `Type de fichier non reconnu (pas d'extension) : ${filename}` }
+  }
+
+  // Check extension whitelist
+  if (!TEXT_EXTENSIONS.has(ext)) {
+    return { allowed: false, reason: `Type de fichier non textuel (${ext}) : ${filename}` }
+  }
+
+  return { allowed: true }
+}
 
 const COMMAND_TIMEOUT = 30_000   // 30s
 const MAX_OUTPUT_LENGTH = 50_000 // ~50KB
@@ -143,11 +228,17 @@ export function buildWorkspaceTools(workspace: WorkspaceService) {
 
     readFile: tool({
       description:
-        'Read the contents of a file in the workspace. Returns text content, detected language, and size.',
+        'Read the contents of a TEXT file in the workspace. Only works on textual files (code, config, docs). Cannot read binary files (images, PDFs, archives), .env files, or files inside node_modules/.git/dist/build.',
       inputSchema: z.object({
         path: z.string().describe('Relative file path from workspace root (e.g. "src/index.ts", "package.json")')
       }),
       execute: async ({ path }) => {
+        // Security: check if the file is readable (text, not sensitive, not in gitignored dirs)
+        const check = isReadableFile(path)
+        if (!check.allowed) {
+          return { error: check.reason! }
+        }
+
         try {
           const file = workspace.readFile(path)
           return {
@@ -212,18 +303,66 @@ export function buildWorkspaceTools(workspace: WorkspaceService) {
   }
 }
 
+// ── Context Files (auto-injected) ────────────────────────
+// Files read automatically and injected into the system prompt so the LLM
+// doesn't need to waste tool calls discovering the project.
+const CONTEXT_FILES = [
+  'CLAUDE.md',
+  'AGENTS.md',
+  'GEMINI.md',
+  'COPILOT.md',
+  'CURSORRULES',
+  '.cursorrules',
+  'README.md',
+  'CONTRIBUTING.md',
+  'CHANGELOG.md',
+]
+
+const MAX_CONTEXT_FILE_SIZE = 50_000 // 50KB per file
+const MAX_TOTAL_CONTEXT_SIZE = 200_000 // 200KB total
+
+/**
+ * Reads context files from workspace root and returns an XML block
+ * to inject into the system prompt. Only existing, non-empty files are included.
+ */
+export function buildWorkspaceContextBlock(rootPath: string): string {
+  const parts: string[] = []
+  let totalSize = 0
+
+  for (const filename of CONTEXT_FILES) {
+    const filePath = join(rootPath, filename)
+    if (!existsSync(filePath)) continue
+
+    try {
+      const content = readFileSync(filePath, 'utf-8')
+      if (!content.trim()) continue
+      if (content.length > MAX_CONTEXT_FILE_SIZE) continue
+      if (totalSize + content.length > MAX_TOTAL_CONTEXT_SIZE) break
+
+      totalSize += content.length
+      parts.push(`<file name="${filename}">\n${content}\n</file>`)
+    } catch {
+      // Skip unreadable files
+    }
+  }
+
+  if (parts.length === 0) return ''
+  return `<workspace-context>\n${parts.join('\n\n')}\n</workspace-context>`
+}
+
 /** System prompt instructions injected when workspace tools are available */
 export const WORKSPACE_TOOLS_PROMPT = `
 Tu as acces au workspace (dossier de projet) de l'utilisateur via des outils.
 
 Outils disponibles :
 - bash(command) — Executer une commande shell dans le repertoire du projet (npm, git, grep, find, tests, linters, builds, etc.)
-- readFile(path) — Lire le contenu d'un fichier
+- readFile(path) — Lire le contenu d'un fichier texte
 - writeFile(path, content) — Creer ou modifier un fichier (repertoires parents crees automatiquement)
 - listFiles(path?) — Lister les fichiers et dossiers (racine par defaut)
 
 REGLES IMPORTANTES :
-- TOUJOURS utiliser les outils pour interagir avec le projet. Ne dis JAMAIS "je vais faire X" sans appeler l'outil immediatement.
+- Les fichiers de contexte du projet (README, CLAUDE.md, etc.) sont deja fournis ci-dessus dans <workspace-context>. NE PAS les relire avec readFile().
+- Utilise les outils pour interagir avec le projet. Ne dis JAMAIS "je vais faire X" sans appeler l'outil immediatement.
 - Tu peux enchainer plusieurs appels d'outils. Par exemple : listFiles() pour decouvrir la structure, readFile() pour lire un fichier, writeFile() pour le modifier.
 - Utilise bash() pour : installer des packages (npm install), lancer des tests (npm test), verifier le code (npx tsc --noEmit), consulter git (git status, git diff), rechercher dans le code (grep -rn), et toute autre operation en ligne de commande.
 - Utilise writeFile() pour creer ou modifier des fichiers. Fournis toujours le contenu COMPLET du fichier.

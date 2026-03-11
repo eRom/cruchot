@@ -4,6 +4,7 @@ import * as path from 'path'
 import { z } from 'zod'
 import { WorkspaceService } from '../services/workspace.service'
 import { FileWatcherService } from '../services/file-watcher.service'
+import { onWorkspaceFileChanged, resetGitService } from './git.ipc'
 
 // System paths that should never be used as workspace root
 const BLOCKED_ROOTS = ['/', '/etc', '/usr', '/System', '/Library', '/var', '/bin', '/sbin', '/tmp']
@@ -75,10 +76,15 @@ export function registerWorkspaceIpc(): void {
     // Start file watcher
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win) {
+      const forwardToRenderer = FileWatcherService.forwardToWindow(win)
       activeWatcher = new FileWatcherService(
         rootPath,
         ['node_modules', '.git', 'dist', 'build', '.next', '__pycache__', '.cache'],
-        FileWatcherService.forwardToWindow(win)
+        (event) => {
+          forwardToRenderer(event)
+          // Notify git service of file changes (debounced push to renderer)
+          onWorkspaceFileChanged(win)
+        }
       )
       await activeWatcher.start()
     }
@@ -93,6 +99,7 @@ export function registerWorkspaceIpc(): void {
       activeWatcher = null
     }
     activeWorkspace = null
+    resetGitService()
   })
 
   // ── Get file tree ──────────────────────────────────────
