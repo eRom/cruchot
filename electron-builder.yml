@@ -1,34 +1,63 @@
 appId: com.multiLLM.desktop
 productName: Multi-LLM Desktop
+copyright: Copyright (c) 2026 Romain
+
 directories:
   buildResources: resources
   output: dist
+
 files:
   - "out/**/*"
+  - "package.json"
   - "!node_modules"
+  # Modules natifs + ESM dynamic imports (externalized, not bundled)
+  - "node_modules/better-sqlite3/**/*"
+  - "node_modules/bindings/**/*"
+  - "node_modules/prebuild-install/**/*"
+  - "node_modules/node-abi/**/*"
+  - "node_modules/file-uri-to-path/**/*"
+  - "node_modules/chokidar/**/*"
+  - "node_modules/@ai-sdk/mcp/**/*"
+  - "node_modules/electron-updater/**/*"
+  - "node_modules/builder-util-runtime/**/*"
+  - "node_modules/trash/**/*"
+
+# --- macOS ---
 mac:
   category: public.app-category.developer-tools
   icon: resources/icon.icns
   target:
-    - dmg
-    - zip
+    - target: dmg
+      arch: [universal]
+    - target: zip
+      arch: [universal]
   hardenedRuntime: true
   gatekeeperAssess: false
+  notarize: true
   entitlements: resources/entitlements.mac.plist
   entitlementsInherit: resources/entitlements.mac.plist
+
+# --- Windows ---
 win:
   target:
     - nsis
   icon: resources/icon.ico
+
+# --- Linux ---
 linux:
   target:
     - AppImage
     - deb
   category: Development
   icon: resources
+
+# --- Installeur Windows ---
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+
+# --- DMG macOS ---
 dmg:
   contents:
     - x: 130
@@ -37,8 +66,14 @@ dmg:
       y: 220
       type: link
       path: /Applications
+
+# --- Auto-update via GitHub Releases ---
 publish:
   provider: github
+  owner: eRom
+  repo: app-desktop-llmx
+
+# --- Fichiers supplementaires ---
 extraResources:
   - from: "drizzle"
     to: "drizzle"

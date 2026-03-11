@@ -15,7 +15,13 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "dist": "electron-vite build && electron-builder",
+    "dist:mac": "electron-vite build && electron-builder --mac",
+    "dist:win": "electron-vite build && electron-builder --win",
+    "dist:linux": "electron-vite build && electron-builder --linux",
+    "dist:publish": "electron-vite build && electron-builder --mac --win --linux --publish always",
+    "release": "npm version patch && git push && git push --tags"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.58",
@@ -76,6 +82,7 @@
     "@vitejs/plugin-react": "^4.3.0",
     "drizzle-kit": "^0.31.9",
     "electron": "^40.8.0",
+    "electron-builder": "^26.8.1",
     "electron-vite": "^5.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
