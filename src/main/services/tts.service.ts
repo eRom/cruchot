@@ -125,11 +125,14 @@ async function synthesizeGoogle(
   cost: number
 ): Promise<{ audio: string; mimeType: string; cost: number }> {
   const config = TTS_CONFIG.google
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${apiKey}`
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent`
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey
+    },
     body: JSON.stringify({
       contents: [{ parts: [{ text }] }],
       generationConfig: {

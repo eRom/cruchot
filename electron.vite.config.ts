@@ -8,6 +8,13 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       outDir: 'out/main',
+      minify: 'terser',
+      terserOptions: {
+        mangle: true,
+        compress: {
+          drop_console: true
+        }
+      },
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'src/main/index.ts')
