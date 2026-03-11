@@ -12,6 +12,7 @@ import { buildWorkspaceTools, buildWorkspaceContextBlock, WORKSPACE_TOOLS_PROMPT
 import { getActiveWorkspace, getActiveWorkspaceRoot } from './workspace.ipc'
 import { mcpManagerService } from '../services/mcp-manager.service'
 import { telegramBotService } from '../services/telegram-bot.service'
+import { remoteServerService } from '../services/remote-server.service'
 import { buildMemoryBlock } from '../db/queries/memory-fragments'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
 import { touchConversation, renameConversation, getConversation, updateConversationModel, updateConversationRole } from '../db/queries/conversations'
@@ -122,7 +123,7 @@ export interface HandleChatMessageParams {
   attachments?: AttachmentRef[]
   fileContexts?: Array<{ path: string; content: string; language: string }>
   hasWorkspace?: boolean
-  source: 'desktop' | 'telegram'
+  source: 'desktop' | 'telegram' | 'websocket'
   window: BrowserWindow
 }
 
@@ -141,6 +142,8 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
   currentAbortController = new AbortController()
 
   const isRemoteConnected = telegramBotService.getStatus() === 'connected'
+  const isWsConnected = remoteServerService.getStatus() === 'running'
+    && remoteServerService.getConnectedClients().length > 0
 
   const startTime = Date.now()
 
@@ -200,6 +203,10 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
     // Start Telegram streaming if connected
     if (isRemoteConnected) {
       await telegramBotService.startStreaming()
+    }
+    // Start WebSocket streaming if connected
+    if (isWsConnected) {
+      remoteServerService.startStreaming()
     }
 
     // Process attachments (extract text, encode images)
@@ -298,6 +305,20 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
         })
       }
     }
+    // Wrap tools with approval gate when WebSocket Remote is connected
+    if (isWsConnected && source === 'websocket') {
+      const { getActiveWebSocketSession } = await import('../db/queries/remote-server')
+      const wsSession = getActiveWebSocketSession()
+      if (wsSession) {
+        tools = wrapToolsWithApproval(tools, remoteServerService, {
+          autoApproveRead: wsSession.autoApproveRead,
+          autoApproveWrite: wsSession.autoApproveWrite,
+          autoApproveBash: wsSession.autoApproveBash,
+          autoApproveList: wsSession.autoApproveList,
+          autoApproveMcp: wsSession.autoApproveMcp
+        })
+      }
+    }
 
     const hasTools = Object.keys(tools).length > 0
 
@@ -346,8 +367,9 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
               if (safeText) {
                 accumulatedText += safeText
                 win.webContents.send('chat:chunk', { type: 'text-delta', content: safeText })
-                // Dual-forward to Telegram
+                // Tri-forward to Telegram + WebSocket
                 if (isRemoteConnected) telegramBotService.pushChunk(safeText)
+                if (isWsConnected) remoteServerService.pushChunk(safeText)
               }
               pendingBuffer = remaining.slice(partialIdx)
               return
@@ -355,8 +377,9 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
             // No tag at all — emit as text
             accumulatedText += remaining
             win.webContents.send('chat:chunk', { type: 'text-delta', content: remaining })
-            // Dual-forward to Telegram
+            // Tri-forward to Telegram + WebSocket
             if (isRemoteConnected) telegramBotService.pushChunk(remaining)
+            if (isWsConnected) remoteServerService.pushChunk(remaining)
             return
           }
           // Emit text before the tag
@@ -365,6 +388,7 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
             accumulatedText += before
             win.webContents.send('chat:chunk', { type: 'text-delta', content: before })
             if (isRemoteConnected) telegramBotService.pushChunk(before)
+            if (isWsConnected) remoteServerService.pushChunk(before)
           }
           insideThinkTag = true
           remaining = remaining.slice(openIdx + 7) // skip "<think>"
@@ -379,6 +403,7 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
               if (safeText) {
                 accumulatedReasoning += safeText
                 win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: safeText })
+                if (isWsConnected) remoteServerService.pushReasoningChunk(safeText)
               }
               pendingBuffer = remaining.slice(partialIdx)
               return
@@ -386,6 +411,7 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
             // All reasoning content
             accumulatedReasoning += remaining
             win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: remaining })
+            if (isWsConnected) remoteServerService.pushReasoningChunk(remaining)
             return
           }
           // Emit reasoning before the close tag
@@ -393,6 +419,7 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
             const reasoning = remaining.slice(0, closeIdx)
             accumulatedReasoning += reasoning
             win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: reasoning })
+            if (isWsConnected) remoteServerService.pushReasoningChunk(reasoning)
           }
           insideThinkTag = false
           remaining = remaining.slice(closeIdx + 8) // skip "</think>"
@@ -421,6 +448,7 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
             type: 'reasoning-delta',
             content: chunk.text
           })
+          if (isWsConnected) remoteServerService.pushReasoningChunk(chunk.text)
         } else if (chunk.type === 'tool-call') {
           // Track tool call as running
           accumulatedToolCalls.push({
@@ -434,6 +462,14 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
             toolArgs: chunk.args,
             toolCallId: chunk.toolCallId
           })
+          if (isWsConnected) {
+            remoteServerService.broadcastToClients({
+              type: 'tool-call',
+              toolCallId: chunk.toolCallId,
+              toolName: chunk.toolName,
+              args: chunk.args
+            })
+          }
         } else if (chunk.type === 'tool-result') {
           // Tool execution completed — update status
           const toolResult = chunk as { type: 'tool-result'; toolName: string; toolCallId: string; output: unknown }
@@ -449,9 +485,12 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
             toolCallId: toolResult.toolCallId,
             toolIsError: isError
           })
-          // Forward tool result to Telegram
+          // Forward tool result to Telegram + WebSocket
           if (isRemoteConnected) {
             telegramBotService.sendToolResult(toolResult.toolName, toolResult.output).catch(() => {})
+          }
+          if (isWsConnected) {
+            remoteServerService.sendToolResult(toolResult.toolName, toolResult.output).catch(() => {})
           }
         }
       }
@@ -466,10 +505,12 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
         if (insideThinkTag) {
           accumulatedReasoning += pendingBuffer
           win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: pendingBuffer })
+          if (isWsConnected) remoteServerService.pushReasoningChunk(pendingBuffer)
         } else {
           accumulatedText += pendingBuffer
           win.webContents.send('chat:chunk', { type: 'text-delta', content: pendingBuffer })
           if (isRemoteConnected) telegramBotService.pushChunk(pendingBuffer)
+          if (isWsConnected) remoteServerService.pushChunk(pendingBuffer)
         }
         pendingBuffer = ''
       }
@@ -487,6 +528,10 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
     // End Telegram streaming
     if (isRemoteConnected) {
       await telegramBotService.endStreaming(fullText)
+    }
+    // End WebSocket streaming
+    if (isWsConnected) {
+      remoteServerService.endStreaming(fullText)
     }
 
     // Get usage from resolved promise (more reliable than onFinish for some providers)
@@ -559,6 +604,10 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
     if (isRemoteConnected) {
       await telegramBotService.endStreaming('').catch(() => {})
     }
+    // End WebSocket streaming on error
+    if (isWsConnected) {
+      remoteServerService.endStreaming('')
+    }
 
     // Don't report abort errors
     if (error instanceof Error && error.name === 'AbortError') {
@@ -584,6 +633,13 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
         : classified.category === 'actionable' ? 'Erreur : quota ou limite atteinte.'
         : 'Erreur lors de la generation.'
       telegramBotService.sendMessage(safeMsg).catch(() => {})
+    }
+    // Notify WebSocket about error
+    if (isWsConnected) {
+      const safeMsg = classified.category === 'fatal' ? 'Erreur d\'authentification API.'
+        : classified.category === 'actionable' ? 'Erreur : quota ou limite atteinte.'
+        : 'Erreur lors de la generation.'
+      remoteServerService.broadcastToClients({ type: 'error', message: safeMsg })
     }
   }
 }

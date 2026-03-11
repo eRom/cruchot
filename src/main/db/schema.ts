@@ -268,7 +268,12 @@ export const remoteSessions = sqliteTable('remote_sessions', {
   autoApproveBash: integer('auto_approve_bash', { mode: 'boolean' }).notNull().default(false),
   autoApproveList: integer('auto_approve_list', { mode: 'boolean' }).notNull().default(true),
   autoApproveMcp: integer('auto_approve_mcp', { mode: 'boolean' }).notNull().default(false),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  // WebSocket remote columns (session 25)
+  sessionType: text('session_type').default('telegram'),
+  wsClientFingerprint: text('ws_client_fingerprint'),
+  wsSessionToken: text('ws_session_token'),
+  wsIpAddress: text('ws_ip_address')
 })
 
 // ---------------------------------------------------------------------------
