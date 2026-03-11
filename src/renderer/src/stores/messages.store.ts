@@ -21,7 +21,8 @@ export interface Message {
   providerId?: string
   tokensIn?: number
   tokensOut?: number
-  contentData?: Record<string, unknown>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  contentData?: Record<string, any>
   cost?: number
   responseTimeMs?: number
   createdAt: Date

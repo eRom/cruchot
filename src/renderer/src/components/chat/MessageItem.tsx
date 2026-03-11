@@ -284,7 +284,7 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
         )}
 
         {/* Content */}
-        {(message.contentData?.type as string) === 'image' ? (
+        {message.contentData && message.contentData.type === 'image' ? (
           <div className="flex flex-col gap-2">
             <img
               src={
