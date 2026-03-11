@@ -258,6 +258,21 @@ const api: ElectronAPI = {
     ipcRenderer.removeAllListeners('task:executed')
   },
 
+  // ── Memory Fragments ─────────────────────────────────────
+  listMemoryFragments: () => ipcRenderer.invoke('memory:list'),
+
+  getActiveMemoryBlock: () => ipcRenderer.invoke('memory:get-active-block'),
+
+  createMemoryFragment: (payload) => ipcRenderer.invoke('memory:create', payload),
+
+  updateMemoryFragment: (payload) => ipcRenderer.invoke('memory:update', payload),
+
+  deleteMemoryFragment: (payload) => ipcRenderer.invoke('memory:delete', payload),
+
+  reorderMemoryFragments: (payload) => ipcRenderer.invoke('memory:reorder', payload),
+
+  toggleMemoryFragment: (payload) => ipcRenderer.invoke('memory:toggle', payload),
+
   // ── MCP Servers ─────────────────────────────────────────
   mcpList: () => ipcRenderer.invoke('mcp:list'),
 
