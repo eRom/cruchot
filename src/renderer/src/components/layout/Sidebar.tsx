@@ -25,6 +25,7 @@ import {
   UserCircle,
   UserPen
 } from 'lucide-react'
+import { RemoteIndicator } from './RemoteIndicator'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
 /** Sidebar width constants — keep in sync with AppLayout grid */
@@ -147,6 +148,9 @@ export function Sidebar(): React.JSX.Element {
             <PanelLeftClose className="size-4" />
           )}
         </Button>
+
+        {/* Remote indicator */}
+        {!collapsed && <RemoteIndicator />}
 
         {/* New conversation button */}
         {collapsed ? (

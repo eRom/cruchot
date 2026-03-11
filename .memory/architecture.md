@@ -1,9 +1,9 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 22 — Git integration, workspace intelligence)
+> Derniere mise a jour : 2026-03-11 (session 23 — Remote Telegram)
 
 ## Vue d'ensemble
 
-App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud (OpenAI/Google), statistiques de couts, workspace co-work (LLM context-aware sur fichiers), **integration Git** (branche, status, diff, AI commit), taches planifiees, **integration MCP** (serveurs externes), **memory fragments** (contexte utilisateur persistant). Zero serveur backend.
+App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud (OpenAI/Google), statistiques de couts, workspace co-work (LLM context-aware sur fichiers), **integration Git** (branche, status, diff, AI commit), taches planifiees, **integration MCP** (serveurs externes), **memory fragments** (contexte utilisateur persistant), **Remote Telegram** (controle a distance via bot). Zero serveur backend.
 
 ## Stack
 
@@ -25,24 +25,24 @@ Renderer (React UI) → contextBridge IPC → Preload (bridge) → ipcMain → M
 src/
   main/
     index.ts              # Lifecycle, auto-updater, custom protocol local-image://
-    ipc/                  # Handlers IPC par domaine (dont mcp.ipc.ts, memory-fragments.ipc.ts, git.ipc.ts)
+    ipc/                  # Handlers IPC par domaine (dont mcp.ipc.ts, memory-fragments.ipc.ts, git.ipc.ts, remote.ipc.ts)
     llm/                  # Router AI SDK, cost-calculator, image gen, workspace-tools, errors, thinking
-    db/schema.ts          # 15 tables Drizzle
-    db/queries/           # Queries par domaine (dont mcp-servers.ts, memory-fragments.ts)
-    services/             # Credential, backup, workspace, file-watcher, tts, scheduler, task-executor, mcp-manager, git
+    db/schema.ts          # 16 tables Drizzle
+    db/queries/           # Queries par domaine (dont mcp-servers.ts, memory-fragments.ts, remote-sessions.ts)
+    services/             # Credential, backup, workspace, file-watcher, tts, scheduler, task-executor, mcp-manager, git, telegram-bot
   preload/
     index.ts              # contextBridge
     types.ts              # Types partages + DTOs
   renderer/src/
     App.tsx               # Routing par ViewMode
-    stores/               # Zustand (conversations, providers, projects, messages, settings, ui, roles, workspace, tasks, mcp, memory, git)
+    stores/               # Zustand (conversations, providers, projects, messages, settings, ui, roles, workspace, tasks, mcp, memory, git, remote)
     components/           # chat/, layout/, projects/, prompts/, roles/, tasks/, mcp/, memory/, settings/, statistics/, images/, conversations/, workspace/, common/
     hooks/                # useStreaming, useInitApp, useKeyboardShortcuts, useAudioPlayer, useContextWindow
 ```
 
 ## Navigation (ViewMode)
 
-`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (8 tabs), images, roles, tasks, mcp, memory, statistics
+`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (9 tabs), images, roles, tasks, mcp, memory, statistics
 
 Sidebar NavGroup "Personnalisation" regroupe : Prompts, Roles, MCP, Memoire
 
@@ -103,6 +103,34 @@ GitService (standalone, per workspace) → execFile('git', args, { env minimal }
 - **UI** : GitBranchBadge (header), tab switcher Fichiers/Changes, ChangesPanel (staged/unstaged + commit), DiffView (colore)
 - **FileTree** : indicateurs Git par fichier (M/A/D/?), dot colore sur dossiers
 
+## Remote Telegram
+
+```
+TelegramBotService (singleton, EventEmitter) → fetch() Telegram Bot API
+  ├── configure(token) → getMe + safeStorage encrypt
+  ├── start(conversationId?) → pairing code 6 chiffres, 5min expiry
+  ├── pollLoop() → getUpdates long polling (30s timeout, AbortController)
+  ├── handleUpdate() → commands (/pair, /stop, /status, /model, /clear, /help) + forward text → chat handler
+  ├── startStreaming/pushChunk/endStreaming → editMessageText (debounce 500ms, cursor ▍)
+  ├── requestApproval() → inline keyboard [Approve][Deny], Promise<boolean>, 5min timeout
+  └── stop/destroy → deactivateSession, goodbye message
+```
+
+- **Zero dependance** : `fetch()` natif Node.js, zero npm, zero serveur backend
+- **Triple securite** : token bot chiffre safeStorage + code pairing (5min, 5 tentatives max) + `allowedUserId` verifie sur chaque message/callback
+- **Conversation bridge** : continue la conversation desktop active (pas de conv separee)
+- **Dual-forward** : `handleChatMessage()` exporte depuis chat.ipc.ts, source `'desktop' | 'telegram'`
+- **Tool approval gate** : `wrapToolsWithApproval()` wrape les `execute` des outils avant `streamText()`, auto-approve configurable par type
+- **MarkdownV2** : `formatForTelegram()` avec fallback texte brut sur erreur 400
+- **Split** : messages > 4096 chars coupes intelligemment (paragraphe > ligne > hard cut, code blocks)
+- **Sanitization** : SENSITIVE_PATTERNS masques avant envoi Telegram
+- **Reconnexion** : backoff exponentiel 1s→60s, expiration 10min inactivite
+- **Persistance** : session restauree au restart app si `isActive && chatId` en DB
+- **UI** : badge status dans ContextWindowIndicator (bottom InputZone), Settings > Remote (9e tab), RemoteIndicator sidebar
+- **Toast + clipboard** : `/pair [code]` copie automatiquement au clipboard + toast sonner au demarrage pairing
+- **IPC** : 8 handlers dans `remote.ipc.ts` + events `remote:status-changed`
+- **DB** : table `remote_sessions` (16e table) — chatId, autoApprove x5, conversationId FK
+
 ## Workspace Context Auto-Injection
 
 ```
@@ -128,10 +156,11 @@ Couches de protection :
 - **Links** : shell.openExternal avec confirmation dialog pour domaines non-trusted (TRUSTED_DOMAINS allowlist)
 - **Workspace** : rootPath valide (isDirectory + rejet paths systeme)
 - **Import** : limite taille fichier 50MB
+- **Remote Telegram** : triple verrou (token chiffre + pairing code + allowedUserId), sanitization avant envoi, tool approval gate inline keyboards
 
 ## Donnees
 
-- SQLite WAL + FTS5, 15 tables (dont `mcp_servers`, `memory_fragments`)
+- SQLite WAL + FTS5, 16 tables (dont `mcp_servers`, `memory_fragments`, `remote_sessions`)
 - Cles API chiffrees via safeStorage (Keychain macOS)
 - Settings UI via Zustand persist (localStorage)
 - Images/attachments sur filesystem, servis via `local-image://` protocol

@@ -411,6 +411,41 @@ export interface McpTestResult {
   error?: string
 }
 
+// ── Remote (Telegram) ─────────────────────────────────────────
+export type RemoteStatus = 'disconnected' | 'configuring' | 'pairing' | 'connected' | 'expired' | 'error'
+
+export interface RemoteStatusEvent {
+  status: RemoteStatus
+  chatId?: string
+}
+
+export interface RemoteConfig {
+  hasToken: boolean
+  botUsername: string | null
+  allowedUserId: number | null
+  status: RemoteStatus
+  session: RemoteSession | null
+}
+
+export interface RemoteSession {
+  id: string
+  chatId: string | null
+  isActive: boolean
+  autoApproveRead: boolean
+  autoApproveWrite: boolean
+  autoApproveBash: boolean
+  autoApproveList: boolean
+  autoApproveMcp: boolean
+}
+
+export interface AutoApproveSettings {
+  autoApproveRead: boolean
+  autoApproveWrite: boolean
+  autoApproveBash: boolean
+  autoApproveList: boolean
+  autoApproveMcp: boolean
+}
+
 // ── Local Providers ─────────────────────────────────────────
 export interface LocalProviderStatus { ollama: boolean; lmstudio: boolean }
 export interface LocalProviderTestResult { reachable: boolean; modelCount: number; models: ModelInfo[] }
@@ -650,6 +685,18 @@ export interface ElectronAPI {
   gitGenerateCommitMessage: (data: { providerId: string; modelId: string }) => Promise<{ message: string; cost: number }>
   onGitChanged: (callback: (info: GitInfo) => void) => void
   offGitChanged: () => void
+
+  // Remote (Telegram)
+  remoteConfigure: (token: string) => Promise<{ botUsername: string }>
+  remoteStart: (conversationId?: string) => Promise<{ pairingCode: string }>
+  remoteStop: () => Promise<void>
+  remoteGetStatus: () => Promise<{ status: RemoteStatus }>
+  remoteGetConfig: () => Promise<RemoteConfig>
+  remoteSetAutoApprove: (data: AutoApproveSettings) => Promise<void>
+  remoteSetAllowedUser: (userId: number | null) => Promise<void>
+  remoteDeleteToken: () => Promise<void>
+  onRemoteStatusChanged: (callback: (event: RemoteStatusEvent) => void) => void
+  offRemoteStatusChanged: () => void
 
   // Settings
   getSetting: (key: string) => Promise<string | null>

@@ -347,6 +347,31 @@ const api: ElectronAPI = {
     ipcRenderer.removeAllListeners('git:changed')
   },
 
+  // ── Remote (Telegram) ────────────────────────────────
+  remoteConfigure: (token: string) => ipcRenderer.invoke('remote:configure', token),
+
+  remoteStart: (conversationId?: string) => ipcRenderer.invoke('remote:start', conversationId),
+
+  remoteStop: () => ipcRenderer.invoke('remote:stop'),
+
+  remoteGetStatus: () => ipcRenderer.invoke('remote:status'),
+
+  remoteGetConfig: () => ipcRenderer.invoke('remote:get-config'),
+
+  remoteSetAutoApprove: (data) => ipcRenderer.invoke('remote:set-auto-approve', data),
+
+  remoteSetAllowedUser: (userId: number | null) => ipcRenderer.invoke('remote:set-allowed-user', userId),
+
+  remoteDeleteToken: () => ipcRenderer.invoke('remote:delete-token'),
+
+  onRemoteStatusChanged: (cb) => {
+    ipcRenderer.on('remote:status-changed', (_event, data) => cb(data))
+  },
+
+  offRemoteStatusChanged: () => {
+    ipcRenderer.removeAllListeners('remote:status-changed')
+  },
+
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>
     ipcRenderer.invoke('settings:get', key),

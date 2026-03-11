@@ -19,13 +19,14 @@ Flux principaux à montrer :
 - MCP : McpManagerService → subprocess stdio / HTTP (env chiffré, headers masqués)
 - Attachments : path confiné (userData + workspace uniquement)
 - DB SQLite : WAL mode, prepared statements (Drizzle ORM), credentials jamais en clair
+- Remote Telegram : triple verrou (token chiffré safeStorage + code pairing 6 chiffres 5min/5 tentatives + allowedUserId vérifié sur chaque message/callback), long polling HTTPS sortant (zéro port entrant), sanitization données sensibles avant envoi, tool approval gate (inline keyboards)
 
 Style : technique et épuré, fond sombre, couleurs : rouge pour les barrières de sécurité, vert pour les flux validés, jaune/orange pour les zones à risque contrôlé (bash tool, MCP subprocess).
 
 
 ## Prompt pour diagramme sur la base de données (schéma table)
 
-Crée un diagramme de schéma de base de données (ERD) pour une app desktop multi-LLM avec 15 tables SQLite. Montre les tables, leurs colonnes principales, types, et les relations (foreign keys).
+Crée un diagramme de schéma de base de données (ERD) pour une app desktop multi-LLM avec 16 tables SQLite. Montre les tables, leurs colonnes principales, types, et les relations (foreign keys).
 
 Tables et relations :
 
@@ -62,6 +63,8 @@ Tables et relations :
 
 **memory_fragments** (id PK, content, isActive, sortOrder, createdAt, updatedAt)
 
+**remote_sessions** (id PK, telegramChatId?, botUsername?, pairedAt?, lastActivity?, isActive, conversationId FK→conversations, autoApproveRead, autoApproveWrite, autoApproveBash, autoApproveList, autoApproveMcp, createdAt)
+
 **images** (id PK, conversationId FK→conversations, messageId FK→messages, prompt, modelId?, width?, height?, path, size?, createdAt)
 
 Relations FK à montrer avec des flèches :
@@ -72,8 +75,9 @@ Relations FK à montrer avec des flèches :
 - images → conversations, messages
 - scheduled_tasks → roles, projects
 - mcp_servers → projects
+- remote_sessions → conversations
 
-Style : ERD classique, fond sombre, groupes logiques par couleur : bleu pour le coeur chat (conversations, messages, attachments), violet pour la config (providers, models, settings), vert pour les features (prompts, roles, projects), orange pour les extensions (scheduled_tasks, mcp_servers, memory_fragments), rouge pour le tracking (statistics, tts_usage, images).
+Style : ERD classique, fond sombre, groupes logiques par couleur : bleu pour le coeur chat (conversations, messages, attachments), violet pour la config (providers, models, settings), vert pour les features (prompts, roles, projects), orange pour les extensions (scheduled_tasks, mcp_servers, memory_fragments, remote_sessions), rouge pour le tracking (statistics, tts_usage, images).
 
 
 ## Prompt pour infographie sur les fonctionnalités
@@ -112,6 +116,19 @@ Catégories et fonctionnalités :
 - Diff viewer coloré intégré (ajouts vert, suppressions rouge, hunks bleu)
 - AI Commit Message : génération one-shot du message via le LLM sélectionné
 - Commit direct depuis l'interface avec toast de confirmation
+
+**Remote Telegram** (icône : smartphone)
+- Contrôle à distance de l'app depuis un smartphone via Telegram Bot API
+- Zéro serveur backend — long polling HTTPS sortant, zéro dépendance npm (fetch natif)
+- Triple verrou de sécurité : token bot chiffré (safeStorage) + code pairing 6 chiffres (5 min, 5 tentatives max) + ID Telegram vérifié sur chaque message
+- Streaming des réponses LLM en temps réel (editMessageText + debounce 500ms + curseur ▍)
+- Approbation des outils via inline keyboards Telegram [Approuver][Refuser] avec auto-approve configurable par type
+- Commandes bot : /pair, /stop, /status, /model, /clear, /help
+- Split intelligent des messages > 4096 chars (paragraphe > ligne > hard cut, gestion des code blocks)
+- Sanitization des données sensibles (clés API, PEM, tokens) avant envoi
+- Continue la conversation desktop active (pas de conversation séparée)
+- Badge status dans la barre de tokens (vert connecté, jaune pairing, gris déconnecté)
+- Reconnexion automatique avec backoff exponentiel (1s→60s), expiration après 10 min d'inactivité
 
 **LM Studio** (icône : serveur local)
 - URL configurable (auto-détection sur localhost)

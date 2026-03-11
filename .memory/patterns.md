@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 22 — Git integration, workspace intelligence)
+> Derniere mise a jour : 2026-03-11 (session 23 — Remote Telegram)
 
 ## Conventions de nommage
 
@@ -141,6 +141,22 @@
 - **Externals** : `@ai-sdk/mcp` et `@ai-sdk/mcp/mcp-stdio` dans rollup externals (comme chokidar)
 - **UI** : vue standalone dans NavGroup "Personnalisation" (pas dans Settings tabs)
 - **Tool label MCP** : regex `^([^_]+)__(.+)$` → `[serverName] toolName` dans useStreaming
+
+## Remote Telegram
+
+- **TelegramBotService** : singleton extends `EventEmitter`, meme pattern que McpManagerService
+- **Token** : chiffre via `safeStorage` (meme pattern que cles API), stocke dans table `settings` cle `multi-llm:remote:telegram-token`
+- **allowedUserId** : stocke en clair dans `settings` cle `multi-llm:remote:allowed-user-id` (entier, pas un secret)
+- **Pairing** : `crypto.randomBytes(3)` → 6 chiffres, expiry 5min, max 5 tentatives
+- **Long polling** : boucle async `pollLoop()` avec `getUpdates(offset, timeout:30)`, AbortController pour cancellation
+- **Streaming Telegram** : `sendMessage('▍')` → `editMessageText(buffer + ' ▍')` debounce 500ms → `editMessage(finalText)` ou split si > 4096
+- **Tool approval** : `wrapToolsWithApproval()` wrape `execute` des outils AVANT `streamText()`. Auto-approve configurable par type (read, list, write, bash, mcp). Inline keyboard [Approve][Deny] → `Promise<boolean>` (timeout 5min = deny)
+- **handleChatMessage()** : fonction exportee depuis `chat.ipc.ts`, source `'desktop' | 'telegram'`. IPC handler = thin wrapper. Telegram forward via `telegramBotService.on('message')` dans `remote.ipc.ts`
+- **Dual-forward** : apres chaque `win.webContents.send('chat:chunk')`, push vers `telegramBotService.pushChunk()` si connected
+- **Conversation bridge** : `start(conversationId)` passe l'ID de la conv active → continue la meme conversation (pas de conv separee)
+- **UI badge** : `RemoteBadge` dans `ContextWindowIndicator.tsx` (bottom InputZone), pas dans la toolbar
+- **Formulaire unifie** : token + userId dans un seul bloc, un seul bouton "Valider", les deux champs obligatoires
+- **Toast + clipboard** : au demarrage pairing, `/pair [code]` copie au clipboard + toast sonner 8s
 
 ## Conventions UI
 

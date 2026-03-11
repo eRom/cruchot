@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 22 — Git integration, workspace intelligence)
+> Derniere mise a jour : 2026-03-11 (session 23 — Remote Telegram)
 
 ## AI SDK v6 — Breaking changes (checklist)
 
@@ -72,8 +72,9 @@
 - ModelSelector : liste plate, pas de groupement par provider
 - Pills InputZone : shadcn Select (pattern ThinkingSelector), RoleSelector apres ThinkingSelector
 - Roles : description/icone/categorie masques
-- WorkspacePanel : toggle (pas close)
+- WorkspacePanel : toggle (pas close), ne PAS auto-open au changement de conversation
 - Blocs de code : padding interne
+- Remote badge : dans ContextWindowIndicator (bottom InputZone), PAS dans la toolbar
 
 ## Securite — pieges decouverts session 20
 
@@ -110,6 +111,18 @@
 - **git status --porcelain=v1** : le format est `XY path` avec X=staging, Y=working. Pour les renommages, le format est `R  old -> new` → parser la fleche
 - **Cache invalidation** : le FileWatcher ignore `.git/` → les changements Git internes (stage, commit) ne declenchent pas de file change. Le cache est invalide manuellement dans les methodes stage/unstage/commit
 - **Debounce git:changed** : sans debounce, un `git add -A` sur 50 fichiers enverrait 50 events. Debounce 500ms dans `onWorkspaceFileChanged()`
+
+## Remote Telegram — pieges session 23
+
+- **"no such table: remote_sessions"** : `drizzle-kit generate` cree un fichier SQL de migration mais le projet utilise `CREATE TABLE IF NOT EXISTS` manuels dans `src/main/db/migrate.ts`. Il faut ajouter la table la-bas, pas compter sur les migrations Drizzle.
+- **Dynamic imports dans telegram-bot.service.ts** : `await import('../db')` et `await import('../db/schema')` generent des warnings Vite quand les modules sont aussi importes statiquement ailleurs. Fix : utiliser des imports statiques directs.
+- **Conversation bridge** : l'approche initiale creait une conv "[Remote] Session" au pairing → l'utilisateur voulait continuer la conv desktop active. Fix : passer `conversationId` dans toute la chaine `RemoteBadge → store.start() → preload → IPC → telegramBot.start()`.
+- **Placement du bouton Remote** : teste dans la toolbar InputZone → "mitigue". Deplace dans `ContextWindowIndicator` (barre tokens en bas) → valide. Pattern : `[Badge Remote] ═══ ~318 / 1.0M tokens <$0.01`
+- **WorkspacePanel auto-open** : `openWorkspace()` dans workspace.store.ts forcait `isPanelOpen: true` → le panneau s'ouvrait a chaque changement de conversation. Fix : retirer le `isPanelOpen: true`, conserver l'etat existant du panneau.
+- **User ID obligatoire** : le champ "Mon ID Telegram" est obligatoire (pas optionnel). Le formulaire token + userId est unifie avec un seul bouton "Valider" qui exige les deux champs.
+- **MarkdownV2 Telegram** : les caracteres speciaux (`_*[]()~>#+=|{}.!-`) doivent etre echappes SAUF dans les code blocks. Fallback texte brut si erreur 400 "parse entities".
+- **Message split** : Telegram limite a 4096 chars. Split intelligent : paragraphe > ligne > hard cut. Les code blocks ouverts doivent etre fermes/rouverts aux frontieres de split.
+- **Rate limiting Telegram** : 429 avec `Retry-After` → respecter le delai, retry 1 fois. 401 → token revoque, disconnected. 403 → bot bloque.
 
 ## Restant a faire
 

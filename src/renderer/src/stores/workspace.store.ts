@@ -37,7 +37,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     try {
       await window.api.workspaceOpen({ rootPath, projectId })
       const tree = await window.api.workspaceGetTree() as FileNode
-      set({ rootPath, tree, isPanelOpen: true, isLoading: false })
+      set({ rootPath, tree, isLoading: false })
     } catch (error) {
       console.error('[Workspace] Failed to open:', error)
       set({ isLoading: false })

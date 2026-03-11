@@ -193,6 +193,22 @@ export function runMigrations(): void {
       updated_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS remote_sessions (
+      id TEXT PRIMARY KEY,
+      telegram_chat_id TEXT,
+      bot_username TEXT,
+      paired_at INTEGER,
+      last_activity INTEGER,
+      is_active INTEGER NOT NULL DEFAULT 0,
+      conversation_id TEXT REFERENCES conversations(id),
+      auto_approve_read INTEGER NOT NULL DEFAULT 1,
+      auto_approve_write INTEGER NOT NULL DEFAULT 0,
+      auto_approve_bash INTEGER NOT NULL DEFAULT 0,
+      auto_approve_list INTEGER NOT NULL DEFAULT 1,
+      auto_approve_mcp INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    );
+
     CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(content);
   `)
 
