@@ -372,6 +372,9 @@ const api: ElectronAPI = {
     ipcRenderer.removeAllListeners('remote:status-changed')
   },
 
+  // ── Summary ─────────────────────────────────────────
+  summarizeConversation: (payload) => ipcRenderer.invoke('summary:generate', payload),
+
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>
     ipcRenderer.invoke('settings:get', key),

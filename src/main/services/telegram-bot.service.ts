@@ -114,10 +114,10 @@ class TelegramBotService extends EventEmitter {
     // Load allowed user ID
     this.loadAllowedUserId()
 
-    // Try to restore active session
+    // Try to restore active session (only if allowedUserId is set — security gate)
     try {
       const session = getActiveSession()
-      if (session && session.telegramChatId) {
+      if (session && session.telegramChatId && this.allowedUserId) {
         // Restore token from credentials
         const db = getDatabase()
         const stored = db.select().from(settings).where(eq(settings.key, CREDENTIAL_KEY)).get()
@@ -175,6 +175,7 @@ class TelegramBotService extends EventEmitter {
    */
   async start(conversationId?: string): Promise<{ pairingCode: string }> {
     if (!this.token) throw new Error('Token non configure')
+    if (!this.allowedUserId) throw new Error('User ID Telegram requis avant de demarrer une session')
 
     // Deactivate any existing session
     const existing = getActiveSession()
@@ -296,9 +297,8 @@ class TelegramBotService extends EventEmitter {
   // ── Pairing ─────────────────────────────────────────
 
   private generatePairingCode(): string {
-    return crypto.randomBytes(3).toString('hex').slice(0, 6).replace(/[a-f]/g, (c) =>
-      String(c.charCodeAt(0) - 87) // convert hex letters to digits
-    ).slice(0, 6).padEnd(6, '0')
+    const n = crypto.randomInt(0, 1_000_000)
+    return String(n).padStart(6, '0')
   }
 
   private async handlePairCommand(chatId: number, code: string): Promise<void> {
@@ -310,7 +310,7 @@ class TelegramBotService extends EventEmitter {
 
     // Check attempts
     this.pairingAttempts++
-    if (this.pairingAttempts > MAX_PAIRING_ATTEMPTS) {
+    if (this.pairingAttempts >= MAX_PAIRING_ATTEMPTS) {
       await this.sendMessageTo(chatId, 'Trop de tentatives. Relancez le pairing depuis le desktop.')
       this.pairingCode = null
       this.pairingExpiry = null
@@ -435,8 +435,8 @@ class TelegramBotService extends EventEmitter {
   private async handleUpdate(update: TelegramUpdate): Promise<void> {
     // Handle callback queries (tool approval)
     if (update.callback_query) {
-      // Check allowed user ID on callback queries too
-      if (this.allowedUserId && update.callback_query.from.id !== this.allowedUserId) return
+      // Reject if no allowedUserId configured or mismatch
+      if (!this.allowedUserId || update.callback_query.from.id !== this.allowedUserId) return
       await this.handleCallbackQuery(update.callback_query)
       return
     }
@@ -446,9 +446,9 @@ class TelegramBotService extends EventEmitter {
     const chatId = update.message.chat.id
     const text = update.message.text.trim()
 
-    // Check allowed user ID on every message (if configured)
+    // Check allowed user ID on every message (mandatory — reject if not configured)
     const fromUserId = update.message.from?.id ?? update.message.chat.id
-    if (this.allowedUserId && fromUserId !== this.allowedUserId) {
+    if (!this.allowedUserId || fromUserId !== this.allowedUserId) {
       // Silently ignore messages from unauthorized users
       return
     }
@@ -555,6 +555,9 @@ class TelegramBotService extends EventEmitter {
 
   private async handleCallbackQuery(query: NonNullable<TelegramUpdate['callback_query']>): Promise<void> {
     if (!query.data) return
+
+    // Verify callback comes from the correct chat
+    if (this.chatId && query.message?.chat?.id !== this.chatId) return
 
     // Answer callback to remove loading state
     await this.callTelegramApi('answerCallbackQuery', { callback_query_id: query.id })

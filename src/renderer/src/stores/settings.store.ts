@@ -18,6 +18,8 @@ interface SettingsState {
   maxTokens: number
   topP: number
   thinkingEffort: ThinkingEffort
+  summaryModelId: string
+  summaryPrompt: string
   ttsProvider: TtsProvider
   favoriteModelIds: string[]
 
@@ -33,6 +35,8 @@ interface SettingsState {
   setMaxTokens: (value: number) => void
   setTopP: (value: number) => void
   setThinkingEffort: (value: ThinkingEffort) => void
+  setSummaryModelId: (modelId: string) => void
+  setSummaryPrompt: (prompt: string) => void
   setTtsProvider: (provider: TtsProvider) => void
   toggleFavoriteModel: (modelId: string) => void
 }
@@ -52,6 +56,16 @@ export const useSettingsStore = create<SettingsState>()(
       topP: 0.5,
       thinkingEffort: 'medium' as ThinkingEffort,
       ttsProvider: 'browser' as TtsProvider,
+      summaryModelId: '',
+      summaryPrompt: `Tu es un assistant specialise dans la synthese de conversations. Genere un resume structure et concis de la conversation suivante.
+
+Le resume doit inclure :
+- Les sujets principaux abordes
+- Les decisions prises ou conclusions atteintes
+- Les actions ou taches mentionnees
+- Les points cles a retenir
+
+Format : sections avec titres, bullet points. Sois concis mais complet.`,
       favoriteModelIds: [],
 
       setTheme: (theme) => set({ theme }),
@@ -68,6 +82,8 @@ export const useSettingsStore = create<SettingsState>()(
       setMaxTokens: (value) => set({ maxTokens: value }),
       setTopP: (value) => set({ topP: value }),
       setThinkingEffort: (value) => set({ thinkingEffort: value }),
+      setSummaryModelId: (modelId) => set({ summaryModelId: modelId }),
+      setSummaryPrompt: (prompt) => set({ summaryPrompt: prompt.slice(0, 10_000) }),
       setTtsProvider: (provider) => set({ ttsProvider: provider }),
       toggleFavoriteModel: (modelId) =>
         set((state) => ({
