@@ -60,14 +60,6 @@ export const PROVIDERS: ProviderDefinition[] = [
     icon: 'cloud'
   },
   {
-    id: 'openrouter',
-    name: 'OpenRouter',
-    type: 'cloud',
-    description: '400+ modèles, routing automatique',
-    requiresApiKey: true,
-    icon: 'route'
-  },
-  {
     id: 'perplexity',
     name: 'Perplexity',
     type: 'cloud',

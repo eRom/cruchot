@@ -898,8 +898,8 @@ export function InputZone({
         <div className="flex justify-center">
           <span className="text-[10px] text-muted-foreground/30 select-none">
             {isImageMode
-              ? 'Enter pour generer &middot; Shift+Enter pour un saut de ligne'
-              : 'Enter pour envoyer &middot; Shift+Enter pour un saut de ligne'}
+              ? 'Enter pour generer · Shift+Enter pour un saut de ligne'
+              : 'Enter pour envoyer · Shift+Enter pour un saut de ligne'}
           </span>
         </div>
       </div>
