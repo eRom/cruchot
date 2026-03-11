@@ -395,6 +395,10 @@ export interface McpTestResult {
   error?: string
 }
 
+// ── Local Providers ─────────────────────────────────────────
+export interface LocalProviderStatus { ollama: boolean; lmstudio: boolean }
+export interface LocalProviderTestResult { reachable: boolean; modelCount: number; models: ModelInfo[] }
+
 // L'API exposee au renderer via contextBridge
 export interface ElectronAPI {
   // Chat
@@ -419,6 +423,12 @@ export interface ElectronAPI {
   validateApiKey: (providerId: string, apiKey: string) => Promise<boolean>
   hasApiKey: (providerId: string) => Promise<boolean>
   getApiKeyMasked: (providerId: string) => Promise<string | null>
+
+  // Local Providers
+  detectLocalProviders: () => Promise<LocalProviderStatus>
+  getLocalModels: (providerId: string) => Promise<ModelInfo[]>
+  setLocalProviderBaseUrl: (providerId: string, baseUrl: string) => Promise<void>
+  testLocalProviderConnection: (providerId: string, baseUrl?: string) => Promise<LocalProviderTestResult>
 
   // Projects
   getProjects: () => Promise<ProjectInfo[]>

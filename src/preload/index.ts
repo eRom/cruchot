@@ -59,6 +59,19 @@ const api: ElectronAPI = {
   getApiKeyMasked: (providerId: string): Promise<string | null> =>
     ipcRenderer.invoke('providers:getApiKeyMasked', providerId),
 
+  // ── Local Providers ─────────────────────────────────────
+  detectLocalProviders: () =>
+    ipcRenderer.invoke('localProviders:detect'),
+
+  getLocalModels: (providerId: string) =>
+    ipcRenderer.invoke('localProviders:models', providerId),
+
+  setLocalProviderBaseUrl: (providerId: string, baseUrl: string) =>
+    ipcRenderer.invoke('localProviders:setBaseUrl', { providerId, baseUrl }),
+
+  testLocalProviderConnection: (providerId: string, baseUrl?: string) =>
+    ipcRenderer.invoke('localProviders:testConnection', { providerId, baseUrl }),
+
   // ── Projects ──────────────────────────────────────────
   getProjects: () => ipcRenderer.invoke('projects:list'),
 
