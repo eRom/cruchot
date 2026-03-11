@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useState, useRef, useEffect } from 'react'
-import { Bot, Sparkles, Brain, Cpu, Globe, Zap, Cloud, Pencil, Trash2, Check, X } from 'lucide-react'
+import { Bot, Sparkles, Brain, Cpu, Globe, Zap, Pencil, Trash2, Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Conversation } from '@/stores/conversations.store'
@@ -13,7 +13,6 @@ const PROVIDER_ICONS: Record<string, typeof Bot> = {
   google: Globe,
   mistral: Zap,
   xai: Cpu,
-  openrouter: Cloud,
   perplexity: Globe,
   ollama: Cpu,
   lmstudio: Cpu

@@ -117,17 +117,6 @@ export function ProviderIcon({ providerId, className, size = 14 }: ProviderIconP
         </svg>
       )
 
-    // OpenRouter — routing/network paths
-    case 'openrouter':
-      return (
-        <svg {...props}>
-          <circle cx="4" cy="12" r="2.5" stroke="currentColor" strokeWidth="1.8" fill="none" />
-          <circle cx="20" cy="6" r="2.5" stroke="currentColor" strokeWidth="1.8" fill="none" />
-          <circle cx="20" cy="18" r="2.5" stroke="currentColor" strokeWidth="1.8" fill="none" />
-          <path d="M6.5 11l11 -4.5M6.5 13l11 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
-      )
-
     // Perplexity — abstract search/globe
     case 'perplexity':
       return (
