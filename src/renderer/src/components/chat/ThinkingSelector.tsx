@@ -44,11 +44,10 @@ export function ThinkingSelector({ disabled = false, className }: ThinkingSelect
               'transition-all duration-200 ease-out',
               'focus-visible:ring-1 focus-visible:ring-ring/30',
               'shadow-none hover:shadow-xs',
-              isActive && 'bg-violet-500/10 text-violet-600 hover:bg-violet-500/20 dark:text-violet-400',
               className
             )}
           >
-            <Brain className={cn('size-3 shrink-0', isActive ? 'opacity-80' : 'opacity-60')} />
+            <Brain className="size-3 shrink-0 opacity-60" />
             <SelectValue>
               <span className="truncate text-xs font-medium">
                 {EFFORT_LABELS[thinkingEffort]}

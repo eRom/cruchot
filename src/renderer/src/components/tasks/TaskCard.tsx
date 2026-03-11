@@ -30,7 +30,7 @@ const SCHEDULE_COLORS: Record<string, string> = {
   manual: 'bg-blue-500',
   interval: 'bg-emerald-500',
   daily: 'bg-orange-500',
-  weekly: 'bg-violet-500'
+  weekly: 'bg-indigo-500'
 }
 
 const SCHEDULE_ICONS: Record<string, typeof Clock> = {
@@ -186,7 +186,7 @@ export function TaskCard({
             task.scheduleType === 'manual' && 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
             task.scheduleType === 'interval' && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
             task.scheduleType === 'daily' && 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-            task.scheduleType === 'weekly' && 'bg-violet-500/10 text-violet-600 dark:text-violet-400'
+            task.scheduleType === 'weekly' && 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
           )}>
             <ScheduleIcon className="size-2.5" />
             {formatSchedule(task)}

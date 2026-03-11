@@ -1,26 +1,28 @@
-import React, { useCallback, useEffect, useMemo } from 'react'
+import { ConversationList } from '@/components/conversations/ConversationList'
+import { ProjectSelector } from '@/components/projects/ProjectSelector'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
+import { useConversationsStore } from '@/stores/conversations.store'
+import { useProjectsStore } from '@/stores/projects.store'
+import { useSettingsStore } from '@/stores/settings.store'
+import { useUiStore, type ViewMode } from '@/stores/ui.store'
+import { useWorkspaceStore } from '@/stores/workspace.store'
 import {
+  BarChart3,
+  BookOpen,
+  ChevronRight,
+  Clock,
+  FolderOpen,
+  Image,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
   Settings,
-  BarChart3,
-  Image,
-  FolderOpen,
-  BookOpen,
   UserCircle,
-  Clock
+  UserPen
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { ConversationList } from '@/components/conversations/ConversationList'
-import { ProjectSelector } from '@/components/projects/ProjectSelector'
-import { useConversationsStore } from '@/stores/conversations.store'
-import { useProjectsStore } from '@/stores/projects.store'
-import { useWorkspaceStore } from '@/stores/workspace.store'
-import { useSettingsStore } from '@/stores/settings.store'
-import { useUiStore, type ViewMode } from '@/stores/ui.store'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
 /** Sidebar width constants — keep in sync with AppLayout grid */
 const SIDEBAR_WIDTH_EXPANDED = 260
@@ -203,26 +205,36 @@ export function Sidebar(): React.JSX.Element {
           onClick={() => handleNavClick('projects')}
         />
         <NavButton
-          icon={BookOpen}
-          label="Prompts"
-          isActive={currentView === 'prompts'}
-          isCollapsed={collapsed}
-          onClick={() => handleNavClick('prompts')}
-        />
-        <NavButton
-          icon={UserCircle}
-          label="Roles"
-          isActive={currentView === 'roles'}
-          isCollapsed={collapsed}
-          onClick={() => handleNavClick('roles')}
-        />
-        <NavButton
           icon={Clock}
           label="Taches"
           isActive={currentView === 'tasks'}
           isCollapsed={collapsed}
           onClick={() => handleNavClick('tasks')}
         />
+        <NavGroup
+          icon={UserPen}
+          label="Personnalisation"
+          isCollapsed={collapsed}
+          isActive={currentView === 'prompts' || currentView === 'roles'}
+        >
+          <NavButton
+            icon={BookOpen}
+            label="Prompts"
+            isActive={currentView === 'prompts'}
+            isCollapsed={collapsed}
+            onClick={() => handleNavClick('prompts')}
+            isNested
+          />
+          <NavButton
+            icon={UserCircle}
+            label="Roles"
+            isActive={currentView === 'roles'}
+            isCollapsed={collapsed}
+            onClick={() => handleNavClick('roles')}
+            isNested
+          />
+        </NavGroup>
+        
         <NavButton
           icon={Settings}
           label="Parametres"
@@ -257,20 +269,21 @@ interface NavButtonProps {
   isActive: boolean
   isCollapsed: boolean
   onClick: () => void
+  isNested?: boolean
 }
 
-function NavButton({ icon: Icon, label, isActive, isCollapsed, onClick }: NavButtonProps): React.JSX.Element {
+function NavButton({ icon: Icon, label, isActive, isCollapsed, onClick, isNested }: NavButtonProps): React.JSX.Element {
   const button = (
     <button
       onClick={onClick}
       className={cn(
-        'group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left',
+        'group flex w-full items-center gap-2.5 rounded-lg py-2 text-left',
         'transition-colors duration-150 ease-out',
         'outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
         isActive
           ? 'bg-sidebar-accent text-sidebar-accent-foreground'
           : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
-        isCollapsed && 'justify-center px-0'
+        isCollapsed ? 'justify-center px-0' : isNested ? 'pl-8 pr-2.5' : 'px-2.5'
       )}
     >
       <Icon
@@ -295,4 +308,63 @@ function NavButton({ icon: Icon, label, isActive, isCollapsed, onClick }: NavBut
   }
 
   return button
+}
+
+/* ── Collapsible nav group ─────────────────────────── */
+
+interface NavGroupProps {
+  icon: typeof Settings
+  label: string
+  isCollapsed: boolean
+  isActive: boolean
+  children: React.ReactNode
+}
+
+function NavGroup({ icon: Icon, label, isCollapsed, isActive, children }: NavGroupProps): React.JSX.Element {
+  const [isOpen, setIsOpen] = useState(isActive)
+
+  // Auto-expand when a child becomes active
+  useEffect(() => {
+    if (isActive) setIsOpen(true)
+  }, [isActive])
+
+  // When collapsed sidebar, render children directly (no group header)
+  if (isCollapsed) {
+    return <>{children}</>
+  }
+
+  return (
+    <div>
+      <button
+        onClick={() => setIsOpen((o) => !o)}
+        className={cn(
+          'group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left',
+          'transition-colors duration-150 ease-out',
+          'outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
+          isActive
+            ? 'text-sidebar-accent-foreground'
+            : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+        )}
+      >
+        <Icon
+          className={cn(
+            'shrink-0 size-4 transition-colors duration-150',
+            isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/40 group-hover:text-sidebar-foreground/60'
+          )}
+        />
+        <span className="flex-1 text-[13px] font-medium leading-tight">{label}</span>
+        <ChevronRight
+          className={cn(
+            'size-3.5 text-sidebar-foreground/30 transition-transform duration-200',
+            isOpen && 'rotate-90'
+          )}
+        />
+      </button>
+      {isOpen && (
+        <div className="flex flex-col gap-0.5">
+          {children}
+        </div>
+      )}
+    </div>
+  )
 }

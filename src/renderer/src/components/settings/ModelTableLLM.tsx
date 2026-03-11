@@ -132,7 +132,7 @@ function ProviderSection({
             <div className="flex items-center gap-1.5">
               <span className="text-foreground">{model.displayName}</span>
               {model.supportsThinking && (
-                <span className="rounded bg-violet-500/10 px-1 py-0.5 text-[9px] font-medium text-violet-500">
+                <span className="rounded bg-muted px-1 py-0.5 text-[9px] font-medium text-muted-foreground">
                   think
                 </span>
               )}

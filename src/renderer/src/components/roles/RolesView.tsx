@@ -377,7 +377,7 @@ function RoleCard({
         {/* Tags + variables */}
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {role.variables && role.variables.length > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] text-violet-600 dark:text-violet-400">
+            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
               <Variable className="size-2.5" />
               {role.variables.length} variable{role.variables.length > 1 ? 's' : ''}
             </span>

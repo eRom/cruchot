@@ -662,7 +662,7 @@ export function InputZone({
             'focus-within:border-ring/40 focus-within:shadow-md',
             'focus-within:shadow-ring/5 dark:focus-within:shadow-ring/10',
             isStreaming && 'border-primary/30',
-            isImageMode && 'border-violet-500/30 focus-within:border-violet-500/40'
+            isImageMode && 'border-primary/30 focus-within:border-primary/40'
           )}
         >
           {/* Workspace file references */}
@@ -814,7 +814,7 @@ export function InputZone({
                   variant="ghost"
                   size="icon"
                   disabled
-                  className="size-8 rounded-full bg-violet-500/10 text-violet-600"
+                  className="size-8 rounded-full bg-muted text-muted-foreground"
                 >
                   <Loader2 className="size-4 animate-spin" />
                 </Button>
@@ -830,9 +830,7 @@ export function InputZone({
                         'size-8 rounded-full',
                         'transition-all duration-200 ease-out',
                         canSend && [
-                          isImageMode
-                            ? 'bg-violet-600 text-white hover:bg-violet-700'
-                            : 'bg-primary text-primary-foreground',
+                          'bg-primary text-primary-foreground',
                           'shadow-sm hover:shadow-md',
                           'hover:scale-105 active:scale-95'
                         ],
