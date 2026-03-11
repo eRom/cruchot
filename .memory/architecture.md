@@ -1,9 +1,9 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11
+> Derniere mise a jour : 2026-03-12
 
 ## Vue d'ensemble
 
-App desktop locale de chat multi-LLM (Electron). 11 providers (9 cloud + OpenRouter + 2 locaux), generation d'images, TTS cloud (OpenAI/Google), statistiques de couts, workspace co-work (LLM context-aware sur fichiers), taches planifiees, **integration MCP** (serveurs externes). Zero serveur backend.
+App desktop locale de chat multi-LLM (Electron). 11 providers (9 cloud + OpenRouter + 2 locaux), generation d'images, TTS cloud (OpenAI/Google), statistiques de couts, workspace co-work (LLM context-aware sur fichiers), taches planifiees, **integration MCP** (serveurs externes), **memory fragments** (contexte utilisateur persistant). Zero serveur backend.
 
 ## Stack
 
@@ -25,26 +25,26 @@ Renderer (React UI) → contextBridge IPC → Preload (bridge) → ipcMain → M
 src/
   main/
     index.ts              # Lifecycle, auto-updater, custom protocol local-image://
-    ipc/                  # Handlers IPC par domaine (dont mcp.ipc.ts)
+    ipc/                  # Handlers IPC par domaine (dont mcp.ipc.ts, memory-fragments.ipc.ts)
     llm/                  # Router AI SDK, cost-calculator, image gen, workspace-tools, errors, thinking
-    db/schema.ts          # 14 tables Drizzle
-    db/queries/           # Queries par domaine (dont mcp-servers.ts)
+    db/schema.ts          # 15 tables Drizzle
+    db/queries/           # Queries par domaine (dont mcp-servers.ts, memory-fragments.ts)
     services/             # Credential, backup, workspace, file-watcher, tts, scheduler, task-executor, mcp-manager
   preload/
     index.ts              # contextBridge
     types.ts              # Types partages + DTOs
   renderer/src/
     App.tsx               # Routing par ViewMode
-    stores/               # Zustand (conversations, providers, projects, messages, settings, ui, roles, workspace, tasks, mcp)
-    components/           # chat/, layout/, projects/, prompts/, roles/, tasks/, mcp/, settings/, statistics/, images/, conversations/, workspace/, common/
+    stores/               # Zustand (conversations, providers, projects, messages, settings, ui, roles, workspace, tasks, mcp, memory)
+    components/           # chat/, layout/, projects/, prompts/, roles/, tasks/, mcp/, memory/, settings/, statistics/, images/, conversations/, workspace/, common/
     hooks/                # useStreaming, useInitApp, useKeyboardShortcuts, useAudioPlayer, useContextWindow
 ```
 
 ## Navigation (ViewMode)
 
-`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (8 tabs), images, roles, tasks, mcp, statistics
+`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (8 tabs), images, roles, tasks, mcp, memory, statistics
 
-Sidebar NavGroup "Personnalisation" regroupe : Prompts, Roles, MCP
+Sidebar NavGroup "Personnalisation" regroupe : Prompts, Roles, MCP, Memoire
 
 ## Flux principal — Chat
 
@@ -68,9 +68,26 @@ McpManagerService (singleton) → Map<serverId, MCPClient>
 - Status push via IPC `mcp:status-changed`
 - Scope par projet (global ou lie a un projectId)
 
+## Memory Fragments
+
+Fragments de contexte personnel injectes dans le system prompt de toutes les conversations :
+
+```
+buildMemoryBlock() → <user-memory> XML block
+  ↓
+chat.ipc.ts : memoryBlock + systemPrompt (role) + workspace-files + tools prompt
+  ↓
+streamText({ messages: [{ role: 'system', content: combined }] })
+```
+
+- Ordre injection : memory fragments → role → workspace files → tools prompt
+- Stocke en DB (pas localStorage), charge via `memory.store.ts` au demarrage
+- Max 50 fragments, 2000 chars/fragment, alerte UI > 5000 chars total
+- Drag & drop HTML5 natif pour reordonner (`sortOrder`)
+
 ## Donnees
 
-- SQLite WAL + FTS5, 14 tables (dont `mcp_servers`)
+- SQLite WAL + FTS5, 15 tables (dont `mcp_servers`, `memory_fragments`)
 - Cles API chiffrees via safeStorage (Keychain macOS)
 - Settings UI via Zustand persist (localStorage)
 - Images/attachments sur filesystem, servis via `local-image://` protocol
