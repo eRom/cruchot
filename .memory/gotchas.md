@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-12 (session 29 — Audit securite complet)
+> Derniere mise a jour : 2026-03-12 (session 31 — Slash Commands)
 
 ## AI SDK v6 — Breaking changes (checklist)
 
@@ -193,6 +193,13 @@
 - **`currentAbortController` global** : variable module-level unique dans chat.ipc.ts. Fragile en multi-fenetres (scenario theorique).
 - **Listeners IPC `removeAllListeners`** : trop large, supprime TOUS les listeners du channel. Risque en multi-fenetre.
 
+## Slash Commands — pieges session 31
+
+- **Peer dependency conflict CI** : `@perplexity-ai/ai-sdk@0.1.2` exige `ai@^5.0.0` mais le projet utilise `ai@^6.0.116`. `npm ci` est strict sur les peer deps → echec CI. Fix : `.npmrc` avec `legacy-peer-deps=true`. Probleme preexistant, pas lie aux slash commands.
+- **Table creation dans migrate.ts** : comme pour `remote_sessions` (S23), la table `slash_commands` doit etre ajoutee dans `src/main/db/migrate.ts` avec `CREATE TABLE IF NOT EXISTS`, pas via les migrations Drizzle.
+- **Cleanup order FK** : `slash_commands` a un FK vers `projects` → doit etre supprime AVANT `projects` dans `cleanup.ts`.
+- **Seed upsert** : `seedBuiltinCommands()` utilise un pattern "insert si absent" pour ne pas ecraser les builtins que l'utilisateur aurait personnalises (prompt modifie, etc.).
+
 ## Restant a faire
 
 - Search bar sidebar (T34)
@@ -205,3 +212,4 @@
 - Certificat Apple Developer ID (99$/an) pour signature + notarisation
 - Test app packagee (crash au lancement a investiguer — probablement lie aux node_modules manquants, a retester apres fix externals)
 - Remote Web : feature en cours sur branche `feature-remote-web` — UI aligne sur desktop, reste a valider visuellement avec Romain
+- Slash Commands : PR #13 ouverte sur `feature-slash-command`, en attente de merge

@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-12 (session 29 — Audit securite complet)
+> Derniere mise a jour : 2026-03-12 (session 31 — Slash Commands)
 
 ## Conventions de nommage
 
@@ -182,16 +182,28 @@
 - **Markdown** : renderer leger par regex (pas react-markdown — zero dep), suffisant pour le remote
 - **Dual-forward** : `handleChatMessage()` reutilisee avec source `'web'`, meme pattern que Telegram
 
-## Export/Import JSON (Prompts & Roles)
+## Export/Import JSON (Prompts, Roles & Commandes)
 
 - **Approche 100% renderer** — pas de nouveaux IPC handlers, donnees deja en memoire dans les stores Zustand
 - **Export** : `JSON.stringify()` + `Blob` + `URL.createObjectURL()` + `<a download>` (pattern standard browser)
-- **Import** : `<input type="file" accept=".json">` cache + `FileReader` → validation + `window.api.createPrompt()`/`createRole()` existants
-- **Format** : `{ type: 'multi-llm-prompts'|'multi-llm-roles', version: 1, exportedAt, items: [...] }` — pas d'id/createdAt/isBuiltin
+- **Import** : `<input type="file" accept=".json">` cache + `FileReader` → validation + `window.api.create*()` existants
+- **Format** : `{ type: 'multi-llm-prompts'|'multi-llm-roles'|'multi-llm-commands', version: 1, exportedAt, items: [...] }` — pas d'id/createdAt/isBuiltin
 - **Dedup** : `uniqueTitle()`/`uniqueName()` — si nom existe deja, suffixe `-1`, `-2`, etc. via Set des noms existants
-- **Validation import** : verification `type`, `Array.isArray(items)`, champs obligatoires (`title+content+type` pour prompts, `name` pour roles), try/catch JSON.parse → toast erreur
+- **Validation import** : verification `type`, `Array.isArray(items)`, champs obligatoires, try/catch JSON.parse → toast erreur
 - **UI** : boutons ghost Download/Upload dans le header (a gauche de "Nouveau"), bouton Download dans les hover actions de chaque card
-- **Roles builtin** : exportables (bouton Export visible) mais pas supprimables
+- **Builtins** : exportables (bouton Export visible) mais pas supprimables
+
+## Slash Commands
+
+- **Resolution renderer-side** : `useSlashCommands()` hook detecte `/` en debut de texte, filtre les commandes, resout les variables
+- **Variables** : `$ARGS` (tout apres le nom), `$1`-`$N` (args positionnels), `$MODEL`, `$PROJECT`, `$WORKSPACE`, `$DATE`
+- **Priorite** : projet > global > builtin (meme nom possible a differents scopes)
+- **Autocomplete** : `SlashCommandPicker` popover positionne au-dessus de InputZone, keyboard nav (ArrowUp/Down/Tab/Enter/Escape)
+- **Metadata** : `contentData.slashCommand` = `{ name, resolvedFrom }` → badge violet `/{name}` dans MessageItem
+- **Builtin seed** : `seedBuiltinCommands()` au startup — upsert par nom (n'ecrase pas les builtins personnalises par l'utilisateur)
+- **Noms** : regex `/^[a-z][a-z0-9-]*$/`, noms reserves blacklist (help, clear, settings, quit, exit)
+- **CRUD** : CommandsView (meme pattern que PromptsView — grille + formulaire inline + export/import JSON)
+- **Scope projet** : `projectId` nullable sur la table, filtre dans `getSlashCommandByName()`
 
 ## Data Cleanup / Factory Reset
 

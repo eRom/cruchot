@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-12 (session 29 — Audit securite complet)
+> Derniere mise a jour : 2026-03-12 (session 31 — Slash Commands)
 
 ## Main process
 
@@ -29,7 +29,7 @@
 | `src/main/llm/cost-calculator.ts` | Table PRICING + calcul cout |
 | `src/main/llm/image.ts` | Generation images multi-provider (Google + OpenAI) |
 | `src/main/llm/file-operations.ts` | Parser blocs `file:create/modify/delete` |
-| `src/main/db/schema.ts` | 16 tables Drizzle (dont mcp_servers, memory_fragments, remote_sessions) |
+| `src/main/db/schema.ts` | 18 tables Drizzle (dont mcp_servers, memory_fragments, remote_sessions, slash_commands) |
 | `src/main/services/workspace.service.ts` | Scan, read/write/delete, securite, .coworkignore |
 | `src/main/services/file-watcher.service.ts` | Chokidar wrapper |
 | `src/main/services/tts.service.ts` | TTS OpenAI (MP3) + Google (PCM→WAV) |
@@ -47,12 +47,15 @@
 | `src/main/db/queries/remote-server.ts` | CRUD table remote_server_sessions |
 | `src/main/db/queries/cleanup.ts` | Bulk delete : `deleteConversationsProjectsImages()` (zone orange) + `factoryResetDatabase()` (zone rouge), ordre FK strict |
 | `src/main/ipc/data.ipc.ts` | 2 handlers `data:cleanup` + `data:factory-reset` — stop services, delete DB, trash fichiers, **confirmation dialog native** (S29) |
+| `src/main/commands/builtin.ts` | 8 builtin slash commands definitions + `RESERVED_COMMAND_NAMES` Set |
+| `src/main/ipc/slash-commands.ipc.ts` | 8 handlers slash commands (list, get, create, update, delete, reset, reorder, seed) — Zod |
+| `src/main/db/queries/slash-commands.ts` | CRUD table slash_commands + seedBuiltinCommands (upsert) + getByName (priorite projet) + reorder |
 
 ## Preload
 
 | Fichier | Role |
 |---------|------|
-| `src/preload/index.ts` | contextBridge ~107 methodes |
+| `src/preload/index.ts` | contextBridge ~115 methodes |
 | `src/preload/types.ts` | Types partages, DTOs |
 
 ## Renderer — Composants cles
@@ -61,8 +64,9 @@
 |---------|------|
 | `src/renderer/src/App.tsx` | Routing ViewMode, shortcuts, onboarding |
 | `components/chat/ChatView.tsx` | Message list + WorkspacePanel, auto-open workspace |
-| `components/chat/InputZone.tsx` | Saisie, mode texte/image, pills (Thinking/Role/Prompt), FileReference |
-| `components/chat/MessageItem.tsx` | Markdown, images, ReasoningBlock, ToolCallBlock, FileOperationCards, footer |
+| `components/chat/InputZone.tsx` | Saisie, mode texte/image, pills (Thinking/Role/Prompt), FileReference, SlashCommandPicker |
+| `components/chat/SlashCommandPicker.tsx` | Popover autocomplete slash commands — keyboard nav, fuzzy filter |
+| `components/chat/MessageItem.tsx` | Markdown, images, ReasoningBlock, ToolCallBlock, FileOperationCards, footer, slash command badge |
 | `components/chat/ModelSelector.tsx` | Liste plate 2 sections, filtre favoris |
 | `components/chat/MarkdownRenderer.tsx` | react-markdown + Shiki (DOMPurify) + KaTeX + Mermaid (DOMPurify) |
 | `components/layout/Sidebar.tsx` | Drag zone, ProjectSelector, ConversationList, nav 9 vues (dont MCP) |
@@ -80,6 +84,7 @@
 | `components/workspace/DiffView.tsx` | Viewer diff unifie colore (+/vert, -/rouge, @@/bleu) |
 | `components/prompts/PromptsView.tsx` | Vue prompts — grille, CRUD, **export/import JSON** (export all, export single, import avec dedup) |
 | `components/roles/RolesView.tsx` | Vue roles — grille, CRUD, **export/import JSON** (meme pattern que prompts) |
+| `components/commands/CommandsView.tsx` | Vue slash commands — grille CRUD + formulaire + export/import JSON (meme pattern PromptsView) |
 | `components/common/CommandPalette.tsx` | Cmd+K — recherche globale |
 
 ## Renderer — Stores
@@ -88,7 +93,8 @@
 |---------|------|
 | `stores/settings.store.ts` | Persist localStorage : theme, font, density, temperature, maxTokens, topP, thinkingEffort, ttsProvider, favoriteModelIds, summaryModelId, summaryPrompt |
 | `stores/messages.store.ts` | Messages conversation active, ToolCallDisplay |
-| `stores/ui.store.ts` | ViewMode, isStreaming, commandPalette, settingsTab |
+| `stores/ui.store.ts` | ViewMode (dont 'commands'), isStreaming, commandPalette, settingsTab |
+| `stores/slash-commands.store.ts` | Slash commands — loadCommands, CRUD, setCommands |
 | `stores/conversations.store.ts` | CRUD conversations (projectId, roleId) |
 | `stores/providers.store.ts` | Providers + models + selectModel() |
 | `stores/workspace.store.ts` | rootPath, tree, attachedFiles, isPanelOpen |
@@ -105,6 +111,7 @@
 | `hooks/useStreaming.ts` | Ecoute chat:chunk, tool-call/tool-result |
 | `hooks/useAudioPlayer.ts` | TTS dual-mode browser/cloud, cache |
 | `hooks/useKeyboardShortcuts.ts` | Cmd+N/K/M/B/virgule, Escape |
+| `hooks/useSlashCommands.ts` | Detection slash, fuzzy filter, variable resolution ($ARGS, $1-$N, $MODEL, etc.) |
 
 ## Config
 
@@ -114,6 +121,8 @@
 | `CLAUDE.md` | Regles projet |
 | `specs/feature-remote-control/` | Spec Remote Telegram (7 fichiers, implementee session 23) |
 | `specs/feature-mcp-integration.md` | Spec MCP (implementee session 18-19) |
+| `specs/feature-slash-command.md` | Spec Slash Commands (implementee session 31, PR #13) |
+| `.npmrc` | `legacy-peer-deps=true` — fix CI peer dep conflict (@perplexity-ai/ai-sdk vs ai@^6) |
 | `src/main/window.ts` | BrowserWindow config (sandbox, CSP), shell.openExternal avec confirmation dialog |
 | `src/main/llm/attachments.ts` | Validation attachments (extension, taille, confinement path userData+workspace) |
 | `src/main/services/updater.service.ts` | Auto-updater electron-updater — check periodique, download, install, IPC broadcast |

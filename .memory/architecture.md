@@ -1,9 +1,9 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-12 (session 29 — Audit securite complet)
+> Derniere mise a jour : 2026-03-12 (session 31 — Slash Commands)
 
 ## Vue d'ensemble
 
-App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud (OpenAI/Google), statistiques de couts, workspace co-work (LLM context-aware sur fichiers), **integration Git** (branche, status, diff, AI commit), taches planifiees, **integration MCP** (serveurs externes), **memory fragments** (contexte utilisateur persistant), **Remote Telegram** (controle a distance via bot), **Remote Web** (controle a distance via navigateur/mobile), **export/import JSON** (prompts & roles). Zero serveur backend.
+App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud (OpenAI/Google), statistiques de couts, workspace co-work (LLM context-aware sur fichiers), **integration Git** (branche, status, diff, AI commit), taches planifiees, **integration MCP** (serveurs externes), **memory fragments** (contexte utilisateur persistant), **Remote Telegram** (controle a distance via bot), **Remote Web** (controle a distance via navigateur/mobile), **export/import JSON** (prompts, roles & commandes), **slash commands** (`/command [args]` dans InputZone). Zero serveur backend.
 
 ## Stack
 
@@ -16,7 +16,7 @@ Renderer (React UI) → contextBridge IPC → Preload (bridge) → ipcMain → M
 ```
 
 - **Main** : cles API (safeStorage), appels LLM, DB SQLite, services
-- **Preload** : `window.api` via contextBridge (~107 methodes typees)
+- **Preload** : `window.api` via contextBridge (~115 methodes typees)
 - **Renderer** : UI React pure, aucun acces Node.js
 
 ## Arborescence
@@ -25,26 +25,27 @@ Renderer (React UI) → contextBridge IPC → Preload (bridge) → ipcMain → M
 src/
   main/
     index.ts              # Lifecycle, auto-updater, custom protocol local-image://
-    ipc/                  # Handlers IPC par domaine (dont mcp.ipc.ts, memory-fragments.ipc.ts, git.ipc.ts, remote.ipc.ts, data.ipc.ts)
+    ipc/                  # Handlers IPC par domaine (dont mcp.ipc.ts, memory-fragments.ipc.ts, git.ipc.ts, remote.ipc.ts, data.ipc.ts, slash-commands.ipc.ts)
+    commands/             # Builtin slash commands definitions
     llm/                  # Router AI SDK, cost-calculator, image gen, workspace-tools, errors, thinking
-    db/schema.ts          # 16 tables Drizzle
-    db/queries/           # Queries par domaine (dont mcp-servers.ts, memory-fragments.ts, remote-sessions.ts, cleanup.ts)
+    db/schema.ts          # 18 tables Drizzle (dont slash_commands)
+    db/queries/           # Queries par domaine (dont mcp-servers.ts, memory-fragments.ts, remote-sessions.ts, slash-commands.ts, cleanup.ts)
     services/             # Credential, backup, workspace, file-watcher, tts, scheduler, task-executor, mcp-manager, git, telegram-bot
   preload/
     index.ts              # contextBridge
     types.ts              # Types partages + DTOs
   renderer/src/
     App.tsx               # Routing par ViewMode
-    stores/               # Zustand (conversations, providers, projects, messages, settings, ui, roles, workspace, tasks, mcp, memory, git, remote)
-    components/           # chat/, layout/, projects/, prompts/, roles/, tasks/, mcp/, memory/, settings/, statistics/, images/, conversations/, workspace/, common/
+    stores/               # Zustand (conversations, providers, projects, messages, settings, ui, roles, workspace, tasks, mcp, memory, git, remote, slash-commands)
+    components/           # chat/, layout/, projects/, prompts/, roles/, tasks/, mcp/, memory/, commands/, settings/, statistics/, images/, conversations/, workspace/, common/
     hooks/                # useStreaming, useInitApp, useKeyboardShortcuts, useAudioPlayer, useContextWindow
 ```
 
 ## Navigation (ViewMode)
 
-`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (10 tabs), images, roles, tasks, mcp, memory, statistics
+`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (10 tabs), images, roles, tasks, mcp, memory, commands, statistics
 
-Sidebar NavGroup "Personnalisation" regroupe : Prompts, Roles, MCP, Memoire
+Sidebar NavGroup "Personnalisation" regroupe : Prompts, Roles, MCP, Memoire, Commandes
 
 ## Flux principal — Chat
 
@@ -178,9 +179,29 @@ Couches de protection :
 - **Remote Web** : `get-conversations` + `cancel-stream` exigent sessionToken (S29), ecoute 127.0.0.1 uniquement
 - **Factory reset** : double confirmation — renderer (input "DELETE") + main process (dialog.showMessageBox natif, S29)
 
+## Slash Commands
+
+```
+InputZone → useSlashCommands() → SlashCommandPicker (autocomplete)
+  → resolve(commandName, rawText) → variable substitution ($ARGS, $1-$N, $MODEL, $PROJECT, $WORKSPACE, $DATE)
+  → resolved prompt sent as normal content via IPC "chat:send"
+  → slashCommand metadata stored in contentData → violet badge in MessageItem
+```
+
+- **Resolution 100% renderer** : le main process recoit le prompt resolu, pas la commande brute
+- **8 builtins** : resume, explain, refactor, debug, translate, commit-msg, review, test
+- **Seed** : `seedBuiltinCommands()` au startup (upsert — ne pas ecraser les builtins personnalises)
+- **Noms reserves** : help, clear, settings, quit, exit (blacklist dans validation)
+- **Scope projet** : `projectId` nullable — global si null, sinon lie a un projet. Priorite : projet > global > builtin
+- **CRUD** : CommandsView (grille + formulaire inline, meme pattern que PromptsView)
+- **Export/Import JSON** : meme pattern que Prompts & Roles
+- **Autocomplete** : SlashCommandPicker popover, keyboard nav (ArrowUp/Down, Tab, Enter, Escape)
+- **DB** : table `slash_commands` (18e table) — name, description, prompt, category, projectId FK, isBuiltin, sortOrder
+- **IPC** : 8 handlers dans `slash-commands.ipc.ts` (list, get, create, update, delete, reset, reorder, seed) — Zod, regex `/^[a-z][a-z0-9-]*$/`
+
 ## Donnees
 
-- SQLite WAL + FTS5, 16 tables (dont `mcp_servers`, `memory_fragments`, `remote_sessions`)
+- SQLite WAL + FTS5, 18 tables (dont `mcp_servers`, `memory_fragments`, `remote_sessions`, `slash_commands`)
 - Cles API chiffrees via safeStorage (Keychain macOS)
 - Settings UI via Zustand persist (localStorage)
 - Images/attachments sur filesystem, servis via `local-image://` protocol
