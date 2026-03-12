@@ -8,7 +8,8 @@ import {
   getDeepSeekProvider,
   getQwenProvider,
   getPerplexityProvider,
-  getLmStudioProvider
+  getLmStudioProvider,
+  getOllamaProvider
 } from './providers'
 
 /**
@@ -45,8 +46,7 @@ export function getModel(providerId: string, modelId: string): LanguageModel {
       return getLmStudioProvider()(modelId)
 
     case 'ollama':
-      // TODO: T22 — Ollama via community provider
-      throw new Error('Ollama provider not yet implemented')
+      return getOllamaProvider()(modelId)
 
     default:
       throw new Error(`Unknown provider: ${providerId}`)

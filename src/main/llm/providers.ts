@@ -6,7 +6,7 @@ import { createXai } from '@ai-sdk/xai'
 import { createDeepSeek } from '@ai-sdk/deepseek'
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { getApiKeyForProvider } from '../ipc/providers.ipc'
-import { getLmStudioBaseUrl } from '../services/local-providers.service'
+import { getLmStudioBaseUrl, getOllamaBaseUrl } from '../services/local-providers.service'
 
 /**
  * Creates configured AI SDK provider instances.
@@ -73,6 +73,14 @@ export function getLmStudioProvider() {
   const baseUrl = getLmStudioBaseUrl()
   return createOpenAICompatible({
     name: 'lmstudio',
+    baseURL: `${baseUrl}/v1`
+  })
+}
+
+export function getOllamaProvider() {
+  const baseUrl = getOllamaBaseUrl()
+  return createOpenAICompatible({
+    name: 'ollama',
     baseURL: `${baseUrl}/v1`
   })
 }

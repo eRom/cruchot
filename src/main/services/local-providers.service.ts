@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm'
 import { getDatabase } from '../db'
 import { settings } from '../db/schema'
 
-const OLLAMA_BASE_URL = 'http://localhost:11434'
+const OLLAMA_DEFAULT_BASE_URL = 'http://localhost:11434'
 const LMSTUDIO_DEFAULT_BASE_URL = 'http://localhost:1234'
 const DETECT_TIMEOUT_MS = 3_000
 
@@ -16,6 +16,7 @@ const DETECT_TIMEOUT_MS = 3_000
 // ---------------------------------------------------------------------------
 
 const SETTING_KEY_LMSTUDIO_URL = 'lmstudio:baseUrl'
+const SETTING_KEY_OLLAMA_URL = 'ollama:baseUrl'
 
 export function getLmStudioBaseUrl(): string {
   try {
@@ -31,6 +32,27 @@ export function setLmStudioBaseUrl(baseUrl: string): void {
   const db = getDatabase()
   db.insert(settings)
     .values({ key: SETTING_KEY_LMSTUDIO_URL, value: baseUrl, updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: settings.key,
+      set: { value: baseUrl, updatedAt: new Date() }
+    })
+    .run()
+}
+
+export function getOllamaBaseUrl(): string {
+  try {
+    const db = getDatabase()
+    const result = db.select().from(settings).where(eq(settings.key, SETTING_KEY_OLLAMA_URL)).get()
+    return result?.value || OLLAMA_DEFAULT_BASE_URL
+  } catch {
+    return OLLAMA_DEFAULT_BASE_URL
+  }
+}
+
+export function setOllamaBaseUrl(baseUrl: string): void {
+  const db = getDatabase()
+  db.insert(settings)
+    .values({ key: SETTING_KEY_OLLAMA_URL, value: baseUrl, updatedAt: new Date() })
     .onConflictDoUpdate({
       target: settings.key,
       set: { value: baseUrl, updatedAt: new Date() }
@@ -120,7 +142,7 @@ async function isReachable(url: string): Promise<boolean> {
  */
 export async function detectLocalProviders(): Promise<LocalProviderStatus> {
   const [ollama, lmstudio] = await Promise.all([
-    isReachable(`${OLLAMA_BASE_URL}/api/tags`),
+    isReachable(`${getOllamaBaseUrl()}/api/tags`),
     isReachable(`${getLmStudioBaseUrl()}/v1/models`),
   ])
 
@@ -131,8 +153,9 @@ export async function detectLocalProviders(): Promise<LocalProviderStatus> {
  * Fetches the list of models available in a local Ollama instance.
  * Throws if Ollama is not running or unreachable.
  */
-export async function getOllamaModels(): Promise<OllamaModel[]> {
-  const response = await fetchWithTimeout(`${OLLAMA_BASE_URL}/api/tags`)
+export async function getOllamaModels(baseUrl?: string): Promise<OllamaModel[]> {
+  const url = baseUrl ?? getOllamaBaseUrl()
+  const response = await fetchWithTimeout(`${url}/api/tags`)
 
   if (!response.ok) {
     const body = await response.text().catch(() => '')
