@@ -8,6 +8,7 @@ import {
   conversations,
   scheduledTasks,
   mcpServers,
+  slashCommands,
   projects,
   roles,
   prompts,
@@ -35,6 +36,7 @@ export function deleteConversationsProjectsImages(): { imagePaths: string[] } {
   db.delete(messages).run()
   db.delete(scheduledTasks).run()
   db.delete(mcpServers).run()
+  db.delete(slashCommands).run()
   db.delete(conversations).run()
   db.delete(projects).run()
 
@@ -60,6 +62,7 @@ export function factoryResetDatabase(): { imagePaths: string[] } {
   db.delete(conversations).run()
   db.delete(scheduledTasks).run()
   db.delete(mcpServers).run()
+  db.delete(slashCommands).run()
   db.delete(projects).run()
   db.delete(roles).run()
   db.delete(prompts).run()

@@ -18,6 +18,7 @@ import { RolesView } from '@/components/roles/RolesView'
 import { TasksView } from '@/components/tasks/TasksView'
 import { McpView } from '@/components/mcp/McpView'
 import { MemoryView } from '@/components/memory/MemoryView'
+import { CommandsView } from '@/components/commands/CommandsView'
 import { useUiStore } from '@/stores/ui.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
@@ -137,6 +138,7 @@ function App(): React.JSX.Element {
             {currentView === 'tasks' && <TasksView />}
             {currentView === 'mcp' && <McpView />}
             {currentView === 'memory' && <MemoryView />}
+            {currentView === 'commands' && <CommandsView />}
           </AppLayout>
 
           {/* Command palette (Cmd+K) */}

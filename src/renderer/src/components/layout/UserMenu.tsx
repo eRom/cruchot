@@ -19,6 +19,7 @@ import {
   BookOpen,
   Brain,
   ChevronsDownUp,
+  Slash,
   ChevronsUpDown,
   Clock,
   FolderOpen,
@@ -120,7 +121,7 @@ export function UserMenu({ isCollapsed, currentView, onNavigate, enabledTasksCou
             <DropdownMenuSubTrigger
               className={cn(
                 'gap-2',
-                (currentView === 'prompts' || currentView === 'roles' || currentView === 'mcp' || currentView === 'memory')
+                (currentView === 'prompts' || currentView === 'roles' || currentView === 'mcp' || currentView === 'memory' || currentView === 'commands')
                   && 'font-semibold text-accent-foreground'
               )}
             >
@@ -151,6 +152,12 @@ export function UserMenu({ isCollapsed, currentView, onNavigate, enabledTasksCou
                 label="Memoire"
                 isActive={currentView === 'memory'}
                 onSelect={() => onNavigate('memory')}
+              />
+              <MenuItem
+                icon={Slash}
+                label="Commandes"
+                isActive={currentView === 'commands'}
+                onSelect={() => onNavigate('commands')}
               />
             </DropdownMenuSubContent>
           </DropdownMenuSub>

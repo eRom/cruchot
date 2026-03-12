@@ -209,6 +209,19 @@ export function runMigrations(): void {
       created_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS slash_commands (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      prompt TEXT NOT NULL,
+      category TEXT,
+      project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
+      is_builtin INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
     CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(content);
   `)
 
