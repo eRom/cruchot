@@ -19,7 +19,7 @@ export interface GitInfo {
 }
 
 // ── Minimal env (same pattern as workspace-tools bash) ────
-const GIT_ENV: Record<string, string> = {
+const GIT_BASE_ENV: Readonly<Record<string, string>> = {
   PATH: '/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin',
   GIT_TERMINAL_PROMPT: '0',
   NO_COLOR: '1',
@@ -41,8 +41,11 @@ export class GitService {
 
   constructor(rootPath: string) {
     this.rootPath = rootPath
-    // Set HOME to rootPath for git config resolution
-    GIT_ENV.HOME = rootPath
+  }
+
+  /** Build env per-call to avoid shared mutable state between instances */
+  private getEnv(): Record<string, string> {
+    return { ...GIT_BASE_ENV, HOME: this.rootPath }
   }
 
   // ── Detection ───────────────────────────────────────────
@@ -195,7 +198,7 @@ export class GitService {
     return new Promise((resolve, reject) => {
       execFile('git', args, {
         cwd: this.rootPath,
-        env: GIT_ENV,
+        env: this.getEnv(),
         timeout,
         maxBuffer: 1024 * 1024 // 1MB
       }, (error, stdout, stderr) => {

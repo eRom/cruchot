@@ -113,10 +113,28 @@ export function registerAllIpcHandlers(): void {
   registerDataIpc()
 
   // ── Settings ────────────────────────────────────────
+  const ALLOWED_SETTING_KEYS = new Set([
+    'multi-llm:user-name',
+    'multi-llm:user-avatar-path',
+    'multi-llm:default-model',
+    'multi-llm:remote:telegram-token',
+    'multi-llm:remote:allowed-user-id',
+    'multi-llm:remote:cf-hostname',
+    'multi-llm:remote:cf-token',
+    'multi-llm:onboarding_completed',
+  ])
+  const ALLOWED_SETTING_PREFIX = 'multi-llm:'
+
+  function isSettingKeyAllowed(key: string): boolean {
+    if (!key.startsWith(ALLOWED_SETTING_PREFIX)) return false
+    if (key.startsWith('multi-llm:apikey:')) return false
+    return ALLOWED_SETTING_KEYS.has(key)
+  }
+
   ipcMain.handle('settings:get', async (_event, key: string) => {
     if (!key || typeof key !== 'string') return null
-    if (key.startsWith('multi-llm:apikey:')) {
-      throw new Error('Access denied: use dedicated API key handlers')
+    if (!isSettingKeyAllowed(key)) {
+      throw new Error('Access denied: unknown setting key')
     }
     const db = getDatabase()
     const result = db.select().from(settings).where(eq(settings.key, key)).get()
@@ -125,8 +143,9 @@ export function registerAllIpcHandlers(): void {
 
   ipcMain.handle('settings:set', async (_event, key: string, value: string) => {
     if (!key || typeof key !== 'string') throw new Error('Key is required')
-    if (key.startsWith('multi-llm:apikey:')) {
-      throw new Error('Access denied: use dedicated API key handlers')
+    if (typeof value !== 'string' || value.length > 10_000) throw new Error('Invalid value')
+    if (!isSettingKeyAllowed(key)) {
+      throw new Error('Access denied: unknown setting key')
     }
     const db = getDatabase()
     db.insert(settings)

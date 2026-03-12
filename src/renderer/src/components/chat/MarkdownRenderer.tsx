@@ -161,16 +161,19 @@ const components: Partial<Components> = {
     </ol>
   ),
   li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-  a: ({ href, children }) => (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="font-medium text-blue-500 underline underline-offset-2 transition-colors hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300"
-    >
-      {children}
-    </a>
-  ),
+  a: ({ href, children }) => {
+    const safeHref = href && /^(https?:\/\/|mailto:|#)/.test(href) ? href : undefined
+    return (
+      <a
+        href={safeHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-medium text-blue-500 underline underline-offset-2 transition-colors hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300"
+      >
+        {children}
+      </a>
+    )
+  },
   blockquote: ({ children }) => (
     <blockquote className="my-3 border-l-2 border-primary/30 pl-4 italic text-muted-foreground">
       {children}

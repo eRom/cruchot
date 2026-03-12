@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-12 (session 27 — Data Cleanup & Factory Reset)
+> Derniere mise a jour : 2026-03-12 (session 29 — Audit securite complet)
 
 ## AI SDK v6 — Breaking changes (checklist)
 
@@ -156,6 +156,42 @@
 - **Ordre FK strict pour DELETE** : `attachments → images → remoteSessions → messages → conversations → scheduledTasks → mcpServers → projects → roles → prompts → memoryFragments → statistics → ttsUsage → settings`. Si l'ordre est mauvais, SQLite leve une FK constraint violation (meme si `foreign_keys = ON` est configure).
 - **Factory reset + localStorage.clear()** : le `localStorage.clear()` est critique — sans lui, Zustand persist rehydrate les stores au reload et l'app ne revient pas a l'etat initial (onboarding_completed resterait en localStorage).
 - **trash import dynamique** : `trash` est un module ESM → `await import('trash')` obligatoire dans le main process (comme chokidar et @ai-sdk/mcp).
+
+## Securite — audit complet session 29
+
+12 vulnerabilites identifiees et corrigees en une session (3 agents paralleles : main/IPC, renderer/preload, deps/config).
+
+### P0 corrigees
+- **WebSocket `get-conversations` + `cancel-stream` sans auth** : client non-paire pouvait lister les conversations et annuler le streaming. Fix : `validateSessionToken()` ajoute sur ces 2 handlers (comme tous les autres).
+- **`files:read` ouvert** : le renderer pouvait lire n'importe quel fichier du filesystem. Fix : `isPathAllowed()` ajoute avant `readAttachment()`.
+
+### P1 corrigees
+- **`GIT_ENV.HOME` mutable globalement** : objet module-level mute par chaque constructeur `GitService` → race condition multi-workspace. Fix : `GIT_BASE_ENV` en `Readonly`, `getEnv()` construit l'env par appel.
+- **MCP stdio herite `process.env` complet** : cles API/tokens du shell parent accessibles par un serveur MCP. Fix : env minimal (PATH, HOME, TMPDIR, LANG, SHELL, USER) + custom env vars seulement. Corrige dans `startServer()` ET `doTestConnection()`.
+- **Bash `TMPDIR=rootPath`** : pollution du workspace avec fichiers tmp + surface d'exfiltration. Fix : `os.tmpdir()`.
+- **XSS via `href` Markdown** : schema `javascript:` accepte dans les liens generes par le LLM. Fix : whitelist `https:/http:/mailto:/#` uniquement.
+- **`settings:get/set` sans whitelist** : ecriture/lecture arbitraire dans la table settings. Fix : `ALLOWED_SETTING_KEYS` Set + validation longueur 10K.
+- **CSP `img-src` sans `data:`** : le code utilise `data:image/png;base64,...` mais la CSP ne l'autorisait pas. Fix : ajout `data:` a `img-src`, `font-src 'self' data:`, `worker-src 'self' blob:`.
+
+### P2 corrigees
+- **Factory reset sans confirmation main** : seul le renderer validait "DELETE". Fix : `dialog.showMessageBox` natif cote main, independant du renderer.
+- **XML prompt injection** : contenu fichier injecte pouvait fermer les balises `</file></workspace-context>`. Fix : sanitize `</file>` et `</workspace-context>` via entity encoding.
+- **`readFile` split `/` au lieu de `path.sep`** : `BLOCKED_PATH_SEGMENTS` inefficace sur Windows. Fix : `normalize(filePath).split(sep)`.
+- **`PerplexitySources` URL** : `window.open(source.url)` sans validation schema. Fix : `new URL()` + check `https:/http:` avant `window.open`.
+
+### Points positifs confirmes (non modifies)
+- `nodeIntegration: false` + `contextIsolation: true` + `sandbox: true`
+- DOMPurify sur Shiki + Mermaid
+- WebSocket Remote ecoute `127.0.0.1` uniquement
+- Session tokens hashes SHA-256 en DB
+- Bash tool : env minimal + blocklist 30 patterns
+- `shell.openExternal` : TRUSTED_DOMAINS + confirmation dialog
+
+### Points restant a surveiller
+- **`pdf-parse` v1.1.1** : non maintenu (2019), parse PDF non fiables en main process. Migrer vers `pdfjs-dist` eventuel.
+- **MCP headers HTTP** : stockes en clair en DB (pas chiffres). Masques du renderer mais pas chiffres au repos.
+- **`currentAbortController` global** : variable module-level unique dans chat.ipc.ts. Fragile en multi-fenetres (scenario theorique).
+- **Listeners IPC `removeAllListeners`** : trop large, supprime TOUS les listeners du channel. Risque en multi-fenetre.
 
 ## Restant a faire
 

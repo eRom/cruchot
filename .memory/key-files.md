@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-12 (session 27 — Data Cleanup & Factory Reset)
+> Derniere mise a jour : 2026-03-12 (session 29 — Audit securite complet)
 
 ## Main process
 
@@ -7,7 +7,7 @@
 |---------|------|
 | `src/main/index.ts` | Lifecycle Electron, auto-updater, protocol `local-image://` (allowlist securise) |
 | `src/main/ipc/chat.ipc.ts` | Handler chat:send + `handleChatMessage()` exportee (dual desktop/telegram), streamText, dual-forward chunks, tool approval gate |
-| `src/main/ipc/index.ts` | Registre IPC + blocage `multi-llm:apikey:*` dans settings |
+| `src/main/ipc/index.ts` | Registre IPC + whitelist settings keys (`ALLOWED_SETTING_KEYS`) + blocage `multi-llm:apikey:*` |
 | `src/main/ipc/conversations.ipc.ts` | CRUD conversations (Zod), filtre projet, roles |
 | `src/main/ipc/images.ipc.ts` | Generation images — save fichier + DB |
 | `src/main/ipc/roles.ipc.ts` | CRUD roles (Zod) |
@@ -17,7 +17,7 @@
 | `src/main/ipc/scheduled-tasks.ipc.ts` | CRUD taches planifiees (Zod discriminatedUnion) |
 | `src/main/ipc/tts.ipc.ts` | TTS synthesize + getAvailableProviders |
 | `src/main/ipc/statistics.ipc.ts` | 5 handlers stats (Zod, days valide 1-3650) |
-| `src/main/ipc/files.ipc.ts` | openInOS/showInFolder securises (allowlist + extension blocklist), files:save limite 10MB |
+| `src/main/ipc/files.ipc.ts` | openInOS/showInFolder/read securises (allowlist + extension blocklist + isPathAllowed), files:save limite 10MB |
 | `src/main/ipc/mcp.ipc.ts` | 12 handlers MCP (CRUD, toggle, start/stop/restart, test) — Zod, env+headers jamais exposes |
 | `src/main/db/queries/mcp-servers.ts` | Queries CRUD table mcp_servers (getAll, getEnabled, create, update, delete, toggle) |
 | `src/main/services/mcp-manager.service.ts` | Singleton MCP lifecycle — Map<serverId, MCPClient>, prefixage outils, env chiffre, testConnection timeout 30s |
@@ -46,7 +46,7 @@
 | `src/main/ipc/remote-server.ipc.ts` | Handlers Remote Web (start, stop, generate-pairing, status, config) |
 | `src/main/db/queries/remote-server.ts` | CRUD table remote_server_sessions |
 | `src/main/db/queries/cleanup.ts` | Bulk delete : `deleteConversationsProjectsImages()` (zone orange) + `factoryResetDatabase()` (zone rouge), ordre FK strict |
-| `src/main/ipc/data.ipc.ts` | 2 handlers `data:cleanup` + `data:factory-reset` — stop services, delete DB, trash fichiers images/attachments/avatar |
+| `src/main/ipc/data.ipc.ts` | 2 handlers `data:cleanup` + `data:factory-reset` — stop services, delete DB, trash fichiers, **confirmation dialog native** (S29) |
 
 ## Preload
 

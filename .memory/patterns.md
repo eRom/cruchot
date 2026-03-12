@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-12 (session 27 — Data Cleanup & Factory Reset)
+> Derniere mise a jour : 2026-03-12 (session 29 — Audit securite complet)
 
 ## Conventions de nommage
 
@@ -112,14 +112,14 @@
 - Path allowlist : `path.resolve()` + `startsWith(dir + path.sep)` (jamais sans `path.sep`)
 - Extension blocklist (.app, .sh, .exe...) pour `shell.openPath()` et `files:save`
 - CSP durcie : script-src/connect-src 'self', object-src/base-uri/form-action/frame-src 'none'
-- Credential blocklist : settings:get/set bloque `multi-llm:apikey:*`
+- Credential/settings : whitelist `ALLOWED_SETTING_KEYS` (S29) + blocage `multi-llm:apikey:*` + validation longueur 10K max
 - Mermaid : `securityLevel: 'strict'` + DOMPurify sanitize SVG
 - Shiki : DOMPurify sanitize HTML (`MarkdownRenderer.tsx`)
 - Suppression : toujours `trash` (jamais rm/unlink)
 - DevTools : `!app.isPackaged` seulement
-- **Bash tool** : env minimal (PATH=/usr/local/bin:/usr/bin:/bin, HOME=workspace), blocklist ~30 patterns (rm -rf ., bash -c, scp, rsync, nc, tee /, base64|bash, python -c, etc.)
+- **Bash tool** : env minimal (PATH=/usr/local/bin:/usr/bin:/bin, HOME=workspace, TMPDIR=os.tmpdir()), blocklist ~30 patterns (rm -rf ., bash -c, scp, rsync, nc, tee /, base64|bash, python -c, etc.)
 - **Attachments** : path confine a userData/attachments + userData/images + workspace root
-- **MCP** : headers HTTP masques du renderer (`hasHeaders: boolean`), testConnection timeout 30s via Promise.race
+- **MCP** : headers HTTP masques du renderer (`hasHeaders: boolean`), testConnection timeout 30s via Promise.race, **env minimal stdio** (PATH/HOME/TMPDIR/LANG/SHELL/USER, plus de process.env complet S29)
 - **shell.openExternal** : confirmation dialog pour domaines hors TRUSTED_DOMAINS allowlist
 - **Workspace** : rootPath valide (isDirectory + rejet paths systeme /, /etc, /usr, /System, /Library)
 - **Import** : limite taille fichier 50MB avant JSON.parse
@@ -198,7 +198,7 @@
 - **2 zones de danger** dans Settings > Donnees :
   - **Zone orange** (`border-orange-500/30 bg-orange-500/5`) : nettoyage partiel — supprime conversations, projets, images, taches, MCP servers. Conserve roles, prompts, memoire, parametres, cles API. Confirmation 2 etapes.
   - **Zone rouge** (`border-red-500/30 bg-red-500/5`) : factory reset complet — supprime TOUTES les 14 tables. Input "DELETE" case-sensitive obligatoire. `localStorage.clear()` → reload → Welcome wizard (onboarding_completed absent).
-- **Backend** : `cleanup.ts` (queries bulk delete, ordre FK strict), `data.ipc.ts` (2 handlers, stop services avant delete, trash fichiers via `import('trash')`)
+- **Backend** : `cleanup.ts` (queries bulk delete, ordre FK strict), `data.ipc.ts` (2 handlers, stop services avant delete, trash fichiers via `import('trash')`, **confirmation dialog native main** pour factory reset S29)
 - **Services stoppes avant factory reset** : schedulerService.stopAll(), mcpManagerService.stopAll(), telegramBotService.destroy(), remoteServerService.stop() — tous en try/catch car peuvent ne pas etre demarres
 - **Singletons exports** : les services utilisent `export const fooService = new FooService()` (pas `export class` + `getInstance()`) — importer le singleton directement
 

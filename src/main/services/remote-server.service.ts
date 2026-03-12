@@ -334,9 +334,12 @@ class RemoteServerService extends EventEmitter {
         this.handleToolApprovalResponse(clientId, message)
         break
 
-      case 'cancel-stream':
+      case 'cancel-stream': {
+        const cancelClient = this.clients.get(clientId)
+        if (!cancelClient || !this.validateSessionToken(cancelClient, String(message.sessionToken ?? ''))) return
         this.emit('cancel-stream')
         break
+      }
 
       case 'ping':
         this.sendToClient(clientId, { type: 'pong' })
@@ -347,7 +350,7 @@ class RemoteServerService extends EventEmitter {
         break
 
       case 'get-conversations':
-        await this.handleGetConversations(clientId)
+        await this.handleGetConversations(clientId, message)
         break
 
       case 'get-history':
@@ -540,7 +543,13 @@ class RemoteServerService extends EventEmitter {
     }
   }
 
-  private async handleGetConversations(clientId: string): Promise<void> {
+  private async handleGetConversations(clientId: string, message: { type: string; sessionToken?: string }): Promise<void> {
+    const client = this.clients.get(clientId)
+    if (!client || !this.validateSessionToken(client, String(message.sessionToken ?? ''))) {
+      this.sendToClient(clientId, { type: 'error', message: 'Session invalide.' })
+      return
+    }
+
     try {
       const { getAllConversations } = await import('../db/queries/conversations')
       const convs = getAllConversations()

@@ -1,5 +1,5 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-12 (session 27 — Data Cleanup & Factory Reset)
+> Derniere mise a jour : 2026-03-12 (session 29 — Audit securite complet)
 
 ## Vue d'ensemble
 
@@ -158,20 +158,25 @@ chat.ipc.ts : contextBlock + WORKSPACE_TOOLS_PROMPT → system prompt
 - Max 50KB/fichier, 200KB total
 - Le LLM recoit le contexte projet sans utiliser d'outils → zero tool calls pour decouvrir le projet
 
-## Securite (audit session 20)
+## Securite (audits sessions 20, 24, 29)
 
 Couches de protection :
-- **Renderer** : sandbox true, CSP stricte (connect-src 'self'), DOMPurify sur Shiki + Mermaid
+- **Renderer** : sandbox true, CSP stricte (connect-src 'self', img-src data:, worker-src blob:, font-src data:), DOMPurify sur Shiki + Mermaid
 - **Preload** : contextBridge uniquement, jamais ipcRenderer direct
 - **IPC** : Zod validation sur tous les handlers (conversations, statistics, search inclus depuis S20)
-- **Bash tool** : env minimal (PATH restreint, zero heritage process.env), blocklist ~30 patterns, timeout 30s
-- **MCP** : env vars chiffrees, headers HTTP masques du renderer (`hasHeaders: boolean`), testConnection timeout 30s
+- **Settings** : whitelist de cles autorisees (`ALLOWED_SETTING_KEYS`) + blocage `multi-llm:apikey:*` + validation longueur 10K max (S29)
+- **Files** : `files:read` confine via `isPathAllowed()` (S29), path traversal (resolve + startsWith), SENSITIVE_PATTERNS case-insensitive, extension blocklist
+- **Bash tool** : env minimal (PATH restreint, zero heritage process.env, TMPDIR=os.tmpdir()), blocklist ~30 patterns, timeout 30s
+- **MCP** : env vars chiffrees, headers HTTP masques du renderer (`hasHeaders: boolean`), testConnection timeout 30s, **env minimal pour stdio** (plus de process.env complet, S29)
+- **Git** : env immutable `GIT_BASE_ENV` (Readonly), `getEnv()` construit par appel (plus de mutation globale, S29)
+- **Markdown** : href valide (https/http/mailto/# uniquement, S29) + DOMPurify
 - **Attachments** : path confine (userData + workspace uniquement)
-- **Files** : path traversal (resolve + startsWith), SENSITIVE_PATTERNS case-insensitive, extension blocklist
 - **Links** : shell.openExternal avec confirmation dialog pour domaines non-trusted (TRUSTED_DOMAINS allowlist)
-- **Workspace** : rootPath valide (isDirectory + rejet paths systeme)
+- **Workspace** : rootPath valide (isDirectory + rejet paths systeme), XML prompt injection sanitize (S29)
 - **Import** : limite taille fichier 50MB
 - **Remote Telegram** : triple verrou (token chiffre + pairing code + allowedUserId), sanitization avant envoi, tool approval gate inline keyboards
+- **Remote Web** : `get-conversations` + `cancel-stream` exigent sessionToken (S29), ecoute 127.0.0.1 uniquement
+- **Factory reset** : double confirmation — renderer (input "DELETE") + main process (dialog.showMessageBox natif, S29)
 
 ## Donnees
 

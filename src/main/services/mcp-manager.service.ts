@@ -70,11 +70,14 @@ class McpManagerService {
           }
         }
 
-        // Always pass full env to avoid spawn EBADF in Electron (missing PATH/stdio)
+        // Minimal env — do NOT leak full process.env (may contain API keys/tokens from parent shell)
         const spawnEnv: Record<string, string> = {
-          ...Object.fromEntries(
-            Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)
-          ),
+          PATH: process.env.PATH ?? '/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin',
+          HOME: process.env.HOME ?? '',
+          TMPDIR: process.env.TMPDIR ?? '/tmp',
+          LANG: process.env.LANG ?? 'en_US.UTF-8',
+          SHELL: process.env.SHELL ?? '/bin/zsh',
+          USER: process.env.USER ?? '',
           ...customEnv
         }
 
@@ -248,11 +251,14 @@ class McpManagerService {
       if (!config.command) throw new Error('Command is required')
       const { Experimental_StdioMCPTransport } = await import('@ai-sdk/mcp/mcp-stdio')
 
-      // Always inherit process.env to avoid spawn EBADF
+      // Minimal env — do NOT leak full process.env
       const spawnEnv: Record<string, string> = {
-        ...Object.fromEntries(
-          Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)
-        ),
+        PATH: process.env.PATH ?? '/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin',
+        HOME: process.env.HOME ?? '',
+        TMPDIR: process.env.TMPDIR ?? '/tmp',
+        LANG: process.env.LANG ?? 'en_US.UTF-8',
+        SHELL: process.env.SHELL ?? '/bin/zsh',
+        USER: process.env.USER ?? '',
         ...config.env
       }
 

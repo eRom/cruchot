@@ -4,13 +4,16 @@
 
 Crée un diagramme d'architecture de sécurité pour une app desktop Electron multi-LLM. Le diagramme doit montrer les couches de sécurité et les flux de données entre les 3 processus principaux.
 
+- Dossier de sortie : **./specs/assets/**
+- Nom du fichier : [sujet]**.png**
+
 Architecture à 3 couches :
 
-1. **Renderer (React, sandboxé)** — Aucun accès Node.js, CSP stricte (script-src 'self', connect-src 'self', object-src/frame-src 'none'), pas de clés API, DOMPurify sur le HTML Shiki et Mermaid.
+1. **Renderer (React, sandboxé)** — Aucun accès Node.js, CSP stricte et complète (script-src 'self', connect-src 'self', img-src 'self' local-image: data:, font-src 'self' data:, worker-src 'self' blob:, object-src/frame-src 'none'), pas de clés API, DOMPurify sur le HTML Shiki et Mermaid, liens Markdown avec validation de schéma (https/http/mailto/# uniquement — bloque javascript: et data:), URLs Perplexity Sources validées avant window.open.
 
-2. **Preload (contextBridge)** — ~84 méthodes typées exposées via `window.api`, jamais ipcRenderer directement. Callbacks nettoyés via removeAllListeners.
+2. **Preload (contextBridge)** — ~107 méthodes typées exposées via `window.api`, jamais ipcRenderer directement. Callbacks nettoyés via removeAllListeners.
 
-3. **Main (Node.js)** — Validation Zod sur tous les IPC handlers. Clés API chiffrées via safeStorage (Keychain macOS). Workspace tools (bash) avec env minimal isolé (PATH restreint, pas d'héritage process.env) et blocklist de commandes (~30 patterns). MCP servers : env vars chiffrées, headers HTTP masqués du renderer. Path traversal protection (path.resolve + startsWith). Fichiers sensibles bloqués (SENSITIVE_PATTERNS case-insensitive). Custom protocol local-image:// avec allowlist de répertoires. shell.openExternal avec confirmation dialog pour domaines non-trusted.
+3. **Main (Node.js)** — Validation Zod sur tous les IPC handlers. Clés API chiffrées via safeStorage (Keychain macOS). Settings protégés par whitelist de clés autorisées (ALLOWED_SETTING_KEYS) + validation longueur 10K max. Workspace tools (bash) avec env minimal isolé (PATH restreint, HOME=workspace, TMPDIR=os.tmpdir(), pas d'héritage process.env) et blocklist de commandes (~30 patterns). MCP servers : env minimal stdio (PATH/HOME/TMPDIR/LANG/SHELL/USER — plus d'héritage process.env complet), env vars custom chiffrées, headers HTTP masqués du renderer. Git : env immutable GIT_BASE_ENV (Readonly) + getEnv() construit par appel (pas de mutation globale entre instances). files:read confiné via isPathAllowed() (userData + workspace uniquement). Path traversal protection (path.resolve + startsWith, path segments via normalize+sep cross-platform). Fichiers sensibles bloqués (SENSITIVE_PATTERNS case-insensitive). Custom protocol local-image:// avec allowlist de répertoires. shell.openExternal avec confirmation dialog pour domaines non-trusted. Factory reset : double confirmation (renderer "DELETE" + dialog.showMessageBox natif côté main). XML context injection sanitisé (</file> et </workspace-context> échappés dans buildWorkspaceContextBlock).
 
 Flux principaux à montrer :
 - Renderer → IPC (Zod validation) → Main → LLM APIs (clés chiffrées)
@@ -20,6 +23,13 @@ Flux principaux à montrer :
 - Attachments : path confiné (userData + workspace uniquement)
 - DB SQLite : WAL mode, prepared statements (Drizzle ORM), credentials jamais en clair
 - Remote Telegram : triple verrou (token chiffré safeStorage + code pairing 6 chiffres 5min/5 tentatives + allowedUserId vérifié sur chaque message/callback), long polling HTTPS sortant (zéro port entrant), sanitization données sensibles avant envoi, tool approval gate (inline keyboards)
+- Remote Web : validateSessionToken() obligatoire sur TOUS les handlers WebSocket (get-conversations et cancel-stream inclus), écoute 127.0.0.1 uniquement, session tokens hashés SHA-256 en DB
+- Settings : whitelist ALLOWED_SETTING_KEYS (blocage lecture/écriture arbitraire en DB)
+- MCP subprocess : env minimal (plus d'héritage process.env complet — clés API du shell parent ne fuitent plus)
+- Git : env immutable Readonly + construction par appel (pas de mutation d'état global partagé entre instances)
+- Markdown : href validé (whitelist schémas https/http/mailto/#, bloque javascript: et data:)
+- Factory reset : double confirmation indépendante (renderer + dialog natif main process)
+- XML prompt : contenu fichiers sanitisé (balises fermantes échappées, bloque l'injection de prompt)
 
 Style : technique et épuré, fond sombre, couleurs : rouge pour les barrières de sécurité, vert pour les flux validés, jaune/orange pour les zones à risque contrôlé (bash tool, MCP subprocess).
 
