@@ -22,6 +22,9 @@ const SENSITIVE_ROOTS = [
 let activeWorkspace: WorkspaceService | null = null
 let activeWatcher: FileWatcherService | null = null
 
+// Paths approved by the user during this session (persists until app restart)
+const approvedSensitivePaths = new Set<string>()
+
 /**
  * Returns the root path of the currently active workspace, or null.
  * Used by other IPC modules for path validation.
@@ -67,9 +70,9 @@ export function registerWorkspaceIpc(): void {
       throw new Error(`Repertoire systeme refuse comme workspace : ${resolvedRoot}`)
     }
 
-    // Soft block: sensitive paths require user approval via native dialog
+    // Soft block: sensitive paths require user approval via native dialog (once per path)
     const sensitiveMatch = SENSITIVE_ROOTS.find(r => resolvedRoot === r || resolvedRoot.startsWith(r + path.sep))
-    if (sensitiveMatch) {
+    if (sensitiveMatch && !approvedSensitivePaths.has(resolvedRoot)) {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (win) {
         const { response } = await dialog.showMessageBox(win, {
@@ -84,6 +87,7 @@ export function registerWorkspaceIpc(): void {
         if (response !== 0) {
           throw new Error(`Acces au repertoire refuse par l'utilisateur : ${resolvedRoot}`)
         }
+        approvedSensitivePaths.add(resolvedRoot)
       }
     }
 

@@ -40,7 +40,10 @@ class McpManagerService {
     }
   }
 
-  async startServer(serverId: string): Promise<void> {
+  private static readonly SPAWN_RETRY_DELAY = 1000 // 1s
+  private static readonly SPAWN_MAX_RETRIES = 2
+
+  async startServer(serverId: string, _retryCount = 0): Promise<void> {
     // Stop existing if running
     if (this.servers.has(serverId)) {
       await this.stopServer(serverId)
@@ -129,6 +132,14 @@ class McpManagerService {
 
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err)
+
+      // Retry on EBADF — common Electron issue with file descriptors when launched from Finder
+      if (errorMsg.includes('EBADF') && _retryCount < McpManagerService.SPAWN_MAX_RETRIES) {
+        console.warn(`[MCP] spawn EBADF on "${serverConfig.name}", retry ${_retryCount + 1}/${McpManagerService.SPAWN_MAX_RETRIES}...`)
+        await new Promise(r => setTimeout(r, McpManagerService.SPAWN_RETRY_DELAY))
+        return this.startServer(serverId, _retryCount + 1)
+      }
+
       this.servers.set(serverId, {
         client: null as unknown as MCPClientInstance,
         status: 'error',

@@ -91,7 +91,7 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
             )}
           >
             {selectedProviderId ? (
-              <ProviderIcon providerId={selectedProviderId} size={13} className="opacity-70" />
+              <ProviderIcon providerId={selectedProviderId} size={13} />
             ) : (
               <ImageIcon className="size-3 shrink-0 opacity-60" />
             )}
@@ -139,7 +139,7 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
                 className="pl-5"
               >
                 <span className="flex items-center gap-2">
-                  <ProviderIcon providerId={provider.id} size={13} className="opacity-50" />
+                  <ProviderIcon providerId={provider.id} size={13} className="" />
                   <span className="truncate">{model.displayName}</span>
                 </span>
               </SelectItem>
@@ -164,7 +164,7 @@ export function ModelSelector({ disabled = false, className }: ModelSelectorProp
                   className="pl-5"
                 >
                   <span className="flex items-center gap-2">
-                    <ProviderIcon providerId={provider.id} size={13} className="opacity-50" />
+                    <ProviderIcon providerId={provider.id} size={13} className="" />
                     <span className="truncate">{model.displayName}</span>
                   </span>
                 </SelectItem>
