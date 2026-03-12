@@ -10,23 +10,13 @@ import { useUiStore, type ViewMode } from '@/stores/ui.store'
 import { useTasksStore } from '@/stores/tasks.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import {
-  BarChart3,
-  BookOpen,
-  Brain,
-  ChevronRight,
-  Clock,
-  FolderOpen,
-  Image,
-  Network,
   PanelLeftClose,
   PanelLeftOpen,
-  Plus,
-  Settings,
-  UserCircle,
-  UserPen
+  Plus
 } from 'lucide-react'
 import { RemoteIndicator } from './RemoteIndicator'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { UserMenu } from './UserMenu'
+import React, { useCallback, useEffect, useMemo } from 'react'
 
 /** Sidebar width constants — keep in sync with AppLayout grid */
 const SIDEBAR_WIDTH_EXPANDED = 260
@@ -206,206 +196,20 @@ export function Sidebar(): React.JSX.Element {
         onDeleteConversation={handleDeleteConversation}
       />
 
-      {/* ── Footer navigation ──────────────────────── */}
-      <nav
+      {/* ── Footer — User Menu ──────────────────────── */}
+      <div
         className={cn(
-          'flex shrink-0 border-t border-sidebar-border/50',
-          collapsed ? 'flex-col items-center gap-0.5 px-1 py-2' : 'flex-col gap-0.5 px-2 py-2'
+          'shrink-0 border-t border-sidebar-border/50',
+          collapsed ? 'px-1 py-2' : 'px-2 py-2'
         )}
       >
-        <NavButton
-          icon={FolderOpen}
-          label="Projets"
-          isActive={currentView === 'projects'}
+        <UserMenu
           isCollapsed={collapsed}
-          onClick={() => handleNavClick('projects')}
+          currentView={currentView}
+          onNavigate={handleNavClick}
+          enabledTasksCount={enabledTasksCount}
         />
-        <NavButton
-          icon={Clock}
-          label="Taches"
-          isActive={currentView === 'tasks'}
-          isCollapsed={collapsed}
-          onClick={() => handleNavClick('tasks')}
-          badge={enabledTasksCount}
-        />
-        <NavGroup
-          icon={UserPen}
-          label="Personnalisation"
-          isCollapsed={collapsed}
-          isActive={currentView === 'prompts' || currentView === 'roles' || currentView === 'mcp' || currentView === 'memory'}
-        >
-          <NavButton
-            icon={BookOpen}
-            label="Prompts"
-            isActive={currentView === 'prompts'}
-            isCollapsed={collapsed}
-            onClick={() => handleNavClick('prompts')}
-            isNested
-          />
-          <NavButton
-            icon={UserCircle}
-            label="Roles"
-            isActive={currentView === 'roles'}
-            isCollapsed={collapsed}
-            onClick={() => handleNavClick('roles')}
-            isNested
-          />
-          <NavButton
-            icon={Network}
-            label="MCP"
-            isActive={currentView === 'mcp'}
-            isCollapsed={collapsed}
-            onClick={() => handleNavClick('mcp')}
-            isNested
-          />
-          <NavButton
-            icon={Brain}
-            label="Memoire"
-            isActive={currentView === 'memory'}
-            isCollapsed={collapsed}
-            onClick={() => handleNavClick('memory')}
-            isNested
-          />
-        </NavGroup>
-        
-        <NavButton
-          icon={Settings}
-          label="Parametres"
-          isActive={currentView === 'settings'}
-          isCollapsed={collapsed}
-          onClick={() => handleNavClick('settings')}
-        />
-        <NavButton
-          icon={Image}
-          label="Images"
-          isActive={currentView === 'images'}
-          isCollapsed={collapsed}
-          onClick={() => handleNavClick('images')}
-        />
-        <NavButton
-          icon={BarChart3}
-          label="Statistiques"
-          isActive={currentView === 'statistics'}
-          isCollapsed={collapsed}
-          onClick={() => handleNavClick('statistics')}
-        />
-      </nav>
+      </div>
     </aside>
-  )
-}
-
-/* ── Small internal nav button ─────────────────────── */
-
-interface NavButtonProps {
-  icon: typeof Settings
-  label: string
-  isActive: boolean
-  isCollapsed: boolean
-  onClick: () => void
-  isNested?: boolean
-  badge?: number
-}
-
-function NavButton({ icon: Icon, label, isActive, isCollapsed, onClick, isNested, badge }: NavButtonProps): React.JSX.Element {
-  const button = (
-    <button
-      onClick={onClick}
-      className={cn(
-        'group flex w-full items-center gap-2.5 rounded-lg py-2 text-left',
-        'transition-colors duration-150 ease-out',
-        'outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
-        isActive
-          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-          : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
-        isCollapsed ? 'justify-center px-0' : isNested ? 'pl-8 pr-2.5' : 'px-2.5'
-      )}
-    >
-      <Icon
-        className={cn(
-          'shrink-0 size-4 transition-colors duration-150',
-          isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/40 group-hover:text-sidebar-foreground/60'
-        )}
-      />
-      {!isCollapsed && (
-        <>
-          <span className="text-[13px] font-medium leading-tight">{label}</span>
-          {badge != null && badge > 0 && (
-            <span className="ml-auto flex size-5 items-center justify-center rounded-full bg-sidebar-primary text-[10px] font-semibold text-sidebar-primary-foreground">
-              {badge}
-            </span>
-          )}
-        </>
-      )}
-    </button>
-  )
-
-  if (isCollapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent side="right">{label}</TooltipContent>
-      </Tooltip>
-    )
-  }
-
-  return button
-}
-
-/* ── Collapsible nav group ─────────────────────────── */
-
-interface NavGroupProps {
-  icon: typeof Settings
-  label: string
-  isCollapsed: boolean
-  isActive: boolean
-  children: React.ReactNode
-}
-
-function NavGroup({ icon: Icon, label, isCollapsed, isActive, children }: NavGroupProps): React.JSX.Element {
-  const [isOpen, setIsOpen] = useState(isActive)
-
-  // Auto-expand when a child becomes active
-  useEffect(() => {
-    if (isActive) setIsOpen(true)
-  }, [isActive])
-
-  // When collapsed sidebar, render children directly (no group header)
-  if (isCollapsed) {
-    return <>{children}</>
-  }
-
-  return (
-    <div>
-      <button
-        onClick={() => setIsOpen((o) => !o)}
-        className={cn(
-          'group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left',
-          'transition-colors duration-150 ease-out',
-          'outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
-          isActive
-            ? 'text-sidebar-accent-foreground'
-            : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-        )}
-      >
-        <Icon
-          className={cn(
-            'shrink-0 size-4 transition-colors duration-150',
-            isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/40 group-hover:text-sidebar-foreground/60'
-          )}
-        />
-        <span className="flex-1 text-[13px] font-medium leading-tight">{label}</span>
-        <ChevronRight
-          className={cn(
-            'size-3.5 text-sidebar-foreground/30 transition-transform duration-200',
-            isOpen && 'rotate-90'
-          )}
-        />
-      </button>
-      {isOpen && (
-        <div className="flex flex-col gap-0.5">
-          {children}
-        </div>
-      )}
-    </div>
   )
 }
