@@ -23,6 +23,7 @@ files:
   - "node_modules/trash/**/*"
   - "node_modules/ws/**/*"
   - "node_modules/qrcode/**/*"
+  - "node_modules/@perplexity-ai/**/*"
 
 # --- macOS ---
 mac:

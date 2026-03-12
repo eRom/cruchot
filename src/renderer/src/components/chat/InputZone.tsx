@@ -10,6 +10,7 @@ import { AspectRatioSelector, type AspectRatio } from '@/components/chat/AspectR
 import { ThinkingSelector } from '@/components/chat/ThinkingSelector'
 import { AttachmentPreview, type AttachmentItem } from '@/components/chat/AttachmentPreview'
 import { RoleSelector } from '@/components/roles/RoleSelector'
+import { SearchToggle } from '@/components/chat/SearchToggle'
 import { useProvidersStore } from '@/stores/providers.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
@@ -107,6 +108,12 @@ export function InputZone({
   const workspaceAttachedFiles = useWorkspaceStore((s) => s.attachedFiles)
   const detachWorkspaceFile = useWorkspaceStore((s) => s.detachFile)
   const toggleWorkspacePanel = useWorkspaceStore((s) => s.togglePanel)
+  const searchEnabled = useSettingsStore((s) => s.searchEnabled) ?? false
+  const providers = useProvidersStore((s) => s.providers)
+  const hasPerplexityKey = useMemo(
+    () => providers.some((p) => p.id === 'perplexity' && p.isConfigured),
+    [providers]
+  )
   const mcpServers = useMcpStore((s) => s.servers)
   const mcpConnectedCount = useMemo(
     () => mcpServers.filter((s) => s.status === 'connected').length,
@@ -526,7 +533,8 @@ export function InputZone({
         roleId: roleIdForPersist,
         attachments: attachmentRefsForIpc.length > 0 ? attachmentRefsForIpc : undefined,
         fileContexts: fileContexts && fileContexts.length > 0 ? fileContexts : undefined,
-        hasWorkspace: workspaceIsOpen || undefined
+        hasWorkspace: workspaceIsOpen || undefined,
+        searchEnabled: searchEnabled || undefined
       })
     } catch {
       // Erreur geree par le stream handler dans le main
@@ -564,6 +572,7 @@ export function InputZone({
     topP,
     thinkingEffort,
     selectedModel?.supportsThinking,
+    searchEnabled,
     activeRoleId,
     activeSystemPrompt,
     conversationMessages.length,
@@ -781,6 +790,9 @@ export function InputZone({
               <ModelSelector disabled={isBusy} />
               {selectedModel?.supportsThinking && !isImageMode && (
                 <ThinkingSelector disabled={isBusy} />
+              )}
+              {hasPerplexityKey && !isImageMode && (
+                <SearchToggle disabled={isBusy} />
               )}
               {!isImageMode && (
                 <RoleSelector disabled={isBusy || isRoleLocked} />

@@ -43,7 +43,8 @@ const sendMessageSchema = z.object({
     content: z.string().max(500_000),
     language: z.string().max(50)
   })).max(20).optional(),
-  hasWorkspace: z.boolean().optional()
+  hasWorkspace: z.boolean().optional(),
+  searchEnabled: z.boolean().optional()
 })
 
 let currentAbortController: AbortController | null = null
@@ -63,6 +64,8 @@ function shouldAutoApprove(toolName: string, session: { autoApproveRead: boolean
   if (toolName === 'listFiles') return session.autoApproveList
   if (toolName === 'writeFile') return session.autoApproveWrite
   if (toolName === 'bash') return session.autoApproveBash
+  // Search tool (external API like MCP)
+  if (toolName === 'search') return session.autoApproveMcp
   // MCP tools (contain double underscore)
   if (toolName.includes('__')) return session.autoApproveMcp
   // Unknown tools default to requiring approval
@@ -123,6 +126,7 @@ export interface HandleChatMessageParams {
   attachments?: AttachmentRef[]
   fileContexts?: Array<{ path: string; content: string; language: string }>
   hasWorkspace?: boolean
+  searchEnabled?: boolean
   source: 'desktop' | 'telegram' | 'websocket'
   window: BrowserWindow
 }
@@ -132,7 +136,7 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
     conversationId, content, modelId, providerId, systemPrompt,
     temperature, maxTokens, topP, thinkingEffort, roleId,
     attachments: attachmentRefs, fileContexts, hasWorkspace,
-    source, window: win
+    searchEnabled, source, window: win
   } = params
 
   // Abort any existing stream
@@ -289,6 +293,20 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       console.warn('[Chat] Failed to get MCP tools:', err)
     }
 
+    // Inject Perplexity Search tool if search mode is enabled
+    if (searchEnabled) {
+      try {
+        const { getApiKeyForProvider } = await import('./providers.ipc')
+        const perplexityApiKey = getApiKeyForProvider('perplexity')
+        if (perplexityApiKey) {
+          const { perplexitySearch } = await import('@perplexity-ai/ai-sdk')
+          mcpTools = { ...mcpTools, search: perplexitySearch({ apiKey: perplexityApiKey }) }
+        }
+      } catch (err) {
+        console.warn('[Chat] Failed to inject Perplexity Search tool:', err)
+      }
+    }
+
     // Merge all tools
     let tools = { ...workspaceTools, ...mcpTools } as Record<string, ToolLike>
 
@@ -336,6 +354,18 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       }
     }
 
+    // Inject search system prompt when search mode is enabled
+    if (searchEnabled) {
+      const searchPrompt = `Le mode recherche web est active. Vous disposez d'un outil "search" pour chercher sur le web via Perplexity.
+
+IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" pour trouver des informations sur le web. N'utilisez PAS les outils de workspace (bash, readFile, listFiles, writeFile) sauf si l'utilisateur demande explicitement de travailler sur des fichiers locaux. Citez vos sources dans la reponse.`
+      if (aiMessages.length > 0 && aiMessages[0].role === 'system') {
+        aiMessages[0].content += '\n\n' + searchPrompt
+      } else {
+        aiMessages.unshift({ role: 'system', content: searchPrompt })
+      }
+    }
+
     // Build providerOptions for thinking if supported
     const providerOptions = thinkingEffort && thinkingEffort !== 'off'
       ? buildThinkingProviderOptions(providerId, thinkingEffort)
@@ -345,6 +375,7 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
     let accumulatedReasoning = ''
     let accumulatedText = ''
     const accumulatedToolCalls: Array<{ toolName: string; args?: Record<string, unknown>; status: 'running' | 'success' | 'error'; error?: string }> = []
+    const accumulatedSearchSources: Array<{ title: string; url: string; snippet?: string }> = []
 
     // State machine for parsing <think> tags from open-source models (LM Studio, Ollama, etc.)
     // These models emit reasoning inside <think>...</think> as plain text-delta chunks.
@@ -474,6 +505,21 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
           // Tool execution completed — update status
           const toolResult = chunk as { type: 'tool-result'; toolName: string; toolCallId: string; output: unknown }
           const isError = toolResult.output != null && typeof toolResult.output === 'object' && 'error' in (toolResult.output as Record<string, unknown>)
+          // Extract search sources from Perplexity Search tool results
+          if (toolResult.toolName === 'search' && toolResult.output && typeof toolResult.output === 'object') {
+            const output = toolResult.output as Record<string, unknown>
+            if (Array.isArray(output.sources)) {
+              for (const src of output.sources) {
+                if (src && typeof src === 'object' && typeof (src as Record<string, unknown>).url === 'string') {
+                  accumulatedSearchSources.push({
+                    title: String((src as Record<string, unknown>).title ?? ''),
+                    url: String((src as Record<string, unknown>).url),
+                    snippet: (src as Record<string, unknown>).snippet ? String((src as Record<string, unknown>).snippet) : undefined
+                  })
+                }
+              }
+            }
+          }
           const tc = accumulatedToolCalls.find(t => t.toolName === toolResult.toolName && t.status === 'running')
           if (tc) {
             tc.status = isError ? 'error' : 'success'
@@ -563,6 +609,7 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       }))
     }
     if (fileOps.length > 0) contentData.fileOperations = fileOps.map(op => ({ ...op, status: 'pending' }))
+    if (accumulatedSearchSources.length > 0) contentData.searchSources = accumulatedSearchSources
 
     const savedMessage = createMessage({
       conversationId,
@@ -592,7 +639,8 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       toolCalls: accumulatedToolCalls.length > 0 ? accumulatedToolCalls.map(tc => ({
         ...tc,
         status: tc.status === 'running' ? 'success' : tc.status
-      })) : undefined
+      })) : undefined,
+      searchSources: accumulatedSearchSources.length > 0 ? accumulatedSearchSources : undefined
     })
 
     currentAbortController = null

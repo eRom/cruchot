@@ -59,21 +59,29 @@ class McpManagerService {
 
         const { Experimental_StdioMCPTransport } = await import('@ai-sdk/mcp/mcp-stdio')
 
-        // Decrypt env vars
-        let env: Record<string, string> | undefined
+        // Build env: always inherit process.env, merge custom env vars on top
+        let customEnv: Record<string, string> | undefined
         if (serverConfig.envEncrypted) {
           try {
             const decrypted = decryptApiKey(serverConfig.envEncrypted)
-            env = JSON.parse(decrypted)
+            customEnv = JSON.parse(decrypted)
           } catch {
             console.warn(`[MCP] Failed to decrypt env vars for server "${serverConfig.name}"`)
           }
         }
 
+        // Always pass full env to avoid spawn EBADF in Electron (missing PATH/stdio)
+        const spawnEnv: Record<string, string> = {
+          ...Object.fromEntries(
+            Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)
+          ),
+          ...customEnv
+        }
+
         transport = new Experimental_StdioMCPTransport({
           command: serverConfig.command,
           args: serverConfig.args ?? [],
-          env,
+          env: spawnEnv,
           cwd: serverConfig.cwd ?? undefined
         })
       } else if (serverConfig.transportType === 'http' || serverConfig.transportType === 'sse') {
@@ -239,10 +247,19 @@ class McpManagerService {
     if (config.transportType === 'stdio') {
       if (!config.command) throw new Error('Command is required')
       const { Experimental_StdioMCPTransport } = await import('@ai-sdk/mcp/mcp-stdio')
+
+      // Always inherit process.env to avoid spawn EBADF
+      const spawnEnv: Record<string, string> = {
+        ...Object.fromEntries(
+          Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)
+        ),
+        ...config.env
+      }
+
       transport = new Experimental_StdioMCPTransport({
         command: config.command,
         args: config.args ?? [],
-        env: config.env,
+        env: spawnEnv,
         cwd: config.cwd ?? undefined
       })
     } else {

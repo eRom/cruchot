@@ -24,6 +24,7 @@ export interface SendMessagePayload {
   attachments?: AttachmentRef[]
   fileContexts?: WorkspaceFileContext[]
   hasWorkspace?: boolean
+  searchEnabled?: boolean
 }
 
 export interface FileNode {
