@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   Plus,
   Search,
@@ -10,21 +10,60 @@ import {
   Copy,
   Check,
   Variable,
-  Shield
+  Shield,
+  Download,
+  Upload
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
 import { useRolesStore, type Role } from '@/stores/roles.store'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 type SortMode = 'activity' | 'name' | 'created'
 type SubView = 'grid' | 'create' | 'edit'
 type FilterCategory = 'all' | string
 
+// ── Export / Import helpers ──────────────────────────────────
+
+function exportRolesToJson(roles: Role[]): void {
+  const data = {
+    type: 'multi-llm-roles',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    items: roles.map(({ name, description, systemPrompt, icon, category, tags, variables }) => ({
+      name,
+      ...(description && { description }),
+      ...(systemPrompt && { systemPrompt }),
+      ...(icon && { icon }),
+      ...(category && { category }),
+      ...(tags?.length && { tags }),
+      ...(variables?.length && { variables })
+    }))
+  }
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `roles-${new Date().toISOString().slice(0, 10)}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function uniqueName(name: string, existing: Set<string>): string {
+  if (!existing.has(name)) return name
+  let i = 1
+  while (existing.has(`${name}-${i}`)) i++
+  return `${name}-${i}`
+}
+
 // ── Main view ────────────────────────────────────────────────
 
 export function RolesView() {
   const { roles, setRoles, addRole, updateRole, removeRole } = useRolesStore()
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [search, setSearch] = useState('')
   const [sortMode, setSortMode] = useState<SortMode>('activity')
@@ -136,6 +175,45 @@ export function RolesView() {
 
   const sortLabel = sortMode === 'activity' ? 'Activite' : sortMode === 'name' ? 'Nom' : 'Creation'
 
+  const handleImport = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      try {
+        const text = await file.text()
+        const parsed = JSON.parse(text)
+        if (parsed.type !== 'multi-llm-roles' || !Array.isArray(parsed.items) || parsed.items.length === 0) {
+          toast.error('Fichier invalide')
+          return
+        }
+        const existingNames = new Set(roles.map((r) => r.name))
+        let imported = 0
+        for (const item of parsed.items) {
+          if (!item.name) continue
+          const name = uniqueName(item.name, existingNames)
+          existingNames.add(name)
+          const created = await window.api.createRole({
+            name,
+            description: item.description,
+            systemPrompt: item.systemPrompt,
+            icon: item.icon,
+            category: item.category,
+            tags: item.tags,
+            variables: item.variables
+          })
+          addRole(created)
+          imported++
+        }
+        toast.success(`${imported} role${imported > 1 ? 's' : ''} importe${imported > 1 ? 's' : ''}`)
+      } catch {
+        toast.error('Fichier JSON invalide')
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = ''
+      }
+    },
+    [roles, addRole]
+  )
+
   // ── Sub-view: Formulaire (creation ou edition) ─────────────
   if (subView === 'create') {
     return <RoleForm onSave={handleCreate} onCancel={() => setSubView('grid')} />
@@ -162,16 +240,52 @@ export function RolesView() {
         <div className="mx-auto max-w-4xl">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">Roles</h1>
-            <Button
-              onClick={() => {
-                setEditingRole(null)
-                setSubView('create')
-              }}
-              className="gap-2"
-            >
-              <Plus className="size-4" />
-              Nouveau role
-            </Button>
+            <div className="flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => exportRolesToJson(roles)}
+                    disabled={roles.length === 0}
+                    className="size-9 text-muted-foreground hover:text-foreground"
+                  >
+                    <Download className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Exporter tous les roles</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="size-9 text-muted-foreground hover:text-foreground"
+                  >
+                    <Upload className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Importer des roles</TooltipContent>
+              </Tooltip>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                onChange={handleImport}
+                className="hidden"
+              />
+              <Button
+                onClick={() => {
+                  setEditingRole(null)
+                  setSubView('create')
+                }}
+                className="gap-2 ml-1"
+              >
+                <Plus className="size-4" />
+                Nouveau role
+              </Button>
+            </div>
           </div>
 
           {/* Search + Filter + Sort */}
@@ -233,6 +347,7 @@ export function RolesView() {
                   key={role.id}
                   role={role}
                   isDeleting={confirmDeleteId === role.id}
+                  onExport={() => exportRolesToJson([role])}
                   onEdit={() => {
                     setEditingRole(role)
                     setSubView('edit')
@@ -255,6 +370,7 @@ export function RolesView() {
 interface RoleCardProps {
   role: Role
   isDeleting: boolean
+  onExport: () => void
   onEdit: () => void
   onDelete: () => void
   onConfirmDelete: () => void
@@ -264,6 +380,7 @@ interface RoleCardProps {
 function RoleCard({
   role,
   isDeleting,
+  onExport,
   onEdit,
   onDelete,
   onConfirmDelete,
@@ -313,6 +430,13 @@ function RoleCard({
               className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={(e) => e.stopPropagation()}
             >
+              <button
+                onClick={(e) => { e.stopPropagation(); onExport() }}
+                className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                title="Exporter"
+              >
+                <Download className="size-3.5" />
+              </button>
               {role.systemPrompt && (
                 <button
                   onClick={handleCopy}
@@ -339,12 +463,19 @@ function RoleCard({
             </div>
           )}
 
-          {/* Builtin roles — edit only */}
+          {/* Builtin roles — export + copy + edit only */}
           {role.isBuiltin && (
             <div
               className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={(e) => e.stopPropagation()}
             >
+              <button
+                onClick={(e) => { e.stopPropagation(); onExport() }}
+                className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                title="Exporter"
+              >
+                <Download className="size-3.5" />
+              </button>
               {role.systemPrompt && (
                 <button
                   onClick={handleCopy}

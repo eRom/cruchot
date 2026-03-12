@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 25 — Remote Web)
+> Derniere mise a jour : 2026-03-12 (session 26 — Export/Import Prompts & Roles)
 
 ## AI SDK v6 — Breaking changes (checklist)
 

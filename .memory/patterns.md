@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 25 — Remote Web)
+> Derniere mise a jour : 2026-03-12 (session 26 — Export/Import Prompts & Roles)
 
 ## Conventions de nommage
 
@@ -181,6 +181,17 @@
 - **MessageItem desktop pattern** : user `max-w-[75%] rounded-2xl px-4 py-3 bg-sidebar shadow-sm`, assistant avatar `size-8 rounded-full bg-muted/60 ring-1 ring-border/30` + Sparkles SVG, content `flex-1 min-w-0 py-2`
 - **Markdown** : renderer leger par regex (pas react-markdown — zero dep), suffisant pour le remote
 - **Dual-forward** : `handleChatMessage()` reutilisee avec source `'web'`, meme pattern que Telegram
+
+## Export/Import JSON (Prompts & Roles)
+
+- **Approche 100% renderer** — pas de nouveaux IPC handlers, donnees deja en memoire dans les stores Zustand
+- **Export** : `JSON.stringify()` + `Blob` + `URL.createObjectURL()` + `<a download>` (pattern standard browser)
+- **Import** : `<input type="file" accept=".json">` cache + `FileReader` → validation + `window.api.createPrompt()`/`createRole()` existants
+- **Format** : `{ type: 'multi-llm-prompts'|'multi-llm-roles', version: 1, exportedAt, items: [...] }` — pas d'id/createdAt/isBuiltin
+- **Dedup** : `uniqueTitle()`/`uniqueName()` — si nom existe deja, suffixe `-1`, `-2`, etc. via Set des noms existants
+- **Validation import** : verification `type`, `Array.isArray(items)`, champs obligatoires (`title+content+type` pour prompts, `name` pour roles), try/catch JSON.parse → toast erreur
+- **UI** : boutons ghost Download/Upload dans le header (a gauche de "Nouveau"), bouton Download dans les hover actions de chaque card
+- **Roles builtin** : exportables (bouton Export visible) mais pas supprimables
 
 ## Conventions UI
 

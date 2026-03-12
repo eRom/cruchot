@@ -1,9 +1,9 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 25 — Remote Web)
+> Derniere mise a jour : 2026-03-12 (session 26 — Export/Import Prompts & Roles)
 
 ## Vue d'ensemble
 
-App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud (OpenAI/Google), statistiques de couts, workspace co-work (LLM context-aware sur fichiers), **integration Git** (branche, status, diff, AI commit), taches planifiees, **integration MCP** (serveurs externes), **memory fragments** (contexte utilisateur persistant), **Remote Telegram** (controle a distance via bot), **Remote Web** (controle a distance via navigateur/mobile). Zero serveur backend.
+App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud (OpenAI/Google), statistiques de couts, workspace co-work (LLM context-aware sur fichiers), **integration Git** (branche, status, diff, AI commit), taches planifiees, **integration MCP** (serveurs externes), **memory fragments** (contexte utilisateur persistant), **Remote Telegram** (controle a distance via bot), **Remote Web** (controle a distance via navigateur/mobile), **export/import JSON** (prompts & roles). Zero serveur backend.
 
 ## Stack
 

@@ -1,30 +1,36 @@
-import React, { useEffect, useState } from 'react'
-import { ArrowLeft, Settings, Palette, Keyboard, Database, Archive, Key, SlidersHorizontal, Volume2, Smartphone, FileText } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useUiStore, type SettingsTab } from '@/stores/ui.store'
-import { GeneralSettings } from './GeneralSettings'
-import { AppearanceSettings } from './AppearanceSettings'
-import { KeybindingsSettings } from './KeybindingsSettings'
-import { DataSettings } from './DataSettings'
-import { BackupSettings } from './BackupSettings'
+import { Archive, ArrowLeft, Database, FileText, Key, Keyboard, Palette, Settings, SlidersHorizontal, Smartphone, Volume2 } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
 import { ApiKeysSection } from './ApiKeysSection'
-import { ModelSettings } from './ModelSettings'
+import { AppearanceSettings } from './AppearanceSettings'
 import { AudioSettings } from './AudioSettings'
+import { BackupSettings } from './BackupSettings'
+import { DataSettings } from './DataSettings'
+import { GeneralSettings } from './GeneralSettings'
+import { KeybindingsSettings } from './KeybindingsSettings'
+import { LocalProvidersSection } from './LocalProvidersSection'
+import { ModelSettings } from './ModelSettings'
 import { RemoteTab } from './RemoteTab'
 import { SummaryTab } from './SummaryTab'
-import { LocalProvidersSection } from './LocalProvidersSection'
-import { cn } from '@/lib/utils'
 
-const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
-  { id: 'general', label: 'General', icon: <Settings className="size-4" /> },
-  { id: 'appearance', label: 'Apparence', icon: <Palette className="size-4" /> },
-  { id: 'apikeys', label: 'Cles API', icon: <Key className="size-4" /> },
-  { id: 'model', label: 'Modele', icon: <SlidersHorizontal className="size-4" /> },
-  { id: 'audio', label: 'Audio', icon: <Volume2 className="size-4" /> },
-  { id: 'keybindings', label: 'Raccourcis', icon: <Keyboard className="size-4" /> },
-  { id: 'data', label: 'Donnees', icon: <Database className="size-4" /> },
-  { id: 'backup', label: 'Sauvegardes', icon: <Archive className="size-4" /> },
-  { id: 'remote', label: 'Remote', icon: <Smartphone className="size-4" /> },
-  { id: 'summary', label: 'Resume', icon: <FileText className="size-4" /> },
+type TabItem =
+  | { type: 'tab'; id: SettingsTab; label: string; icon: React.ReactNode }
+  | { type: 'separator' }
+
+const TABS: TabItem[] = [
+  { type: 'tab', id: 'general', label: 'General', icon: <Settings className="size-4" /> },
+  { type: 'tab', id: 'appearance', label: 'Apparence', icon: <Palette className="size-4" /> },
+  { type: 'tab', id: 'keybindings', label: 'Raccourcis', icon: <Keyboard className="size-4" /> },
+  { type: 'separator' },
+  { type: 'tab', id: 'apikeys', label: 'Cles API', icon: <Key className="size-4" /> },
+  { type: 'tab', id: 'model', label: 'Modele', icon: <SlidersHorizontal className="size-4" /> },
+  { type: 'tab', id: 'audio', label: 'Audio', icon: <Volume2 className="size-4" /> },
+  { type: 'tab', id: 'summary', label: 'Resume', icon: <FileText className="size-4" /> },
+  { type: 'separator' },
+  { type: 'tab', id: 'remote', label: 'Remote', icon: <Smartphone className="size-4" /> },
+  { type: 'tab', id: 'data', label: 'Donnees', icon: <Database className="size-4" /> },
+  { type: 'tab', id: 'backup', label: 'Sauvegardes', icon: <Archive className="size-4" /> },
 ]
 
 export function SettingsView() {
@@ -59,21 +65,25 @@ export function SettingsView() {
         {/* Tab navigation */}
         <nav className="w-48 shrink-0 border-r border-border/40 bg-muted/20 p-3">
           <div className="flex flex-col gap-0.5">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  'flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium transition-colors',
-                  activeTab === tab.id
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-                )}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
+            {TABS.map((item, i) =>
+              item.type === 'separator' ? (
+                <div key={`sep-${i}`} className="my-1.5 h-px bg-border/40" />
+              ) : (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={cn(
+                    'flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium transition-colors',
+                    activeTab === item.id
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+                  )}
+                >
+                  {item.icon}
+                  {item.label}
+                </button>
+              )
+            )}
           </div>
         </nav>
 
@@ -90,11 +100,11 @@ export function SettingsView() {
             )}
             {activeTab === 'model' && <ModelSettings />}
             {activeTab === 'audio' && <AudioSettings />}
-            {activeTab === 'keybindings' && <KeybindingsSettings />}
-            {activeTab === 'data' && <DataSettings />}
-            {activeTab === 'backup' && <BackupSettings />}
-            {activeTab === 'remote' && <RemoteTab />}
             {activeTab === 'summary' && <SummaryTab />}
+            {activeTab === 'keybindings' && <KeybindingsSettings />}
+            {activeTab === 'remote' && <RemoteTab />}
+            {activeTab === 'backup' && <BackupSettings />}
+            {activeTab === 'data' && <DataSettings />}
           </div>
         </div>
       </div>

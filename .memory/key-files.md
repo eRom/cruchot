@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 25 — Remote Web)
+> Derniere mise a jour : 2026-03-12 (session 26 — Export/Import Prompts & Roles)
 
 ## Main process
 
@@ -75,6 +75,8 @@
 | `components/workspace/GitBranchBadge.tsx` | Badge branche Git (nom, dot dirty/clean, count modifies) |
 | `components/workspace/ChangesPanel.tsx` | Vue Changes (staged/unstaged, stage/unstage, diff inline, commit + AI message) |
 | `components/workspace/DiffView.tsx` | Viewer diff unifie colore (+/vert, -/rouge, @@/bleu) |
+| `components/prompts/PromptsView.tsx` | Vue prompts — grille, CRUD, **export/import JSON** (export all, export single, import avec dedup) |
+| `components/roles/RolesView.tsx` | Vue roles — grille, CRUD, **export/import JSON** (meme pattern que prompts) |
 | `components/common/CommandPalette.tsx` | Cmd+K — recherche globale |
 
 ## Renderer — Stores
