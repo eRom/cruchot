@@ -1,9 +1,12 @@
 import { useState } from 'react'
-import { Database, Download, Upload, Trash2, AlertTriangle } from 'lucide-react'
+import { Database, Download, Upload, Trash2, AlertTriangle, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export function DataSettings() {
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showCleanupConfirm, setShowCleanupConfirm] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [resetInput, setResetInput] = useState('')
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const handleExport = async () => {
     try {
@@ -24,14 +27,27 @@ export function DataSettings() {
     }
   }
 
-  const handleDeleteAll = async () => {
+  const handleCleanup = async () => {
+    setIsProcessing(true)
     try {
-      await window.api.deleteAllConversations()
-      setShowDeleteConfirm(false)
-      // Reload pour rafraichir la sidebar
+      await window.api.dataCleanup()
+      setShowCleanupConfirm(false)
       window.location.reload()
     } catch (err) {
-      console.error('[DataSettings] Delete all failed:', err)
+      console.error('[DataSettings] Cleanup failed:', err)
+      setIsProcessing(false)
+    }
+  }
+
+  const handleFactoryReset = async () => {
+    setIsProcessing(true)
+    try {
+      await window.api.dataFactoryReset()
+      localStorage.clear()
+      window.location.reload()
+    } catch (err) {
+      console.error('[DataSettings] Factory reset failed:', err)
+      setIsProcessing(false)
     }
   }
 
@@ -86,48 +102,115 @@ export function DataSettings() {
           </Button>
         </div>
 
-        {/* Danger zone */}
+        {/* ── Zone orange : Nettoyage partiel ──────────────────── */}
+        <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-4">
+          <div className="flex items-center gap-2">
+            <Trash2 className="size-4 text-orange-500" />
+            <p className="text-sm font-medium text-orange-500">Nettoyage des donnees</p>
+          </div>
+
+          {!showCleanupConfirm ? (
+            <div className="mt-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-foreground">Supprimer conversations, projets et images</p>
+                <p className="text-xs text-muted-foreground">
+                  Les roles, prompts, serveurs MCP, parametres et cles API seront conserves
+                </p>
+              </div>
+              <Button
+                size="sm"
+                disabled={isProcessing}
+                className="bg-orange-600 text-white hover:bg-orange-700"
+                onClick={() => setShowCleanupConfirm(true)}
+              >
+                <Trash2 className="size-4" />
+                Nettoyer
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-3 space-y-3">
+              <p className="text-sm text-orange-500">
+                Toutes les conversations, projets et images generees seront supprimes.
+                Les roles, prompts, serveurs MCP et parametres seront conserves.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  disabled={isProcessing}
+                  className="bg-orange-600 text-white hover:bg-orange-700"
+                  onClick={handleCleanup}
+                >
+                  {isProcessing ? 'Suppression...' : 'Confirmer la suppression'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isProcessing}
+                  onClick={() => setShowCleanupConfirm(false)}
+                >
+                  Annuler
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Zone rouge : Factory reset ───────────────────────── */}
         <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="size-4 text-red-500" />
-            <p className="text-sm font-medium text-red-500">Zone de danger</p>
+            <p className="text-sm font-medium text-red-500">Reinitialisation complete</p>
           </div>
 
-          {!showDeleteConfirm ? (
+          {!showResetConfirm ? (
             <div className="mt-3 flex items-center justify-between">
               <div>
-                <p className="text-sm text-foreground">Supprimer toutes les donnees</p>
+                <p className="text-sm text-foreground">Revenir a l&apos;etat initial</p>
                 <p className="text-xs text-muted-foreground">
-                  Cette action est irreversible
+                  Supprime TOUTES les donnees. L&apos;assistant de bienvenue sera relance.
                 </p>
               </div>
               <Button
                 variant="destructive"
                 size="sm"
-                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isProcessing}
+                onClick={() => setShowResetConfirm(true)}
               >
-                <Trash2 className="size-4" />
-                Supprimer tout
+                <RotateCcw className="size-4" />
+                Reinitialiser
               </Button>
             </div>
           ) : (
             <div className="mt-3 space-y-3">
               <p className="text-sm text-red-500">
-                Etes-vous certain de vouloir supprimer toutes vos conversations, images et
-                parametres ? Cette action est definitive.
+                Cette action est definitive et irreversible. Toutes vos donnees seront supprimees :
+                conversations, projets, roles, prompts, serveurs MCP, memoire, statistiques et parametres.
               </p>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  value={resetInput}
+                  onChange={(e) => setResetInput(e.target.value)}
+                  placeholder="Tapez DELETE pour confirmer"
+                  className="w-56 rounded-md border border-red-500/40 bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                  disabled={isProcessing}
+                />
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={handleDeleteAll}
+                  disabled={resetInput !== 'DELETE' || isProcessing}
+                  onClick={handleFactoryReset}
                 >
-                  Oui, tout supprimer
+                  {isProcessing ? 'Reinitialisation...' : 'Tout supprimer'}
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isProcessing}
+                  onClick={() => {
+                    setShowResetConfirm(false)
+                    setResetInput('')
+                  }}
                 >
                   Annuler
                 </Button>

@@ -1,5 +1,5 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-12 (session 26 — Export/Import Prompts & Roles)
+> Derniere mise a jour : 2026-03-12 (session 27 — Data Cleanup & Factory Reset)
 
 ## Vue d'ensemble
 
@@ -16,7 +16,7 @@ Renderer (React UI) → contextBridge IPC → Preload (bridge) → ipcMain → M
 ```
 
 - **Main** : cles API (safeStorage), appels LLM, DB SQLite, services
-- **Preload** : `window.api` via contextBridge (~105 methodes typees)
+- **Preload** : `window.api` via contextBridge (~107 methodes typees)
 - **Renderer** : UI React pure, aucun acces Node.js
 
 ## Arborescence
@@ -25,10 +25,10 @@ Renderer (React UI) → contextBridge IPC → Preload (bridge) → ipcMain → M
 src/
   main/
     index.ts              # Lifecycle, auto-updater, custom protocol local-image://
-    ipc/                  # Handlers IPC par domaine (dont mcp.ipc.ts, memory-fragments.ipc.ts, git.ipc.ts, remote.ipc.ts)
+    ipc/                  # Handlers IPC par domaine (dont mcp.ipc.ts, memory-fragments.ipc.ts, git.ipc.ts, remote.ipc.ts, data.ipc.ts)
     llm/                  # Router AI SDK, cost-calculator, image gen, workspace-tools, errors, thinking
     db/schema.ts          # 16 tables Drizzle
-    db/queries/           # Queries par domaine (dont mcp-servers.ts, memory-fragments.ts, remote-sessions.ts)
+    db/queries/           # Queries par domaine (dont mcp-servers.ts, memory-fragments.ts, remote-sessions.ts, cleanup.ts)
     services/             # Credential, backup, workspace, file-watcher, tts, scheduler, task-executor, mcp-manager, git, telegram-bot
   preload/
     index.ts              # contextBridge

@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
+import { Trash2, Upload } from 'lucide-react'
 
 export function GeneralSettings() {
   const language = useSettingsStore((s) => s.language)
@@ -15,12 +16,75 @@ export function GeneralSettings() {
   const selectedModelId = useProvidersStore((s) => s.selectedModelId)
   const selectedProviderId = useProvidersStore((s) => s.selectedProviderId)
   const selectModel = useProvidersStore((s) => s.selectModel)
+  const userName = useSettingsStore((s) => s.userName) ?? ''
+  const setUserName = useSettingsStore((s) => s.setUserName)
+  const userAvatarPath = useSettingsStore((s) => s.userAvatarPath) ?? ''
+  const setUserAvatarPath = useSettingsStore((s) => s.setUserAvatarPath)
+
+  const handleSelectAvatar = async () => {
+    const path = await window.api.selectAvatar()
+    if (path) {
+      setUserAvatarPath(path)
+    }
+  }
+
+  const handleRemoveAvatar = async () => {
+    await window.api.removeAvatar()
+    setUserAvatarPath('')
+  }
 
   return (
     <section className="space-y-5">
       <h2 className="text-sm font-medium text-foreground">General</h2>
 
       <div className="space-y-4">
+        {/* Profile */}
+        <div className="flex items-center gap-4 rounded-lg border border-border/60 p-4">
+          {/* Avatar */}
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={handleSelectAvatar}
+              className="group relative flex size-16 items-center justify-center overflow-hidden rounded-full bg-sidebar-primary transition-opacity hover:opacity-80"
+              title="Changer l'avatar"
+            >
+              {userAvatarPath ? (
+                <img
+                  src={`local-image://${userAvatarPath}`}
+                  alt="Avatar"
+                  className="size-full object-cover"
+                />
+              ) : (
+                <span className="text-xl font-semibold text-sidebar-primary-foreground">?</span>
+              )}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                <Upload className="size-5 text-white" />
+              </div>
+            </button>
+            {userAvatarPath && (
+              <button
+                type="button"
+                onClick={handleRemoveAvatar}
+                className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground transition-opacity hover:opacity-80"
+                title="Supprimer l'avatar"
+              >
+                <Trash2 className="size-3" />
+              </button>
+            )}
+          </div>
+          {/* Name */}
+          <div className="flex-1">
+            <p className="mb-1 text-sm font-medium text-foreground">Profil</p>
+            <input
+              type="text"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder="Anonymous"
+              className="w-full rounded-md border border-border/60 bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              maxLength={50}
+            />
+          </div>
+        </div>
         {/* Language */}
         <div className="flex items-center justify-between rounded-lg border border-border/60 p-4">
           <div>

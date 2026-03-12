@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-12 (session 26 — Export/Import Prompts & Roles)
+> Derniere mise a jour : 2026-03-12 (session 27 — Data Cleanup & Factory Reset)
 
 ## Main process
 
@@ -45,12 +45,14 @@
 | `src/main/services/remote-server.service.ts` | Singleton RemoteServerService — WebSocket server ws://, pairing, dual-forward, CloudFlare tunnel (~960 lignes) |
 | `src/main/ipc/remote-server.ipc.ts` | Handlers Remote Web (start, stop, generate-pairing, status, config) |
 | `src/main/db/queries/remote-server.ts` | CRUD table remote_server_sessions |
+| `src/main/db/queries/cleanup.ts` | Bulk delete : `deleteConversationsProjectsImages()` (zone orange) + `factoryResetDatabase()` (zone rouge), ordre FK strict |
+| `src/main/ipc/data.ipc.ts` | 2 handlers `data:cleanup` + `data:factory-reset` — stop services, delete DB, trash fichiers images/attachments/avatar |
 
 ## Preload
 
 | Fichier | Role |
 |---------|------|
-| `src/preload/index.ts` | contextBridge ~105 methodes |
+| `src/preload/index.ts` | contextBridge ~107 methodes |
 | `src/preload/types.ts` | Types partages, DTOs |
 
 ## Renderer — Composants cles
@@ -69,6 +71,7 @@
 | `components/mcp/McpServerForm.tsx` | Formulaire create/edit serveur MCP — transport, env vars, projet, test |
 | `components/chat/ContextWindowIndicator.tsx` | Barre tokens + cout + RemoteBadge + SummaryButton (status, pairing toast+clipboard, start/stop) |
 | `components/settings/SettingsView.tsx` | 10 tabs (General, Apparence, API, Modele, Audio, Raccourcis, Donnees, Sauvegardes, Remote, Resume) |
+| `components/settings/DataSettings.tsx` | Tab Donnees — export/import + zone orange (nettoyage partiel) + zone rouge (factory reset avec validation DELETE) |
 | `components/settings/SummaryTab.tsx` | Config Resume — selecteur modele (text+configured), textarea prompt, bouton reinitialiser |
 | `components/settings/RemoteTab.tsx` | Config Remote — formulaire token+userId unifie, session start/stop, pairing code, auto-approve toggles |
 | `components/workspace/WorkspacePanel.tsx` | Panneau droit collapsible, FileTree + FilePanel + GitBranchBadge + tab Fichiers/Changes |

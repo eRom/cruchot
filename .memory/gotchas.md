@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-12 (session 26 — Export/Import Prompts & Roles)
+> Derniere mise a jour : 2026-03-12 (session 27 — Data Cleanup & Factory Reset)
 
 ## AI SDK v6 — Breaking changes (checklist)
 
@@ -149,6 +149,13 @@
 - **Pas d'historique apres pairing** : le web affichait un chat vide meme si la conv avait des messages. Fix : useEffect qui envoie `get-history` quand `activeConversation` est set
 - **UI quality gap** : le web utilisait des styles generiques au lieu du design system desktop. Fix : recopier exactement les classes CSS du desktop (meme palette OKLCH, memes rounded/shadow/padding, meme InputZone pattern `rounded-2xl border-border/60 bg-card`, meme MessageItem layout avec avatar Sparkles `size-8 rounded-full`)
 - **Exigence Romain** : l'UI du web remote doit etre un "vrai compagnon du Desktop" — calque visuel exact, pas une approximation
+
+## Data Cleanup — pieges session 27
+
+- **Singletons services** : les services (SchedulerService, McpManagerService, TelegramBotService, RemoteServerService) ne sont PAS exportes en `export class` avec `getInstance()` mais en `export const fooService = new FooService()`. Les imports dynamiques doivent utiliser `{ schedulerService }` pas `{ SchedulerService }`.
+- **Ordre FK strict pour DELETE** : `attachments → images → remoteSessions → messages → conversations → scheduledTasks → mcpServers → projects → roles → prompts → memoryFragments → statistics → ttsUsage → settings`. Si l'ordre est mauvais, SQLite leve une FK constraint violation (meme si `foreign_keys = ON` est configure).
+- **Factory reset + localStorage.clear()** : le `localStorage.clear()` est critique — sans lui, Zustand persist rehydrate les stores au reload et l'app ne revient pas a l'etat initial (onboarding_completed resterait en localStorage).
+- **trash import dynamique** : `trash` est un module ESM → `await import('trash')` obligatoire dans le main process (comme chokidar et @ai-sdk/mcp).
 
 ## Restant a faire
 

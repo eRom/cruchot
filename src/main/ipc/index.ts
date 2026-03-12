@@ -27,6 +27,7 @@ import { registerGitIpc } from './git.ipc'
 import { registerRemoteIpc } from './remote.ipc'
 import { registerRemoteServerIpc } from './remote-server.ipc'
 import { registerSummaryIpc } from './summary.ipc'
+import { registerDataIpc } from './data.ipc'
 
 /**
  * Registre central des IPC handlers.
@@ -107,6 +108,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Summary ─────────────────────────────────
   registerSummaryIpc()
+
+  // ── Data (cleanup / factory reset) ────────────────
+  registerDataIpc()
 
   // ── Settings ────────────────────────────────────────
   ipcMain.handle('settings:get', async (_event, key: string) => {

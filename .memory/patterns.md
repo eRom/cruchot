@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-12 (session 26 — Export/Import Prompts & Roles)
+> Derniere mise a jour : 2026-03-12 (session 27 — Data Cleanup & Factory Reset)
 
 ## Conventions de nommage
 
@@ -192,6 +192,15 @@
 - **Validation import** : verification `type`, `Array.isArray(items)`, champs obligatoires (`title+content+type` pour prompts, `name` pour roles), try/catch JSON.parse → toast erreur
 - **UI** : boutons ghost Download/Upload dans le header (a gauche de "Nouveau"), bouton Download dans les hover actions de chaque card
 - **Roles builtin** : exportables (bouton Export visible) mais pas supprimables
+
+## Data Cleanup / Factory Reset
+
+- **2 zones de danger** dans Settings > Donnees :
+  - **Zone orange** (`border-orange-500/30 bg-orange-500/5`) : nettoyage partiel — supprime conversations, projets, images, taches, MCP servers. Conserve roles, prompts, memoire, parametres, cles API. Confirmation 2 etapes.
+  - **Zone rouge** (`border-red-500/30 bg-red-500/5`) : factory reset complet — supprime TOUTES les 14 tables. Input "DELETE" case-sensitive obligatoire. `localStorage.clear()` → reload → Welcome wizard (onboarding_completed absent).
+- **Backend** : `cleanup.ts` (queries bulk delete, ordre FK strict), `data.ipc.ts` (2 handlers, stop services avant delete, trash fichiers via `import('trash')`)
+- **Services stoppes avant factory reset** : schedulerService.stopAll(), mcpManagerService.stopAll(), telegramBotService.destroy(), remoteServerService.stop() — tous en try/catch car peuvent ne pas etre demarres
+- **Singletons exports** : les services utilisent `export const fooService = new FooService()` (pas `export class` + `getInstance()`) — importer le singleton directement
 
 ## Conventions UI
 

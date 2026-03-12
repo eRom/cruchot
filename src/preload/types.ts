@@ -761,6 +761,14 @@ export interface ElectronAPI {
   // Summary
   summarizeConversation: (payload: SummarizePayload) => Promise<SummarizeResult>
 
+  // Profile
+  selectAvatar: () => Promise<string | null>
+  removeAvatar: () => Promise<boolean>
+
+  // Data (cleanup / factory reset)
+  dataCleanup: () => Promise<{ success: boolean }>
+  dataFactoryReset: () => Promise<{ success: boolean }>
+
   // Settings
   getSetting: (key: string) => Promise<string | null>
   setSetting: (key: string, value: string) => Promise<void>
