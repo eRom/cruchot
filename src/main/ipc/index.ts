@@ -114,19 +114,45 @@ export function registerAllIpcHandlers(): void {
 
   // ── Settings ────────────────────────────────────────
   const ALLOWED_SETTING_KEYS = new Set([
+    // User profile
     'multi-llm:user-name',
     'multi-llm:user-avatar-path',
-    'multi-llm:default-model',
+    // App state
+    'multi-llm:onboarding_completed',
+    'multi-llm:default-model-id',
+    // Appearance
+    'multi-llm:theme',
+    'multi-llm:language',
+    'multi-llm:sidebar-collapsed',
+    'multi-llm:font-size',
+    'multi-llm:font-size-px',
+    'multi-llm:density',
+    'multi-llm:message-width',
+    // Model params
+    'multi-llm:temperature',
+    'multi-llm:max-tokens',
+    'multi-llm:top-p',
+    'multi-llm:thinking-effort',
+    // Features
+    'multi-llm:search-enabled',
+    'multi-llm:tts-provider',
+    'multi-llm:favorite-model-ids',
+    // Summary
+    'multi-llm:summary-model-id',
+    'multi-llm:summary-prompt',
+    // Remote
     'multi-llm:remote:telegram-token',
     'multi-llm:remote:allowed-user-id',
     'multi-llm:remote:cf-hostname',
     'multi-llm:remote:cf-token',
-    'multi-llm:onboarding_completed',
+    // Local providers
+    'lmstudio:baseUrl',
+    'ollama:baseUrl',
+    // Legacy (kept for migration)
+    'onboarding_completed',
   ])
-  const ALLOWED_SETTING_PREFIX = 'multi-llm:'
 
   function isSettingKeyAllowed(key: string): boolean {
-    if (!key.startsWith(ALLOWED_SETTING_PREFIX)) return false
     if (key.startsWith('multi-llm:apikey:')) return false
     return ALLOWED_SETTING_KEYS.has(key)
   }
