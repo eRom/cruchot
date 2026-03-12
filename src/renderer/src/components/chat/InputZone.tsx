@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowUp, FolderOpen, ImageIcon, Loader2, Network, Paperclip, Square } from 'lucide-react'
+import { ArrowUp, FolderOpen, ImageIcon, Loader2, Paperclip, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ModelSelector } from '@/components/chat/ModelSelector'
@@ -7,10 +7,9 @@ import { ContextWindowIndicator } from '@/components/chat/ContextWindowIndicator
 import { VoiceInput } from '@/components/chat/VoiceInput'
 import { PromptPicker } from '@/components/chat/PromptPicker'
 import { AspectRatioSelector, type AspectRatio } from '@/components/chat/AspectRatioSelector'
-import { ThinkingSelector } from '@/components/chat/ThinkingSelector'
 import { AttachmentPreview, type AttachmentItem } from '@/components/chat/AttachmentPreview'
 import { RoleSelector } from '@/components/roles/RoleSelector'
-import { SearchToggle } from '@/components/chat/SearchToggle'
+import { ChatOptionsMenu } from '@/components/chat/ChatOptionsMenu'
 import { useProvidersStore } from '@/stores/providers.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
@@ -19,7 +18,6 @@ import { useSettingsStore } from '@/stores/settings.store'
 import { useUiStore } from '@/stores/ui.store'
 import { useRolesStore } from '@/stores/roles.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
-import { useMcpStore } from '@/stores/mcp.store'
 import { useContextWindow } from '@/hooks/useContextWindow'
 import { cn } from '@/lib/utils'
 import { FileReference } from '@/components/workspace/FileReference'
@@ -109,17 +107,6 @@ export function InputZone({
   const detachWorkspaceFile = useWorkspaceStore((s) => s.detachFile)
   const toggleWorkspacePanel = useWorkspaceStore((s) => s.togglePanel)
   const searchEnabled = useSettingsStore((s) => s.searchEnabled) ?? false
-  const providers = useProvidersStore((s) => s.providers)
-  const hasPerplexityKey = useMemo(
-    () => providers.some((p) => p.id === 'perplexity' && p.isConfigured),
-    [providers]
-  )
-  const mcpServers = useMcpStore((s) => s.servers)
-  const mcpConnectedCount = useMemo(
-    () => mcpServers.filter((s) => s.status === 'connected').length,
-    [mcpServers]
-  )
-
   // ── Context window ────────────────────────────────────────
   const conversationMessages = useMemo(
     () => messages.filter((m) => m.conversationId === activeConversationId),
@@ -788,11 +775,11 @@ export function InputZone({
                 </Tooltip>
               )}
               <ModelSelector disabled={isBusy} />
-              {selectedModel?.supportsThinking && !isImageMode && (
-                <ThinkingSelector disabled={isBusy} />
-              )}
-              {hasPerplexityKey && !isImageMode && (
-                <SearchToggle disabled={isBusy} />
+              {!isImageMode && (
+                <ChatOptionsMenu
+                  disabled={isBusy}
+                  supportsThinking={selectedModel?.supportsThinking}
+                />
               )}
               {!isImageMode && (
                 <RoleSelector disabled={isBusy || isRoleLocked} />
@@ -805,19 +792,6 @@ export function InputZone({
                 onTranscript={(text) => setContent((prev) => prev ? `${prev} ${text}` : text)}
                 disabled={isBusy}
               />
-              {mcpConnectedCount > 0 && !isImageMode && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium text-muted-foreground">
-                      <Network className="size-3 text-emerald-500" />
-                      <span>{mcpConnectedCount}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    {mcpConnectedCount} serveur{mcpConnectedCount > 1 ? 's' : ''} MCP connecte{mcpConnectedCount > 1 ? 's' : ''}
-                  </TooltipContent>
-                </Tooltip>
-              )}
             </div>
 
             {/* Cote droit — Bouton envoyer / annuler */}

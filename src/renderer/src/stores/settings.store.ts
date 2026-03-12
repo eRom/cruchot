@@ -80,33 +80,94 @@ Format : sections avec titres, bullet points. Sois concis mais complet.`,
       userAvatarPath: '',
       searchEnabled: false,
 
-      setDefaultModelId: (modelId) => set({ defaultModelId: modelId }),
-      setTheme: (theme) => set({ theme }),
-      setLanguage: (language) => set({ language }),
+      setDefaultModelId: (modelId) => {
+        set({ defaultModelId: modelId })
+        window.api.setSetting('multi-llm:default-model-id', modelId).catch(() => {})
+      },
+      setTheme: (theme) => {
+        set({ theme })
+        window.api.setSetting('multi-llm:theme', theme).catch(() => {})
+      },
+      setLanguage: (language) => {
+        set({ language })
+        window.api.setSetting('multi-llm:language', language).catch(() => {})
+      },
       toggleSidebar: () =>
-        set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-      setSidebarCollapsed: (collapsed) =>
-        set({ sidebarCollapsed: collapsed }),
-      setFontSize: (size) => set({ fontSize: size }),
-      setFontSizePx: (px) => set({ fontSizePx: px }),
-      setDensity: (density) => set({ density }),
-      setMessageWidth: (percent) => set({ messageWidth: percent }),
-      setTemperature: (value) => set({ temperature: value }),
-      setMaxTokens: (value) => set({ maxTokens: value }),
-      setTopP: (value) => set({ topP: value }),
-      setThinkingEffort: (value) => set({ thinkingEffort: value }),
-      setSummaryModelId: (modelId) => set({ summaryModelId: modelId }),
-      setSummaryPrompt: (prompt) => set({ summaryPrompt: prompt.slice(0, 10_000) }),
-      setTtsProvider: (provider) => set({ ttsProvider: provider }),
-      setUserName: (name) => set({ userName: name.trim().slice(0, 50) }),
-      setUserAvatarPath: (path) => set({ userAvatarPath: path }),
-      setSearchEnabled: (value) => set({ searchEnabled: value }),
+        set((state) => {
+          const collapsed = !state.sidebarCollapsed
+          window.api.setSetting('multi-llm:sidebar-collapsed', String(collapsed)).catch(() => {})
+          return { sidebarCollapsed: collapsed }
+        }),
+      setSidebarCollapsed: (collapsed) => {
+        set({ sidebarCollapsed: collapsed })
+        window.api.setSetting('multi-llm:sidebar-collapsed', String(collapsed)).catch(() => {})
+      },
+      setFontSize: (size) => {
+        set({ fontSize: size })
+        window.api.setSetting('multi-llm:font-size', size).catch(() => {})
+      },
+      setFontSizePx: (px) => {
+        set({ fontSizePx: px })
+        window.api.setSetting('multi-llm:font-size-px', String(px)).catch(() => {})
+      },
+      setDensity: (density) => {
+        set({ density })
+        window.api.setSetting('multi-llm:density', density).catch(() => {})
+      },
+      setMessageWidth: (percent) => {
+        set({ messageWidth: percent })
+        window.api.setSetting('multi-llm:message-width', String(percent)).catch(() => {})
+      },
+      setTemperature: (value) => {
+        set({ temperature: value })
+        window.api.setSetting('multi-llm:temperature', String(value)).catch(() => {})
+      },
+      setMaxTokens: (value) => {
+        set({ maxTokens: value })
+        window.api.setSetting('multi-llm:max-tokens', String(value)).catch(() => {})
+      },
+      setTopP: (value) => {
+        set({ topP: value })
+        window.api.setSetting('multi-llm:top-p', String(value)).catch(() => {})
+      },
+      setThinkingEffort: (value) => {
+        set({ thinkingEffort: value })
+        window.api.setSetting('multi-llm:thinking-effort', value).catch(() => {})
+      },
+      setSummaryModelId: (modelId) => {
+        set({ summaryModelId: modelId })
+        window.api.setSetting('multi-llm:summary-model-id', modelId).catch(() => {})
+      },
+      setSummaryPrompt: (prompt) => {
+        const trimmed = prompt.slice(0, 10_000)
+        set({ summaryPrompt: trimmed })
+        window.api.setSetting('multi-llm:summary-prompt', trimmed).catch(() => {})
+      },
+      setTtsProvider: (provider) => {
+        set({ ttsProvider: provider })
+        window.api.setSetting('multi-llm:tts-provider', provider).catch(() => {})
+      },
+      setUserName: (name) => {
+        const trimmed = name.trim().slice(0, 50)
+        set({ userName: trimmed })
+        window.api.setSetting('multi-llm:user-name', trimmed).catch(() => {})
+      },
+      setUserAvatarPath: (path) => {
+        set({ userAvatarPath: path })
+        window.api.setSetting('multi-llm:user-avatar-path', path).catch(() => {})
+      },
+      setSearchEnabled: (value) => {
+        set({ searchEnabled: value })
+        window.api.setSetting('multi-llm:search-enabled', String(value)).catch(() => {})
+      },
       toggleFavoriteModel: (modelId) =>
-        set((state) => ({
-          favoriteModelIds: state.favoriteModelIds.includes(modelId)
+        set((state) => {
+          const updated = state.favoriteModelIds.includes(modelId)
             ? state.favoriteModelIds.filter((id) => id !== modelId)
             : [...state.favoriteModelIds, modelId]
-        })),
+          window.api.setSetting('multi-llm:favorite-model-ids', JSON.stringify(updated)).catch(() => {})
+          return { favoriteModelIds: updated }
+        }),
     }),
     {
       name: 'multi-llm-settings'
