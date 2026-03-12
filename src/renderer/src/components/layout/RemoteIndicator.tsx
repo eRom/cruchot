@@ -14,11 +14,12 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function RemoteIndicator(): React.JSX.Element | null {
   const status = useRemoteStore((s) => s.status)
+  const config = useRemoteStore((s) => s.config)
   const setCurrentView = useUiStore((s) => s.setCurrentView)
   const setSettingsTab = useUiStore((s) => s.setSettingsTab)
 
-  // Only visible when not disconnected
-  if (status === 'disconnected') return null
+  // Only visible when actively connected/pairing with a configured token
+  if (status === 'disconnected' || !config?.hasToken) return null
 
   const dotColor = STATUS_COLORS[status] ?? 'bg-zinc-400'
 

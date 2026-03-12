@@ -74,6 +74,61 @@ export function useInitApp() {
           }
         }
 
+        // Restore all settings from DB (survives localStorage flush)
+        try {
+          const keys = [
+            'multi-llm:user-name',
+            'multi-llm:user-avatar-path',
+            'multi-llm:search-enabled',
+            'multi-llm:theme',
+            'multi-llm:language',
+            'multi-llm:sidebar-collapsed',
+            'multi-llm:font-size',
+            'multi-llm:font-size-px',
+            'multi-llm:density',
+            'multi-llm:message-width',
+            'multi-llm:temperature',
+            'multi-llm:max-tokens',
+            'multi-llm:top-p',
+            'multi-llm:thinking-effort',
+            'multi-llm:default-model-id',
+            'multi-llm:summary-model-id',
+            'multi-llm:summary-prompt',
+            'multi-llm:tts-provider',
+            'multi-llm:favorite-model-ids'
+          ] as const
+
+          const values = await Promise.all(keys.map((k) => window.api.getSetting(k)))
+          const map = Object.fromEntries(keys.map((k, i) => [k, values[i]])) as Record<string, string | null>
+
+          const patch: Record<string, unknown> = {}
+          if (map['multi-llm:user-name'] !== null) patch.userName = map['multi-llm:user-name']
+          if (map['multi-llm:user-avatar-path'] !== null) patch.userAvatarPath = map['multi-llm:user-avatar-path']
+          if (map['multi-llm:search-enabled'] !== null) patch.searchEnabled = map['multi-llm:search-enabled'] === 'true'
+          if (map['multi-llm:theme'] !== null) patch.theme = map['multi-llm:theme']
+          if (map['multi-llm:language'] !== null) patch.language = map['multi-llm:language']
+          if (map['multi-llm:sidebar-collapsed'] !== null) patch.sidebarCollapsed = map['multi-llm:sidebar-collapsed'] === 'true'
+          if (map['multi-llm:font-size'] !== null) patch.fontSize = map['multi-llm:font-size']
+          if (map['multi-llm:font-size-px'] !== null) patch.fontSizePx = Number(map['multi-llm:font-size-px'])
+          if (map['multi-llm:density'] !== null) patch.density = map['multi-llm:density']
+          if (map['multi-llm:message-width'] !== null) patch.messageWidth = Number(map['multi-llm:message-width'])
+          if (map['multi-llm:temperature'] !== null) patch.temperature = Number(map['multi-llm:temperature'])
+          if (map['multi-llm:max-tokens'] !== null) patch.maxTokens = Number(map['multi-llm:max-tokens'])
+          if (map['multi-llm:top-p'] !== null) patch.topP = Number(map['multi-llm:top-p'])
+          if (map['multi-llm:thinking-effort'] !== null) patch.thinkingEffort = map['multi-llm:thinking-effort']
+          if (map['multi-llm:default-model-id'] !== null) patch.defaultModelId = map['multi-llm:default-model-id']
+          if (map['multi-llm:summary-model-id'] !== null) patch.summaryModelId = map['multi-llm:summary-model-id']
+          if (map['multi-llm:summary-prompt'] !== null) patch.summaryPrompt = map['multi-llm:summary-prompt']
+          if (map['multi-llm:tts-provider'] !== null) patch.ttsProvider = map['multi-llm:tts-provider']
+          if (map['multi-llm:favorite-model-ids'] !== null) {
+            try { patch.favoriteModelIds = JSON.parse(map['multi-llm:favorite-model-ids']!) } catch { /* ignore */ }
+          }
+
+          if (Object.keys(patch).length > 0) {
+            useSettingsStore.setState(patch)
+          }
+        } catch { /* ignore */ }
+
         // Initial detection + start polling for local providers
         pollLocalProviders()
         pollRef.current = setInterval(pollLocalProviders, LOCAL_PROVIDERS_POLL_MS)

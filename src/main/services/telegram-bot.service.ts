@@ -135,9 +135,18 @@ class TelegramBotService extends EventEmitter {
             this.sendMessage('Session reprise apres redemarrage.')
             this.resetInactivityTimer()
           } catch {
-            console.warn('[Telegram] Failed to decrypt stored token')
+            console.warn('[Telegram] Failed to decrypt stored token — deactivating stale session')
+            deactivateSession(session.id)
           }
+        } else {
+          // Token missing from DB — clean up stale session
+          console.warn('[Telegram] No token found for active session — deactivating')
+          deactivateSession(session.id)
         }
+      } else if (session && !this.allowedUserId) {
+        // Security gate: no allowedUserId — clean up stale session
+        console.warn('[Telegram] Active session without allowedUserId — deactivating')
+        deactivateSession(session.id)
       }
     } catch (err) {
       console.warn('[Telegram] Failed to restore session:', err)
