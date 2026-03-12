@@ -14,8 +14,11 @@ import { PROVIDERS, MODELS } from '../llm/registry'
 import {
   detectLocalProviders,
   getLMStudioModels,
+  getOllamaModels,
   setLmStudioBaseUrl,
-  getLmStudioBaseUrl
+  getLmStudioBaseUrl,
+  setOllamaBaseUrl,
+  getOllamaBaseUrl
 } from '../services/local-providers.service'
 
 const setApiKeySchema = z.object({
@@ -59,6 +62,8 @@ export function registerProvidersIpc(): void {
   ipcMain.handle('providers:models', async (_event, providerId?: string) => {
     const staticModels = providerId ? MODELS.filter(m => m.providerId === providerId) : [...MODELS]
 
+    let allModels = staticModels
+
     // Attempt to fetch LM Studio models (non-blocking, silent fail)
     if (!providerId || providerId === 'lmstudio') {
       try {
@@ -76,13 +81,36 @@ export function registerProvidersIpc(): void {
           supportsStreaming: true,
           supportsThinking: false
         }))
-        return [...staticModels, ...dynamicModels]
+        allModels = [...allModels, ...dynamicModels]
       } catch {
-        // LM Studio offline — return static models only
+        // LM Studio offline — skip
       }
     }
 
-    return staticModels
+    // Attempt to fetch Ollama models (non-blocking, silent fail)
+    if (!providerId || providerId === 'ollama') {
+      try {
+        const ollamaModels = await getOllamaModels()
+        const dynamicModels = ollamaModels.map(m => ({
+          id: m.name,
+          providerId: 'ollama',
+          name: m.name,
+          displayName: m.name,
+          type: 'text' as const,
+          contextWindow: 0,
+          inputPrice: 0,
+          outputPrice: 0,
+          supportsImages: false,
+          supportsStreaming: true,
+          supportsThinking: false
+        }))
+        allModels = [...allModels, ...dynamicModels]
+      } catch {
+        // Ollama offline — skip
+      }
+    }
+
+    return allModels
   })
 
   // ── Set API Key ─────────────────────────────────────
@@ -172,6 +200,23 @@ export function registerProvidersIpc(): void {
       }))
     }
 
+    if (parsed.data === 'ollama') {
+      const ollamaModels = await getOllamaModels()
+      return ollamaModels.map(m => ({
+        id: m.name,
+        providerId: 'ollama',
+        name: m.name,
+        displayName: m.name,
+        type: 'text' as const,
+        contextWindow: 0,
+        inputPrice: 0,
+        outputPrice: 0,
+        supportsImages: false,
+        supportsStreaming: true,
+        supportsThinking: false
+      }))
+    }
+
     return []
   })
 
@@ -184,10 +229,12 @@ export function registerProvidersIpc(): void {
     const parsed = setBaseUrlSchema.safeParse(payload)
     if (!parsed.success) throw new Error('Invalid payload: ' + parsed.error.message)
 
+    const cleanUrl = parsed.data.baseUrl.replace(/\/+$/, '')
+
     if (parsed.data.providerId === 'lmstudio') {
-      // Remove trailing slash
-      const cleanUrl = parsed.data.baseUrl.replace(/\/+$/, '')
       setLmStudioBaseUrl(cleanUrl)
+    } else if (parsed.data.providerId === 'ollama') {
+      setOllamaBaseUrl(cleanUrl)
     }
   })
 
@@ -212,6 +259,32 @@ export function registerProvidersIpc(): void {
             providerId: 'lmstudio',
             name: m.id,
             displayName: m.id,
+            type: 'text' as const,
+            contextWindow: 0,
+            inputPrice: 0,
+            outputPrice: 0,
+            supportsImages: false,
+            supportsStreaming: true,
+            supportsThinking: false
+          }))
+        }
+      } catch {
+        return { reachable: false, modelCount: 0, models: [] }
+      }
+    }
+
+    if (parsed.data.providerId === 'ollama') {
+      const url = parsed.data.baseUrl?.replace(/\/+$/, '') ?? getOllamaBaseUrl()
+      try {
+        const models = await getOllamaModels(url)
+        return {
+          reachable: true,
+          modelCount: models.length,
+          models: models.map(m => ({
+            id: m.name,
+            providerId: 'ollama',
+            name: m.name,
+            displayName: m.name,
             type: 'text' as const,
             contextWindow: 0,
             inputPrice: 0,

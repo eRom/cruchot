@@ -40,6 +40,13 @@ export function useInitApp() {
       } else {
         setLocalModels('lmstudio', [])
       }
+
+      if (status.ollama) {
+        const models = await window.api.getLocalModels('ollama')
+        setLocalModels('ollama', models as Model[])
+      } else {
+        setLocalModels('ollama', [])
+      }
     } catch {
       // Silent fail — local providers are optional
     }
