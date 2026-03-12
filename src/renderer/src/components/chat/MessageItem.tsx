@@ -304,6 +304,13 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
           <ToolCallBlock toolCalls={message.toolCalls} isStreaming={isStreaming} />
         )}
 
+        {/* Slash command badge */}
+        {isUser && message.contentData?.slashCommand && (
+          <span className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-600 dark:text-violet-400 font-mono">
+            /{message.contentData.slashCommand as string}
+          </span>
+        )}
+
         {/* Content */}
         {message.contentData && message.contentData.type === 'image' ? (
           <div className="flex flex-col gap-2">

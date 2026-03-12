@@ -370,6 +370,20 @@ export interface MemoryFragment {
   updatedAt: Date
 }
 
+// ── Slash Commands ─────────────────────────────────────────
+export interface SlashCommandInfo {
+  id: string
+  name: string
+  description: string
+  prompt: string
+  category?: string | null
+  projectId?: string | null
+  isBuiltin: boolean
+  sortOrder: number
+  createdAt: Date
+  updatedAt: Date
+}
+
 // ── MCP Servers ─────────────────────────────────────────
 export type McpTransportType = 'stdio' | 'http' | 'sse'
 export type McpServerStatus = 'connected' | 'error' | 'stopped'
@@ -663,6 +677,16 @@ export interface ElectronAPI {
   deleteMemoryFragment: (payload: { id: string }) => Promise<void>
   reorderMemoryFragments: (payload: { orderedIds: string[] }) => Promise<void>
   toggleMemoryFragment: (payload: { id: string }) => Promise<MemoryFragment | undefined>
+
+  // Slash Commands
+  slashCommandsList: () => Promise<SlashCommandInfo[]>
+  slashCommandsGet: (id: string) => Promise<SlashCommandInfo | undefined>
+  slashCommandsCreate: (data: { name: string; description: string; prompt: string; category?: string; projectId?: string }) => Promise<SlashCommandInfo>
+  slashCommandsUpdate: (id: string, data: { name?: string; description?: string; prompt?: string; category?: string | null; projectId?: string | null }) => Promise<SlashCommandInfo | undefined>
+  slashCommandsDelete: (id: string) => Promise<void>
+  slashCommandsReset: (id: string) => Promise<SlashCommandInfo | undefined>
+  slashCommandsReorder: (orderedIds: string[]) => Promise<void>
+  slashCommandsSeed: () => Promise<void>
 
   // MCP Servers
   mcpList: () => Promise<McpServerInfo[]>

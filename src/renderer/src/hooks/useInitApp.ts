@@ -6,6 +6,7 @@ import { useMcpStore } from '@/stores/mcp.store'
 import { useMemoryStore } from '@/stores/memory.store'
 import { useRemoteStore } from '@/stores/remote.store'
 import { useRemoteServerStore } from '@/stores/remote-server.store'
+import { useSlashCommandsStore } from '@/stores/slash-commands.store'
 
 const LOCAL_PROVIDERS_POLL_MS = 30_000
 
@@ -25,6 +26,7 @@ export function useInitApp() {
   const handleRemoteStatusChange = useRemoteStore((s) => s.handleStatusChange)
   const loadRemoteServerConfig = useRemoteServerStore((s) => s.loadConfig)
   const handleRemoteServerStatusChange = useRemoteServerStore((s) => s.handleStatusChange)
+  const loadSlashCommands = useSlashCommandsStore((s) => s.loadCommands)
 
   const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
 
@@ -145,6 +147,9 @@ export function useInitApp() {
         // Load remote server config (non-blocking)
         loadRemoteServerConfig().catch((err) => console.warn('[Init] Remote Server load failed:', err))
 
+        // Load slash commands (non-blocking)
+        loadSlashCommands().catch((err) => console.warn('[Init] Slash commands load failed:', err))
+
         // Listen for remote status changes
         window.api.onRemoteStatusChanged(handleRemoteStatusChange)
 
@@ -161,5 +166,5 @@ export function useInitApp() {
       window.api.offRemoteStatusChanged()
       window.api.offRemoteServerStatusChanged()
     }
-  }, [setConversations, setProviders, setModels, pollLocalProviders, loadMcpServers, loadMemoryFragments, loadRemoteConfig, handleRemoteStatusChange, loadRemoteServerConfig, handleRemoteServerStatusChange])
+  }, [setConversations, setProviders, setModels, pollLocalProviders, loadMcpServers, loadMemoryFragments, loadRemoteConfig, handleRemoteStatusChange, loadRemoteServerConfig, handleRemoteServerStatusChange, loadSlashCommands])
 }
