@@ -4,6 +4,7 @@ import { useMessagesStore, type Message } from '@/stores/messages.store'
 import { useProvidersStore } from '@/stores/providers.store' // used via getState()
 import { useRolesStore } from '@/stores/roles.store'
 import { useProjectsStore } from '@/stores/projects.store'
+import { useSettingsStore } from '@/stores/settings.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import MessageList from './MessageList'
 import { InputZone } from './InputZone'
@@ -67,11 +68,14 @@ export default function ChatView() {
       return
     }
 
-    // Restore model from conversation (read store snapshot, not reactive)
+    // Restore model from conversation, or fallback to default model
     const conv = useConversationsStore.getState().conversations.find((c) => c.id === activeConversationId)
-    if (conv?.modelId?.includes('::')) {
-      const [providerId, modelId] = conv.modelId.split('::')
-      useProvidersStore.getState().selectModel(providerId, modelId)
+    const modelSource = conv?.modelId ?? useSettingsStore.getState().defaultModelId ?? ''
+    if (modelSource.includes('::')) {
+      const [providerId, modelId] = modelSource.split('::')
+      if (providerId && modelId) {
+        useProvidersStore.getState().selectModel(providerId, modelId)
+      }
     }
 
     async function loadMessages() {

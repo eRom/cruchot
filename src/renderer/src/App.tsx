@@ -66,8 +66,9 @@ function App(): React.JSX.Element {
   const setSettingsTab = useUiStore((s) => s.setSettingsTab)
 
   const handleSettings = useCallback(() => {
+    setSettingsTab('general')
     setCurrentView('settings')
-  }, [setCurrentView])
+  }, [setSettingsTab, setCurrentView])
 
   const handleModelList = useCallback(() => {
     setSettingsTab('model')

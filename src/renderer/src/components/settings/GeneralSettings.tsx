@@ -12,9 +12,9 @@ import { Trash2, Upload } from 'lucide-react'
 export function GeneralSettings() {
   const language = useSettingsStore((s) => s.language)
   const setLanguage = useSettingsStore((s) => s.setLanguage)
+  const defaultModelId = useSettingsStore((s) => s.defaultModelId) ?? ''
+  const setDefaultModelId = useSettingsStore((s) => s.setDefaultModelId)
   const models = useProvidersStore((s) => s.models)
-  const selectedModelId = useProvidersStore((s) => s.selectedModelId)
-  const selectedProviderId = useProvidersStore((s) => s.selectedProviderId)
   const selectModel = useProvidersStore((s) => s.selectModel)
   const userName = useSettingsStore((s) => s.userName) ?? ''
   const setUserName = useSettingsStore((s) => s.setUserName)
@@ -116,11 +116,13 @@ export function GeneralSettings() {
             </p>
           </div>
           <Select
-            value={selectedModelId ?? ''}
-            onValueChange={(modelId) => {
-              const model = models.find((m) => m.id === modelId)
-              if (model) {
-                selectModel(model.providerId, model.id)
+            value={defaultModelId}
+            onValueChange={(value) => {
+              setDefaultModelId(value)
+              // Also apply immediately as active model
+              const [providerId, modelId] = value.split('::')
+              if (providerId && modelId) {
+                selectModel(providerId, modelId)
               }
             }}
           >
@@ -133,8 +135,8 @@ export function GeneralSettings() {
                   Aucun modele disponible
                 </SelectItem>
               ) : (
-                models.map((model) => (
-                  <SelectItem key={model.id} value={model.id}>
+                models.filter((m) => m.type === 'text').map((model) => (
+                  <SelectItem key={model.id} value={`${model.providerId}::${model.id}`}>
                     {model.displayName}
                   </SelectItem>
                 ))
