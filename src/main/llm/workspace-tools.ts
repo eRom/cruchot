@@ -44,6 +44,7 @@ const BLOCKED_PATTERNS = [
   /\bcurl\b.*\|\s*\b(bash|sh|zsh)\b/,           // curl | bash
   /\bwget\b.*\|\s*\b(bash|sh|zsh)\b/,           // wget | bash
   /\beval\b.*\$\(/,                              // eval $(...)
+  /\beval\b\s+/,                                 // eval (any form)
   /\bbash\s+-c\b/,                               // bash -c "..."
   /\bsh\s+-c\b/,                                 // sh -c "..."
   /\bzsh\s+-c\b/,                                // zsh -c "..."
@@ -51,6 +52,14 @@ const BLOCKED_PATTERNS = [
   /\bpython[23]?\s+-c\b/,                       // python -c "..."
   /\bnode\s+-e\b/,                               // node -e "..."
   /\bperl\s+-e\b/,                               // perl -e "..."
+
+  // ── Shell metacharacter evasion ───────────────────────
+  /`[^`]*`/,                                     // backtick command substitution
+  /\$\([^)]*\)/,                                 // $() command substitution
+  /(^|[;&|]\s*)source\s+/,                       // source at command position (not in arguments)
+  /(^|[;&|]\s*)\.\s+\//,                         // . /path at command position (dot-script)
+  /\\x[0-9a-fA-F]{2}/,                          // hex escape sequences
+  /\$'\\/,                                       // $'...' ANSI-C quoting (escape sequences)
 
   // ── Data exfiltration ──────────────────────────────────
   /\bscp\b/,                                     // scp (remote copy)
@@ -261,7 +270,7 @@ export function buildWorkspaceTools(workspace: WorkspaceService) {
         'Create or overwrite a file in the workspace. Parent directories are created automatically. Use for creating new files, modifying existing ones, or generating code.',
       inputSchema: z.object({
         path: z.string().describe('Relative file path to write (e.g. "src/components/Button.tsx")'),
-        content: z.string().describe('Full content to write to the file')
+        content: z.string().max(5_000_000).describe('Full content to write to the file (max 5MB)')
       }),
       execute: async ({ path, content }) => {
         try {

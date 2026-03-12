@@ -326,8 +326,11 @@ class TelegramBotService extends EventEmitter {
       return
     }
 
-    // Validate code
-    if (code.trim() !== this.pairingCode) {
+    // Validate code (timing-safe comparison to prevent side-channel attacks)
+    // Normalize to exactly 6 chars to ensure equal buffer lengths for timingSafeEqual
+    const codeStr = code.trim().slice(0, 6).padEnd(6)
+    const expectedStr = this.pairingCode.padEnd(6)
+    if (!crypto.timingSafeEqual(Buffer.from(codeStr), Buffer.from(expectedStr))) {
       await this.sendMessageTo(chatId, `Code incorrect (tentative ${this.pairingAttempts}/${MAX_PAIRING_ATTEMPTS}).`)
       return
     }
@@ -784,7 +787,9 @@ class TelegramBotService extends EventEmitter {
   async sendToolResult(toolName: string, output: unknown): Promise<void> {
     const outputStr = typeof output === 'string' ? output : JSON.stringify(output, null, 2)
     const truncated = outputStr.length > 1000 ? outputStr.slice(0, 1000) + '...' : outputStr
-    await this.sendMessage(`[${toolName}] ${truncated}`)
+    // Sanitize tool output to avoid leaking API keys or sensitive data
+    const sanitized = this.sanitizeForTelegram(truncated)
+    await this.sendMessage(`[${toolName}] ${sanitized}`)
   }
 
   // ── Tool Approval ───────────────────────────────────

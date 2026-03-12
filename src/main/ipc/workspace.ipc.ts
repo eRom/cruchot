@@ -7,7 +7,15 @@ import { FileWatcherService } from '../services/file-watcher.service'
 import { onWorkspaceFileChanged, resetGitService } from './git.ipc'
 
 // System paths that should never be used as workspace root
-const BLOCKED_ROOTS = ['/', '/etc', '/usr', '/System', '/Library', '/var', '/bin', '/sbin', '/tmp']
+const BLOCKED_ROOTS = [
+  '/', '/etc', '/usr', '/System', '/Library', '/var', '/bin', '/sbin', '/tmp',
+  '/private', '/private/etc', '/private/var', '/private/tmp',
+  '/opt', '/cores', '/dev', '/proc', '/sys',
+  // macOS-specific
+  '/Applications', '/Volumes',
+  // User home root (too broad)
+  process.env.HOME ?? '/Users'
+]
 
 // ── Module-level state ────────────────────────────────────
 let activeWorkspace: WorkspaceService | null = null
@@ -54,7 +62,7 @@ export function registerWorkspaceIpc(): void {
     const resolvedRoot = path.resolve(rootPath)
 
     // Validate rootPath is a safe directory
-    if (BLOCKED_ROOTS.includes(resolvedRoot) || BLOCKED_ROOTS.some(r => resolvedRoot === r)) {
+    if (BLOCKED_ROOTS.some(r => resolvedRoot === r || resolvedRoot.startsWith(r + path.sep))) {
       throw new Error(`Repertoire systeme refuse comme workspace : ${resolvedRoot}`)
     }
     try {

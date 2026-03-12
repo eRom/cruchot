@@ -18,7 +18,22 @@ async function trashPaths(paths: string[]): Promise<void> {
 
 export function registerDataIpc(): void {
   // ── Zone orange : nettoyage partiel ─────────────────────────
-  ipcMain.handle('data:cleanup', async () => {
+  ipcMain.handle('data:cleanup', async (event) => {
+    // Native confirmation dialog — do not rely on renderer alone
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) {
+      const { response } = await dialog.showMessageBox(win, {
+        type: 'warning',
+        buttons: ['Annuler', 'Nettoyer'],
+        defaultId: 0,
+        cancelId: 0,
+        title: 'Nettoyage des donnees',
+        message: 'Conversations, projets et images seront supprimes.',
+        detail: 'Les roles, prompts, memoire, parametres et cles API seront conserves.'
+      })
+      if (response !== 1) return { success: false, cancelled: true }
+    }
+
     const { imagePaths } = deleteConversationsProjectsImages()
 
     // Trash les fichiers images

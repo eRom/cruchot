@@ -70,7 +70,8 @@ export function registerRemoteServerIpc(): void {
       })
     } catch (err) {
       console.error('[RemoteServer] Failed to handle WS message:', err)
-      remoteServerService.broadcastToClients({
+      // Only broadcast to authenticated clients — do not leak info to unauthenticated connections
+      remoteServerService.broadcastToAuthenticatedClients({
         type: 'error',
         message: 'Erreur lors du traitement du message.'
       })
