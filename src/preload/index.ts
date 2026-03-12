@@ -372,6 +372,47 @@ const api: ElectronAPI = {
     ipcRenderer.removeAllListeners('remote:status-changed')
   },
 
+  // ── Remote Server (WebSocket) ──────────────────────
+  remoteServerStart: (data) => ipcRenderer.invoke('remote-server:start', data),
+
+  remoteServerStop: () => ipcRenderer.invoke('remote-server:stop'),
+
+  remoteServerGetConfig: () => ipcRenderer.invoke('remote-server:get-config'),
+
+  remoteServerSetConfig: (data) => ipcRenderer.invoke('remote-server:set-config', data),
+
+  remoteServerGeneratePairing: (data) => ipcRenderer.invoke('remote-server:generate-pairing', data),
+
+  remoteServerDisconnectClient: (clientId: string) => ipcRenderer.invoke('remote-server:disconnect-client', clientId),
+
+  remoteServerGetClients: () => ipcRenderer.invoke('remote-server:get-clients'),
+
+  remoteServerSetAutoApprove: (data) => ipcRenderer.invoke('remote-server:set-auto-approve', data),
+
+  onRemoteServerStatusChanged: (cb) => {
+    ipcRenderer.on('remote-server:status-changed', (_event, data) => cb(data))
+  },
+
+  offRemoteServerStatusChanged: () => {
+    ipcRenderer.removeAllListeners('remote-server:status-changed')
+  },
+
+  onRemoteServerClientConnected: (cb) => {
+    ipcRenderer.on('remote-server:client-connected', (_event, data) => cb(data))
+  },
+
+  offRemoteServerClientConnected: () => {
+    ipcRenderer.removeAllListeners('remote-server:client-connected')
+  },
+
+  onRemoteServerClientDisconnected: (cb) => {
+    ipcRenderer.on('remote-server:client-disconnected', (_event, data) => cb(data))
+  },
+
+  offRemoteServerClientDisconnected: () => {
+    ipcRenderer.removeAllListeners('remote-server:client-disconnected')
+  },
+
   // ── Summary ─────────────────────────────────────────
   summarizeConversation: (payload) => ipcRenderer.invoke('summary:generate', payload),
 

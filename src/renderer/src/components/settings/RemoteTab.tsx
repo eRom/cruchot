@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Smartphone, Eye, EyeOff, Loader2, Check, X, Copy } from 'lucide-react'
+import { Smartphone, Eye, EyeOff, Loader2, Check, X, Copy, Globe, Wifi, WifiOff, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { useRemoteStore } from '@/stores/remote.store'
+import { useRemoteServerStore } from '@/stores/remote-server.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { cn } from '@/lib/utils'
 
@@ -13,8 +15,15 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   error: { label: 'Erreur', color: 'bg-red-500' }
 }
 
+const WS_STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  stopped: { label: 'Arrete', color: 'bg-zinc-400' },
+  running: { label: 'Actif', color: 'bg-emerald-500' },
+  error: { label: 'Erreur', color: 'bg-red-500' }
+}
+
 export function RemoteTab(): React.JSX.Element {
   const { status, config, pairingCode, loading, loadConfig, configure, start, stop, setAutoApprove, deleteToken } = useRemoteStore()
+  const wsStore = useRemoteServerStore()
   const activeConversationId = useConversationsStore((s) => s.activeConversationId)
 
   const [token, setToken] = useState('')
@@ -23,16 +32,32 @@ export function RemoteTab(): React.JSX.Element {
   const [copied, setCopied] = useState(false)
   const [userIdInput, setUserIdInput] = useState('')
 
+  // Web Server config
+  const [wsHostname, setWsHostname] = useState('')
+  const [wsCfToken, setWsCfToken] = useState('')
+  const [showCfToken, setShowCfToken] = useState(false)
+  const [wsPort, setWsPort] = useState('9877')
+  const [wsCopied, setWsCopied] = useState(false)
+
   useEffect(() => {
     loadConfig()
-  }, [loadConfig])
+    wsStore.loadConfig()
+  }, [loadConfig, wsStore.loadConfig])
 
-  // Sync userIdInput with config
+  // Sync Telegram config
   useEffect(() => {
     if (config?.allowedUserId) {
       setUserIdInput(String(config.allowedUserId))
     }
   }, [config?.allowedUserId])
+
+  // Sync WS config
+  useEffect(() => {
+    if (wsStore.config) {
+      setWsHostname(wsStore.config.cfHostname ?? '')
+      setWsPort(String(wsStore.config.port))
+    }
+  }, [wsStore.config])
 
   const handleConfigure = useCallback(async () => {
     if (!token.trim() || !userIdInput.trim()) return
@@ -71,20 +96,73 @@ export function RemoteTab(): React.JSX.Element {
     })
   }, [config, setAutoApprove])
 
+  // ── Web Server handlers ──────────────────────
+
+  const handleWsConfigSave = useCallback(async () => {
+    const port = parseInt(wsPort, 10)
+    if (isNaN(port) || port < 1024 || port > 65535) {
+      toast.error('Port invalide (1024-65535)')
+      return
+    }
+    await wsStore.setConfig({
+      port,
+      cfHostname: wsHostname.trim() || null,
+      cfToken: wsCfToken.trim() || null
+    })
+    setWsCfToken('')
+    toast.success('Configuration sauvegardee')
+  }, [wsPort, wsHostname, wsCfToken, wsStore])
+
+  const handleWsStart = useCallback(async () => {
+    try {
+      await wsStore.start(activeConversationId ?? undefined)
+      toast.success('Serveur WebSocket demarre')
+    } catch (err) {
+      toast.error('Erreur au demarrage', {
+        description: err instanceof Error ? err.message : 'Erreur inconnue'
+      })
+    }
+  }, [wsStore, activeConversationId])
+
+  const handleWsStop = useCallback(async () => {
+    await wsStore.stop()
+    toast.success('Serveur WebSocket arrete')
+  }, [wsStore])
+
+  const handleGeneratePairing = useCallback(async () => {
+    const result = await wsStore.generatePairing(activeConversationId ?? undefined)
+    if (result.url) {
+      navigator.clipboard.writeText(result.url).catch(() => {})
+      toast('Lien de pairing copie dans le presse-papier', { duration: 5000 })
+    }
+  }, [wsStore, activeConversationId])
+
+  const handleCopyWsUrl = useCallback(() => {
+    const url = wsStore.pairingUrl
+    if (url) {
+      navigator.clipboard.writeText(url)
+      setWsCopied(true)
+      setTimeout(() => setWsCopied(false), 2000)
+    }
+  }, [wsStore.pairingUrl])
+
   const statusInfo = STATUS_LABELS[status] ?? STATUS_LABELS.disconnected
+  const wsStatusInfo = WS_STATUS_LABELS[wsStore.status] ?? WS_STATUS_LABELS.stopped
 
   return (
     <div className="space-y-8">
       <div>
         <h2 className="text-lg font-semibold text-foreground">Remote Control</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Controlez l'app depuis Telegram. Toute l'intelligence reste sur votre machine.
+          Controlez l'app depuis Telegram ou un navigateur web. L'intelligence reste sur votre machine.
         </p>
       </div>
 
       {/* ── Telegram Config Section ────────────── */}
       <section className="space-y-3">
-        <h3 className="text-sm font-medium text-foreground">Telegram</h3>
+        <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+          <Smartphone className="size-4" /> Telegram
+        </h3>
 
         {config?.hasToken && config.botUsername ? (
           <div className="space-y-2">
@@ -106,7 +184,6 @@ export function RemoteTab(): React.JSX.Element {
           </div>
         ) : (
           <div className="space-y-3">
-            {/* Token row */}
             <div className="flex items-center gap-3">
               <label className="w-24 shrink-0 text-sm text-muted-foreground">Token Bot</label>
               <div className="relative flex-1">
@@ -125,8 +202,6 @@ export function RemoteTab(): React.JSX.Element {
                 </button>
               </div>
             </div>
-
-            {/* User ID row */}
             <div className="flex items-center gap-3">
               <label className="w-24 shrink-0 text-sm text-muted-foreground">Mon ID</label>
               <input
@@ -138,8 +213,6 @@ export function RemoteTab(): React.JSX.Element {
                 className="flex-1 rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none font-mono"
               />
             </div>
-
-            {/* Valider button */}
             <div className="flex items-center gap-3">
               <div className="w-24 shrink-0" />
               <button
@@ -154,10 +227,7 @@ export function RemoteTab(): React.JSX.Element {
                 {loading ? <Loader2 className="size-4 animate-spin" /> : 'Valider'}
               </button>
             </div>
-
-            {configError && (
-              <p className="text-xs text-red-400">{configError}</p>
-            )}
+            {configError && <p className="text-xs text-red-400">{configError}</p>}
             <p className="text-xs text-muted-foreground">
               Creez un bot via @BotFather, collez le token. Envoyez /start a @userinfobot pour votre ID.
             </p>
@@ -165,18 +235,14 @@ export function RemoteTab(): React.JSX.Element {
         )}
       </section>
 
-      {/* ── Session Section ─────────────────────── */}
+      {/* ── Telegram Session Section ─────────────────────── */}
       {config?.hasToken && (
         <section className="space-y-3">
-          <h3 className="text-sm font-medium text-foreground">Session</h3>
-
-          {/* Status badge */}
+          <h3 className="text-sm font-medium text-foreground">Session Telegram</h3>
           <div className="flex items-center gap-3">
             <span className={cn('size-2.5 rounded-full', statusInfo.color)} />
             <span className="text-sm text-foreground">{statusInfo.label}</span>
           </div>
-
-          {/* Actions */}
           <div className="flex gap-2">
             {status === 'disconnected' || status === 'expired' ? (
               <button
@@ -204,50 +270,33 @@ export function RemoteTab(): React.JSX.Element {
               </button>
             )}
           </div>
-
-          {/* Pairing code */}
           {status === 'pairing' && pairingCode && (
             <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4 space-y-2">
-              <p className="text-sm text-foreground">
-                Envoyez cette commande a votre bot Telegram :
-              </p>
+              <p className="text-sm text-foreground">Envoyez cette commande a votre bot Telegram :</p>
               <div className="flex items-center gap-2">
                 <code className="rounded bg-muted px-3 py-1.5 text-lg font-mono font-bold tracking-widest text-foreground">
                   /pair {pairingCode}
                 </code>
-                <button
-                  onClick={handleCopyCode}
-                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                  title="Copier"
-                >
+                <button onClick={handleCopyCode} className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors" title="Copier">
                   {copied ? <Check className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Le code expire dans 5 minutes.
-              </p>
+              <p className="text-xs text-muted-foreground">Le code expire dans 5 minutes.</p>
             </div>
           )}
-
-          {/* Connected info */}
           {status === 'connected' && config.session && (
             <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
-              <p className="text-sm text-emerald-400">
-                Session active — Chat ID: {config.session.chatId}
-              </p>
+              <p className="text-sm text-emerald-400">Session active — Chat ID: {config.session.chatId}</p>
             </div>
           )}
         </section>
       )}
 
-      {/* ── Auto-Approve Section ───────────────── */}
+      {/* ── Telegram Auto-Approve Section ───────────────── */}
       {config?.session && (status === 'connected' || status === 'pairing') && (
         <section className="space-y-3">
-          <h3 className="text-sm font-medium text-foreground">Auto-approbation des outils</h3>
-          <p className="text-xs text-muted-foreground">
-            Les outils auto-approuves s'executent sans confirmation Telegram.
-          </p>
-
+          <h3 className="text-sm font-medium text-foreground">Auto-approbation (Telegram)</h3>
+          <p className="text-xs text-muted-foreground">Les outils auto-approuves s'executent sans confirmation Telegram.</p>
           <div className="space-y-2">
             {[
               { field: 'autoApproveRead', label: 'Lecture fichiers (readFile)', value: config.session.autoApproveRead },
@@ -260,23 +309,222 @@ export function RemoteTab(): React.JSX.Element {
                 <span className="text-sm text-foreground">{label}</span>
                 <button
                   onClick={() => handleAutoApproveToggle(field, !value)}
-                  className={cn(
-                    'relative h-6 w-11 rounded-full transition-colors',
-                    value ? 'bg-emerald-600' : 'bg-zinc-600'
-                  )}
+                  className={cn('relative h-6 w-11 rounded-full transition-colors', value ? 'bg-emerald-600' : 'bg-zinc-600')}
                 >
-                  <span
-                    className={cn(
-                      'absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform',
-                      value && 'translate-x-5'
-                    )}
-                  />
+                  <span className={cn('absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform', value && 'translate-x-5')} />
                 </button>
               </div>
             ))}
           </div>
         </section>
       )}
+
+      {/* ── Separator ──────────────────────────────── */}
+      <hr className="border-border/30" />
+
+      {/* ── Web Server Section ──────────────────────── */}
+      <section className="space-y-3">
+        <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+          <Globe className="size-4" /> Serveur Web Remote
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          Serveur WebSocket local + CloudFlare Tunnel pour un acces navigateur depuis n'importe ou.
+        </p>
+
+        {/* Status */}
+        <div className="flex items-center gap-3">
+          <span className={cn('size-2.5 rounded-full', wsStatusInfo.color)} />
+          <span className="text-sm text-foreground">{wsStatusInfo.label}</span>
+          {wsStore.config?.connectedClients ? (
+            <span className="text-xs text-muted-foreground">
+              ({wsStore.config.connectedClients} client{wsStore.config.connectedClients > 1 ? 's' : ''})
+            </span>
+          ) : null}
+          {wsStore.config?.tunnelUrl && (
+            <span className="text-xs text-muted-foreground font-mono truncate max-w-[200px]">
+              {wsStore.config.tunnelUrl}
+            </span>
+          )}
+        </div>
+
+        {/* Config */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <label className="w-24 shrink-0 text-sm text-muted-foreground">Port</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={wsPort}
+              onChange={(e) => setWsPort(e.target.value.replace(/\D/g, ''))}
+              placeholder="9877"
+              className="w-24 rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground font-mono focus:border-primary focus:outline-none"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="w-24 shrink-0 text-sm text-muted-foreground">Hostname</label>
+            <input
+              type="text"
+              value={wsHostname}
+              onChange={(e) => setWsHostname(e.target.value)}
+              placeholder="ws.example.com"
+              className="flex-1 rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none font-mono"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="w-24 shrink-0 text-sm text-muted-foreground">CF Token</label>
+            <div className="relative flex-1">
+              <input
+                type={showCfToken ? 'text' : 'password'}
+                value={wsCfToken}
+                onChange={(e) => setWsCfToken(e.target.value)}
+                placeholder={wsStore.config?.hasCfToken ? '(configure)' : 'Token CloudFlare (optionnel)'}
+                className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none"
+              />
+              <button
+                onClick={() => setShowCfToken(!showCfToken)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground"
+              >
+                {showCfToken ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-24 shrink-0" />
+            <button
+              onClick={handleWsConfigSave}
+              disabled={wsStore.loading}
+              className={cn(
+                'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                'bg-primary text-primary-foreground hover:bg-primary/90',
+                'disabled:opacity-50 disabled:cursor-not-allowed'
+              )}
+            >
+              {wsStore.loading ? <Loader2 className="size-4 animate-spin" /> : 'Sauvegarder'}
+            </button>
+          </div>
+        </div>
+
+        {/* Start/Stop */}
+        <div className="flex gap-2">
+          {wsStore.status === 'stopped' || wsStore.status === 'error' ? (
+            <button
+              onClick={handleWsStart}
+              disabled={wsStore.loading}
+              className={cn(
+                'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                'bg-emerald-600 text-white hover:bg-emerald-500',
+                'disabled:opacity-50 disabled:cursor-not-allowed'
+              )}
+            >
+              {wsStore.loading ? <Loader2 className="size-4 animate-spin" /> : 'Demarrer le serveur'}
+            </button>
+          ) : (
+            <button
+              onClick={handleWsStop}
+              disabled={wsStore.loading}
+              className={cn(
+                'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                'bg-red-600 text-white hover:bg-red-500',
+                'disabled:opacity-50 disabled:cursor-not-allowed'
+              )}
+            >
+              {wsStore.loading ? <Loader2 className="size-4 animate-spin" /> : 'Arreter le serveur'}
+            </button>
+          )}
+        </div>
+
+        {/* Pairing section */}
+        {wsStore.status === 'running' && (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <button
+                onClick={handleGeneratePairing}
+                className={cn(
+                  'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                  'bg-blue-600 text-white hover:bg-blue-500'
+                )}
+              >
+                Generer code de pairing
+              </button>
+            </div>
+
+            {wsStore.pairingCode && (
+              <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <code className="rounded bg-muted px-3 py-1.5 text-lg font-mono font-bold tracking-widest text-foreground">
+                    {wsStore.pairingCode}
+                  </code>
+                  <span className="text-xs text-muted-foreground">(5 min)</span>
+                </div>
+
+                {wsStore.pairingWsUrl && (
+                  <div className="text-xs text-muted-foreground font-mono">
+                    WebSocket : {wsStore.pairingWsUrl}
+                  </div>
+                )}
+
+                {wsStore.pairingUrl && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        readOnly
+                        value={wsStore.pairingUrl}
+                        className="flex-1 rounded-lg border border-border/50 bg-muted/30 px-3 py-1.5 text-xs font-mono text-muted-foreground"
+                      />
+                      <button
+                        onClick={handleCopyWsUrl}
+                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                        title="Copier l'URL"
+                      >
+                        {wsCopied ? <Check className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* QR Code */}
+                {wsStore.pairingQrDataUrl && (
+                  <div className="flex justify-center">
+                    <img
+                      src={wsStore.pairingQrDataUrl}
+                      alt="QR Code"
+                      className="size-48 rounded-lg border border-border/30"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Connected clients */}
+        {wsStore.clients.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-medium text-muted-foreground">Clients connectes</h4>
+            {wsStore.clients.map((client) => (
+              <div key={client.id} className="flex items-center gap-3 rounded-lg border border-border/30 px-3 py-2">
+                <Wifi className="size-3.5 text-emerald-500" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-foreground truncate">{client.ip}</div>
+                  <div className="text-[10px] text-muted-foreground truncate">{client.userAgent}</div>
+                </div>
+                <button
+                  onClick={() => wsStore.disconnectClient(client.id)}
+                  className="text-red-400 hover:text-red-300 transition-colors"
+                  title="Deconnecter"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <p className="text-xs text-muted-foreground">
+          Installez <code className="text-[10px] bg-muted px-1 rounded">cloudflared</code> pour le tunnel.
+          Sans tunnel, seul localhost est accessible.
+        </p>
+      </section>
     </div>
   )
 }

@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Smartphone, FileText } from 'lucide-react'
+import { Smartphone, FileText, Globe } from 'lucide-react'
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useRemoteStore } from '@/stores/remote.store'
+import { useRemoteServerStore } from '@/stores/remote-server.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useMessagesStore } from '@/stores/messages.store'
 import { useSettingsStore } from '@/stores/settings.store'
@@ -61,6 +62,9 @@ export function ContextWindowIndicator({
     <div className="flex items-center gap-2 px-4">
       {/* Remote badge — left side */}
       <RemoteBadge />
+
+      {/* WebSocket badge */}
+      <WebServerBadge />
 
       {/* Summary button */}
       <SummaryButton />
@@ -153,6 +157,78 @@ function RemoteBadge() {
             )}
           </span>
           <span className="hidden sm:inline">{label}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        {tooltipText}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+/** Small clickable badge for WebSocket Remote Server status. */
+function WebServerBadge() {
+  const wsStatus = useRemoteServerStore((s) => s.status)
+  const wsConfig = useRemoteServerStore((s) => s.config)
+  const wsStart = useRemoteServerStore((s) => s.start)
+  const wsStop = useRemoteServerStore((s) => s.stop)
+  const activeConversationId = useConversationsStore((s) => s.activeConversationId)
+  const setCurrentView = useUiStore((s) => s.setCurrentView)
+  const setSettingsTab = useUiStore((s) => s.setSettingsTab)
+
+  const handleClick = async () => {
+    if (wsStatus === 'stopped' || wsStatus === 'error') {
+      try {
+        await wsStart(activeConversationId ?? undefined)
+        toast.success('Serveur WebSocket demarre')
+      } catch {
+        setSettingsTab('remote')
+        setCurrentView('settings')
+      }
+    } else if (wsStatus === 'running') {
+      wsStop()
+    }
+  }
+
+  const isRunning = wsStatus === 'running'
+  const clientCount = wsConfig?.connectedClients ?? 0
+
+  const tooltipText = wsStatus === 'stopped'
+    ? 'Demarrer le serveur Web Remote'
+    : wsStatus === 'error'
+      ? 'Erreur serveur — Cliquer pour redemarrer'
+      : clientCount > 0
+        ? `Web Remote actif (${clientCount} client${clientCount > 1 ? 's' : ''}) — Cliquer pour arreter`
+        : 'Web Remote actif — Aucun client — Cliquer pour arreter'
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={handleClick}
+          className={cn(
+            'flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5',
+            'text-[10px] font-medium transition-all duration-200',
+            'hover:bg-accent/60',
+            isRunning && clientCount > 0
+              ? 'text-emerald-500'
+              : isRunning
+                ? 'text-blue-500'
+                : 'text-muted-foreground/60 hover:text-muted-foreground/80'
+          )}
+        >
+          <span className="relative">
+            <Globe className="size-3" />
+            {isRunning && clientCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            )}
+            {isRunning && clientCount === 0 && (
+              <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-blue-500" />
+            )}
+          </span>
+          <span className="hidden sm:inline">
+            {isRunning ? (clientCount > 0 ? `Web (${clientCount})` : 'Web') : 'Web'}
+          </span>
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom">

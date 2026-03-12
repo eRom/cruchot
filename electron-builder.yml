@@ -21,6 +21,8 @@ files:
   - "node_modules/electron-updater/**/*"
   - "node_modules/builder-util-runtime/**/*"
   - "node_modules/trash/**/*"
+  - "node_modules/ws/**/*"
+  - "node_modules/qrcode/**/*"
 
 # --- macOS ---
 mac:

@@ -4,6 +4,7 @@ import { useProvidersStore, type Model } from '@/stores/providers.store'
 import { useMcpStore } from '@/stores/mcp.store'
 import { useMemoryStore } from '@/stores/memory.store'
 import { useRemoteStore } from '@/stores/remote.store'
+import { useRemoteServerStore } from '@/stores/remote-server.store'
 
 const LOCAL_PROVIDERS_POLL_MS = 30_000
 
@@ -21,6 +22,8 @@ export function useInitApp() {
   const loadMemoryFragments = useMemoryStore((s) => s.loadFragments)
   const loadRemoteConfig = useRemoteStore((s) => s.loadConfig)
   const handleRemoteStatusChange = useRemoteStore((s) => s.handleStatusChange)
+  const loadRemoteServerConfig = useRemoteServerStore((s) => s.loadConfig)
+  const handleRemoteServerStatusChange = useRemoteServerStore((s) => s.handleStatusChange)
 
   const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
 
@@ -67,8 +70,14 @@ export function useInitApp() {
         // Load remote config (non-blocking)
         loadRemoteConfig().catch((err) => console.warn('[Init] Remote load failed:', err))
 
+        // Load remote server config (non-blocking)
+        loadRemoteServerConfig().catch((err) => console.warn('[Init] Remote Server load failed:', err))
+
         // Listen for remote status changes
         window.api.onRemoteStatusChanged(handleRemoteStatusChange)
+
+        // Listen for remote server status changes
+        window.api.onRemoteServerStatusChanged(handleRemoteServerStatusChange)
       } catch (error) {
         console.error('Failed to initialize app:', error)
       }
@@ -78,6 +87,7 @@ export function useInitApp() {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
       window.api.offRemoteStatusChanged()
+      window.api.offRemoteServerStatusChanged()
     }
-  }, [setConversations, setProviders, setModels, pollLocalProviders, loadMcpServers, loadMemoryFragments, loadRemoteConfig, handleRemoteStatusChange])
+  }, [setConversations, setProviders, setModels, pollLocalProviders, loadMcpServers, loadMemoryFragments, loadRemoteConfig, handleRemoteStatusChange, loadRemoteServerConfig, handleRemoteServerStatusChange])
 }
