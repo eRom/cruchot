@@ -224,7 +224,21 @@ export async function executeScheduledTask(
 
 // ── Helpers ─────────────────────────────────────────────────
 
+// Allowed setting keys for task executor (subset of ALLOWED_SETTING_KEYS from ipc/index.ts)
+const TASK_ALLOWED_KEYS = new Set([
+  'multi-llm:temperature',
+  'multi-llm:max-tokens',
+  'multi-llm:top-p',
+  'multi-llm:thinking-effort',
+  // Legacy bare keys (some code still stores without namespace)
+  'temperature',
+  'maxTokens',
+  'topP',
+  'thinkingEffort'
+])
+
 function getSettingNumber(key: string): number | null {
+  if (!TASK_ALLOWED_KEYS.has(key)) return null
   try {
     const db = getDatabase()
     const row = db.select().from(settings).where(eq(settings.key, key)).get()
@@ -237,6 +251,7 @@ function getSettingNumber(key: string): number | null {
 }
 
 function getSettingString(key: string): string | null {
+  if (!TASK_ALLOWED_KEYS.has(key)) return null
   try {
     const db = getDatabase()
     const row = db.select().from(settings).where(eq(settings.key, key)).get()

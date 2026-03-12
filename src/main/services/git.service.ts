@@ -43,9 +43,14 @@ export class GitService {
     this.rootPath = rootPath
   }
 
-  /** Build env per-call to avoid shared mutable state between instances */
+  /** Build env per-call to avoid shared mutable state between instances.
+   *  HOME set to a neutral path (not rootPath) to prevent malicious .gitconfig in workspace. */
   private getEnv(): Record<string, string> {
-    return { ...GIT_BASE_ENV, HOME: this.rootPath }
+    return {
+      ...GIT_BASE_ENV,
+      HOME: process.env.HOME ?? '/tmp',
+      GIT_CONFIG_NOSYSTEM: '1' // Ignore system-wide gitconfig
+    }
   }
 
   // ── Detection ───────────────────────────────────────────

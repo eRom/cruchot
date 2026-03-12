@@ -246,8 +246,12 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
     if (fileContexts && fileContexts.length > 0) {
       // Sanitize path and language to prevent XML attribute injection
       const sanitizeAttr = (s: string) => s.replace(/["<>&]/g, '')
+      // Sanitize content to prevent XML tag injection (same pattern as buildWorkspaceContextBlock)
+      const sanitizeContent = (s: string) => s
+        .replace(/<\/file>/gi, '&lt;/file&gt;')
+        .replace(/<\/workspace-files>/gi, '&lt;/workspace-files&gt;')
       const fileBlock = fileContexts.map(f =>
-        `<file path="${sanitizeAttr(f.path)}" language="${sanitizeAttr(f.language)}">\n${f.content}\n</file>`
+        `<file path="${sanitizeAttr(f.path)}" language="${sanitizeAttr(f.language)}">\n${sanitizeContent(f.content)}\n</file>`
       ).join('\n\n')
 
       const workspaceInstruction = `\n\n<workspace-files>\n${fileBlock}\n</workspace-files>\n\nQuand tu proposes des modifications de fichiers, utilise ce format :\n\`\`\`file:create:chemin/fichier.ext\ncontenu\n\`\`\`\n\`\`\`file:modify:chemin/fichier.ext\ncontenu complet modifie\n\`\`\`\n\`\`\`file:delete:chemin/fichier.ext\n\`\`\``
@@ -494,7 +498,7 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
             toolCallId: chunk.toolCallId
           })
           if (isWsConnected) {
-            remoteServerService.broadcastToClients({
+            remoteServerService.broadcastToAuthenticatedClients({
               type: 'tool-call',
               toolCallId: chunk.toolCallId,
               toolName: chunk.toolName,
@@ -687,7 +691,7 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
       const safeMsg = classified.category === 'fatal' ? 'Erreur d\'authentification API.'
         : classified.category === 'actionable' ? 'Erreur : quota ou limite atteinte.'
         : 'Erreur lors de la generation.'
-      remoteServerService.broadcastToClients({ type: 'error', message: safeMsg })
+      remoteServerService.broadcastToAuthenticatedClients({ type: 'error', message: safeMsg })
     }
   }
 }

@@ -154,7 +154,8 @@ class RemoteServerService extends EventEmitter {
       try {
         this.wss = new WebSocketServer({
           port: this.port,
-          host: '127.0.0.1'
+          host: '127.0.0.1',
+          maxPayload: 64 * 1024 // 64KB — prevent DoS via oversized messages
         })
 
         this.wss.on('listening', () => {
@@ -419,8 +420,11 @@ class RemoteServerService extends EventEmitter {
       return
     }
 
-    // Validate code
-    if (code !== this.pairingCode) {
+    // Validate code (timing-safe comparison to prevent side-channel attacks)
+    // Normalize to exactly 6 chars to ensure equal buffer lengths for timingSafeEqual
+    const safeCode = String(code).slice(0, 6).padEnd(6)
+    const expectedCode = this.pairingCode.padEnd(6)
+    if (!crypto.timingSafeEqual(Buffer.from(safeCode), Buffer.from(expectedCode))) {
       this.recordFailure(client.ip)
       this.sendToClient(clientId, {
         type: 'pair-failed',
@@ -659,10 +663,12 @@ class RemoteServerService extends EventEmitter {
   async sendToolResult(toolName: string, output: unknown): Promise<void> {
     const outputStr = typeof output === 'string' ? output : JSON.stringify(output, null, 2)
     const truncated = outputStr.length > 1000 ? outputStr.slice(0, 1000) + '...' : outputStr
+    // Sanitize tool output to avoid leaking API keys or sensitive data
+    const sanitized = this.sanitize(truncated)
     this.broadcastToAuthenticatedClients({
       type: 'tool-result',
       toolName,
-      output: truncated
+      output: sanitized
     })
   }
 
@@ -677,7 +683,7 @@ class RemoteServerService extends EventEmitter {
     }
   }
 
-  private broadcastToAuthenticatedClients(data: Record<string, unknown>): void {
+  broadcastToAuthenticatedClients(data: Record<string, unknown>): void {
     const json = JSON.stringify(data)
     for (const [, client] of this.clients) {
       if (client.sessionToken && client.ws.readyState === 1) {

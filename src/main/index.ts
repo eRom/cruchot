@@ -1,4 +1,5 @@
 import { app, BrowserWindow, net, protocol } from 'electron'
+import * as fs from 'fs'
 import { createMainWindow } from './window'
 import { registerAllIpcHandlers } from './ipc'
 import { initDatabase, closeDatabase } from './db'
@@ -29,7 +30,14 @@ app.whenReady().then(() => {
   // Handle local-image:// protocol — serves files only from allowed directories
   protocol.handle('local-image', (request) => {
     const filePath = decodeURIComponent(request.url.replace('local-image://', ''))
-    const resolved = path.resolve(filePath)
+
+    // Resolve symlinks to prevent escaping allowed dirs via symlink chains
+    let resolved: string
+    try {
+      resolved = fs.realpathSync(filePath)
+    } catch {
+      return new Response('Not Found', { status: 404 })
+    }
 
     if (!allowedDirs.some((dir) => resolved.startsWith(dir))) {
       console.warn('[Protocol] Blocked access to file outside allowed dirs:', resolved)

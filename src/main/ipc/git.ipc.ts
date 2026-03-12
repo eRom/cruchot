@@ -1,4 +1,5 @@
 import { ipcMain, BrowserWindow } from 'electron'
+import * as path from 'path'
 import { z } from 'zod'
 import { generateText } from 'ai'
 import { GitService } from '../services/git.service'
@@ -84,8 +85,40 @@ export function registerGitIpc(): void {
 
     const svc = getGitService()
     if (!svc) return ''
+
+    // Validate path is relative and within workspace root (no path traversal)
+    if (parsed.data.path) {
+      const filePath = parsed.data.path
+      if (path.isAbsolute(filePath) || filePath.includes('..')) {
+        throw new Error('Chemin invalide : seuls les chemins relatifs sans ".." sont autorises')
+      }
+      const root = getActiveWorkspaceRoot()
+      if (root) {
+        const resolved = path.resolve(root, filePath)
+        if (!resolved.startsWith(root + path.sep) && resolved !== root) {
+          throw new Error('Chemin en dehors du workspace')
+        }
+      }
+    }
+
     return svc.getDiff(parsed.data.path, parsed.data.staged)
   })
+
+  // ── Path validation helper for git operations ──────────
+  function validateGitPaths(paths: string[]): void {
+    const root = getActiveWorkspaceRoot()
+    for (const p of paths) {
+      if (path.isAbsolute(p) || p.includes('..')) {
+        throw new Error('Chemin invalide : seuls les chemins relatifs sans ".." sont autorises')
+      }
+      if (root) {
+        const resolved = path.resolve(root, p)
+        if (!resolved.startsWith(root + path.sep) && resolved !== root) {
+          throw new Error('Chemin en dehors du workspace')
+        }
+      }
+    }
+  }
 
   // ── git:stageFiles ──────────────────────────────────────
   ipcMain.handle('git:stageFiles', async (_event, payload: unknown) => {
@@ -94,6 +127,8 @@ export function registerGitIpc(): void {
     })
     const parsed = schema.safeParse(payload)
     if (!parsed.success) throw new Error('Invalid git:stageFiles payload')
+
+    validateGitPaths(parsed.data.paths)
 
     const svc = getGitService()
     if (!svc) throw new Error('No workspace open')
@@ -114,6 +149,8 @@ export function registerGitIpc(): void {
     })
     const parsed = schema.safeParse(payload)
     if (!parsed.success) throw new Error('Invalid git:unstageFiles payload')
+
+    validateGitPaths(parsed.data.paths)
 
     const svc = getGitService()
     if (!svc) throw new Error('No workspace open')
