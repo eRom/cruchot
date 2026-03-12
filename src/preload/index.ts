@@ -413,8 +413,17 @@ const api: ElectronAPI = {
     ipcRenderer.removeAllListeners('remote-server:client-disconnected')
   },
 
+  // ── Profile ──────────────────────────────────────────
+  selectAvatar: () => ipcRenderer.invoke('profile:select-avatar'),
+
+  removeAvatar: () => ipcRenderer.invoke('profile:remove-avatar'),
+
   // ── Summary ─────────────────────────────────────────
   summarizeConversation: (payload) => ipcRenderer.invoke('summary:generate', payload),
+
+  // ── Data (cleanup / factory reset) ─────────────────
+  dataCleanup: () => ipcRenderer.invoke('data:cleanup'),
+  dataFactoryReset: () => ipcRenderer.invoke('data:factory-reset'),
 
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>

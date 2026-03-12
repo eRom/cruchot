@@ -1,4 +1,4 @@
-import { ipcMain, dialog, shell, BrowserWindow, app } from 'electron'
+import { ipcMain, dialog, shell, BrowserWindow, app, nativeImage } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { saveAttachment, readAttachment } from '../services/file.service'
@@ -184,6 +184,56 @@ export function registerFilesIpc(): void {
       throw new Error('Access denied: path outside allowed directories')
     }
     shell.showItemInFolder(filePath)
+  })
+
+  // ── Profile avatar ────────────────────────────────────
+  ipcMain.handle('profile:select-avatar', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) throw new Error('No window found')
+
+    const result = await dialog.showOpenDialog(win, {
+      title: 'Choisir un avatar',
+      buttonLabel: 'Choisir',
+      properties: ['openFile'],
+      filters: [
+        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }
+      ]
+    })
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return null
+    }
+
+    const sourcePath = result.filePaths[0]
+    const imagesDir = path.join(app.getPath('userData'), 'images')
+    if (!fs.existsSync(imagesDir)) {
+      fs.mkdirSync(imagesDir, { recursive: true })
+    }
+
+    const destPath = path.join(imagesDir, 'avatar.png')
+
+    // Resize if needed (max 800px) and convert to PNG
+    let img = nativeImage.createFromPath(sourcePath)
+    const size = img.getSize()
+    if (size.width > 800 || size.height > 800) {
+      const scale = 800 / Math.max(size.width, size.height)
+      img = img.resize({
+        width: Math.round(size.width * scale),
+        height: Math.round(size.height * scale)
+      })
+    }
+
+    fs.writeFileSync(destPath, img.toPNG())
+    return destPath
+  })
+
+  ipcMain.handle('profile:remove-avatar', async () => {
+    const avatarPath = path.join(app.getPath('userData'), 'images', 'avatar.png')
+    if (fs.existsSync(avatarPath)) {
+      const { default: trash } = await import('trash')
+      await trash(avatarPath)
+    }
+    return true
   })
 
   console.log('[IPC] Files handlers registered')

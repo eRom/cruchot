@@ -22,6 +22,8 @@ interface SettingsState {
   summaryPrompt: string
   ttsProvider: TtsProvider
   favoriteModelIds: string[]
+  userName: string
+  userAvatarPath: string
 
   setTheme: (theme: ThemeMode) => void
   setLanguage: (language: 'fr' | 'en') => void
@@ -39,6 +41,8 @@ interface SettingsState {
   setSummaryPrompt: (prompt: string) => void
   setTtsProvider: (provider: TtsProvider) => void
   toggleFavoriteModel: (modelId: string) => void
+  setUserName: (name: string) => void
+  setUserAvatarPath: (path: string) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -67,6 +71,8 @@ Le resume doit inclure :
 
 Format : sections avec titres, bullet points. Sois concis mais complet.`,
       favoriteModelIds: [],
+      userName: '',
+      userAvatarPath: '',
 
       setTheme: (theme) => set({ theme }),
       setLanguage: (language) => set({ language }),
@@ -85,6 +91,8 @@ Format : sections avec titres, bullet points. Sois concis mais complet.`,
       setSummaryModelId: (modelId) => set({ summaryModelId: modelId }),
       setSummaryPrompt: (prompt) => set({ summaryPrompt: prompt.slice(0, 10_000) }),
       setTtsProvider: (provider) => set({ ttsProvider: provider }),
+      setUserName: (name) => set({ userName: name.trim().slice(0, 50) }),
+      setUserAvatarPath: (path) => set({ userAvatarPath: path }),
       toggleFavoriteModel: (modelId) =>
         set((state) => ({
           favoriteModelIds: state.favoriteModelIds.includes(modelId)

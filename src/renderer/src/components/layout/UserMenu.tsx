@@ -13,6 +13,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import type { ViewMode } from '@/stores/ui.store'
+import { useSettingsStore } from '@/stores/settings.store'
 import {
   BarChart3,
   BookOpen,
@@ -29,11 +30,6 @@ import {
 } from 'lucide-react'
 import React, { useState } from 'react'
 
-const MOCK_USER = {
-  name: 'Romain',
-  initials: 'RC'
-}
-
 interface UserMenuProps {
   isCollapsed: boolean
   currentView: ViewMode
@@ -43,6 +39,11 @@ interface UserMenuProps {
 
 export function UserMenu({ isCollapsed, currentView, onNavigate, enabledTasksCount }: UserMenuProps): React.JSX.Element {
   const [open, setOpen] = useState(false)
+  const userName = useSettingsStore((s) => s.userName) ?? ''
+  const userAvatarPath = useSettingsStore((s) => s.userAvatarPath) ?? ''
+
+  const displayName = userName || 'Anonymous'
+  const initials = userName ? userName.charAt(0).toUpperCase() : '?'
 
   const ChevronIcon = open ? ChevronsDownUp : ChevronsUpDown
 
@@ -57,13 +58,21 @@ export function UserMenu({ isCollapsed, currentView, onNavigate, enabledTasksCou
       )}
     >
       {/* Avatar */}
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-[11px] font-semibold text-sidebar-primary-foreground">
-        {MOCK_USER.initials}
-      </span>
+      {userAvatarPath ? (
+        <img
+          src={`local-image://${userAvatarPath}`}
+          alt={displayName}
+          className="size-8 shrink-0 rounded-full object-cover"
+        />
+      ) : (
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-[11px] font-semibold text-sidebar-primary-foreground">
+          {initials}
+        </span>
+      )}
       {!isCollapsed && (
         <>
           <span className="flex-1 truncate text-[13px] font-medium leading-tight">
-            {MOCK_USER.name}
+            {displayName}
           </span>
           <ChevronIcon className="size-4 shrink-0 text-sidebar-foreground/40 transition-colors group-hover:text-sidebar-foreground/60" />
         </>
@@ -77,7 +86,7 @@ export function UserMenu({ isCollapsed, currentView, onNavigate, enabledTasksCou
         {isCollapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>{trigger}</TooltipTrigger>
-            <TooltipContent side="right">{MOCK_USER.name}</TooltipContent>
+            <TooltipContent side="right">{displayName}</TooltipContent>
           </Tooltip>
         ) : (
           trigger
