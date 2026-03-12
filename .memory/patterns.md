@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 24 — Summary + audit secu Remote)
+> Derniere mise a jour : 2026-03-11 (session 25 — Remote Web)
 
 ## Conventions de nommage
 
@@ -168,6 +168,19 @@
 - **Config** : `summaryModelId` (format `providerId::modelId`) + `summaryPrompt` dans settings.store.ts, cap 10K chars cote store ET Zod backend
 - **UI** : `SummaryButton` interne a `ContextWindowIndicator.tsx`, meme pattern visuel que `RemoteBadge` (icone + label, tooltip dynamique)
 - **Securite backend** : whitelist providers `VALID_PROVIDERS`, regex modelId, verification `getConversation()` avant chargement messages
+
+## Remote Web (SPA standalone)
+
+- **Architecture** : SPA Vite independante dans `src/remote-web/`, build separee, zero dependance sur le renderer Electron
+- **State machine** : `useReducer` (pas Zustand — app legere, pas de persistence)
+- **WebSocket** : hook `useWebSocket` avec reconnexion auto, protocol JSON custom
+- **Pairing** : URL params `?ws=...&pair=...` pour auto-connect via QR code
+- **Pending pair pattern** : `pendingPairRef` + useEffect sur `connectionStatus === 'connected'` pour eviter race condition send-before-open
+- **UI calque desktop** : memes classes CSS, meme palette OKLCH, memes patterns de layout
+- **InputZone desktop pattern** : `rounded-2xl border border-border/60 bg-card shadow-sm`, textarea `px-4 pt-3 pb-0`, toolbar `px-2 pb-2 pt-1`, conteneur `max-w-3xl mx-auto`, zone racine `px-4 pb-6 pt-3 border-t border-border/40 bg-background/80 backdrop-blur-sm` + gradient fade `before:bg-gradient-to-t`
+- **MessageItem desktop pattern** : user `max-w-[75%] rounded-2xl px-4 py-3 bg-sidebar shadow-sm`, assistant avatar `size-8 rounded-full bg-muted/60 ring-1 ring-border/30` + Sparkles SVG, content `flex-1 min-w-0 py-2`
+- **Markdown** : renderer leger par regex (pas react-markdown — zero dep), suffisant pour le remote
+- **Dual-forward** : `handleChatMessage()` reutilisee avec source `'web'`, meme pattern que Telegram
 
 ## Conventions UI
 

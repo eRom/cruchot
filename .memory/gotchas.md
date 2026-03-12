@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 24 — Summary + audit secu Remote)
+> Derniere mise a jour : 2026-03-11 (session 25 — Remote Web)
 
 ## AI SDK v6 — Breaking changes (checklist)
 
@@ -140,6 +140,16 @@
 - **Erreurs brutes vers Telegram** : `classified.message` pouvait contenir des infos sensibles (cles partielles, stack traces). Fix : messages generiques par categorie d'erreur (fatal/actionable/transient).
 - **remote:start sans Zod** : `conversationId` passait directement sans validation. Fix : schema Zod `z.string().min(1).max(100).optional()`.
 
+## Remote Web — pieges session 25
+
+- **`generatePairingCode()` protocol bug** : generait `wss://localhost` (HTTPS protocol + pas de port) → WebSocket ne se connectait jamais. Fix : `ws://localhost:${port}` pour local, `wss://` seulement pour tunnel CloudFlare
+- **`wsUrl` manquant dans le retour IPC** : le pairing result ne renvoyait pas l'URL WebSocket au renderer, donc le web ne pouvait pas se connecter automatiquement via QR code. Fix : ajouter `wsUrl` dans `RemoteServerPairingResult`
+- **Race condition send-before-open** : `send({ type: 'pair', code })` appele avant que le WebSocket soit ouvert → message silencieusement perdu. Fix : `pendingPairRef` + useEffect qui envoie quand `connectionStatus === 'connected'`
+- **Auto-submit sur chaque keystroke** : le useEffect dependait de `wsUrlInput`, donc chaque caractere tape relancait la soumission. Fix : `hasUrlFromParams` ref — auto-submit uniquement quand l'URL vient des query params, sinon bouton manuel
+- **Pas d'historique apres pairing** : le web affichait un chat vide meme si la conv avait des messages. Fix : useEffect qui envoie `get-history` quand `activeConversation` est set
+- **UI quality gap** : le web utilisait des styles generiques au lieu du design system desktop. Fix : recopier exactement les classes CSS du desktop (meme palette OKLCH, memes rounded/shadow/padding, meme InputZone pattern `rounded-2xl border-border/60 bg-card`, meme MessageItem layout avec avatar Sparkles `size-8 rounded-full`)
+- **Exigence Romain** : l'UI du web remote doit etre un "vrai compagnon du Desktop" — calque visuel exact, pas une approximation
+
 ## Restant a faire
 
 - Search bar sidebar (T34)
@@ -151,3 +161,4 @@
 - MCP : chiffrer les headers HTTP comme les env vars
 - Certificat Apple Developer ID (99$/an) pour signature + notarisation
 - Test app packagee (crash au lancement a investiguer — probablement lie aux node_modules manquants, a retester apres fix externals)
+- Remote Web : feature en cours sur branche `feature-remote-web` — UI aligne sur desktop, reste a valider visuellement avec Romain

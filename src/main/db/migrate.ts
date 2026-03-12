@@ -245,4 +245,19 @@ export function runMigrations(): void {
   } catch {
     // Column already exists — ignore
   }
+
+  // Add WebSocket remote columns to remote_sessions table (session 25)
+  const wsRemoteMigrations = [
+    "ALTER TABLE remote_sessions ADD COLUMN session_type TEXT DEFAULT 'telegram'",
+    'ALTER TABLE remote_sessions ADD COLUMN ws_client_fingerprint TEXT',
+    'ALTER TABLE remote_sessions ADD COLUMN ws_session_token TEXT',
+    'ALTER TABLE remote_sessions ADD COLUMN ws_ip_address TEXT'
+  ]
+  for (const sql of wsRemoteMigrations) {
+    try {
+      sqlite.exec(sql)
+    } catch {
+      // Column already exists — ignore
+    }
+  }
 }

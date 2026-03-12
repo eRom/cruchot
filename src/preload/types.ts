@@ -446,6 +446,40 @@ export interface AutoApproveSettings {
   autoApproveMcp: boolean
 }
 
+// ── Remote Server (WebSocket) ─────────────────────────────────────
+export type RemoteServerStatus = 'stopped' | 'running' | 'error'
+
+export interface RemoteServerConfig {
+  enabled: boolean
+  port: number
+  isRunning: boolean
+  connectedClients: number
+  tunnelUrl: string | null
+  cfHostname: string | null
+  hasCfToken: boolean
+}
+
+export interface RemoteServerClientInfo {
+  id: string
+  ip: string
+  userAgent: string
+  connectedAt: string
+  lastActivity: string
+}
+
+export interface RemoteServerStatusEvent {
+  status: RemoteServerStatus
+  connectedClients: number
+  tunnelUrl?: string | null
+}
+
+export interface RemoteServerPairingResult {
+  code: string
+  url: string | null
+  wsUrl: string
+  qrDataUrl: string | null
+}
+
 // ── Summary ─────────────────────────────────────────────────
 export interface SummarizePayload {
   conversationId: string
@@ -707,6 +741,22 @@ export interface ElectronAPI {
   remoteDeleteToken: () => Promise<void>
   onRemoteStatusChanged: (callback: (event: RemoteStatusEvent) => void) => void
   offRemoteStatusChanged: () => void
+
+  // Remote Server (WebSocket)
+  remoteServerStart: (data?: { conversationId?: string }) => Promise<{ port: number; tunnelUrl: string | null }>
+  remoteServerStop: () => Promise<void>
+  remoteServerGetConfig: () => Promise<RemoteServerConfig>
+  remoteServerSetConfig: (data: { port?: number; cfToken?: string | null; cfHostname?: string | null }) => Promise<RemoteServerConfig>
+  remoteServerGeneratePairing: (data?: { conversationId?: string }) => Promise<RemoteServerPairingResult>
+  remoteServerDisconnectClient: (clientId: string) => Promise<void>
+  remoteServerGetClients: () => Promise<RemoteServerClientInfo[]>
+  remoteServerSetAutoApprove: (data: AutoApproveSettings) => Promise<void>
+  onRemoteServerStatusChanged: (callback: (event: RemoteServerStatusEvent) => void) => void
+  offRemoteServerStatusChanged: () => void
+  onRemoteServerClientConnected: (callback: (data: { id: string; ip: string; userAgent: string; connectedAt: string }) => void) => void
+  offRemoteServerClientConnected: () => void
+  onRemoteServerClientDisconnected: (callback: (data: { id: string }) => void) => void
+  offRemoteServerClientDisconnected: () => void
 
   // Summary
   summarizeConversation: (payload: SummarizePayload) => Promise<SummarizeResult>

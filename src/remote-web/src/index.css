@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Palette exacte du desktop (dark mode — globals.css) ── */
+  --color-background: oklch(0.236 0 0);
+  --color-foreground: oklch(0.985 0 0);
+  --color-card: oklch(0.274 0.003 286);
+  --color-card-foreground: oklch(0.985 0 0);
+  --color-primary: oklch(0.92 0.004 286.32);
+  --color-primary-foreground: oklch(0.236 0 0);
+  --color-secondary: oklch(0.31 0.003 286);
+  --color-secondary-foreground: oklch(0.985 0 0);
+  --color-muted: oklch(0.31 0.003 286);
+  --color-muted-foreground: oklch(0.705 0.015 286.067);
+  --color-accent: oklch(0.31 0.003 286);
+  --color-accent-foreground: oklch(0.985 0 0);
+  --color-destructive: oklch(0.704 0.191 22.216);
+  --color-border: oklch(1 0 0 / 10%);
+  --color-input: oklch(1 0 0 / 15%);
+  --color-ring: oklch(0.552 0.016 285.938);
+
+  /* Sidebar — warm tone */
+  --color-sidebar: oklch(0.269 0.005 90);
+  --color-sidebar-foreground: oklch(0.985 0 0);
+  --color-sidebar-primary: oklch(49.107% 0.24121 264.248);
+  --color-sidebar-accent: oklch(0.33 0.005 90);
+
+  /* Semantic */
+  --color-cyan-accent: oklch(0.6 0.118 184.704);
+  --color-emerald-accent: oklch(0.696 0.17 162.48);
+
+  --radius: 0.625rem;
+  --radius-lg: calc(var(--radius) * 1.5);
+  --radius-xl: calc(var(--radius) * 2);
+}
+
+/* ── Reset ─────────────────────────────────────────── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar (identique desktop) ─────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: oklch(1 0 0 / 8%);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(1 0 0 / 14%);
+}
+
+/* ── Code blocks (identique desktop MarkdownRenderer) ─ */
+pre {
+  background: oklch(0.19 0 0) !important;
+  border: 1px solid oklch(1 0 0 / 8%);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.65;
+  margin: 10px 0;
+}
+
+code {
+  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 13px;
+}
+
+/* ── Prose (identique desktop MessageContent) ──────── */
+.prose-msg {
+  font-size: 14px;
+  line-height: 1.7;
+  color: oklch(0.92 0 0);
+}
+.prose-msg h1 { font-size: 1.2em; font-weight: 700; margin: 16px 0 6px; color: var(--color-foreground); }
+.prose-msg h2 { font-size: 1.1em; font-weight: 600; margin: 14px 0 5px; color: var(--color-foreground); }
+.prose-msg h3 { font-size: 1.05em; font-weight: 600; margin: 12px 0 4px; color: var(--color-foreground); }
+.prose-msg p { margin: 5px 0; }
+.prose-msg p:first-child { margin-top: 0; }
+.prose-msg p:last-child { margin-bottom: 0; }
+.prose-msg ul { margin: 8px 0; padding-left: 20px; list-style-type: disc; }
+.prose-msg ol { margin: 8px 0; padding-left: 20px; list-style-type: decimal; }
+.prose-msg li { margin: 3px 0; line-height: 1.6; }
+.prose-msg strong { color: var(--color-foreground); font-weight: 600; }
+.prose-msg em { color: var(--color-muted-foreground); font-style: italic; }
+
+/* Inline code */
+.prose-msg code {
+  background: oklch(1 0 0 / 8%);
+  color: oklch(0.75 0.12 264);
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 0.85em;
+}
+.prose-msg pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+/* User bubble code */
+.bubble-user code {
+  background: oklch(1 0 0 / 12%);
+  color: oklch(0.92 0 0);
+}
+
+/* ── Textarea ──────────────────────────────────────── */
+textarea {
+  outline: none;
+}
+textarea:focus {
+  outline: none;
+}
+
+/* ── Animations (identique desktop) ────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn { animation: fadeIn 0.25s ease-out both; }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slideIn { animation: slideIn 0.3s ease-out both; }

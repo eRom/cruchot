@@ -1,13 +1,13 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-11 (session 24 — Summary + audit secu Remote)
+> Derniere mise a jour : 2026-03-11 (session 25 — Remote Web)
 
 ## Vue d'ensemble
 
-App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud (OpenAI/Google), statistiques de couts, workspace co-work (LLM context-aware sur fichiers), **integration Git** (branche, status, diff, AI commit), taches planifiees, **integration MCP** (serveurs externes), **memory fragments** (contexte utilisateur persistant), **Remote Telegram** (controle a distance via bot). Zero serveur backend.
+App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud (OpenAI/Google), statistiques de couts, workspace co-work (LLM context-aware sur fichiers), **integration Git** (branche, status, diff, AI commit), taches planifiees, **integration MCP** (serveurs externes), **memory fragments** (contexte utilisateur persistant), **Remote Telegram** (controle a distance via bot), **Remote Web** (controle a distance via navigateur/mobile). Zero serveur backend.
 
 ## Stack
 
-Electron 35 + React 19 + TypeScript 5.7 + Tailwind CSS 4 + shadcn/ui + better-sqlite3 + Drizzle ORM + Zustand + **Vercel AI SDK 6** (`ai@^6.0.116`) + **`@ai-sdk/mcp`** (MCP client)
+Electron 35 + React 19 + TypeScript 5.7 + Tailwind CSS 4 + shadcn/ui + better-sqlite3 + Drizzle ORM + Zustand + **Vercel AI SDK 6** (`ai@^6.0.116`) + **`@ai-sdk/mcp`** (MCP client) + **Vite standalone** (remote-web SPA)
 
 ## Architecture 2 processus
 
@@ -190,6 +190,31 @@ Couches de protection :
 - **Bundling** : `externalizeDepsPlugin` avec exclude list (deps JS pures bundlees), seuls `better-sqlite3`, `chokidar`, `@ai-sdk/mcp`, `electron-updater`, `trash` restent en node_modules
 - **Signature** : pas encore de certificat Apple Developer ID — ad-hoc + `codesign --force --deep` pour dev local
 - **Scripts** : `dist:mac`, `dist:win`, `dist:linux`, `dist:publish`, `release`
+
+## Remote Web
+
+```
+RemoteServerService (singleton, EventEmitter) → ws (npm) WebSocket server
+  ├── start(port) → WebSocket.Server on localhost:port (default 9877)
+  ├── generatePairingCode(conversationId?) → 6 digits, 5min expiry, QR code, wsUrl
+  ├── handleConnection() → auth via pairing code → sessionToken → paired client
+  ├── handleMessage() → route: pair, user-message, tool-approval-response, cancel-stream, get-history
+  ├── dual-forward → chat chunks pushed to WS client + desktop renderer
+  └── CloudFlare tunnel support (optional cfHostname → wss:// URL)
+```
+
+- **SPA standalone** : `src/remote-web/` — Vite + React + Tailwind CSS 4, build separee dans `out/remote-web/`
+- **WebSocket** : `ws` npm module, serveur localhost:9877 (configurable), pairing 6 chiffres
+- **Protocol** : JSON messages via WebSocket (pair, user-message, tool-approval-response, cancel-stream, get-history, stream-start/text-delta/reasoning-delta/end, tool-approval-request, session-expired)
+- **Conversation bridge** : meme pattern que Telegram — continue la conv desktop active
+- **Dual-forward** : `handleChatMessage()` reutilisee, source `'desktop' | 'web'`
+- **UI Web** : calque exact du desktop (meme palette OKLCH, memes composants, memes patterns CSS)
+- **Composants** : App.tsx (useReducer state), PairingScreen, ChatView, StatusBar, ToolCallCard, ReasoningBlock, Markdown
+- **Hooks** : useWebSocket (reconnexion, dispatch actions)
+- **Auto-pair** : URL params `?ws=...&pair=...` pour QR code scan direct
+- **Backend** : `remote-server.service.ts` (~960 lignes), `remote-server.ipc.ts`, `remote-server.store.ts`
+- **DB** : table `remote_server_sessions` (17e table)
+- **Branche** : `feature-remote-web`
 
 ## GitHub
 
