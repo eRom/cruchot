@@ -10,6 +10,8 @@ import { schedulerService } from './services/scheduler.service'
 import { mcpManagerService } from './services/mcp-manager.service'
 import { telegramBotService } from './services/telegram-bot.service'
 import { remoteServerService } from './services/remote-server.service'
+import { seedBuiltinCommands } from './db/queries/slash-commands'
+import { BUILTIN_COMMANDS } from './commands/builtin'
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'
 
@@ -51,6 +53,10 @@ app.whenReady().then(() => {
   runMigrations()
 
   registerAllIpcHandlers()
+
+  // Seed builtin slash commands
+  seedBuiltinCommands(BUILTIN_COMMANDS)
+
   mainWindow = createMainWindow()
 
   // Scheduler — start timers for enabled scheduled tasks
