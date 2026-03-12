@@ -37,7 +37,14 @@ function SourceBadge({ source, index }: { source: PerplexitySource; index: numbe
   return (
     <span className="relative">
       <button
-        onClick={() => window.open(source.url, '_blank', 'noopener,noreferrer')}
+        onClick={() => {
+          try {
+            const parsed = new URL(source.url)
+            if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+              window.open(source.url, '_blank', 'noopener,noreferrer')
+            }
+          } catch { /* URL invalide */ }
+        }}
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
         className={cn(

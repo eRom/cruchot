@@ -149,6 +149,9 @@ export function registerFilesIpc(): void {
     if (!filePath || typeof filePath !== 'string') {
       throw new Error('File path is required')
     }
+    if (!isPathAllowed(filePath)) {
+      throw new Error('Access denied: path outside allowed directories')
+    }
 
     const buffer = readAttachment(filePath)
     if (!buffer) {

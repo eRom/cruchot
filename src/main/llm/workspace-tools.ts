@@ -3,7 +3,8 @@ import { z } from 'zod'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import { existsSync, readFileSync } from 'fs'
-import { join } from 'path'
+import { join, sep, normalize } from 'path'
+import { tmpdir } from 'os'
 import type { WorkspaceService } from '../services/workspace.service'
 
 const execAsync = promisify(exec)
@@ -111,7 +112,7 @@ const BLOCKED_PATH_SEGMENTS = [
 ]
 
 function isReadableFile(filePath: string): { allowed: boolean; reason?: string } {
-  const segments = filePath.split('/')
+  const segments = normalize(filePath).split(sep)
   const filename = segments[segments.length - 1] || ''
   const ext = filename.includes('.') ? '.' + filename.split('.').pop()!.toLowerCase() : ''
 
@@ -197,7 +198,7 @@ export function buildWorkspaceTools(workspace: WorkspaceService) {
             env: {
               PATH: '/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
               HOME: rootPath,
-              TMPDIR: rootPath,
+              TMPDIR: tmpdir(),
               LANG: process.env.LANG ?? 'en_US.UTF-8',
               FORCE_COLOR: '0',
               NO_COLOR: '1'
@@ -340,7 +341,9 @@ export function buildWorkspaceContextBlock(rootPath: string): string {
       if (totalSize + content.length > MAX_TOTAL_CONTEXT_SIZE) break
 
       totalSize += content.length
-      parts.push(`<file name="${filename}">\n${content}\n</file>`)
+      // Sanitize closing tags to prevent XML prompt injection
+      const safeContent = content.replace(/<\/file>/gi, '&lt;/file&gt;').replace(/<\/workspace-context>/gi, '&lt;/workspace-context&gt;')
+      parts.push(`<file name="${filename}">\n${safeContent}\n</file>`)
     } catch {
       // Skip unreadable files
     }

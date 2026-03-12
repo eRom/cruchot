@@ -1,4 +1,4 @@
-import { ipcMain, app } from 'electron'
+import { ipcMain, app, dialog, BrowserWindow } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import { deleteConversationsProjectsImages, factoryResetDatabase } from '../db/queries/cleanup'
@@ -28,7 +28,21 @@ export function registerDataIpc(): void {
   })
 
   // ── Zone rouge : factory reset ──────────────────────────────
-  ipcMain.handle('data:factory-reset', async () => {
+  ipcMain.handle('data:factory-reset', async (event) => {
+    // Double confirmation native — ne pas se fier au renderer seul
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) {
+      const { response } = await dialog.showMessageBox(win, {
+        type: 'warning',
+        buttons: ['Annuler', 'Reinitialiser'],
+        defaultId: 0,
+        cancelId: 0,
+        title: 'Factory Reset',
+        message: 'Toutes les donnees seront supprimees de facon irreversible.',
+        detail: 'Conversations, projets, roles, prompts, memoire, parametres, cles API — tout sera efface.'
+      })
+      if (response !== 1) return { success: false, cancelled: true }
+    }
     // 1. Stop services actifs
     try {
       const { schedulerService } = await import('../services/scheduler.service')
