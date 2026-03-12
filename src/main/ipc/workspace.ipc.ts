@@ -6,15 +6,16 @@ import { WorkspaceService } from '../services/workspace.service'
 import { FileWatcherService } from '../services/file-watcher.service'
 import { onWorkspaceFileChanged, resetGitService } from './git.ipc'
 
-// System paths that should never be used as workspace root
-const BLOCKED_ROOTS = [
+// System paths that are ALWAYS blocked as workspace root (no override)
+const HARD_BLOCKED_ROOTS = [
   '/', '/etc', '/usr', '/System', '/Library', '/var', '/bin', '/sbin', '/tmp',
   '/private', '/private/etc', '/private/var', '/private/tmp',
-  '/opt', '/cores', '/dev', '/proc', '/sys',
-  // macOS-specific
-  '/Applications', '/Volumes',
-  // User home root (too broad)
-  process.env.HOME ?? '/Users'
+  '/opt', '/cores', '/dev', '/proc', '/sys'
+]
+
+// Sensitive paths that trigger an approval dialog (user can override)
+const SENSITIVE_ROOTS = [
+  '/Applications', '/Volumes', '/Users'
 ]
 
 // ── Module-level state ────────────────────────────────────
@@ -61,10 +62,31 @@ export function registerWorkspaceIpc(): void {
     const { rootPath } = parsed.data
     const resolvedRoot = path.resolve(rootPath)
 
-    // Validate rootPath is a safe directory
-    if (BLOCKED_ROOTS.some(r => resolvedRoot === r || resolvedRoot.startsWith(r + path.sep))) {
+    // Hard block: system paths that should NEVER be used as workspace
+    if (HARD_BLOCKED_ROOTS.some(r => resolvedRoot === r || resolvedRoot.startsWith(r + path.sep))) {
       throw new Error(`Repertoire systeme refuse comme workspace : ${resolvedRoot}`)
     }
+
+    // Soft block: sensitive paths require user approval via native dialog
+    const sensitiveMatch = SENSITIVE_ROOTS.find(r => resolvedRoot === r || resolvedRoot.startsWith(r + path.sep))
+    if (sensitiveMatch) {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (win) {
+        const { response } = await dialog.showMessageBox(win, {
+          type: 'warning',
+          buttons: ['Autoriser', 'Annuler'],
+          defaultId: 1,
+          cancelId: 1,
+          title: 'Chemin sensible',
+          message: `Le chemin "${resolvedRoot}" se trouve dans une zone sensible (${sensitiveMatch}).`,
+          detail: 'Ouvrir ce repertoire comme workspace donne au LLM un acces en lecture/ecriture aux fichiers qu\'il contient.\n\nVoulez-vous continuer ?'
+        })
+        if (response !== 0) {
+          throw new Error(`Acces au repertoire refuse par l'utilisateur : ${resolvedRoot}`)
+        }
+      }
+    }
+
     try {
       const stat = fs.statSync(resolvedRoot)
       if (!stat.isDirectory()) throw new Error(`Le chemin n'est pas un repertoire : ${resolvedRoot}`)

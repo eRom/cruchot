@@ -13,25 +13,29 @@ Architecture à 3 couches :
 
 2. **Preload (contextBridge)** — ~107 méthodes typées exposées via `window.api`, jamais ipcRenderer directement. Callbacks nettoyés via removeAllListeners.
 
-3. **Main (Node.js)** — Validation Zod sur tous les IPC handlers. Clés API chiffrées via safeStorage (Keychain macOS). Settings protégés par whitelist de clés autorisées (ALLOWED_SETTING_KEYS) + validation longueur 10K max. Workspace tools (bash) avec env minimal isolé (PATH restreint, HOME=workspace, TMPDIR=os.tmpdir(), pas d'héritage process.env) et blocklist de commandes (~30 patterns). MCP servers : env minimal stdio (PATH/HOME/TMPDIR/LANG/SHELL/USER — plus d'héritage process.env complet), env vars custom chiffrées, headers HTTP masqués du renderer. Git : env immutable GIT_BASE_ENV (Readonly) + getEnv() construit par appel (pas de mutation globale entre instances). files:read confiné via isPathAllowed() (userData + workspace uniquement). Path traversal protection (path.resolve + startsWith, path segments via normalize+sep cross-platform). Fichiers sensibles bloqués (SENSITIVE_PATTERNS case-insensitive). Custom protocol local-image:// avec allowlist de répertoires. shell.openExternal avec confirmation dialog pour domaines non-trusted. Factory reset : double confirmation (renderer "DELETE" + dialog.showMessageBox natif côté main). XML context injection sanitisé (</file> et </workspace-context> échappés dans buildWorkspaceContextBlock).
+3. **Main (Node.js)** — Validation Zod sur tous les IPC handlers. Clés API chiffrées via safeStorage (Keychain macOS). Settings protégés par whitelist de clés autorisées (ALLOWED_SETTING_KEYS) + validation longueur 10K max. Workspace tools (bash) avec env minimal isolé (PATH restreint, HOME=workspace, TMPDIR=os.tmpdir(), pas d'héritage process.env) et blocklist de commandes (~36 patterns, dont 6 anti-évasion shell : backticks, $(), source/dot-script en position commande, séquences hex, ANSI-C quoting) + writeFile limité à 5MB (Zod .max). MCP servers : env minimal stdio (PATH/HOME/TMPDIR/LANG/SHELL/USER — plus d'héritage process.env complet), env vars custom chiffrées, headers HTTP masqués du renderer. Git : env immutable GIT_BASE_ENV (Readonly) + getEnv() construit par appel (pas de mutation globale entre instances), HOME=process.env.HOME (plus rootPath — empêche l'injection .gitconfig), GIT_CONFIG_NOSYSTEM=1 (bloque la config système). Git IPC : validateGitPaths() sur getDiff, stageFiles ET unstageFiles (path traversal : rejet chemins absolus, "..", resolve+startsWith). files:read confiné via isPathAllowed() (userData + workspace uniquement). Path traversal protection (path.resolve + startsWith, path segments via normalize+sep cross-platform). Fichiers sensibles bloqués (SENSITIVE_PATTERNS case-insensitive). Custom protocol local-image:// avec allowlist de répertoires + fs.realpathSync() anti-symlink escape. shell.openExternal avec confirmation dialog pour domaines non-trusted. Workspace open : 2 niveaux de protection — HARD_BLOCKED_ROOTS (/, /etc, /usr, /System, /Library, /var, /bin, /sbin, /tmp, /private/*, /opt, /cores, /dev, /proc, /sys → bloqués définitivement) + SENSITIVE_ROOTS (/Applications, /Volumes, /Users → dialog natif showMessageBox avec avertissement explicite, l'utilisateur peut approuver). Factory reset + data cleanup : double confirmation (renderer "DELETE" + dialog.showMessageBox natif côté main pour les deux). Task executor : settings whitelist TASK_ALLOWED_KEYS (pas d'accès direct DB sans filtre). Recherche FTS5 : sanitizeFtsQuery() neutralise les opérateurs MATCH (AND/OR/NOT/NEAR, accolades, astérisques, préfixes colonne:) + résultats tronqués à 500 chars. XML context injection sanitisé (</file> et </workspace-context> échappés dans buildWorkspaceContextBlock). Chat fileContexts : sanitizeContent() sur path et contenu avant injection XML dans le system prompt. Remote Telegram/Web : comparaison pairing code via crypto.timingSafeEqual (anti timing side-channel), .slice(0,6).padEnd(6) pour normaliser la longueur des buffers. Remote Web : maxPayload 64KB sur WebSocketServer (anti-DoS), broadcastToAuthenticatedClients uniquement (plus de broadcast aux clients non-pairés), sanitize sur sendToolResult avant envoi.
 
 Flux principaux à montrer :
 - Renderer → IPC (Zod validation) → Main → LLM APIs (clés chiffrées)
 - Main → IPC streaming chunks → Renderer (DOMPurify)
-- Workspace : bash tool sandboxé → child_process (env minimal, timeout 30s, blocklist)
-- MCP : McpManagerService → subprocess stdio / HTTP (env chiffré, headers masqués)
+- Workspace open : resolvedRoot → HARD_BLOCKED_ROOTS (hard block) → SENSITIVE_ROOTS (dialog approbation) → stat isDirectory → WorkspaceService
+- Workspace : bash tool sandboxé → child_process (env minimal, timeout 30s, blocklist ~36 patterns dont anti-évasion shell)
+- MCP : McpManagerService → subprocess stdio / HTTP (env minimal, vars chiffrées, headers masqués)
 - Attachments : path confiné (userData + workspace uniquement)
-- DB SQLite : WAL mode, prepared statements (Drizzle ORM), credentials jamais en clair
-- Remote Telegram : triple verrou (token chiffré safeStorage + code pairing 6 chiffres 5min/5 tentatives + allowedUserId vérifié sur chaque message/callback), long polling HTTPS sortant (zéro port entrant), sanitization données sensibles avant envoi, tool approval gate (inline keyboards)
-- Remote Web : validateSessionToken() obligatoire sur TOUS les handlers WebSocket (get-conversations et cancel-stream inclus), écoute 127.0.0.1 uniquement, session tokens hashés SHA-256 en DB
-- Settings : whitelist ALLOWED_SETTING_KEYS (blocage lecture/écriture arbitraire en DB)
+- DB SQLite : WAL mode, prepared statements (Drizzle ORM), credentials jamais en clair, FTS5 queries sanitisées
+- Remote Telegram : triple verrou (token chiffré safeStorage + code pairing 6 chiffres crypto.timingSafeEqual 5min/5 tentatives + allowedUserId vérifié sur chaque message/callback), long polling HTTPS sortant (zéro port entrant), sanitization données sensibles avant envoi, tool approval gate (inline keyboards)
+- Remote Web : validateSessionToken() obligatoire sur TOUS les handlers WebSocket (get-conversations et cancel-stream inclus), écoute 127.0.0.1 uniquement, session tokens hashés SHA-256 en DB, maxPayload 64KB anti-DoS, broadcast réservé aux clients authentifiés, pairing timing-safe
+- Git : env immutable Readonly + construction par appel + HOME=user home (pas workspace) + GIT_CONFIG_NOSYSTEM + validateGitPaths() sur toutes les opérations fichier
+- Settings : whitelist ALLOWED_SETTING_KEYS (IPC) + TASK_ALLOWED_KEYS (task executor) — blocage lecture/écriture arbitraire en DB
 - MCP subprocess : env minimal (plus d'héritage process.env complet — clés API du shell parent ne fuitent plus)
-- Git : env immutable Readonly + construction par appel (pas de mutation d'état global partagé entre instances)
 - Markdown : href validé (whitelist schémas https/http/mailto/#, bloque javascript: et data:)
-- Factory reset : double confirmation indépendante (renderer + dialog natif main process)
-- XML prompt : contenu fichiers sanitisé (balises fermantes échappées, bloque l'injection de prompt)
+- Factory reset + cleanup : double confirmation indépendante (renderer + dialog natif main process) sur les DEUX opérations
+- XML prompt : contenu fichiers sanitisé (balises fermantes échappées + sanitizeContent sur fileContexts, bloque l'injection de prompt)
+- Custom protocol local-image:// : fs.realpathSync() résout les symlinks AVANT la vérification d'allowlist (anti-symlink escape)
+- Recherche FTS5 : sanitizeFtsQuery() empêche l'injection d'opérateurs MATCH, résultats tronqués à 500 chars (anti-DoS IPC)
+- CI/CD : npm audit strict (sans continue-on-error, --omit=dev)
 
-Style : technique et épuré, fond sombre, couleurs : rouge pour les barrières de sécurité, vert pour les flux validés, jaune/orange pour les zones à risque contrôlé (bash tool, MCP subprocess).
+Style : technique et épuré, fond sombre, couleurs : rouge pour les barrières de sécurité hard block, vert pour les flux validés, jaune/orange pour les zones à risque contrôlé (bash tool, MCP subprocess, SENSITIVE_ROOTS avec dialog approbation), bleu pour les protections anti-timing/anti-DoS.
 
 
 ## Prompt pour diagramme sur la base de données (schéma table)
@@ -250,9 +254,10 @@ Architecture à montrer :
 - Zéro serveur backend, zéro dépendance npm (fetch natif Node.js)
 - Triple verrou de sécurité :
   1. Token bot chiffré via safeStorage (Keychain macOS)
-  2. Code pairing 6 chiffres (crypto.randomInt, 5 min expiry, max 5 tentatives >=)
+  2. Code pairing 6 chiffres (crypto.randomInt, 5 min expiry, max 5 tentatives >=), comparaison via crypto.timingSafeEqual (anti timing side-channel), normalisation .slice(0,6).padEnd(6)
   3. allowedUserId vérifié sur CHAQUE message ET callback (obligatoire, pas optionnel)
 - Streaming : sendMessage('▍') → editMessageText (debounce 500ms) → split intelligent > 4096 chars
+- sendToolResult : sanitize des données sensibles avant envoi
 - Tool approval : wrapToolsWithApproval() → inline keyboards [Approuver][Refuser], auto-approve configurable par type (5 toggles : read, write, bash, list, mcp)
 - Commandes bot : /pair, /stop, /status, /model, /clear, /help
 - Sanitization : SENSITIVE_PATTERNS masqués, erreurs génériques vers Telegram (pas de raw stack traces)
@@ -261,10 +266,12 @@ Architecture à montrer :
 
 **Canal 2 — Remote Web** (côté droit)
 - RemoteServerService (singleton, EventEmitter) dans le Main process
-- WebSocket server `ws` npm sur localhost:9877 (configurable)
+- WebSocket server `ws` npm sur localhost:9877 (configurable), maxPayload 64KB (anti-DoS)
 - SPA standalone (Vite + React + Tailwind CSS 4) dans `src/remote-web/`, build séparée dans `out/remote-web/`
-- Pairing : code 6 chiffres + QR code avec URL params `?ws=...&pair=...` pour auto-connect
+- Pairing : code 6 chiffres + QR code avec URL params `?ws=...&pair=...` pour auto-connect, comparaison crypto.timingSafeEqual
 - Protocol JSON custom via WebSocket (pair, user-message, tool-approval-response, cancel-stream, get-history, stream-start/text-delta/reasoning-delta/end, tool-approval-request, session-expired)
+- Broadcast réservé aux clients authentifiés (broadcastToAuthenticatedClients — plus de fuite vers clients non-pairés)
+- sendToolResult : sanitize des données sensibles avant broadcast
 - UI = calque exact du desktop (même palette OKLCH, même InputZone, même MessageItem avec avatar Sparkles)
 - Session persistée en DB (table remote_server_sessions, 17ème table)
 - Support optionnel CloudFlare tunnel (wss:// pour accès externe)
