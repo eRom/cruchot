@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FileOperation } from '../../../../preload/types'
 import { AudioPlayer } from './AudioPlayer'
 import { MessageContent } from './MessageContent'
+import { PerplexitySources, type PerplexitySource } from './PerplexitySources'
 
 interface MessageItemProps {
   message: Message
@@ -95,7 +96,8 @@ const TOOL_CONFIG: Record<string, { icon: typeof FileText; label: string }> = {
   readFile: { icon: FileText, label: 'Lecture du fichier' },
   writeFile: { icon: Pencil, label: 'Ecriture du fichier' },
   listFiles: { icon: FolderSearch, label: 'Exploration des fichiers' },
-  searchInFiles: { icon: Search, label: 'Recherche dans les fichiers' }
+  searchInFiles: { icon: Search, label: 'Recherche dans les fichiers' },
+  search: { icon: Search, label: 'Recherche web' }
 }
 
 /** Resolve tool config — handles MCP prefixed tools (e.g. github__create_issue) */
@@ -260,6 +262,7 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
   const label = providerLabel(message.providerId, message.modelId)
   const tokens = formatTokens(message.tokensIn, message.tokensOut)
   const fileOperations = (message.contentData?.fileOperations as FileOperation[] | undefined) ?? []
+  const searchSources = (message.contentData?.searchSources as PerplexitySource[] | undefined) ?? []
 
   return (
     <div
@@ -359,6 +362,11 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
             }}
           />
         ))}
+
+        {/* Perplexity search sources */}
+        {!isUser && searchSources.length > 0 && (
+          <PerplexitySources sources={searchSources} />
+        )}
 
         {/* Streaming indicator — generating phase */}
         {isStreaming && message.streamPhase === 'generating' && (

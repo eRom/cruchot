@@ -25,6 +25,7 @@ interface SettingsState {
   favoriteModelIds: string[]
   userName: string
   userAvatarPath: string
+  searchEnabled: boolean
 
   setDefaultModelId: (modelId: string) => void
   setTheme: (theme: ThemeMode) => void
@@ -45,6 +46,7 @@ interface SettingsState {
   toggleFavoriteModel: (modelId: string) => void
   setUserName: (name: string) => void
   setUserAvatarPath: (path: string) => void
+  setSearchEnabled: (value: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -76,6 +78,7 @@ Format : sections avec titres, bullet points. Sois concis mais complet.`,
       favoriteModelIds: [],
       userName: '',
       userAvatarPath: '',
+      searchEnabled: false,
 
       setDefaultModelId: (modelId) => set({ defaultModelId: modelId }),
       setTheme: (theme) => set({ theme }),
@@ -97,6 +100,7 @@ Format : sections avec titres, bullet points. Sois concis mais complet.`,
       setTtsProvider: (provider) => set({ ttsProvider: provider }),
       setUserName: (name) => set({ userName: name.trim().slice(0, 50) }),
       setUserAvatarPath: (path) => set({ userAvatarPath: path }),
+      setSearchEnabled: (value) => set({ searchEnabled: value }),
       toggleFavoriteModel: (modelId) =>
         set((state) => ({
           favoriteModelIds: state.favoriteModelIds.includes(modelId)

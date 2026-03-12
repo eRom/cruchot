@@ -27,6 +27,7 @@ interface StreamChunk {
   responseTimeMs?: number
   fileOperations?: Array<{ id: string; type: string; path: string; content?: string; status: string }>
   toolCalls?: Array<{ toolName: string; args?: Record<string, unknown>; status: string; error?: string }>
+  searchSources?: Array<{ title: string; url: string; snippet?: string }>
 }
 
 /** Human-readable labels for workspace tool calls */
@@ -35,7 +36,8 @@ const TOOL_LABELS: Record<string, string> = {
   readFile: 'Lecture du fichier',
   writeFile: 'Ecriture du fichier',
   listFiles: 'Exploration des fichiers',
-  searchInFiles: 'Recherche dans les fichiers'
+  searchInFiles: 'Recherche dans les fichiers',
+  search: 'Recherche web'
 }
 
 /** Parse MCP tool name (prefix__toolName) into readable label */
@@ -176,6 +178,9 @@ export function useStreaming() {
             }
             if (chunk.toolCalls && chunk.toolCalls.length > 0) {
               finishContentData.toolCalls = chunk.toolCalls
+            }
+            if (chunk.searchSources && chunk.searchSources.length > 0) {
+              finishContentData.searchSources = chunk.searchSources
             }
 
             updateMessage(msgId, {

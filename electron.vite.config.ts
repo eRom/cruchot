@@ -40,7 +40,7 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'src/main/index.ts')
         },
-        external: ['fsevents', 'chokidar', '@ai-sdk/mcp', '@ai-sdk/mcp/mcp-stdio', 'ws']
+        external: ['fsevents', 'chokidar', '@ai-sdk/mcp', '@ai-sdk/mcp/mcp-stdio', 'ws', '@perplexity-ai/ai-sdk']
       }
     }
   },

@@ -192,6 +192,22 @@ Catégories et fonctionnalités :
 - Filtrage par période (7j, 30j, 90j, 1an, tout)
 - Compteurs de tokens in/out
 
+**Recherche Web (Perplexity Search)** (icône : loupe/globe)
+- Mode Search activable/désactivable dans la zone de saisie (toggle violet)
+- Outil Perplexity Search injecté dans le pipeline AI SDK — fonctionne avec n'importe quel provider/modèle
+- Le LLM décide quand chercher sur le web (tool call automatique)
+- Sources numérotées cliquables affichées sous la réponse (badges interactifs)
+- Prompt directif qui priorise la recherche web sur les outils workspace
+- Visible uniquement si la clé API Perplexity est configurée
+- Persistance des sources dans la base de données (contentData.searchSources)
+
+**Gestion des données** (icône : bouclier/corbeille)
+- Nettoyage partiel (zone orange) : supprime conversations, projets, images, tâches, serveurs MCP — conserve rôles, prompts, mémoire, paramètres, clés API
+- Factory reset complet (zone rouge) : suppression de TOUTES les tables DB, arrêt des services actifs, trash des fichiers (images, attachments, avatar)
+- Validation "DELETE" (case-sensitive) obligatoire pour le factory reset
+- Retour à l'état initial (Welcome wizard) après factory reset
+- Export/import JSON pour les prompts et les rôles (sauvegarde avant nettoyage)
+
 **Personnalisation** (icône : sliders)
 - Thème clair/sombre
 - Paramètres modèle globaux (temperature, maxTokens, topP)
@@ -208,9 +224,55 @@ Catégories et fonctionnalités :
 
 Bandeau bas : **Stack technique** — Electron 35 · React 19 · TypeScript · Tailwind CSS 4 · SQLite · Drizzle ORM · Vercel AI SDK 6
 
-Style : infographie moderne, fond sombre, mise en page en grille (3-4 colonnes), chaque catégorie dans une carte avec icône colorée en haut, titre en gras, bullet points concis en dessous. Palette de couleurs : bleu électrique pour le chat, violet pour la personnalisation, vert pour le workspace et Git, orange pour les extensions (MCP, tâches), cyan pour les médias (images, TTS), rouge pour la sécurité, indigo pour LM Studio. Aspect premium et épuré, pas surchargé.
+Style : infographie moderne, fond sombre, mise en page en grille (3-4 colonnes), chaque catégorie dans une carte avec icône colorée en haut, titre en gras, bullet points concis en dessous. Palette de couleurs : bleu électrique pour le chat, violet pour la personnalisation et la recherche web, vert pour le workspace et Git, orange pour les extensions (MCP, tâches), cyan pour les médias (images, TTS), rouge pour la sécurité et la gestion des données, indigo pour LM Studio, rose pour le Remote (Telegram, Web). Aspect premium et épuré, pas surchargé.
 
 ---
 
-## Prompts pour la fonctionnalité de "Remote Telegram | Web" (Architecture & sécurité)
+## Prompt pour diagramme Remote Telegram | Web (Architecture & sécurité)
 
+Crée un diagramme d'architecture technique pour la fonctionnalité "Remote Control" d'une app desktop Electron multi-LLM. Le diagramme doit montrer les deux canaux de contrôle à distance (Telegram et Web) et leurs flux de sécurité.
+
+Architecture à montrer :
+
+**Canal 1 — Remote Telegram** (côté gauche)
+- TelegramBotService (singleton, EventEmitter) dans le Main process
+- Long polling HTTPS sortant vers Telegram Bot API (getUpdates, timeout 30s, AbortController)
+- Zéro serveur backend, zéro dépendance npm (fetch natif Node.js)
+- Triple verrou de sécurité :
+  1. Token bot chiffré via safeStorage (Keychain macOS)
+  2. Code pairing 6 chiffres (crypto.randomInt, 5 min expiry, max 5 tentatives >=)
+  3. allowedUserId vérifié sur CHAQUE message ET callback (obligatoire, pas optionnel)
+- Streaming : sendMessage('▍') → editMessageText (debounce 500ms) → split intelligent > 4096 chars
+- Tool approval : wrapToolsWithApproval() → inline keyboards [Approuver][Refuser], auto-approve configurable par type (5 toggles : read, write, bash, list, mcp)
+- Commandes bot : /pair, /stop, /status, /model, /clear, /help
+- Sanitization : SENSITIVE_PATTERNS masqués, erreurs génériques vers Telegram (pas de raw stack traces)
+- Reconnexion : backoff exponentiel 1s→60s, expiration 10 min inactivité
+- Session persistée en DB (table remote_sessions, 16ème table)
+
+**Canal 2 — Remote Web** (côté droit)
+- RemoteServerService (singleton, EventEmitter) dans le Main process
+- WebSocket server `ws` npm sur localhost:9877 (configurable)
+- SPA standalone (Vite + React + Tailwind CSS 4) dans `src/remote-web/`, build séparée dans `out/remote-web/`
+- Pairing : code 6 chiffres + QR code avec URL params `?ws=...&pair=...` pour auto-connect
+- Protocol JSON custom via WebSocket (pair, user-message, tool-approval-response, cancel-stream, get-history, stream-start/text-delta/reasoning-delta/end, tool-approval-request, session-expired)
+- UI = calque exact du desktop (même palette OKLCH, même InputZone, même MessageItem avec avatar Sparkles)
+- Session persistée en DB (table remote_server_sessions, 17ème table)
+- Support optionnel CloudFlare tunnel (wss:// pour accès externe)
+
+**Point de convergence — handleChatMessage()** (centre)
+- Fonction unique exportée depuis chat.ipc.ts
+- Source : 'desktop' | 'telegram' | 'websocket'
+- Dual-forward : chunks streamés simultanément vers le renderer desktop ET le canal remote connecté
+- Tool approval gate : wrapToolsWithApproval() enveloppe les execute() des outils AVANT streamText()
+- Conversation bridge : les deux canaux continuent la conversation desktop active (pas de conv séparée)
+
+**DB** (en bas)
+- remote_sessions : chatId, autoApprove x5, conversationId FK, allowedUserId
+- remote_server_sessions : clientId, autoApprove x5, conversationId FK
+
+Flux à montrer avec flèches :
+- Smartphone → Telegram Bot API → long polling → TelegramBotService → handleChatMessage() → streamText() → dual-forward chunks → Renderer desktop + Telegram (editMessageText)
+- Navigateur/Mobile → WebSocket ws:// → RemoteServerService → handleChatMessage() → streamText() → dual-forward chunks → Renderer desktop + WebSocket client
+- Tool call → wrapToolsWithApproval() → inline keyboard (Telegram) / ToolCallCard (Web) → approve/deny → execute ou reject
+
+Style : technique et épuré, fond sombre, couleurs : rose/magenta pour Telegram, bleu/cyan pour Web, vert pour les flux validés, rouge pour les barrières de sécurité (pairing, allowedUserId, token chiffré), jaune pour le tool approval gate. Les deux canaux convergent visuellement vers handleChatMessage() au centre.
