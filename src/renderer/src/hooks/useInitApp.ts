@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProvidersStore, type Model } from '@/stores/providers.store'
+import { useSettingsStore } from '@/stores/settings.store'
 import { useMcpStore } from '@/stores/mcp.store'
 import { useMemoryStore } from '@/stores/memory.store'
 import { useRemoteStore } from '@/stores/remote.store'
@@ -63,6 +64,15 @@ export function useInitApp() {
         setConversations(conversations)
         setProviders(providers)
         setModels(models)
+
+        // Restore default model from persisted settings
+        const defaultModelId = useSettingsStore.getState().defaultModelId ?? ''
+        if (defaultModelId.includes('::')) {
+          const [providerId, modelId] = defaultModelId.split('::')
+          if (providerId && modelId) {
+            useProvidersStore.getState().selectModel(providerId, modelId)
+          }
+        }
 
         // Initial detection + start polling for local providers
         pollLocalProviders()

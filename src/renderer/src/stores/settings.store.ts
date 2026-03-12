@@ -18,6 +18,7 @@ interface SettingsState {
   maxTokens: number
   topP: number
   thinkingEffort: ThinkingEffort
+  defaultModelId: string
   summaryModelId: string
   summaryPrompt: string
   ttsProvider: TtsProvider
@@ -25,6 +26,7 @@ interface SettingsState {
   userName: string
   userAvatarPath: string
 
+  setDefaultModelId: (modelId: string) => void
   setTheme: (theme: ThemeMode) => void
   setLanguage: (language: 'fr' | 'en') => void
   toggleSidebar: () => void
@@ -60,6 +62,7 @@ export const useSettingsStore = create<SettingsState>()(
       topP: 0.5,
       thinkingEffort: 'medium' as ThinkingEffort,
       ttsProvider: 'browser' as TtsProvider,
+      defaultModelId: '',
       summaryModelId: '',
       summaryPrompt: `Tu es un assistant specialise dans la synthese de conversations. Genere un resume structure et concis de la conversation suivante.
 
@@ -74,6 +77,7 @@ Format : sections avec titres, bullet points. Sois concis mais complet.`,
       userName: '',
       userAvatarPath: '',
 
+      setDefaultModelId: (modelId) => set({ defaultModelId: modelId }),
       setTheme: (theme) => set({ theme }),
       setLanguage: (language) => set({ language }),
       toggleSidebar: () =>
