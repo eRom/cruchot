@@ -85,6 +85,7 @@ class McpManagerService {
           command: serverConfig.command,
           args: serverConfig.args ?? [],
           env: spawnEnv,
+          stderr: 'pipe',
           cwd: serverConfig.cwd ?? undefined
         })
       } else if (serverConfig.transportType === 'http' || serverConfig.transportType === 'sse') {
@@ -266,6 +267,7 @@ class McpManagerService {
         command: config.command,
         args: config.args ?? [],
         env: spawnEnv,
+        stderr: 'pipe',
         cwd: config.cwd ?? undefined
       })
     } else {
