@@ -286,6 +286,23 @@ const api: ElectronAPI = {
 
   toggleMemoryFragment: (payload) => ipcRenderer.invoke('memory:toggle', payload),
 
+  // ── Slash Commands ─────────────────────────────────────────
+  slashCommandsList: () => ipcRenderer.invoke('slash-commands:list'),
+
+  slashCommandsGet: (id) => ipcRenderer.invoke('slash-commands:get', id),
+
+  slashCommandsCreate: (data) => ipcRenderer.invoke('slash-commands:create', data),
+
+  slashCommandsUpdate: (id, data) => ipcRenderer.invoke('slash-commands:update', id, data),
+
+  slashCommandsDelete: (id) => ipcRenderer.invoke('slash-commands:delete', id),
+
+  slashCommandsReset: (id) => ipcRenderer.invoke('slash-commands:reset', id),
+
+  slashCommandsReorder: (orderedIds) => ipcRenderer.invoke('slash-commands:reorder', orderedIds),
+
+  slashCommandsSeed: () => ipcRenderer.invoke('slash-commands:seed'),
+
   // ── MCP Servers ─────────────────────────────────────────
   mcpList: () => ipcRenderer.invoke('mcp:list'),
 

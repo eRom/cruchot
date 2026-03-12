@@ -28,6 +28,7 @@ import { registerRemoteIpc } from './remote.ipc'
 import { registerRemoteServerIpc } from './remote-server.ipc'
 import { registerSummaryIpc } from './summary.ipc'
 import { registerDataIpc } from './data.ipc'
+import { registerSlashCommandsIpc } from './slash-commands.ipc'
 
 /**
  * Registre central des IPC handlers.
@@ -111,6 +112,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Data (cleanup / factory reset) ────────────────
   registerDataIpc()
+
+  // ── Slash Commands ────────────────────────────
+  registerSlashCommandsIpc()
 
   // ── Settings ────────────────────────────────────────
   const ALLOWED_SETTING_KEYS = new Set([

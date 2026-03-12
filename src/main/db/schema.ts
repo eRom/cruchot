@@ -277,6 +277,22 @@ export const remoteSessions = sqliteTable('remote_sessions', {
 })
 
 // ---------------------------------------------------------------------------
+// Slash Commands
+// ---------------------------------------------------------------------------
+export const slashCommands = sqliteTable('slash_commands', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  prompt: text('prompt').notNull(),
+  category: text('category'),
+  projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }),
+  isBuiltin: integer('is_builtin', { mode: 'boolean' }).notNull().default(false),
+  sortOrder: integer('sort_order').default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+})
+
+// ---------------------------------------------------------------------------
 // Images
 // ---------------------------------------------------------------------------
 export const images = sqliteTable('images', {

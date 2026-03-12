@@ -21,6 +21,8 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useContextWindow } from '@/hooks/useContextWindow'
 import { cn } from '@/lib/utils'
 import { FileReference } from '@/components/workspace/FileReference'
+import { SlashCommandPicker } from '@/components/chat/SlashCommandPicker'
+import { useSlashCommands } from '@/hooks/useSlashCommands'
 import type { AttachmentRef } from '../../../../preload/types'
 
 // ── Types pour futures integrations (ModelParams) ──
@@ -107,6 +109,22 @@ export function InputZone({
   const detachWorkspaceFile = useWorkspaceStore((s) => s.detachFile)
   const toggleWorkspacePanel = useWorkspaceStore((s) => s.togglePanel)
   const searchEnabled = useSettingsStore((s) => s.searchEnabled) ?? false
+
+  // ── Slash commands ─────────────────────────────────────────
+  const { isActive: slashActive, matches: slashMatches, resolve: resolveSlashCommand } = useSlashCommands(content)
+  const [slashPickerOpen, setSlashPickerOpen] = useState(false)
+  const [slashSelectedIndex, setSlashSelectedIndex] = useState(0)
+
+  // Open/close picker based on slash detection
+  useEffect(() => {
+    if (slashActive && slashMatches.length > 0) {
+      setSlashPickerOpen(true)
+      setSlashSelectedIndex(0)
+    } else {
+      setSlashPickerOpen(false)
+    }
+  }, [slashActive, slashMatches.length])
+
   // ── Context window ────────────────────────────────────────
   const conversationMessages = useMemo(
     () => messages.filter((m) => m.conversationId === activeConversationId),
@@ -457,16 +475,32 @@ export function InputZone({
     const conversationId = await ensureConversation()
     if (!conversationId) return
 
+    // ── Slash command resolution ─────────────────────────────
+    let resolvedContent = trimmed
+    let slashCommandName: string | undefined
+    if (trimmed.startsWith('/')) {
+      const resolved = resolveSlashCommand(trimmed)
+      if (resolved) {
+        resolvedContent = resolved.prompt
+        slashCommandName = resolved.commandName
+      }
+    }
+
     // Build attachment refs before clearing
     const attachmentRefsForIpc = buildAttachmentRefs()
 
     // Build contentData for optimistic user message
-    const userContentData = attachmentRefsForIpc.length > 0
-      ? { attachments: attachmentRefsForIpc.map(r => ({ path: r.path, name: r.name, size: r.size, type: r.type, mimeType: r.mimeType })) }
-      : undefined
+    const baseContentData: Record<string, unknown> = {}
+    if (attachmentRefsForIpc.length > 0) {
+      baseContentData.attachments = attachmentRefsForIpc.map(r => ({ path: r.path, name: r.name, size: r.size, type: r.type, mimeType: r.mimeType }))
+    }
+    if (slashCommandName) {
+      baseContentData.slashCommand = slashCommandName
+    }
+    const userContentData = Object.keys(baseContentData).length > 0 ? baseContentData : undefined
 
     // Ajouter le message user au store local (optimistic update)
-    const messageContent = trimmed || (hasAttachments ? `[${pendingAttachments.length} fichier(s) joint(s)]` : '')
+    const messageContent = resolvedContent || (hasAttachments ? `[${pendingAttachments.length} fichier(s) joint(s)]` : '')
     const userMessage = {
       id: crypto.randomUUID(),
       conversationId,
@@ -563,7 +597,8 @@ export function InputZone({
     activeRoleId,
     activeSystemPrompt,
     conversationMessages.length,
-    onMessageSent
+    onMessageSent,
+    resolveSlashCommand
   ])
 
   // ── Dispatch send ──────────────────────────────────────
@@ -574,6 +609,16 @@ export function InputZone({
       handleSendText()
     }
   }, [isImageMode, handleSendImage, handleSendText])
+
+  // ── Slash command selection from picker ──────────────────
+  const handleSlashSelect = useCallback(
+    (commandName: string) => {
+      setContent(`/${commandName} `)
+      setSlashPickerOpen(false)
+      requestAnimationFrame(() => textareaRef.current?.focus())
+    },
+    []
+  )
 
   // ── Insertion depuis PromptPicker ─────────────────────────
   const handlePromptInsert = useCallback(
@@ -600,6 +645,40 @@ export function InputZone({
   // ── Keyboard ─────────────────────────────────────────────
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      // Slash command picker keyboard navigation
+      if (slashPickerOpen && slashMatches.length > 0) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          setSlashSelectedIndex((i) => (i + 1) % slashMatches.length)
+          return
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          setSlashSelectedIndex((i) => (i - 1 + slashMatches.length) % slashMatches.length)
+          return
+        }
+        if (e.key === 'Tab') {
+          e.preventDefault()
+          handleSlashSelect(slashMatches[slashSelectedIndex].command.name)
+          return
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          setSlashPickerOpen(false)
+          return
+        }
+        // Enter with picker open = select the command (not send)
+        if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+          // If content is just "/something" without a space (still selecting), select
+          const firstWord = content.split(' ')[0]
+          if (firstWord === content.trim()) {
+            e.preventDefault()
+            handleSlashSelect(slashMatches[slashSelectedIndex].command.name)
+            return
+          }
+        }
+      }
+
       // Enter seul = envoyer, Shift+Enter = saut de ligne
       if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
         e.preventDefault()
@@ -608,7 +687,7 @@ export function InputZone({
         }
       }
     },
-    [canSend, handleSend]
+    [canSend, handleSend, slashPickerOpen, slashMatches, slashSelectedIndex, handleSlashSelect, content]
   )
 
   return (
@@ -658,6 +737,7 @@ export function InputZone({
         <div
           className={cn(
             'group relative flex flex-col rounded-2xl',
+            // Extra class needed for absolute positioning of picker
             'border border-border/60 bg-card',
             'shadow-sm',
             'transition-all duration-200 ease-out',
@@ -667,6 +747,14 @@ export function InputZone({
             isImageMode && 'border-primary/30 focus-within:border-primary/40'
           )}
         >
+          {/* Slash command autocomplete picker */}
+          <SlashCommandPicker
+            matches={slashMatches}
+            onSelect={handleSlashSelect}
+            onClose={() => setSlashPickerOpen(false)}
+            visible={slashPickerOpen}
+          />
+
           {/* Workspace file references */}
           {workspaceAttachedFiles.length > 0 && (
             <div className="flex flex-wrap gap-1.5 px-3 pt-2">
