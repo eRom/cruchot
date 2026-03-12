@@ -21,3 +21,6 @@ electron-builder.env
 
 # Drizzle migrations (non utilisees — tables creees manuellement dans migrate.ts)
 drizzle/
+
+# Presentation sources
+specs/presentation/sources/*
