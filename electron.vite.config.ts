@@ -3,6 +3,11 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+// electron-vite uses NODE_ENV_ELECTRON_VITE (not NODE_ENV) to signal production builds
+const isProd =
+  process.env.NODE_ENV_ELECTRON_VITE === 'production' ||
+  process.env.NODE_ENV === 'production'
+
 export default defineConfig({
   main: {
     plugins: [
@@ -29,18 +34,20 @@ export default defineConfig({
     ],
     build: {
       outDir: 'out/main',
-      minify: 'terser',
-      terserOptions: {
-        mangle: true,
-        compress: {
-          drop_console: true
+      minify: isProd ? 'terser' : false,
+      ...(isProd ? {
+        terserOptions: {
+          mangle: true,
+          compress: {
+            drop_console: true
+          }
         }
-      },
+      } : {}),
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'src/main/index.ts')
         },
-        external: ['fsevents', 'chokidar', '@ai-sdk/mcp', '@ai-sdk/mcp/mcp-stdio', 'ws', '@perplexity-ai/ai-sdk']
+        external: ['fsevents', 'chokidar', '@ai-sdk/mcp', '@ai-sdk/mcp/mcp-stdio', 'ws', '@perplexity-ai/ai-sdk', '@huggingface/transformers', 'onnxruntime-node', 'onnxruntime-web', 'onnxruntime-common', 'sharp']
       }
     }
   },

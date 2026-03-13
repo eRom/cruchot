@@ -442,6 +442,16 @@ const api: ElectronAPI = {
   dataCleanup: () => ipcRenderer.invoke('data:cleanup'),
   dataFactoryReset: () => ipcRenderer.invoke('data:factory-reset'),
 
+  // ── Semantic Memory (Qdrant) ──────────────────────────
+  semanticMemoryStatus: () => ipcRenderer.invoke('memory:semantic-status'),
+  semanticMemorySearch: (payload) => ipcRenderer.invoke('memory:semantic-search', payload),
+  semanticMemoryForget: (payload) => ipcRenderer.invoke('memory:semantic-forget', payload),
+  semanticMemoryForgetConversation: (payload) => ipcRenderer.invoke('memory:semantic-forget-conversation', payload),
+  semanticMemoryForgetAll: () => ipcRenderer.invoke('memory:semantic-forget-all'),
+  semanticMemoryReindex: () => ipcRenderer.invoke('memory:semantic-reindex'),
+  semanticMemoryToggle: (payload) => ipcRenderer.invoke('memory:semantic-toggle', payload),
+  semanticMemoryStats: () => ipcRenderer.invoke('memory:semantic-stats'),
+
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>
     ipcRenderer.invoke('settings:get', key),

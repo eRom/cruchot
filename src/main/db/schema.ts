@@ -293,6 +293,20 @@ export const slashCommands = sqliteTable('slash_commands', {
 })
 
 // ---------------------------------------------------------------------------
+// Vector Sync State (Qdrant ↔ SQLite)
+// ---------------------------------------------------------------------------
+export const vectorSyncState = sqliteTable('vector_sync_state', {
+  id: text('id').primaryKey(),
+  messageId: text('message_id').notNull().unique(),
+  conversationId: text('conversation_id').notNull(),
+  status: text('status', { enum: ['pending', 'indexed', 'failed'] }).notNull(),
+  pointId: text('point_id'),
+  errorMessage: text('error_message'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  indexedAt: integer('indexed_at', { mode: 'timestamp' })
+})
+
+// ---------------------------------------------------------------------------
 // Images
 // ---------------------------------------------------------------------------
 export const images = sqliteTable('images', {

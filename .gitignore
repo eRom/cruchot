@@ -22,5 +22,11 @@ electron-builder.env
 # Drizzle migrations (non utilisees — tables creees manuellement dans migrate.ts)
 drizzle/
 
+# Vendor binaries (downloaded, not committed)
+vendor/qdrant/darwin-*/
+vendor/qdrant/linux-*/
+vendor/qdrant/win32-*/
+vendor/models/
+
 # Presentation sources
 specs/presentation/sources/*

@@ -4,6 +4,7 @@ import { useUiStore } from '@/stores/ui.store'
 import { useMemoryStore } from '@/stores/memory.store'
 import { MemoryFragmentCard } from './MemoryFragmentCard'
 import { MemoryPreview } from './MemoryPreview'
+import { SemanticMemorySection } from './SemanticMemorySection'
 import { toast } from 'sonner'
 
 export function MemoryView() {
@@ -217,6 +218,11 @@ export function MemoryView() {
               <MemoryPreview fragments={fragments} />
             </div>
           )}
+
+          {/* Semantic Memory Section */}
+          <div className="border-t border-border/40 pt-6">
+            <SemanticMemorySection />
+          </div>
         </div>
       </div>
     </div>

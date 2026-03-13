@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { useMessagesStore } from '@/stores/messages.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useUiStore } from '@/stores/ui.store'
+import { useSemanticMemoryStore } from '@/stores/semantic-memory.store'
 
 interface StreamChunk {
   type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'tool-result' | 'finish' | 'error'
@@ -28,6 +29,7 @@ interface StreamChunk {
   fileOperations?: Array<{ id: string; type: string; path: string; content?: string; status: string }>
   toolCalls?: Array<{ toolName: string; args?: Record<string, unknown>; status: string; error?: string }>
   searchSources?: Array<{ title: string; url: string; snippet?: string }>
+  semanticRecallCount?: number
 }
 
 /** Human-readable labels for workspace tool calls */
@@ -73,6 +75,7 @@ export function useStreaming() {
   const updateConversation = useConversationsStore((s) => s.updateConversation)
   const setIsStreaming = useUiStore((s) => s.setIsStreaming)
   const activeConversationId = useConversationsStore((s) => s.activeConversationId)
+  const setLastRecallCount = useSemanticMemoryStore((s) => s.setLastRecallCount)
 
   // Use ref for streaming message ID to avoid stale closure issues
   const streamingIdRef = useRef<string | null>(null)
@@ -197,6 +200,8 @@ export function useStreaming() {
                 : {})
             })
           }
+          // Update semantic memory badge
+          setLastRecallCount(chunk.semanticRecallCount ?? 0)
           streamingIdRef.current = null
           setStreamingMessageId(null)
           setIsStreaming(false)
@@ -234,7 +239,7 @@ export function useStreaming() {
         }
       }
     },
-    [activeConversationId, addMessage, appendToMessage, appendReasoning, addToolCall, updateLastToolCallStatus, updateMessage, setStreamingMessageId, setIsStreaming]
+    [activeConversationId, addMessage, appendToMessage, appendReasoning, addToolCall, updateLastToolCallStatus, updateMessage, setStreamingMessageId, setIsStreaming, setLastRecallCount]
   )
 
   // Listen for streaming chunks

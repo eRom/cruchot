@@ -12,6 +12,7 @@ import { telegramBotService } from './services/telegram-bot.service'
 import { remoteServerService } from './services/remote-server.service'
 import { seedBuiltinCommands } from './db/queries/slash-commands'
 import { BUILTIN_COMMANDS } from './commands/builtin'
+import { qdrantMemoryService } from './services/qdrant-memory.service'
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'
 
@@ -77,6 +78,11 @@ app.whenReady().then(() => {
     console.error('[RemoteServer] Init failed:', err)
   })
 
+  // Qdrant semantic memory — start if enabled (default: true)
+  qdrantMemoryService.init().catch((err) => {
+    console.error('[QdrantMemory] Init failed:', err)
+  })
+
   // Auto-updater — only in packaged builds
   if (app.isPackaged) {
     initAutoUpdater()
@@ -96,6 +102,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  qdrantMemoryService.stop().catch(() => {})
   telegramBotService.destroy().catch(() => {})
   remoteServerService.destroy().catch(() => {})
   mcpManagerService.stopAll().catch(() => {})

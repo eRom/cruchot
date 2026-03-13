@@ -79,6 +79,11 @@ export function registerDataIpc(): void {
       remoteServerService.stop()
     } catch { /* service pas demarre */ }
 
+    try {
+      const { qdrantMemoryService } = await import('../services/qdrant-memory.service')
+      await qdrantMemoryService.forgetAll()
+    } catch { /* service pas demarre */ }
+
     // 2. Reset DB
     const { imagePaths } = factoryResetDatabase()
 

@@ -222,6 +222,17 @@ export function runMigrations(): void {
       updated_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS vector_sync_state (
+      id TEXT PRIMARY KEY,
+      message_id TEXT NOT NULL UNIQUE,
+      conversation_id TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('pending', 'indexed', 'failed')),
+      point_id TEXT,
+      error_message TEXT,
+      created_at INTEGER NOT NULL,
+      indexed_at INTEGER
+    );
+
     CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(content);
   `)
 

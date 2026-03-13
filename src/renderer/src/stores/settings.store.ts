@@ -26,6 +26,7 @@ interface SettingsState {
   userName: string
   userAvatarPath: string
   searchEnabled: boolean
+  semanticMemoryEnabled: boolean
 
   setDefaultModelId: (modelId: string) => void
   setTheme: (theme: ThemeMode) => void
@@ -47,6 +48,7 @@ interface SettingsState {
   setUserName: (name: string) => void
   setUserAvatarPath: (path: string) => void
   setSearchEnabled: (value: boolean) => void
+  setSemanticMemoryEnabled: (value: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -79,6 +81,7 @@ Format : sections avec titres, bullet points. Sois concis mais complet.`,
       userName: '',
       userAvatarPath: '',
       searchEnabled: false,
+      semanticMemoryEnabled: true,
 
       setDefaultModelId: (modelId) => {
         set({ defaultModelId: modelId })
@@ -159,6 +162,11 @@ Format : sections avec titres, bullet points. Sois concis mais complet.`,
       setSearchEnabled: (value) => {
         set({ searchEnabled: value })
         window.api.setSetting('multi-llm:search-enabled', String(value)).catch(() => {})
+      },
+      setSemanticMemoryEnabled: (value) => {
+        set({ semanticMemoryEnabled: value })
+        window.api.setSetting('multi-llm:semantic-memory-enabled', String(value)).catch(() => {})
+        window.api.semanticMemoryToggle({ enabled: value }).catch(() => {})
       },
       toggleFavoriteModel: (modelId) =>
         set((state) => {
