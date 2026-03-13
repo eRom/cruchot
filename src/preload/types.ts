@@ -595,9 +595,16 @@ export interface ElectronAPI {
 
   // Export
   exportConversation: (data: { conversationId: string; format: 'md' | 'json' | 'txt' | 'html' }) => Promise<ExportResult>
+  exportBulk: () => Promise<{ exported: boolean; filePath?: string }>
 
   // Import
   importConversation: (data: { format: 'json' | 'chatgpt' | 'claude' }) => Promise<ImportResult>
+  importBulk: () => Promise<{ imported: boolean; needsToken?: boolean; filePath?: string; projectsImported?: number; conversationsImported?: number; messagesImported?: number }>
+  importBulkWithToken: (data: { filePath: string; tokenHex: string }) => Promise<{ imported: boolean; projectsImported?: number; conversationsImported?: number; messagesImported?: number }>
+
+  // Instance Token
+  getInstanceTokenMasked: () => Promise<string>
+  copyInstanceToken: () => Promise<string>
 
   // Statistics
   getDailyStats: (days?: number) => Promise<DailyStat[]>

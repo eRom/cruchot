@@ -114,9 +114,16 @@ const api: ElectronAPI = {
 
   // ── Export ────────────────────────────────────────────
   exportConversation: (data) => ipcRenderer.invoke('export:conversation', data),
+  exportBulk: () => ipcRenderer.invoke('export:bulk'),
 
   // ── Import ────────────────────────────────────────────
   importConversation: (data) => ipcRenderer.invoke('import:conversation', data),
+  importBulk: () => ipcRenderer.invoke('import:bulk'),
+  importBulkWithToken: (data) => ipcRenderer.invoke('import:bulk-with-token', data),
+
+  // ── Instance Token ────────────────────────────────────
+  getInstanceTokenMasked: () => ipcRenderer.invoke('instance-token:get-masked'),
+  copyInstanceToken: () => ipcRenderer.invoke('instance-token:copy'),
 
   // ── Statistics ────────────────────────────────────────
   getDailyStats: (days) => ipcRenderer.invoke('statistics:daily', days),
