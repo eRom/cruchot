@@ -13,24 +13,6 @@ export const BUILTIN_COMMANDS: BuiltinCommand[] = [
     category: 'general'
   },
   {
-    name: 'explain',
-    description: 'Explique du code en detail',
-    prompt: 'Explique le code suivant en detail, en decrivant son fonctionnement, sa logique, et les patterns utilises :\n\n$ARGS',
-    category: 'code'
-  },
-  {
-    name: 'refactor',
-    description: 'Propose un refactoring',
-    prompt: 'Propose un refactoring pour le code suivant. Explique les ameliorations en termes de lisibilite, maintenabilite et performance :\n\n$ARGS',
-    category: 'code'
-  },
-  {
-    name: 'debug',
-    description: 'Aide au debug',
-    prompt: 'Aide-moi a debugger ce probleme. Analyse les symptomes, identifie les causes possibles, et propose des solutions :\n\n$ARGS',
-    category: 'code'
-  },
-  {
     name: 'translate',
     description: 'Traduit du texte',
     prompt: 'Traduis le texte suivant en $1 :\n\n$2',
@@ -43,16 +25,42 @@ export const BUILTIN_COMMANDS: BuiltinCommand[] = [
     category: 'git'
   },
   {
-    name: 'review',
-    description: 'Code review',
-    prompt: 'Fais une code review du code suivant. Verifie les bugs potentiels, les problemes de securite, la lisibilite, et les bonnes pratiques. Propose des ameliorations concretes :\n\n$ARGS',
-    category: 'code'
-  },
-  {
-    name: 'test',
-    description: 'Genere des tests unitaires',
-    prompt: 'Genere des tests unitaires complets pour le code suivant. Couvre les cas nominaux, les cas limites et les cas d\'erreur :\n\n$ARGS',
-    category: 'code'
+    name: 'anonymize',
+    description: 'Anonymise un document en remplacant les entites sensibles',
+    prompt: `Tu es un agent expert en anonymisation de documents legaux et administratifs.
+Ta mission est d'appliquer un remplacement strict d'entites sensibles par des pseudonymes sur le texte que je vais te fournir, en respectant a la lettre les regles suivantes.
+
+**1. REGLES DE NOMMAGE (Strictes)**
+- **Noms et Prenoms** : Remplace l'identite de chaque individu par \`Agent + numero\`. (ex: Jean Dupont -> Agent 1, Mme Martin -> Agent 2).
+- **Fonctions et Metiers** : Remplace les postes (Directeur, Chef de projet, Ingenieur, Juriste...) par \`Poste + lettre\`. (ex: Directeur Technique -> Poste A).
+- **Adresses IP** : Remplace les IP par \`IP- + numero\`. (ex: 192.168.0.5 -> IP-001).
+- **Services** : Remplace les noms de services par \`Service + lettre\`. (ex: Service RH -> Service A).
+- **Noms de lieux** : Remplace les batiments, rues, villes ou institutions (Prefecture, Hotel de Ville...) par \`Lieu + lettre\`. (ex: Batiment Republique -> Lieu A).
+- **Emails** : Remplace toutes les adresses electroniques par \`Mail + lettre\`. (ex: dupont@mail.fr -> Mail A).
+- **Acronymes (Institutions, Regions, etc.)** : Remplace les acronymes ou les ensembles "Acronyme + Region" (ex: DREAL Grand Est, DSI, DIR, MIOM) par \`ORG + lettre\`. (ex: DREAL Grand Est -> ORG A).
+
+**2. REGLES DE COHERENCE**
+- Ton anonymisation doit etre parfaitement deterministe : une fois qu'une entite est anonymisee sous un pseudonyme (par exemple "M. Alain" -> Agent 3), **chaque fois** que "M. Alain" apparait a nouveau dans le texte, il doit **obligatoirement** etre remplace par "Agent 3".
+- N'invente pas d'autres categories (pas de "Entreprise A" ou de "Institution B", utilise uniquement les categories ci-dessus).
+
+**3. REGLE DE NON-MODIFICATION DU TEXTE BRUT (Tres important)**
+Tu ne dois faire **que** du "Chercher/Remplacer". Tu n'as sous aucun pretexte le droit de :
+- Resumer le texte.
+- Corriger les fautes d'orthographe ou de grammaire du texte d'origine.
+- Reformuler des phrases.
+- Modifier la ponctuation d'origine.
+Retourne l'integralite du texte avec les remplacements appliques.
+
+**4. FORMAT DE SORTIE**
+Une fois le texte anonymise restitue dans son integralite sans aucune coupe, saute deux lignes et fournis un tableau Markdown de correspondance recapitulatif avec les occurrences exactes, respectant strictement ces deux colonnes :
+
+| Donnee d'origine | Code anonymise |
+|---|---|
+| *Nom original* | *Pseudonyme* |
+
+Texte a anonymiser :
+$ARGS`,
+    category: 'general'
   }
 ]
 

@@ -27,6 +27,7 @@ vendor/qdrant/darwin-*/
 vendor/qdrant/linux-*/
 vendor/qdrant/win32-*/
 vendor/models/
+.qdrant-initialized
 
 # Presentation sources
 specs/presentation/sources/*

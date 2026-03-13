@@ -1,25 +1,25 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import {
-  Plus,
-  Search,
-  BookOpen,
-  Pencil,
-  Trash2,
-  ArrowUpDown,
-  FileText,
-  Puzzle,
-  ArrowLeft,
-  Copy,
-  Check,
-  Variable,
-  Download,
-  Upload
-} from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
-import { usePromptsStore, type Prompt } from '@/stores/prompts.store'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { usePromptsStore, type Prompt } from '@/stores/prompts.store'
+import {
+  ArrowLeft,
+  ArrowUpDown,
+  BookOpen,
+  Check,
+  Copy,
+  Download,
+  FileText,
+  Pencil,
+  Plus,
+  Puzzle,
+  Search,
+  Trash2,
+  Upload,
+  Variable
+} from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 type SortMode = 'activity' | 'name' | 'created'
@@ -421,8 +421,8 @@ function PromptCard({
       <div
         className={cn(
           'h-1.5 w-full',
-          prompt.type === 'complet' && 'bg-blue-500',
-          prompt.type === 'complement' && 'bg-amber-500'
+          prompt.type === 'complet' && ' bg-gray-500',
+          prompt.type === 'complement' && 'bg-gray-500'
         )}
       />
 
@@ -430,7 +430,7 @@ function PromptCard({
         {/* Title row */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <TypeIcon className={cn('size-4 shrink-0', config?.color)} />
+            <TypeIcon className="size-4 shrink-0 primary" />
             <h3 className="text-sm font-semibold text-foreground leading-snug truncate">
               {prompt.title}
             </h3>

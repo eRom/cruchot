@@ -1,24 +1,24 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
+import { useProjectsStore } from '@/stores/projects.store'
+import { useSlashCommandsStore, type SlashCommand } from '@/stores/slash-commands.store'
 import {
+  ArrowLeft,
+  ArrowUpDown,
+  Check,
+  Copy,
+  Download,
+  Pencil,
   Plus,
+  RotateCcw,
   Search,
   TerminalSquare,
-  Pencil,
   Trash2,
-  ArrowUpDown,
-  ArrowLeft,
-  Copy,
-  Check,
-  Download,
-  Upload,
-  RotateCcw
+  Upload
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Input } from '@/components/ui/input'
-import { useSlashCommandsStore, type SlashCommand } from '@/stores/slash-commands.store'
-import { useProjectsStore } from '@/stores/projects.store'
-import { cn } from '@/lib/utils'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 type SortMode = 'activity' | 'name' | 'created'
@@ -479,7 +479,7 @@ function CommandCard({
       <div
         className={cn(
           'h-1.5 w-full',
-          command.isBuiltin ? 'bg-violet-500' : 'bg-emerald-500'
+          command.isBuiltin ? 'bg-gray-500' : 'bg-gray-500'
         )}
       />
 
@@ -549,7 +549,7 @@ function CommandCard({
             className={cn(
               'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
               command.isBuiltin
-                ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400'
+                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
                 : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
             )}
           >

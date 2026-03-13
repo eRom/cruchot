@@ -1,24 +1,24 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
+import { useRolesStore, type Role } from '@/stores/roles.store'
 import {
+  ArrowLeft,
+  ArrowUpDown,
+  Check,
+  Copy,
+  Download,
+  Pencil,
   Plus,
   Search,
-  UserCircle,
-  Pencil,
-  Trash2,
-  ArrowUpDown,
-  ArrowLeft,
-  Copy,
-  Check,
-  Variable,
   Shield,
-  Download,
-  Upload
+  Trash2,
+  Upload,
+  UserCircle,
+  Variable
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Input } from '@/components/ui/input'
-import { useRolesStore, type Role } from '@/stores/roles.store'
-import { cn } from '@/lib/utils'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 type SortMode = 'activity' | 'name' | 'created'
@@ -406,13 +406,13 @@ function RoleCard({
       )}
     >
       {/* Color bar */}
-      <div className="h-1.5 w-full bg-emerald-500" />
+      <div className="h-1.5 w-full bg-gray-500" />
 
       <div className="flex flex-1 flex-col p-4">
         {/* Title row */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <UserCircle className="size-4 shrink-0 text-emerald-500" />
+            <UserCircle className="size-4 shrink-0 primary" />
             <h3 className="text-sm font-semibold text-foreground leading-snug truncate">
               {role.name}
             </h3>
