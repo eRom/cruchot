@@ -34,13 +34,14 @@ Flux principaux à montrer :
 - Custom protocol local-image:// : fs.realpathSync() résout les symlinks AVANT la vérification d'allowlist (anti-symlink escape)
 - Recherche FTS5 : sanitizeFtsQuery() empêche l'injection d'opérateurs MATCH, résultats tronqués à 500 chars (anti-DoS IPC)
 - CI/CD : npm audit strict (sans continue-on-error, --omit=dev)
+- Mémoire sémantique : Qdrant binaire local 127.0.0.1 uniquement (pas d'accès réseau), embeddings ONNX CPU locaux (zéro cloud), contenu des recalls sanitisé avant injection XML dans le system prompt, données vectorielles stockées dans userData (même protection que SQLite)
 
 Style : technique et épuré, fond sombre, couleurs : rouge pour les barrières de sécurité hard block, vert pour les flux validés, jaune/orange pour les zones à risque contrôlé (bash tool, MCP subprocess, SENSITIVE_ROOTS avec dialog approbation), bleu pour les protections anti-timing/anti-DoS.
 
 
 ## Prompt pour diagramme sur la base de données (schéma table)
 
-Crée un diagramme de schéma de base de données (ERD) pour une app desktop multi-LLM avec 16 tables SQLite. Montre les tables, leurs colonnes principales, types, et les relations (foreign keys).
+Crée un diagramme de schéma de base de données (ERD) pour une app desktop multi-LLM avec 19 tables SQLite. Montre les tables, leurs colonnes principales, types, et les relations (foreign keys).
 
 Tables et relations :
 
@@ -81,6 +82,12 @@ Tables et relations :
 
 **images** (id PK, conversationId FK→conversations, messageId FK→messages, prompt, modelId?, width?, height?, path, size?, createdAt)
 
+**slash_commands** (id PK, name UNIQUE, description?, content, projectId FK→projects, isBuiltin, category?, tags JSON, createdAt, updatedAt)
+
+**remote_server_sessions** (id PK, clientId, sessionToken, pairedAt?, lastActivity?, isActive, conversationId FK→conversations, autoApproveRead, autoApproveWrite, autoApproveBash, autoApproveList, autoApproveMcp, createdAt)
+
+**vector_sync_state** (id PK, messageId UNIQUE, conversationId, status [pending|indexed|failed], pointId?, errorMessage?, createdAt, indexedAt?)
+
 Relations FK à montrer avec des flèches :
 - models → providers
 - conversations → projects, roles
@@ -90,8 +97,11 @@ Relations FK à montrer avec des flèches :
 - scheduled_tasks → roles, projects
 - mcp_servers → projects
 - remote_sessions → conversations
+- remote_server_sessions → conversations
+- slash_commands → projects
+- vector_sync_state → messages (via messageId), conversations (via conversationId)
 
-Style : ERD classique, fond sombre, groupes logiques par couleur : bleu pour le coeur chat (conversations, messages, attachments), violet pour la config (providers, models, settings), vert pour les features (prompts, roles, projects), orange pour les extensions (scheduled_tasks, mcp_servers, memory_fragments, remote_sessions), rouge pour le tracking (statistics, tts_usage, images).
+Style : ERD classique, fond sombre, groupes logiques par couleur : bleu pour le coeur chat (conversations, messages, attachments), violet pour la config (providers, models, settings), vert pour les features (prompts, roles, projects, slash_commands), orange pour les extensions (scheduled_tasks, mcp_servers, memory_fragments, remote_sessions, remote_server_sessions), rouge pour le tracking (statistics, tts_usage, images), cyan pour la mémoire sémantique (vector_sync_state).
 
 ---
 
@@ -189,6 +199,18 @@ Catégories et fonctionnalités :
 - Max 50 fragments, drag & drop pour réordonner
 - Activable/désactivable individuellement
 - Injection automatique dans le system prompt
+
+**Mémoire Sémantique (RAG local)** (icône : réseau neuronal/étoiles)
+- Rappel automatique des conversations passées via recherche vectorielle locale
+- Qdrant (binaire Rust embarqué) sur 127.0.0.1:6333, stockage dans userData
+- Embeddings locaux via all-MiniLM-L6-v2 (384d, ONNX, ~23 MB quantized)
+- Ingestion fire-and-forget après chaque message (chunking 1000 chars, overlap 200)
+- Recall silencieux avant chaque requête LLM (top 5, cosine similarity > 0.35)
+- Contexte injecté en bloc XML `<semantic-memory>` dans le system prompt (invisible pour l'utilisateur)
+- Filtrable par projet (global + projet actif), exclusion de la conversation courante
+- Explorer intégré dans la vue Mémoire (recherche, suppression par point/conversation)
+- Activé par défaut, toggle dans les paramètres
+- Zéro cloud — tout tourne en local (binaire Qdrant + ONNX Runtime CPU)
 
 **Tâches planifiées** (icône : horloge)
 - 4 types de planification : manuelle, intervalle, quotidienne, hebdomadaire

@@ -24,6 +24,11 @@ files:
   - "node_modules/ws/**/*"
   - "node_modules/qrcode/**/*"
   - "node_modules/@perplexity-ai/**/*"
+  - "node_modules/@huggingface/**/*"
+  - "node_modules/@qdrant/**/*"
+  - "node_modules/onnxruntime-node/**/*"
+  - "node_modules/onnxruntime-web/**/*"
+  - "node_modules/onnxruntime-common/**/*"
 
 # --- macOS ---
 mac:
@@ -80,3 +85,9 @@ publish:
 extraResources:
   - from: "drizzle"
     to: "drizzle"
+  - from: "vendor/qdrant/${os}-${arch}/"
+    to: "qdrant/"
+    filter:
+      - "qdrant*"
+  - from: "vendor/models/"
+    to: "models/"

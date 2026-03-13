@@ -29,6 +29,7 @@ import { registerRemoteServerIpc } from './remote-server.ipc'
 import { registerSummaryIpc } from './summary.ipc'
 import { registerDataIpc } from './data.ipc'
 import { registerSlashCommandsIpc } from './slash-commands.ipc'
+import { registerQdrantMemoryIpc } from './qdrant-memory.ipc'
 
 /**
  * Registre central des IPC handlers.
@@ -116,6 +117,9 @@ export function registerAllIpcHandlers(): void {
   // ── Slash Commands ────────────────────────────
   registerSlashCommandsIpc()
 
+  // ── Qdrant Memory (semantic) ──────────────────
+  registerQdrantMemoryIpc()
+
   // ── Settings ────────────────────────────────────────
   const ALLOWED_SETTING_KEYS = new Set([
     // User profile
@@ -152,6 +156,8 @@ export function registerAllIpcHandlers(): void {
     // Local providers
     'lmstudio:baseUrl',
     'ollama:baseUrl',
+    // Semantic memory
+    'multi-llm:semantic-memory-enabled',
     // Legacy (kept for migration)
     'onboarding_completed',
   ])

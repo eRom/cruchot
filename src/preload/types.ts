@@ -384,6 +384,33 @@ export interface SlashCommandInfo {
   updatedAt: Date
 }
 
+// ── Semantic Memory (Qdrant) ─────────────────────────────────────
+export interface SemanticMemoryStatusResult {
+  status: string
+  totalPoints: number
+  collectionSize: string
+}
+
+export interface SemanticMemorySearchResult {
+  id: string
+  score: number
+  content: string
+  contentPreview: string
+  conversationId: string
+  projectId: string | null
+  role: string
+  modelId: string | null
+  createdAt: number
+}
+
+export interface SemanticMemoryStats {
+  totalPoints: number
+  indexedConversations: number
+  collectionSizeMB: string
+  pendingSync: number
+  status: string
+}
+
 // ── MCP Servers ─────────────────────────────────────────
 export type McpTransportType = 'stdio' | 'http' | 'sse'
 export type McpServerStatus = 'connected' | 'error' | 'stopped'
@@ -793,6 +820,16 @@ export interface ElectronAPI {
   // Data (cleanup / factory reset)
   dataCleanup: () => Promise<{ success: boolean }>
   dataFactoryReset: () => Promise<{ success: boolean }>
+
+  // Semantic Memory (Qdrant)
+  semanticMemoryStatus: () => Promise<SemanticMemoryStatusResult>
+  semanticMemorySearch: (payload: { query: string; topK?: number; projectId?: string }) => Promise<SemanticMemorySearchResult[]>
+  semanticMemoryForget: (payload: { pointIds: string[] }) => Promise<void>
+  semanticMemoryForgetConversation: (payload: { conversationId: string }) => Promise<void>
+  semanticMemoryForgetAll: () => Promise<void>
+  semanticMemoryReindex: () => Promise<void>
+  semanticMemoryToggle: (payload: { enabled: boolean }) => Promise<void>
+  semanticMemoryStats: () => Promise<SemanticMemoryStats>
 
   // Settings
   getSetting: (key: string) => Promise<string | null>

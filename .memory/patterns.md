@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-12 (session 31 — Slash Commands)
+> Derniere mise a jour : 2026-03-13 (S33)
 
 ## Conventions de nommage
 
@@ -11,222 +11,83 @@
 - Preload : `contextBridge.exposeInMainWorld('api', { ... })`
 - Renderer : `window.api.methodName(payload)`
 
-## LLM — AI SDK v6 Pattern
+## LLM — AI SDK v6
 
 - `streamText()` pour chat, `generateImage()` pour images
 - `onChunk` forward IPC — `chunk.text` (pas `textDelta`)
 - **Pas de `onFinish`** — save DB apres `await result.text` + `await result.usage`
 - `result.usage` → `{ inputTokens, outputTokens }` (pas `promptTokens`/`completionTokens`)
-- `NoOutputGeneratedError` : catch autour de `result.text`, verifier `.cause` (wrape souvent l'erreur API)
-- `inputSchema` (pas `parameters`) pour definir les outils
-- **`stopWhen: stepCountIs(50)`** — limite haute (50 steps) car app locale. Default v6 = `stepCountIs(1)`
-- `tool-call` et `tool-result` chunks dans `onChunk` (pas `onStepFinish`)
-- `abortSignal` pour annulation (cote client seulement)
+- `inputSchema` (pas `parameters`) pour outils, `stopWhen: stepCountIs(50)`
+- `NoOutputGeneratedError` : verifier `.cause` (wrape l'erreur API reelle)
+- `tool-call`/`tool-result` chunks dans `onChunk` (pas `onStepFinish`)
 
 ## Thinking / Reasoning
 
-- `supportsThinking: boolean` sur ModelDefinition
-- `thinking.ts` : `buildThinkingProviderOptions(providerId, effort)` — 4 niveaux (off/low/medium/high)
-- Anthropic : `thinking.type` disabled/enabled/adaptive + `budgetTokens`
-- OpenAI : `reasoningEffort` none/low/medium/high
-- Google : `thinkingConfig.thinkingBudget`
-- xAI : `reasoningEffort` low/high (Chat API, pas medium/none)
-- DeepSeek : binaire enabled/disabled. Reasoner raisonne toujours.
-- Qwen/Magistral : decoratif (built-in, pas de providerOptions)
-- ThinkingSelector visible si `supportsThinking && !isImageMode`
-
-## Image Generation
-
-- `type: 'image'` dans ModelDefinition → InputZone bascule en mode image (AspectRatioSelector)
-- `image.ts` route : `gemini-*` → Google, `gpt-image-*` → OpenAI
-- Save : fichier PNG + table images + messages DB
-- Affichage : `<img src="local-image://path">` (sandbox bloque file://)
+- `thinking.ts` : `buildThinkingProviderOptions(providerId, effort)` — 4 niveaux
+- Anthropic : `thinking.type` + `budgetTokens` | OpenAI : `reasoningEffort` | Google : `thinkingConfig.thinkingBudget`
+- xAI : low/high seulement | DeepSeek : binaire | Qwen/Magistral : decoratif
 
 ## Projet ↔ Conversation
 
-- `defaultModelId` format `providerId::modelId` — toujours `split('::')` avant `selectModel()`
-- Conversation herite `projectId` actif, sidebar filtre par projet (null = boite de reception)
-- `conversation.modelId` sauve apres chaque message, restaure au switch
-
-## Roles (System Prompts)
-
-- RoleSelector pill dans InputZone (shadcn Select, meme pattern que ThinkingSelector)
-- Sections : Aucun → Role projet (`__project__`) → Integres → Personnalises
-- Variables `{{varName}}` resolues via popover
-- Verrouillage si `messages.length > 0`, persistance `roleId` apres 1er message
-- Description/icone/categorie masques dans l'UI (gardes en DB)
+- `defaultModelId` format `providerId::modelId` — `split('::')` avant `selectModel()`
+- Conversation herite `projectId` actif, sidebar filtre par projet
 
 ## Workspace Co-Work + Tools
 
-- **WorkspaceService** : scan tree, read/write/delete, path traversal check, .coworkignore, sensitive files blocklist
-- **FileWatcherService** : Chokidar (ESM, `external` dans electron.vite.config), forward events renderer
-- **WorkspacePanel** : collapsible toggle (pas close), `Cmd+B`, auto-open quand projet change
-- **4 outils AI SDK** (`workspace-tools.ts`) :
-  - `bash` : shell exec async (child_process.exec), cwd=workspace, blocklist ~30 patterns, env minimal (PATH restreint, zero process.env), timeout 30s, ANSI off
-  - `readFile` : **whitelist d'extensions textuelles** (~80 ext), blocklist fichiers sensibles (.env*, .pem, .key), blocklist segments gitignore (node_modules, .git, dist, build, .cache, .venv...)
-  - `writeFile` (immediat) / `listFiles`
-- **Auto-injection contexte** : `buildWorkspaceContextBlock()` lit CLAUDE.md, AGENTS.md, GEMINI.md, README.md etc. a la racine et les injecte dans le system prompt → le LLM n'a pas besoin de tool calls pour decouvrir le projet
-- **ToolCallBlock** : collapsible cyan, icones par outil (Terminal/FileText/Pencil/FolderSearch), **auto-collapse quand stream finit** (useRef + useEffect sur isStreaming transition)
-- **ReasoningBlock** : idem auto-collapse a la fin du stream
-- Fichiers attaches injectes en system prompt (`<workspace-files>` XML)
+- 4 outils AI SDK : bash (env minimal, blocklist ~36), readFile (whitelist ~80 ext), writeFile, listFiles
+- `buildWorkspaceContextBlock()` auto-lit CLAUDE.md, README.md etc. → system prompt
+- Fichiers attaches en system prompt (`<workspace-files>` XML)
+- ToolCallBlock/ReasoningBlock : auto-collapse quand stream finit (useRef + useEffect)
 
-## Git Integration
+## @Mention Fichiers
 
-- **GitService** : standalone (pas dans WorkspaceService), `execFile` (pas `exec` → zero injection shell)
-- **Env minimal** : `PATH` restreint, `GIT_TERMINAL_PROMPT=0`, `NO_COLOR=1`, `LANG=en_US.UTF-8`
-- **Cache** : `getStatus()` + `getInfo()` avec TTL 2s, invalide par `invalidateCache()` (appele par FileWatcher)
-- **Parsing porcelain v1** : `XY path` → `{ path, staging: X, working: Y }`, gestion renommages (`R old -> new`)
-- **Debounce** : `git:changed` push au renderer debounce 500ms apres file change
-- **AI Commit** : `generateText()` one-shot (pas de conversation DB), diff tronque 20K chars, temperature 0.3
-- **UI pattern** : tab switcher dans WorkspacePanel header (Fichiers/Changes), visible seulement si `isGitRepo`
-- **FileTree** : `statusMap` (Map<path, GitFileStatus>) memoize pour lookup O(1), `dirHasGitStatus()` pour dot colore sur dossiers
-- **FilePanel** : toggle Diff (icone GitCompare) visible si fichier a un statut Git modifie
-
-## TTS Multi-Provider
-
-- 3 providers : browser (Web Speech), openai (gpt-4o-mini-tts, Coral), google (gemini TTS, Aoede)
-- Cloud : IPC → base64 → Blob → Audio.play(), cache Map par messageId
-- Google retourne PCM brut → `pcmToWav()` ajoute header WAV 44 bytes
-- `tts_usage` table, cout dans GlobalStats
-- CSP : `media-src 'self' blob:` obligatoire
-
-## Taches planifiees
-
-- 4 types : manual, interval, daily, weekly
-- SchedulerService singleton (Map timers), setTimeout-chain (pas setInterval)
-- task-executor : cree conversation, streamText(), save messages + cost, Notification Electron
-- Isolation streaming : chunks ont `conversationId`, useStreaming filtre si != active
-
-## Favoris modeles
-
-- `favoriteModelIds[]` dans settings store. Aucun favori → tous affiches. ProjectForm non filtre.
-
-## Error Classification
-
-- `classifyError()` : unwrap `error.cause` recursif → classify par statusCode + message
-- fatal (401/403), actionable (402, 429+quota), transient (429 rate limit, 5xx)
-- Toast sonner : 10s actionable, 6s sinon
-
-## Security Hardening (renforce session 20)
-
-- Path allowlist : `path.resolve()` + `startsWith(dir + path.sep)` (jamais sans `path.sep`)
-- Extension blocklist (.app, .sh, .exe...) pour `shell.openPath()` et `files:save`
-- CSP durcie : script-src/connect-src 'self', object-src/base-uri/form-action/frame-src 'none'
-- Credential/settings : whitelist `ALLOWED_SETTING_KEYS` (S29) + blocage `multi-llm:apikey:*` + validation longueur 10K max
-- Mermaid : `securityLevel: 'strict'` + DOMPurify sanitize SVG
-- Shiki : DOMPurify sanitize HTML (`MarkdownRenderer.tsx`)
-- Suppression : toujours `trash` (jamais rm/unlink)
-- DevTools : `!app.isPackaged` seulement
-- **Bash tool** : env minimal (PATH=/usr/local/bin:/usr/bin:/bin, HOME=workspace, TMPDIR=os.tmpdir()), blocklist ~30 patterns (rm -rf ., bash -c, scp, rsync, nc, tee /, base64|bash, python -c, etc.)
-- **Attachments** : path confine a userData/attachments + userData/images + workspace root
-- **MCP** : headers HTTP masques du renderer (`hasHeaders: boolean`), testConnection timeout 30s via Promise.race, **env minimal stdio** (PATH/HOME/TMPDIR/LANG/SHELL/USER, plus de process.env complet S29)
-- **shell.openExternal** : confirmation dialog pour domaines hors TRUSTED_DOMAINS allowlist
-- **Workspace** : rootPath valide (isDirectory + rejet paths systeme /, /etc, /usr, /System, /Library)
-- **Import** : limite taille fichier 50MB avant JSON.parse
-- **fileContexts** : sanitize path/language (suppression `"<>&`) avant injection XML system prompt
-- **SENSITIVE_PATTERNS** : case-insensitive (`/i` flag) — couvre .ENV, .Key, Credentials.json sur HFS+
-- **Zod partout** : conversations, statistics (days 1-3650), search (max 500 chars) — plus aucun handler sans validation
-
-## MCP Integration
-
-- **McpManagerService** : singleton, `Map<serverId, MCPClient>`, lifecycle (start/stop/restart)
-- **Transport** : stdio principal (subprocess `Experimental_StdioMCPTransport`), HTTP/SSE secondaire
-- **Prefixage outils** : `servername__toolname` (double underscore) pour eviter collisions inter-serveurs
-- **Env vars chiffrees** : JSON.stringify → `safeStorage.encryptString()` → base64 (meme pattern que cles API)
-- **Securite renderer** : `envEncrypted` + `headers` jamais exposes, remplaces par `hasEnvVars`/`hasHeaders: boolean` dans IPC
-- **Status push** : `mcp:status-changed` IPC event → renderer met a jour le store
-- **Scope projet** : `projectId` nullable — global si null, sinon lie a un projet
-- **Chat integration** : MCP tools merges avec workspace tools dans `chat.ipc.ts`, fallback silencieux si erreur
-- **Dynamic imports** : `await import('@ai-sdk/mcp')` et `@ai-sdk/mcp/mcp-stdio` (ESM dans Electron main)
-- **Externals** : `@ai-sdk/mcp` et `@ai-sdk/mcp/mcp-stdio` dans rollup externals (comme chokidar)
-- **UI** : vue standalone dans NavGroup "Personnalisation" (pas dans Settings tabs)
-- **Tool label MCP** : regex `^([^_]+)__(.+)$` → `[serverName] toolName` dans useStreaming
-
-## Remote Telegram
-
-- **TelegramBotService** : singleton extends `EventEmitter`, meme pattern que McpManagerService
-- **Token** : chiffre via `safeStorage` (meme pattern que cles API), stocke dans table `settings` cle `multi-llm:remote:telegram-token`
-- **allowedUserId** : stocke en clair dans `settings` cle `multi-llm:remote:allowed-user-id` (entier, pas un secret)
-- **Pairing** : `crypto.randomInt(0, 1_000_000)` → 6 chiffres uniformes, expiry 5min, max 5 tentatives (>=, pas >)
-- **Long polling** : boucle async `pollLoop()` avec `getUpdates(offset, timeout:30)`, AbortController pour cancellation
-- **Streaming Telegram** : `sendMessage('▍')` → `editMessageText(buffer + ' ▍')` debounce 500ms → `editMessage(finalText)` ou split si > 4096
-- **Tool approval** : `wrapToolsWithApproval()` wrape `execute` des outils AVANT `streamText()`. Auto-approve configurable par type (read, list, write, bash, mcp). Inline keyboard [Approve][Deny] → `Promise<boolean>` (timeout 5min = deny)
-- **handleChatMessage()** : fonction exportee depuis `chat.ipc.ts`, source `'desktop' | 'telegram'`. IPC handler = thin wrapper. Telegram forward via `telegramBotService.on('message')` dans `remote.ipc.ts`
-- **Dual-forward** : apres chaque `win.webContents.send('chat:chunk')`, push vers `telegramBotService.pushChunk()` si connected
-- **Conversation bridge** : `start(conversationId)` passe l'ID de la conv active → continue la meme conversation (pas de conv separee)
-- **UI badge** : `RemoteBadge` dans `ContextWindowIndicator.tsx` (bottom InputZone), pas dans la toolbar
-- **Formulaire unifie** : token + userId dans un seul bloc, un seul bouton "Valider", les deux champs obligatoires
-- **Toast + clipboard** : au demarrage pairing, `/pair [code]` copie au clipboard + toast sonner 8s
-- **Securite renforcee S24** : `allowedUserId` obligatoire (pas optionnel) — `!this.allowedUserId` = reject sur messages, callbacks, start(), restore session. Erreurs generiques vers Telegram (pas de raw error messages). Callback queries verifiees contre `this.chatId`. Zod sur `remote:start` conversationId.
-
-## Summary (Resume de conversation)
-
-- **Pattern one-shot** : meme pattern que AI Commit (generateText, pas streamText, pas de conversation DB)
-- **Serialization** : messages user/assistant serialises en transcript texte `[Utilisateur]/[Assistant]` dans un seul message user (evite "assistant message prefill" error sur certains providers)
-- **Truncation** : transcript tronque a 100K chars pour eviter l'explosion de tokens
-- **Resultat** : copie directe au clipboard via `navigator.clipboard.writeText()`, jamais rendu en HTML (zero risque XSS)
-- **Config** : `summaryModelId` (format `providerId::modelId`) + `summaryPrompt` dans settings.store.ts, cap 10K chars cote store ET Zod backend
-- **UI** : `SummaryButton` interne a `ContextWindowIndicator.tsx`, meme pattern visuel que `RemoteBadge` (icone + label, tooltip dynamique)
-- **Securite backend** : whitelist providers `VALID_PROVIDERS`, regex modelId, verification `getConversation()` avant chargement messages
-
-## Remote Web (SPA standalone)
-
-- **Architecture** : SPA Vite independante dans `src/remote-web/`, build separee, zero dependance sur le renderer Electron
-- **State machine** : `useReducer` (pas Zustand — app legere, pas de persistence)
-- **WebSocket** : hook `useWebSocket` avec reconnexion auto, protocol JSON custom
-- **Pairing** : URL params `?ws=...&pair=...` pour auto-connect via QR code
-- **Pending pair pattern** : `pendingPairRef` + useEffect sur `connectionStatus === 'connected'` pour eviter race condition send-before-open
-- **UI calque desktop** : memes classes CSS, meme palette OKLCH, memes patterns de layout
-- **InputZone desktop pattern** : `rounded-2xl border border-border/60 bg-card shadow-sm`, textarea `px-4 pt-3 pb-0`, toolbar `px-2 pb-2 pt-1`, conteneur `max-w-3xl mx-auto`, zone racine `px-4 pb-6 pt-3 border-t border-border/40 bg-background/80 backdrop-blur-sm` + gradient fade `before:bg-gradient-to-t`
-- **MessageItem desktop pattern** : user `max-w-[75%] rounded-2xl px-4 py-3 bg-sidebar shadow-sm`, assistant avatar `size-8 rounded-full bg-muted/60 ring-1 ring-border/30` + Sparkles SVG, content `flex-1 min-w-0 py-2`
-- **Markdown** : renderer leger par regex (pas react-markdown — zero dep), suffisant pour le remote
-- **Dual-forward** : `handleChatMessage()` reutilisee avec source `'web'`, meme pattern que Telegram
-
-## Export/Import JSON (Prompts, Roles & Commandes)
-
-- **Approche 100% renderer** — pas de nouveaux IPC handlers, donnees deja en memoire dans les stores Zustand
-- **Export** : `JSON.stringify()` + `Blob` + `URL.createObjectURL()` + `<a download>` (pattern standard browser)
-- **Import** : `<input type="file" accept=".json">` cache + `FileReader` → validation + `window.api.create*()` existants
-- **Format** : `{ type: 'multi-llm-prompts'|'multi-llm-roles'|'multi-llm-commands', version: 1, exportedAt, items: [...] }` — pas d'id/createdAt/isBuiltin
-- **Dedup** : `uniqueTitle()`/`uniqueName()` — si nom existe deja, suffixe `-1`, `-2`, etc. via Set des noms existants
-- **Validation import** : verification `type`, `Array.isArray(items)`, champs obligatoires, try/catch JSON.parse → toast erreur
-- **UI** : boutons ghost Download/Upload dans le header (a gauche de "Nouveau"), bouton Download dans les hover actions de chaque card
-- **Builtins** : exportables (bouton Export visible) mais pas supprimables
+- Textarea `color: transparent` + `-webkit-text-fill-color: transparent` + `caret-color: foreground`
+- Overlay div `absolute inset-0` rend le meme texte avec @mentions stylees cyan
+- Regex : paths tries par longueur desc, negative lookahead `(?![\w./-])`
+- mentionedFiles = `Set<string>` local (pas Zustand), cleanup quand @path disparait du texte
+- FileMentionPopover : meme positionnement que SlashCommandPicker
+- Au send : fichiers panel-attaches + @mentionnes merges avec dedup via `loadedPaths` Set
 
 ## Slash Commands
 
-- **Resolution renderer-side** : `useSlashCommands()` hook detecte `/` en debut de texte, filtre les commandes, resout les variables
-- **Variables** : `$ARGS` (tout apres le nom), `$1`-`$N` (args positionnels), `$MODEL`, `$PROJECT`, `$WORKSPACE`, `$DATE`
-- **Priorite** : projet > global > builtin (meme nom possible a differents scopes)
-- **Autocomplete** : `SlashCommandPicker` popover positionne au-dessus de InputZone, keyboard nav (ArrowUp/Down/Tab/Enter/Escape)
-- **Metadata** : `contentData.slashCommand` = `{ name, resolvedFrom }` → badge violet `/{name}` dans MessageItem
-- **Builtin seed** : `seedBuiltinCommands()` au startup — upsert par nom (n'ecrase pas les builtins personnalises par l'utilisateur)
-- **Noms** : regex `/^[a-z][a-z0-9-]*$/`, noms reserves blacklist (help, clear, settings, quit, exit)
-- **CRUD** : CommandsView (meme pattern que PromptsView — grille + formulaire inline + export/import JSON)
-- **Scope projet** : `projectId` nullable sur la table, filtre dans `getSlashCommandByName()`
+- Resolution renderer-side : `useSlashCommands()` detecte `/`, filtre, resout variables ($ARGS, $1-$N, $MODEL, $PROJECT, $WORKSPACE, $DATE)
+- Priorite : projet > global > builtin. Noms : regex `/^[a-z][a-z0-9-]*$/`, reserves blacklist
+- `contentData.slashCommand` → badge violet dans MessageItem
+- Seed builtins au startup (upsert, n'ecrase pas les personnalises)
+
+## Memoire Semantique (RAG local)
+
+- **Ingestion** : fire-and-forget via `syncQueue` + interval 2s, batch max 50 messages
+- **Chunking** : 1000 chars, overlap 200, coupure intelligente (paragraphe > phrase > newline), guard anti-boucle infinie (`Math.max(nextStart, start + 1)`)
+- **Recall** : silencieux, injecte dans system prompt `<semantic-memory>` XML, invisible pour l'utilisateur
+- **Qdrant REST API** : `fetch()` natif vers `127.0.0.1:6333`, pas de client JS — filtre format `{ key, match: { value } }`, `should` au top-level (pas nested)
+- **Qdrant config** : YAML dans `userData/qdrant-config/config.yaml`, spawn avec `--config-path` (PAS --port/--storage-path CLI args)
+- **Embedding** : `@huggingface/transformers` dynamic import (ESM), pipeline `feature-extraction`, model `all-MiniLM-L6-v2` (384d, ONNX quantized)
+- **Point IDs** : `crypto.randomUUID()` (Qdrant exige UUID ou uint, pas nanoid)
+- **Prod bundling** : modele ONNX dans `vendor/models/`, script `scripts/prepare-models.sh`, `extraResources` dans electron-builder
+
+## Export/Import JSON (Prompts, Roles & Commandes)
+
+- 100% renderer (donnees deja en stores Zustand)
+- Export : `Blob` + `URL.createObjectURL()` + `<a download>`
+- Import : `FileReader` → validation type/items + `window.api.create*()`. Dedup suffixe `-1`, `-2`
 
 ## Data Cleanup / Factory Reset
 
-- **2 zones de danger** dans Settings > Donnees :
-  - **Zone orange** (`border-orange-500/30 bg-orange-500/5`) : nettoyage partiel — supprime conversations, projets, images, taches, MCP servers. Conserve roles, prompts, memoire, parametres, cles API. Confirmation 2 etapes.
-  - **Zone rouge** (`border-red-500/30 bg-red-500/5`) : factory reset complet — supprime TOUTES les 14 tables. Input "DELETE" case-sensitive obligatoire. `localStorage.clear()` → reload → Welcome wizard (onboarding_completed absent).
-- **Backend** : `cleanup.ts` (queries bulk delete, ordre FK strict), `data.ipc.ts` (2 handlers, stop services avant delete, trash fichiers via `import('trash')`, **confirmation dialog native main** pour factory reset S29)
-- **Services stoppes avant factory reset** : schedulerService.stopAll(), mcpManagerService.stopAll(), telegramBotService.destroy(), remoteServerService.stop() — tous en try/catch car peuvent ne pas etre demarres
-- **Singletons exports** : les services utilisent `export const fooService = new FooService()` (pas `export class` + `getInstance()`) — importer le singleton directement
+- Zone orange : nettoyage partiel (conversations, projets, images, taches, MCP). Zone rouge : factory reset complet (18 tables + `localStorage.clear()`)
+- Backend : ordre FK strict, stop services avant delete, trash fichiers, confirmation dialog natif main
+- Singletons : `export const fooService = new FooService()` (pas getInstance())
 
 ## Conventions UI
 
-- Vues inline (formulaire remplace grille, pas de modal) — `subView` state ('grid'|'create'|'edit')
-- Pills InputZone : toujours shadcn Select (copier pattern ThinkingSelector)
-- Footer message : actions (audio/copier) hover a gauche, info (model/cout/temps) a droite
-- ConversationList : `overflow-y-auto` (PAS Radix ScrollArea — display:table casse flex)
+- Vues inline (pas de modal) — `subView` state ('grid'|'create'|'edit')
+- Pills InputZone : shadcn Select (pattern ThinkingSelector)
+- Footer message : actions hover a gauche, info a droite
+- ConversationList : `overflow-y-auto` (PAS Radix ScrollArea)
 - Title bar macOS : `hiddenInset`, traffic lights `{x:15, y:10}`, drag zones 38px
 
-## Distribution / Packaging
+## Distribution
 
-- **externalizeDepsPlugin** : externalise tout par defaut, `exclude` liste les deps JS pures a bundler (ai, drizzle-orm, zod, nanoid, etc.)
-- **Modules natifs/ESM** restent external : `better-sqlite3`, `chokidar`, `@ai-sdk/mcp`, `electron-updater`, `trash` → inclus via `files` dans electron-builder.yml
-- **electron-builder.yml** : `files` whitelist node_modules specifiques (pas `!node_modules` global puis re-include)
-- **Build universal** macOS : `arch: [universal]` — Intel + Apple Silicon en un binaire, rebuild better-sqlite3 pour les 2 arches
-- **Auto-updater** : `autoDownload: false`, broadcast IPC vers renderer, check toutes les 4h, `app.isPackaged` guard
-- **Release workflow** : tag `v*` → CI build + `--publish always` → GitHub Release auto avec manifeste `latest-mac.yml`
+- externalizeDepsPlugin : `exclude` liste les deps JS pures a bundler
+- Modules natifs/ESM restent external : better-sqlite3, chokidar, @ai-sdk/mcp, electron-updater, trash, @huggingface/transformers, onnxruntime-node, onnxruntime-web, onnxruntime-common
+- Build universal macOS, auto-updater check 4h, `app.isPackaged` guard

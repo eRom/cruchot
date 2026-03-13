@@ -14,6 +14,8 @@ import { mcpManagerService } from '../services/mcp-manager.service'
 import { telegramBotService } from '../services/telegram-bot.service'
 import { remoteServerService } from '../services/remote-server.service'
 import { buildMemoryBlock } from '../db/queries/memory-fragments'
+import { qdrantMemoryService } from '../services/qdrant-memory.service'
+import { buildSemanticMemoryBlock } from '../llm/memory-prompt'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
 import { touchConversation, renameConversation, getConversation, updateConversationModel, updateConversationRole } from '../db/queries/conversations'
 import { getActiveSession } from '../db/queries/remote-sessions'
@@ -224,10 +226,32 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
     const dbMessages = getMessagesForConversation(conversationId)
     const aiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<{ type: string; text?: string; image?: string; mimeType?: string }> }> = []
 
-    // Build combined system prompt: memory fragments + role prompt
+    // Semantic memory recall (if enabled)
+    let semanticMemoryBlock = ''
+    if (qdrantMemoryService.getStatus() === 'ready') {
+      try {
+        const recalls = await qdrantMemoryService.recall(content, {
+          topK: 5,
+          scoreThreshold: 0.35,
+          projectId: conv?.projectId ?? null,
+          conversationId
+        })
+        if (recalls.length > 0) {
+          semanticMemoryBlock = buildSemanticMemoryBlock(recalls)
+        }
+      } catch (err) {
+        console.warn('[Chat] Semantic memory recall failed:', err)
+      }
+    }
+
+    // Build combined system prompt: semantic memory + memory fragments + role prompt
     const memoryBlock = buildMemoryBlock()
     let combinedSystemPrompt = ''
-    if (memoryBlock) combinedSystemPrompt += memoryBlock
+    if (semanticMemoryBlock) combinedSystemPrompt += semanticMemoryBlock
+    if (memoryBlock) {
+      if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
+      combinedSystemPrompt += memoryBlock
+    }
     if (systemPrompt) {
       if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
       combinedSystemPrompt += systemPrompt
@@ -628,6 +652,29 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
       contentData: Object.keys(contentData).length > 0 ? contentData : undefined
     })
 
+    // Ingest messages into semantic memory (fire-and-forget)
+    if (qdrantMemoryService.getStatus() === 'ready') {
+      const projectId = conv?.projectId ?? null
+      qdrantMemoryService.ingest({
+        id: nanoid(),
+        conversationId,
+        projectId,
+        role: 'user',
+        content,
+        modelId: null,
+        createdAt: new Date()
+      }).catch(() => {})
+      qdrantMemoryService.ingest({
+        id: savedMessage.id,
+        conversationId,
+        projectId,
+        role: 'assistant',
+        content: fullText,
+        modelId,
+        createdAt: new Date()
+      }).catch(() => {})
+    }
+
     win.webContents.send('chat:chunk', {
       type: 'finish',
       content: fullText,
@@ -644,7 +691,8 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
         ...tc,
         status: tc.status === 'running' ? 'success' : tc.status
       })) : undefined,
-      searchSources: accumulatedSearchSources.length > 0 ? accumulatedSearchSources : undefined
+      searchSources: accumulatedSearchSources.length > 0 ? accumulatedSearchSources : undefined,
+      semanticRecallCount: qdrantMemoryService.getLastRecallCount() || undefined
     })
 
     currentAbortController = null
