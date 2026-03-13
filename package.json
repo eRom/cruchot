@@ -1,6 +1,6 @@
 {
   "name": "multi-llm-desktop",
-  "version": "0.1.1",
+  "version": "0.3.0",
   "description": "Multi-LLM Desktop — Chat multi-provider avec support OpenAI, Anthropic, Gemini, Mistral, xAI, OpenRouter, Ollama, LM Studio",
   "main": "./out/main/index.js",
   "author": "Romain",
