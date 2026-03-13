@@ -1,32 +1,80 @@
-import { useState } from 'react'
-import { Database, Download, Upload, Trash2, AlertTriangle, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { AlertTriangle, Check, Copy, Database, Download, Key, Lock, RotateCcw, Trash2, Upload } from 'lucide-react'
+import { useState } from 'react'
 
 export function DataSettings() {
   const [showCleanupConfirm, setShowCleanupConfirm] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [resetInput, setResetInput] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [tokenCopied, setTokenCopied] = useState(false)
 
-  const handleExport = async () => {
+  // Import state machine
+  const [importState, setImportState] = useState<'idle' | 'needs-token' | 'importing'>('idle')
+  const [pendingFilePath, setPendingFilePath] = useState('')
+  const [tokenInput, setTokenInput] = useState('')
+
+  // ── Token ────────────────────────────────────────────
+  const handleCopyToken = async () => {
     try {
-      await window.api.exportConversation({
-        conversationId: '',
-        format: 'json'
+      const hex = await window.api.copyInstanceToken()
+      await navigator.clipboard.writeText(hex)
+      setTokenCopied(true)
+      setTimeout(() => setTokenCopied(false), 2000)
+    } catch (err) {
+      console.error('[DataSettings] Copy token failed:', err)
+    }
+  }
+
+  // ── Export bulk ──────────────────────────────────────
+  const handleExportBulk = async () => {
+    try {
+      await window.api.exportBulk()
+    } catch (err) {
+      console.error('[DataSettings] Bulk export failed:', err)
+    }
+  }
+
+  // ── Import bulk ──────────────────────────────────────
+  const handleImportBulk = async () => {
+    setImportState('importing')
+    try {
+      const result = await window.api.importBulk()
+      if (result.imported) {
+        alert(`Import reussi : ${result.projectsImported} projets, ${result.conversationsImported} conversations, ${result.messagesImported} messages`)
+        window.location.reload()
+      } else if (result.needsToken && result.filePath) {
+        setPendingFilePath(result.filePath)
+        setImportState('needs-token')
+      } else {
+        setImportState('idle')
+      }
+    } catch (err) {
+      console.error('[DataSettings] Bulk import failed:', err)
+      setImportState('idle')
+    }
+  }
+
+  const handleImportWithToken = async () => {
+    if (tokenInput.length !== 64) return
+    setImportState('importing')
+    try {
+      const result = await window.api.importBulkWithToken({
+        filePath: pendingFilePath,
+        tokenHex: tokenInput
       })
-    } catch {
-      // Export error handling will be wired later
+      if (result.imported) {
+        alert(`Import reussi : ${result.projectsImported} projets, ${result.conversationsImported} conversations, ${result.messagesImported} messages`)
+        window.location.reload()
+      }
+    } catch (err) {
+      console.error('[DataSettings] Import with token failed:', err)
+      alert('Echec du dechiffrement : token invalide ou fichier corrompu')
+      setImportState('needs-token')
     }
   }
 
-  const handleImport = async () => {
-    try {
-      await window.api.importConversation({ format: 'json' })
-    } catch {
-      // Import error handling will be wired later
-    }
-  }
-
+  // ── Cleanup / Reset ──────────────────────────────────
   const handleCleanup = async () => {
     setIsProcessing(true)
     try {
@@ -74,29 +122,113 @@ export function DataSettings() {
           </div>
         </div>
 
-        {/* Export */}
+        {/* Instance Token */}
+        <div className="rounded-lg border border-border/60 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                <Key className="size-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Token d&apos;instance</p>
+                <p className="text-xs text-muted-foreground">
+                  Cle de chiffrement pour les exports .mlx 
+                  <br/>— a conserver pour importer sur une autre machine — 
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs text-muted-foreground">••••••••••••••••</span>
+              <Button variant="outline" size="sm" onClick={handleCopyToken}>
+                {tokenCopied ? <Check className="size-4 text-green-500" /> : <Copy className="size-4" />}
+                {tokenCopied ? 'Copie !' : 'Copier'}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Export bulk */}
         <div className="flex items-center justify-between rounded-lg border border-border/60 p-4">
           <div>
-            <p className="text-sm font-medium text-foreground">Exporter les conversations</p>
+            <p className="text-sm font-medium text-foreground">Exporter toutes les donnees (chiffre)</p>
             <p className="text-xs text-muted-foreground">
-              Exporte toutes les conversations au format JSON
+              Exporte conversations et projets dans un fichier .mlx chiffré (AES-256-GCM)
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={handleExport}>
+          <Button variant="outline" size="sm" onClick={handleExportBulk}>
             <Download className="size-4" />
             Exporter
           </Button>
         </div>
 
-        {/* Import */}
-        <div className="flex items-center justify-between rounded-lg border border-border/60 p-4">
+        {/* Import bulk */}
+        <div className="rounded-lg border border-border/60 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">Importer (natif)</p>
+              <p className="text-xs text-muted-foreground">
+                Importe un fichier .mlx chiffré
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleImportBulk}
+              disabled={importState === 'importing'}
+            >
+              <Upload className="size-4" />
+              {importState === 'importing' ? 'Import...' : 'Importer'}
+            </Button>
+          </div>
+
+          {/* Token input (shown when local token fails) */}
+          {importState === 'needs-token' && (
+            <div className="mt-3 space-y-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Ce fichier provient d&apos;une autre instance. Collez le token d&apos;instance de la machine source :
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={tokenInput}
+                  onChange={(e) => setTokenInput(e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 64))}
+                  placeholder="Token hex (64 caracteres)"
+                  className="flex-1 rounded-md border border-border bg-background px-3 py-1.5 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                />
+                <Button
+                  size="sm"
+                  disabled={tokenInput.length !== 64}
+                  onClick={handleImportWithToken}
+                  className="bg-amber-600 text-white hover:bg-amber-700"
+                >
+                  <Lock className="size-4" />
+                  Dechiffrer
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setImportState('idle')
+                    setTokenInput('')
+                    setPendingFilePath('')
+                  }}
+                >
+                  Annuler
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Import externe (disabled) */}
+        <div className="flex items-center justify-between rounded-lg border border-border/60 p-4 opacity-50">
           <div>
-            <p className="text-sm font-medium text-foreground">Importer des conversations</p>
+            <p className="text-sm font-medium text-foreground">Importer (externe)</p>
             <p className="text-xs text-muted-foreground">
-              Importe depuis un fichier JSON, ChatGPT ou Claude
+              ChatGPT, Claude, Gemini — bientot disponible
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={handleImport}>
+          <Button variant="outline" size="sm" disabled title="Bientot disponible">
             <Upload className="size-4" />
             Importer
           </Button>

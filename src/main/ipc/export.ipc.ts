@@ -1,7 +1,9 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron'
+import { ipcMain, dialog, BrowserWindow, clipboard } from 'electron'
 import { writeFileSync } from 'fs'
 import { z } from 'zod'
 import { exportConversation, ExportFormat } from '../services/export.service'
+import { buildExportPayload, encryptPayload } from '../services/bulk-export.service'
+import { getInstanceToken, getInstanceTokenHex } from '../services/instance-token.service'
 
 const exportSchema = z.object({
   conversationId: z.string().min(1),
@@ -45,6 +47,41 @@ export function registerExportIpc(): void {
 
     writeFileSync(filePath, result.content, 'utf-8')
     return { exported: true, filePath }
+  })
+
+  // ── Bulk export (encrypted .mlx) ─────────────────────
+  ipcMain.handle('export:bulk', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) throw new Error('No active window')
+
+    const payload = buildExportPayload()
+    const token = getInstanceToken()
+    const encrypted = encryptPayload(payload, token)
+
+    const defaultName = `multi-llm-export-${new Date().toISOString().slice(0, 10)}.mlx`
+
+    const { filePath, canceled } = await dialog.showSaveDialog(win, {
+      title: 'Exporter toutes les donnees (chiffre)',
+      defaultPath: defaultName,
+      filters: [{ name: 'Multi-LLM Export', extensions: ['mlx'] }]
+    })
+
+    if (canceled || !filePath) return { exported: false }
+
+    writeFileSync(filePath, encrypted)
+    console.log(`[Export] Bulk export saved to ${filePath} (${encrypted.length} bytes)`)
+    return { exported: true, filePath }
+  })
+
+  // ── Instance token ───────────────────────────────────
+  ipcMain.handle('instance-token:get-masked', async () => {
+    return '••••••••••••••••'
+  })
+
+  ipcMain.handle('instance-token:copy', async () => {
+    const hex = getInstanceTokenHex()
+    clipboard.writeText(hex)
+    return hex
   })
 
   console.log('[IPC] Export handlers registered')

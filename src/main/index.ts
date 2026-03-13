@@ -13,6 +13,7 @@ import { remoteServerService } from './services/remote-server.service'
 import { seedBuiltinCommands } from './db/queries/slash-commands'
 import { BUILTIN_COMMANDS } from './commands/builtin'
 import { qdrantMemoryService } from './services/qdrant-memory.service'
+import { ensureInstanceToken } from './services/instance-token.service'
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'
 
@@ -52,6 +53,9 @@ app.whenReady().then(() => {
   // Initialize database before anything else
   initDatabase(getDbPath())
   runMigrations()
+
+  // Ensure instance token exists (for encrypted export/import)
+  ensureInstanceToken()
 
   registerAllIpcHandlers()
 
