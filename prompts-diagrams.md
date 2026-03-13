@@ -124,6 +124,7 @@ Catégories et fonctionnalités :
 - Détection de changements en temps réel (Chokidar file watcher)
 - Propositions de modifications de fichiers avec approbation (FileOperationCard)
 - Auto-injection des fichiers de contexte (CLAUDE.md, README.md, AGENTS.md, GEMINI.md)
+- @mention de fichiers : taper `@` dans le textarea pour autocomplete des fichiers workspace, le fichier sélectionné reste inline stylé en cyan (overlay transparent), navigation hiérarchique dans les dossiers, filtrage des fichiers sensibles/ignorés, contenu chargé automatiquement comme contexte au moment de l'envoi
 
 **Intégration Git** (icône : branches/merge)
 - Branche courante, indicateur dirty/clean, compteur de fichiers modifiés

@@ -22,7 +22,10 @@ import { useContextWindow } from '@/hooks/useContextWindow'
 import { cn } from '@/lib/utils'
 import { FileReference } from '@/components/workspace/FileReference'
 import { SlashCommandPicker } from '@/components/chat/SlashCommandPicker'
+import { FileMentionPopover } from '@/components/chat/FileMentionPopover'
+import { MentionOverlay } from '@/components/chat/MentionOverlay'
 import { useSlashCommands } from '@/hooks/useSlashCommands'
+import { useFileMention } from '@/hooks/useFileMention'
 import type { AttachmentRef } from '../../../../preload/types'
 
 // ── Types pour futures integrations (ModelParams) ──
@@ -105,10 +108,43 @@ export function InputZone({
   const activeRoleId = useRolesStore((s) => s.activeRoleId)
   const activeSystemPrompt = useRolesStore((s) => s.activeSystemPrompt)
   const workspaceRootPath = useWorkspaceStore((s) => s.rootPath)
+  const workspaceTree = useWorkspaceStore((s) => s.tree)
   const workspaceAttachedFiles = useWorkspaceStore((s) => s.attachedFiles)
   const detachWorkspaceFile = useWorkspaceStore((s) => s.detachFile)
   const toggleWorkspacePanel = useWorkspaceStore((s) => s.togglePanel)
   const searchEnabled = useSettingsStore((s) => s.searchEnabled) ?? false
+
+  // ── Cursor position for @ mention ──────────────────────────
+  const [cursorPos, setCursorPos] = useState(0)
+
+  // ── Mentioned files (inline @path in textarea) ─────────────
+  const [mentionedFiles, setMentionedFiles] = useState<Set<string>>(new Set())
+  const hasMentions = mentionedFiles.size > 0
+
+  // ── Cleanup removed mentions when content changes ──────────
+  useEffect(() => {
+    if (mentionedFiles.size === 0) return
+    let changed = false
+    const next = new Set<string>()
+    for (const path of mentionedFiles) {
+      if (content.includes(`@${path}`)) {
+        next.add(path)
+      } else {
+        changed = true
+      }
+    }
+    if (changed) setMentionedFiles(next)
+  }, [content]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── File mention (@) ───────────────────────────────────────
+  const mention = useFileMention({
+    content,
+    cursorPosition: cursorPos,
+    hasWorkspace: !!workspaceRootPath,
+    tree: workspaceTree,
+    attachedFiles: workspaceAttachedFiles,
+    mentionedFiles
+  })
 
   // ── Slash commands ─────────────────────────────────────────
   const { isActive: slashActive, matches: slashMatches, resolve: resolveSlashCommand } = useSlashCommands(content)
@@ -528,12 +564,30 @@ export function InputZone({
     // Resolve role ID for persistence (skip virtual __project__ id)
     const roleIdForPersist = activeRoleId && activeRoleId !== '__project__' ? activeRoleId : undefined
 
-    // Load workspace file contexts if any
+    // Load workspace file contexts (panel-attached + @mentioned)
     let fileContexts: { path: string; content: string; language: string }[] | undefined
+    const loadedPaths = new Set<string>()
+
+    // From workspace panel attached files
     if (workspaceAttachedFiles.length > 0) {
       try {
-        fileContexts = await useWorkspaceStore.getState().getAttachedFileContexts()
+        const wsContexts = await useWorkspaceStore.getState().getAttachedFileContexts()
+        fileContexts = wsContexts
+        for (const ctx of wsContexts) loadedPaths.add(ctx.path)
       } catch { /* ignore */ }
+    }
+
+    // From @mentions (inline in text)
+    if (mentionedFiles.size > 0) {
+      if (!fileContexts) fileContexts = []
+      for (const mentionPath of mentionedFiles) {
+        if (loadedPaths.has(mentionPath)) continue
+        try {
+          const file = await window.api.workspaceReadFile(mentionPath)
+          fileContexts.push({ path: file.path, content: file.content, language: file.language })
+          loadedPaths.add(file.path)
+        } catch { /* skip unreadable */ }
+      }
     }
 
     // Envoyer via IPC
@@ -561,9 +615,12 @@ export function InputZone({
       // Erreur geree par le stream handler dans le main
     }
 
-    // Clear workspace attached files after send
+    // Clear workspace attached files + mentioned files after send
     if (workspaceAttachedFiles.length > 0) {
       useWorkspaceStore.getState().clearAttachedFiles()
+    }
+    if (mentionedFiles.size > 0) {
+      setMentionedFiles(new Set())
     }
 
     // Persist role on conversation after first message
@@ -598,7 +655,8 @@ export function InputZone({
     activeSystemPrompt,
     conversationMessages.length,
     onMessageSent,
-    resolveSlashCommand
+    resolveSlashCommand,
+    mentionedFiles
   ])
 
   // ── Dispatch send ──────────────────────────────────────
@@ -609,6 +667,61 @@ export function InputZone({
       handleSendText()
     }
   }, [isImageMode, handleSendImage, handleSendText])
+
+  // ── File mention selection ──────────────────────────────
+  const handleMentionSelect = useCallback(
+    (index: number) => {
+      const selection = mention.selectItem(index)
+      if (!selection) return
+
+      if (selection.isDirectory) {
+        // Navigate into directory: replace query with dir path + /
+        const before = content.slice(0, selection.mentionStart + 1) // keep the @
+        const after = content.slice(selection.cursorPosition)
+        const dirPath = mention.results[index]?.fullPath
+        if (dirPath) {
+          const newContent = `${before}${dirPath}/${after}`
+          setContent(newContent)
+          const newCursor = selection.mentionStart + 1 + dirPath.length + 1
+          setCursorPos(newCursor)
+          requestAnimationFrame(() => {
+            if (textareaRef.current) {
+              textareaRef.current.selectionStart = newCursor
+              textareaRef.current.selectionEnd = newCursor
+            }
+          })
+        }
+        return
+      }
+
+      // File selected: replace @query with @fullPath (keep inline in text)
+      const fullPath = selection.selectedPath
+      const before = content.slice(0, selection.mentionStart)
+      const after = content.slice(selection.cursorPosition)
+      const mentionText = `@${fullPath}`
+      const newContent = `${before}${mentionText} ${after}`
+      setContent(newContent)
+
+      // Track as mentioned file
+      setMentionedFiles((prev) => {
+        const next = new Set(prev)
+        next.add(fullPath)
+        return next
+      })
+
+      // Place cursor after the mention + space
+      const newCursor = before.length + mentionText.length + 1
+      setCursorPos(newCursor)
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = newCursor
+          textareaRef.current.selectionEnd = newCursor
+          textareaRef.current.focus()
+        }
+      })
+    },
+    [mention, content]
+  )
 
   // ── Slash command selection from picker ──────────────────
   const handleSlashSelect = useCallback(
@@ -645,6 +758,18 @@ export function InputZone({
   // ── Keyboard ─────────────────────────────────────────────
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      // File mention picker keyboard navigation (priority over slash)
+      if (mention.isOpen) {
+        if (mention.handleKeyDown(e)) {
+          // Tab or Enter = select current item
+          if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+            handleMentionSelect(mention.selectedIndex)
+          }
+          // Escape = just close (handled by removing @ from content or user presses Escape)
+          return
+        }
+      }
+
       // Slash command picker keyboard navigation
       if (slashPickerOpen && slashMatches.length > 0) {
         if (e.key === 'ArrowDown') {
@@ -687,7 +812,7 @@ export function InputZone({
         }
       }
     },
-    [canSend, handleSend, slashPickerOpen, slashMatches, slashSelectedIndex, handleSlashSelect, content]
+    [canSend, handleSend, slashPickerOpen, slashMatches, slashSelectedIndex, handleSlashSelect, content, mention, handleMentionSelect]
   )
 
   return (
@@ -778,30 +903,66 @@ export function InputZone({
             </div>
           )}
 
-          {/* Textarea */}
-          <textarea
-            ref={textareaRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={isImageMode ? 'Decrivez l\'image a generer...' : 'Envoyer un message...'}
-            disabled={isBusy}
-            rows={1}
-            className={cn(
-              'w-full resize-none border-none bg-transparent outline-none',
-              'text-sm leading-relaxed text-foreground',
-              'placeholder:text-muted-foreground/50',
-              'px-4 pt-3 pb-0',
-              'scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border/40',
-              'transition-[height] duration-150 ease-out',
-              isBusy && 'cursor-not-allowed opacity-50'
+          {/* File mention popover */}
+          {mention.isOpen && (
+            <FileMentionPopover
+              results={mention.results}
+              selectedIndex={mention.selectedIndex}
+              currentDir={mention.currentDir}
+              onSelect={handleMentionSelect}
+              onClose={() => {}}
+            />
+          )}
+
+          {/* Textarea + mention overlay */}
+          <div className="relative">
+            {/* Mention highlight overlay (renders @mentions in colored spans) */}
+            {hasMentions && (
+              <MentionOverlay
+                content={content}
+                mentionedFiles={mentionedFiles}
+                textareaRef={textareaRef}
+                className={cn(
+                  'text-sm leading-relaxed text-foreground',
+                  'px-4 pt-3 pb-0'
+                )}
+                style={{ lineHeight: `${TEXTAREA_LINE_HEIGHT}px` }}
+              />
             )}
-            style={{
-              minHeight: `${TEXTAREA_MIN_HEIGHT}px`,
-              maxHeight: `${TEXTAREA_MAX_HEIGHT}px`,
-              lineHeight: `${TEXTAREA_LINE_HEIGHT}px`
-            }}
-          />
+
+            {/* Textarea */}
+            <textarea
+              ref={textareaRef}
+              value={content}
+              onChange={(e) => {
+                setContent(e.target.value)
+                setCursorPos(e.target.selectionStart)
+              }}
+              onSelect={(e) => setCursorPos((e.target as HTMLTextAreaElement).selectionStart)}
+              onKeyDown={handleKeyDown}
+              placeholder={isImageMode ? 'Decrivez l\'image a generer...' : 'Envoyer un message...'}
+              disabled={isBusy}
+              rows={1}
+              className={cn(
+                'relative w-full resize-none border-none bg-transparent outline-none',
+                'text-sm leading-relaxed',
+                'placeholder:text-muted-foreground/50',
+                'px-4 pt-3 pb-0',
+                'scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border/40',
+                'transition-[height] duration-150 ease-out',
+                isBusy && 'cursor-not-allowed opacity-50',
+                // When mentions exist: text invisible (overlay renders it), but caret stays visible
+                hasMentions
+                  ? 'text-transparent caret-foreground [-webkit-text-fill-color:transparent]'
+                  : 'text-foreground'
+              )}
+              style={{
+                minHeight: `${TEXTAREA_MIN_HEIGHT}px`,
+                maxHeight: `${TEXTAREA_MAX_HEIGHT}px`,
+                lineHeight: `${TEXTAREA_LINE_HEIGHT}px`
+              }}
+            />
+          </div>
 
           {/* Aspect ratio selector — mode image uniquement */}
           {isImageMode && (
