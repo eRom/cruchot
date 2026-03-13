@@ -1,9 +1,17 @@
-import { useEffect, useState } from 'react'
-import { Brain, RefreshCw, Trash2, Search, Loader2 } from 'lucide-react'
-import { toast } from 'sonner'
-import { useSettingsStore } from '@/stores/settings.store'
 import { useSemanticMemoryStore } from '@/stores/semantic-memory.store'
+import { useSettingsStore } from '@/stores/settings.store'
+import { Brain, Loader2, RefreshCw, Search, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { MemoryExplorer } from './MemoryExplorer'
+
+function formatDiskSize(mb: string | number): string {
+  mb = typeof mb === 'string' ? parseFloat(mb) || 0 : mb
+  if (mb < 0.01) return '< 1 KB'
+  if (mb < 1) return `${Math.round(mb * 1024)} KB`
+  if (mb < 1024) return `${mb.toFixed(1)} MB`
+  return `${(mb / 1024).toFixed(2)} GB`
+}
 
 export function SemanticMemorySection() {
   const semanticMemoryEnabled = useSettingsStore((s) => s.semanticMemoryEnabled) ?? true
@@ -69,7 +77,7 @@ export function SemanticMemorySection() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Brain className="size-4 text-purple-500" />
+          <Brain className="size-4 primary" />
           <h3 className="text-sm font-medium text-foreground">Memoire semantique</h3>
         </div>
         <label className="relative inline-flex cursor-pointer items-center">
@@ -99,7 +107,7 @@ export function SemanticMemorySection() {
           </div>
           {stats.totalPoints > 0 && (
             <>
-              <p>{stats.collectionSizeMB} MB sur disque</p>
+              <p>{formatDiskSize(stats.collectionSizeMB)} sur disque</p>
               {stats.pendingSync > 0 && (
                 <p>{stats.pendingSync} message{stats.pendingSync > 1 ? 's' : ''} en attente d'indexation</p>
               )}

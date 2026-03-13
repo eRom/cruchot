@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { Smartphone, Eye, EyeOff, Loader2, Check, X, Copy, Globe, Wifi, WifiOff, Trash2 } from 'lucide-react'
-import { toast } from 'sonner'
-import { useRemoteStore } from '@/stores/remote.store'
-import { useRemoteServerStore } from '@/stores/remote-server.store'
-import { useConversationsStore } from '@/stores/conversations.store'
 import { cn } from '@/lib/utils'
+import { useConversationsStore } from '@/stores/conversations.store'
+import { useRemoteServerStore } from '@/stores/remote-server.store'
+import { useRemoteStore } from '@/stores/remote.store'
+import { Check, Copy, Eye, EyeOff, Globe, Loader2, Smartphone, Wifi, X } from 'lucide-react'
+import React, { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   disconnected: { label: 'Deconnecte', color: 'bg-zinc-400' },
@@ -213,8 +213,7 @@ export function RemoteTab(): React.JSX.Element {
                 className="flex-1 rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none font-mono"
               />
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-24 shrink-0" />
+            <div className="flex items-center justify-end">
               <button
                 onClick={handleConfigure}
                 disabled={loading || !token.trim() || !userIdInput.trim()}
@@ -224,7 +223,7 @@ export function RemoteTab(): React.JSX.Element {
                   'disabled:opacity-50 disabled:cursor-not-allowed'
                 )}
               >
-                {loading ? <Loader2 className="size-4 animate-spin" /> : 'Valider'}
+                {loading ? <Loader2 className="size-4 animate-spin" /> : 'Sauvegarder'}
               </button>
             </div>
             {configError && <p className="text-xs text-red-400">{configError}</p>}
@@ -388,8 +387,7 @@ export function RemoteTab(): React.JSX.Element {
               </button>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-24 shrink-0" />
+          <div className="flex items-center justify-end">
             <button
               onClick={handleWsConfigSave}
               disabled={wsStore.loading}
@@ -405,7 +403,7 @@ export function RemoteTab(): React.JSX.Element {
         </div>
 
         {/* Start/Stop */}
-        <div className="flex gap-2">
+        <div className="flex justify-end gap-2">
           {wsStore.status === 'stopped' || wsStore.status === 'error' ? (
             <button
               onClick={handleWsStart}
@@ -416,7 +414,7 @@ export function RemoteTab(): React.JSX.Element {
                 'disabled:opacity-50 disabled:cursor-not-allowed'
               )}
             >
-              {wsStore.loading ? <Loader2 className="size-4 animate-spin" /> : 'Demarrer le serveur'}
+              {wsStore.loading ? <Loader2 className="size-4 animate-spin" /> : 'Demarrer'}
             </button>
           ) : (
             <button
@@ -428,7 +426,7 @@ export function RemoteTab(): React.JSX.Element {
                 'disabled:opacity-50 disabled:cursor-not-allowed'
               )}
             >
-              {wsStore.loading ? <Loader2 className="size-4 animate-spin" /> : 'Arreter le serveur'}
+              {wsStore.loading ? <Loader2 className="size-4 animate-spin" /> : 'Arreter'}
             </button>
           )}
         </div>

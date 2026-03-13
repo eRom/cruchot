@@ -1,18 +1,18 @@
-import { useState } from 'react'
-import {
-  Clock,
-  Pencil,
-  Trash2,
-  Play,
-  CheckCircle2,
-  XCircle,
-  Timer,
-  CalendarDays,
-  CalendarClock,
-  Hand
-} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import {
+  CalendarClock,
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  Hand,
+  Pencil,
+  Play,
+  Timer,
+  Trash2,
+  XCircle
+} from 'lucide-react'
+import { useState } from 'react'
 import type { ScheduledTaskInfo } from '../../../../preload/types'
 
 interface TaskCardProps {
@@ -110,13 +110,13 @@ export function TaskCard({
       )}
     >
       {/* Color bar */}
-      <div className={cn('h-1.5 w-full', SCHEDULE_COLORS[task.scheduleType] ?? 'bg-gray-500')} />
+      <div className={cn('h-1.5 w-full bg-gray-500')} />
 
       <div className="flex flex-1 flex-col p-4">
         {/* Title row */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <Clock className="size-4 shrink-0 text-blue-500" />
+            <Clock className="size-4 shrink-0 primary" />
             <h3 className="text-sm font-semibold text-foreground leading-snug truncate">
               {task.name}
             </h3>
@@ -124,25 +124,6 @@ export function TaskCard({
 
           {/* Actions */}
           <div className="flex shrink-0 items-center gap-1">
-            {/* Toggle */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onToggle()
-              }}
-              className={cn(
-                'relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors',
-                task.isEnabled ? 'bg-primary' : 'bg-muted'
-              )}
-            >
-              <span
-                className={cn(
-                  'inline-block size-3.5 rounded-full bg-white shadow-sm transition-transform',
-                  task.isEnabled ? 'translate-x-[18px]' : 'translate-x-[3px]'
-                )}
-              />
-            </button>
-
             {/* Hover actions */}
             <div
               className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -171,6 +152,25 @@ export function TaskCard({
                 <Trash2 className="size-3.5" />
               </button>
             </div>
+
+            {/* Toggle — tout à droite */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggle()
+              }}
+              className={cn(
+                'relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors',
+                task.isEnabled ? 'bg-primary' : 'bg-muted'
+              )}
+            >
+              <span
+                className={cn(
+                  'inline-block size-3.5 rounded-full bg-white shadow-sm transition-transform',
+                  task.isEnabled ? 'translate-x-[18px]' : 'translate-x-[3px]'
+                )}
+              />
+            </button>
           </div>
         </div>
 

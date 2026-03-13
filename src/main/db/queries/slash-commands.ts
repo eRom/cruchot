@@ -139,4 +139,18 @@ export function seedBuiltinCommands(
     }
     // If exists, don't update — user may have customized it
   }
+
+  // Remove builtins that are no longer in the list
+  const builtinNames = new Set(builtins.map(b => b.name))
+  const allBuiltins = db
+    .select({ id: slashCommands.id, name: slashCommands.name })
+    .from(slashCommands)
+    .where(eq(slashCommands.isBuiltin, true))
+    .all()
+
+  for (const row of allBuiltins) {
+    if (!builtinNames.has(row.name)) {
+      db.delete(slashCommands).where(eq(slashCommands.id, row.id)).run()
+    }
+  }
 }
