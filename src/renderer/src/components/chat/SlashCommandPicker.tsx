@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { Slash } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SlashCommand } from '@/stores/slash-commands.store'
 
@@ -55,7 +54,6 @@ export function SlashCommandPicker({ matches, onSelect, onClose, visible }: Slas
           onClick={() => onSelect(command.name)}
           onMouseEnter={() => setSelectedIndex(index)}
         >
-          <Slash className="size-4 shrink-0 text-muted-foreground/60" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium font-mono">/{command.name}</span>

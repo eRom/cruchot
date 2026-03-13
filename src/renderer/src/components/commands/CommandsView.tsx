@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   Plus,
   Search,
-  Slash,
+  TerminalSquare,
   Pencil,
   Trash2,
   ArrowUpDown,
@@ -352,7 +352,7 @@ export function CommandsView() {
         <div className="mx-auto max-w-4xl">
           {filteredCommands.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <Slash className="size-12 text-muted-foreground/20" />
+              <TerminalSquare className="size-12 text-muted-foreground/20" />
               <p className="mt-4 text-sm text-muted-foreground">
                 {search || filterScope !== 'all'
                   ? 'Aucune commande ne correspond a votre recherche.'
@@ -487,7 +487,6 @@ function CommandCard({
         {/* Title row */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <Slash className="size-4 shrink-0 text-muted-foreground/60" />
             <h3 className="text-sm font-semibold text-foreground leading-snug truncate font-mono">
               /{command.name}
             </h3>

@@ -1,15 +1,14 @@
 import { cn } from '@/lib/utils'
 import { useUiStore, type SettingsTab } from '@/stores/ui.store'
-import { Archive, ArrowLeft, Database, FileText, Key, Keyboard, Palette, Settings, SlidersHorizontal, Smartphone, Volume2 } from 'lucide-react'
+import { Archive, ArrowLeft, Blocks, Database, FileText, Keyboard, Palette, Settings, SlidersHorizontal, Smartphone, Volume2 } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
-import { ApiKeysSection } from './ApiKeysSection'
 import { AppearanceSettings } from './AppearanceSettings'
 import { AudioSettings } from './AudioSettings'
 import { BackupSettings } from './BackupSettings'
 import { DataSettings } from './DataSettings'
 import { GeneralSettings } from './GeneralSettings'
 import { KeybindingsSettings } from './KeybindingsSettings'
-import { LocalProvidersSection } from './LocalProvidersSection'
+import { ProvidersSection } from './ProvidersSection'
 import { ModelSettings } from './ModelSettings'
 import { RemoteTab } from './RemoteTab'
 import { SummaryTab } from './SummaryTab'
@@ -23,7 +22,7 @@ const TABS: TabItem[] = [
   { type: 'tab', id: 'appearance', label: 'Apparence', icon: <Palette className="size-4" /> },
   { type: 'tab', id: 'keybindings', label: 'Raccourcis', icon: <Keyboard className="size-4" /> },
   { type: 'separator' },
-  { type: 'tab', id: 'apikeys', label: 'Cles API', icon: <Key className="size-4" /> },
+  { type: 'tab', id: 'apikeys', label: 'Providers', icon: <Blocks className="size-4" /> },
   { type: 'tab', id: 'model', label: 'Modele', icon: <SlidersHorizontal className="size-4" /> },
   { type: 'tab', id: 'audio', label: 'Audio', icon: <Volume2 className="size-4" /> },
   { type: 'tab', id: 'summary', label: 'Resume', icon: <FileText className="size-4" /> },
@@ -92,12 +91,7 @@ export function SettingsView() {
           <div className="mx-auto max-w-2xl pb-8">
             {activeTab === 'general' && <GeneralSettings />}
             {activeTab === 'appearance' && <AppearanceSettings />}
-            {activeTab === 'apikeys' && (
-              <div className="space-y-8">
-                <ApiKeysSection />
-                <LocalProvidersSection />
-              </div>
-            )}
+            {activeTab === 'apikeys' && <ProvidersSection />}
             {activeTab === 'model' && <ModelSettings />}
             {activeTab === 'audio' && <AudioSettings />}
             {activeTab === 'summary' && <SummaryTab />}

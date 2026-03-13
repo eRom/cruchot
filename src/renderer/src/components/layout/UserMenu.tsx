@@ -19,7 +19,7 @@ import {
   BookOpen,
   Brain,
   ChevronsDownUp,
-  Slash,
+  TerminalSquare,
   ChevronsUpDown,
   Clock,
   FolderOpen,
@@ -154,7 +154,7 @@ export function UserMenu({ isCollapsed, currentView, onNavigate, enabledTasksCou
                 onSelect={() => onNavigate('memory')}
               />
               <MenuItem
-                icon={Slash}
+                icon={TerminalSquare}
                 label="Commandes"
                 isActive={currentView === 'commands'}
                 onSelect={() => onNavigate('commands')}
