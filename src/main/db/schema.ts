@@ -71,6 +71,7 @@ export const conversations = sqliteTable('conversations', {
   projectId: text('project_id').references(() => projects.id),
   modelId: text('model_id'),
   roleId: text('role_id').references(() => roles.id),
+  activeLibraryId: text('active_library_id'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
@@ -318,6 +319,93 @@ export const customModels = sqliteTable('custom_models', {
   isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(true),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+})
+
+// ---------------------------------------------------------------------------
+// Libraries (Referentiels documentaires RAG)
+// ---------------------------------------------------------------------------
+export const libraries = sqliteTable('libraries', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  color: text('color'),
+  icon: text('icon'),
+  projectId: text('project_id').references(() => projects.id),
+
+  // Embedding config (immutable apres creation)
+  embeddingModel: text('embedding_model', {
+    enum: ['local', 'google']
+  }).notNull().default('local'),
+  embeddingDimensions: integer('embedding_dimensions').notNull().default(384),
+
+  // Stats caches
+  sourcesCount: integer('sources_count').notNull().default(0),
+  chunksCount: integer('chunks_count').notNull().default(0),
+  totalSizeBytes: integer('total_size_bytes').notNull().default(0),
+
+  // Etat
+  status: text('status', {
+    enum: ['empty', 'indexing', 'ready', 'error']
+  }).notNull().default('empty'),
+  lastIndexedAt: integer('last_indexed_at', { mode: 'timestamp' }),
+
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+})
+
+// ---------------------------------------------------------------------------
+// Library Sources (fichiers dans un referentiel)
+// ---------------------------------------------------------------------------
+export const librarySources = sqliteTable('library_sources', {
+  id: text('id').primaryKey(),
+  libraryId: text('library_id')
+    .notNull()
+    .references(() => libraries.id, { onDelete: 'cascade' }),
+
+  filename: text('filename').notNull(),
+  originalPath: text('original_path').notNull(),
+  storedPath: text('stored_path').notNull(),
+  mimeType: text('mime_type').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+
+  extractedText: text('extracted_text'),
+  extractedLength: integer('extracted_length'),
+
+  chunksCount: integer('chunks_count').notNull().default(0),
+  status: text('status', {
+    enum: ['pending', 'extracting', 'chunking', 'indexing', 'ready', 'error']
+  }).notNull().default('pending'),
+  errorMessage: text('error_message'),
+
+  contentHash: text('content_hash'),
+
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+})
+
+// ---------------------------------------------------------------------------
+// Library Chunks (tracking des chunks dans Qdrant)
+// ---------------------------------------------------------------------------
+export const libraryChunks = sqliteTable('library_chunks', {
+  id: text('id').primaryKey(),
+  libraryId: text('library_id')
+    .notNull()
+    .references(() => libraries.id, { onDelete: 'cascade' }),
+  sourceId: text('source_id')
+    .notNull()
+    .references(() => librarySources.id, { onDelete: 'cascade' }),
+
+  pointId: text('point_id').notNull(),
+
+  chunkIndex: integer('chunk_index').notNull(),
+  startChar: integer('start_char').notNull(),
+  endChar: integer('end_char').notNull(),
+
+  heading: text('heading'),
+  lineStart: integer('line_start'),
+  lineEnd: integer('line_end'),
+
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 })
 
 // ---------------------------------------------------------------------------

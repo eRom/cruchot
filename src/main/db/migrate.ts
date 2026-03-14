@@ -245,6 +245,56 @@ export function runMigrations(): void {
     );
 
     CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(content);
+
+    CREATE TABLE IF NOT EXISTS libraries (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      color TEXT,
+      icon TEXT,
+      project_id TEXT REFERENCES projects(id),
+      embedding_model TEXT NOT NULL DEFAULT 'local' CHECK(embedding_model IN ('local', 'google')),
+      embedding_dimensions INTEGER NOT NULL DEFAULT 384,
+      sources_count INTEGER NOT NULL DEFAULT 0,
+      chunks_count INTEGER NOT NULL DEFAULT 0,
+      total_size_bytes INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'empty' CHECK(status IN ('empty', 'indexing', 'ready', 'error')),
+      last_indexed_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS library_sources (
+      id TEXT PRIMARY KEY,
+      library_id TEXT NOT NULL REFERENCES libraries(id) ON DELETE CASCADE,
+      filename TEXT NOT NULL,
+      original_path TEXT NOT NULL,
+      stored_path TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      size_bytes INTEGER NOT NULL,
+      extracted_text TEXT,
+      extracted_length INTEGER,
+      chunks_count INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'extracting', 'chunking', 'indexing', 'ready', 'error')),
+      error_message TEXT,
+      content_hash TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS library_chunks (
+      id TEXT PRIMARY KEY,
+      library_id TEXT NOT NULL REFERENCES libraries(id) ON DELETE CASCADE,
+      source_id TEXT NOT NULL REFERENCES library_sources(id) ON DELETE CASCADE,
+      point_id TEXT NOT NULL,
+      chunk_index INTEGER NOT NULL,
+      start_char INTEGER NOT NULL,
+      end_char INTEGER NOT NULL,
+      heading TEXT,
+      line_start INTEGER,
+      line_end INTEGER,
+      created_at INTEGER NOT NULL
+    );
   `)
 
   // ── Incremental migrations (idempotent) ────────────────
@@ -294,5 +344,12 @@ export function runMigrations(): void {
     } catch {
       // Column already exists — ignore
     }
+  }
+
+  // Add active_library_id column to conversations table (RAG libraries)
+  try {
+    sqlite.exec('ALTER TABLE conversations ADD COLUMN active_library_id TEXT')
+  } catch {
+    // Column already exists — ignore
   }
 }

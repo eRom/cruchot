@@ -25,6 +25,7 @@ export interface SendMessagePayload {
   fileContexts?: WorkspaceFileContext[]
   hasWorkspace?: boolean
   searchEnabled?: boolean
+  libraryId?: string
 }
 
 export interface FileNode {
@@ -125,6 +126,7 @@ export interface ConversationInfo {
   projectId?: string
   modelId?: string
   roleId?: string | null
+  activeLibraryId?: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -409,6 +411,76 @@ export interface SemanticMemoryStats {
   collectionSizeMB: string
   pendingSync: number
   status: string
+}
+
+// ── Libraries (RAG Referentiels) ─────────────────────────────
+export interface LibraryInfo {
+  id: string
+  name: string
+  description?: string | null
+  color?: string | null
+  icon?: string | null
+  projectId?: string | null
+  embeddingModel: 'local' | 'google'
+  embeddingDimensions: number
+  sourcesCount: number
+  chunksCount: number
+  totalSizeBytes: number
+  status: 'empty' | 'indexing' | 'ready' | 'error'
+  lastIndexedAt?: Date | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface LibrarySourceInfo {
+  id: string
+  libraryId: string
+  filename: string
+  originalPath: string
+  storedPath: string
+  mimeType: string
+  sizeBytes: number
+  extractedLength?: number | null
+  chunksCount: number
+  status: 'pending' | 'extracting' | 'chunking' | 'indexing' | 'ready' | 'error'
+  errorMessage?: string | null
+  contentHash?: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface LibrarySearchResult {
+  id: string
+  score: number
+  content: string
+  contentPreview: string
+  sourceId: string
+  libraryId: string
+  filename: string
+  heading: string | null
+  chunkIndex: number
+  lineStart: number | null
+  lineEnd: number | null
+}
+
+export interface LibrarySourceForMessage {
+  id: number
+  sourceId: string
+  libraryId: string
+  libraryName: string
+  filename: string
+  heading: string | null
+  lineStart: number | null
+  lineEnd: number | null
+  chunkPreview: string
+  score: number
+}
+
+export interface LibraryIndexingProgress {
+  libraryId: string
+  sourceId: string
+  percent: number
+  status: 'extracting' | 'chunking' | 'embedding' | 'upserting' | 'done' | 'error'
 }
 
 // ── MCP Servers ─────────────────────────────────────────
@@ -855,6 +927,26 @@ export interface ElectronAPI {
   semanticMemoryReindex: () => Promise<void>
   semanticMemoryToggle: (payload: { enabled: boolean }) => Promise<void>
   semanticMemoryStats: () => Promise<SemanticMemoryStats>
+
+  // Libraries (RAG Referentiels)
+  libraryList: () => Promise<LibraryInfo[]>
+  libraryGet: (payload: { id: string }) => Promise<LibraryInfo | null>
+  libraryCreate: (payload: { name: string; description?: string; color?: string; icon?: string; projectId?: string; embeddingModel?: 'local' | 'google' }) => Promise<LibraryInfo>
+  libraryUpdate: (payload: { id: string; name?: string; description?: string; color?: string; icon?: string }) => Promise<LibraryInfo | null>
+  libraryDelete: (payload: { id: string }) => Promise<void>
+  libraryAddSources: (payload: { libraryId: string; filePaths: string[] }) => Promise<LibrarySourceInfo[]>
+  libraryRemoveSource: (payload: { libraryId: string; sourceId: string }) => Promise<void>
+  libraryGetSources: (payload: { libraryId: string }) => Promise<LibrarySourceInfo[]>
+  libraryReindexSource: (payload: { libraryId: string; sourceId: string }) => Promise<void>
+  libraryReindexAll: (payload: { libraryId: string }) => Promise<void>
+  librarySearch: (payload: { libraryId: string; query: string; topK?: number }) => Promise<LibrarySearchResult[]>
+  libraryStats: (payload: { libraryId: string }) => Promise<LibraryInfo & { qdrantPoints: number; collectionSizeMB: string } | null>
+  libraryPickFiles: () => Promise<string[]>
+  libraryAttach: (payload: { conversationId: string; libraryId: string }) => Promise<void>
+  libraryDetach: (payload: { conversationId: string }) => Promise<void>
+  libraryGetAttached: (payload: { conversationId: string }) => Promise<string | null>
+  onLibraryIndexingProgress: (callback: (progress: LibraryIndexingProgress) => void) => void
+  offLibraryIndexingProgress: () => void
 
   // Settings
   getSetting: (key: string) => Promise<string | null>

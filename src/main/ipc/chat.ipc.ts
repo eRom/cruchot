@@ -16,6 +16,9 @@ import { remoteServerService } from '../services/remote-server.service'
 import { buildMemoryBlock } from '../db/queries/memory-fragments'
 import { qdrantMemoryService } from '../services/qdrant-memory.service'
 import { buildSemanticMemoryBlock } from '../llm/memory-prompt'
+import { buildLibraryContextBlock, type LibraryChunkForPrompt } from '../llm/library-prompt'
+import { libraryService } from '../services/library.service'
+import { getConversationLibraryId, getLibrary } from '../db/queries/libraries'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
 import { touchConversation, renameConversation, getConversation, updateConversationModel, updateConversationRole } from '../db/queries/conversations'
 import { getActiveSession } from '../db/queries/remote-sessions'
@@ -46,7 +49,8 @@ const sendMessageSchema = z.object({
     language: z.string().max(50)
   })).max(20).optional(),
   hasWorkspace: z.boolean().optional(),
-  searchEnabled: z.boolean().optional()
+  searchEnabled: z.boolean().optional(),
+  libraryId: z.string().optional()
 })
 
 let currentAbortController: AbortController | null = null
@@ -168,9 +172,14 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
     }
 
     // Save user message to DB (with attachment references in contentData)
-    const userContentData = validatedRefs.length > 0
-      ? { attachments: validatedRefs.map(r => ({ path: r.path, name: r.name, size: r.size, type: r.type, mimeType: r.mimeType })) }
-      : undefined
+    const userContentData: Record<string, unknown> = {}
+    if (validatedRefs.length > 0) {
+      userContentData.attachments = validatedRefs.map(r => ({ path: r.path, name: r.name, size: r.size, type: r.type, mimeType: r.mimeType }))
+    }
+    const activeLibId = getConversationLibraryId(conversationId)
+    if (activeLibId) {
+      userContentData.libraryId = activeLibId
+    }
 
     createMessage({
       conversationId,
@@ -178,7 +187,7 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       content,
       modelId,
       providerId,
-      contentData: userContentData
+      contentData: Object.keys(userContentData).length > 0 ? userContentData : undefined
     })
 
     // Touch conversation updatedAt
@@ -244,10 +253,56 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       }
     }
 
-    // Build combined system prompt: semantic memory + memory fragments + role prompt
+    // Library retrieval (RAG — if a library is attached to the conversation, sticky)
+    let libraryContextBlock = ''
+    let librarySourcesForMessage: LibraryChunkForPrompt[] = []
+    const activeLibraryId = getConversationLibraryId(conversationId)
+    if (activeLibraryId) {
+      const lib = getLibrary(activeLibraryId)
+      const libName = lib?.name ?? 'Referentiel'
+      const toolCallId = `library-retrieval-${Date.now()}`
+
+      // Send synthetic tool-call chunk to renderer (shows "Recherche referentiel" in ToolCallBlock)
+      win.webContents.send('chat:chunk', {
+        type: 'tool-call',
+        toolName: 'librarySearch',
+        toolArgs: { query: content.slice(0, 120), library: libName },
+        toolCallId
+      })
+
+      try {
+        const chunks = await libraryService.retrieveForChat(activeLibraryId, content)
+        if (chunks.length > 0) {
+          libraryContextBlock = buildLibraryContextBlock(chunks, libName)
+          librarySourcesForMessage = chunks
+        }
+        // Send synthetic tool-result (success)
+        win.webContents.send('chat:chunk', {
+          type: 'tool-result',
+          toolName: 'librarySearch',
+          toolCallId,
+          toolIsError: false
+        })
+      } catch (err) {
+        console.warn('[Chat] Library retrieval failed:', err)
+        // Send synthetic tool-result (error)
+        win.webContents.send('chat:chunk', {
+          type: 'tool-result',
+          toolName: 'librarySearch',
+          toolCallId,
+          toolIsError: true
+        })
+      }
+    }
+
+    // Build combined system prompt: library-context + semantic memory + memory fragments + role prompt
     const memoryBlock = buildMemoryBlock()
     let combinedSystemPrompt = ''
-    if (semanticMemoryBlock) combinedSystemPrompt += semanticMemoryBlock
+    if (libraryContextBlock) combinedSystemPrompt += libraryContextBlock
+    if (semanticMemoryBlock) {
+      if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
+      combinedSystemPrompt += semanticMemoryBlock
+    }
     if (memoryBlock) {
       if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
       combinedSystemPrompt += memoryBlock
@@ -638,6 +693,20 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
     }
     if (fileOps.length > 0) contentData.fileOperations = fileOps.map(op => ({ ...op, status: 'pending' }))
     if (accumulatedSearchSources.length > 0) contentData.searchSources = accumulatedSearchSources
+    if (librarySourcesForMessage.length > 0) {
+      contentData.librarySources = librarySourcesForMessage.map(s => ({
+        id: s.id,
+        sourceId: s.sourceId,
+        libraryId: s.libraryId,
+        libraryName: s.libraryName,
+        filename: s.filename,
+        heading: s.heading,
+        lineStart: s.lineStart,
+        lineEnd: s.lineEnd,
+        chunkPreview: s.contentPreview,
+        score: s.score
+      }))
+    }
 
     const savedMessage = createMessage({
       conversationId,
@@ -692,7 +761,8 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
         status: tc.status === 'running' ? 'success' : tc.status
       })) : undefined,
       searchSources: accumulatedSearchSources.length > 0 ? accumulatedSearchSources : undefined,
-      semanticRecallCount: qdrantMemoryService.getLastRecallCount() || undefined
+      semanticRecallCount: qdrantMemoryService.getLastRecallCount() || undefined,
+      librarySourcesCount: librarySourcesForMessage.length > 0 ? librarySourcesForMessage.length : undefined
     })
 
     currentAbortController = null
