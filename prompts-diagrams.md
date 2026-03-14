@@ -11,12 +11,12 @@ Architecture à 3 couches :
 
 1. **Renderer (React, sandboxé)** — Aucun accès Node.js, CSP stricte et complète (script-src 'self', connect-src 'self', img-src 'self' local-image: data:, font-src 'self' data:, worker-src 'self' blob:, object-src/frame-src 'none'), pas de clés API, DOMPurify sur le HTML Shiki et Mermaid, liens Markdown avec validation de schéma (https/http/mailto/# uniquement — bloque javascript: et data:), URLs Perplexity Sources validées avant window.open.
 
-2. **Preload (contextBridge)** — ~107 méthodes typées exposées via `window.api`, jamais ipcRenderer directement. Callbacks nettoyés via removeAllListeners.
+2. **Preload (contextBridge)** — ~140 méthodes typées exposées via `window.api`, jamais ipcRenderer directement. Callbacks nettoyés via removeAllListeners.
 
 3. **Main (Node.js)** — Validation Zod sur tous les IPC handlers. Clés API chiffrées via safeStorage (Keychain macOS). Settings protégés par whitelist de clés autorisées (ALLOWED_SETTING_KEYS) + validation longueur 10K max. Workspace tools (bash) avec env minimal isolé (PATH restreint, HOME=workspace, TMPDIR=os.tmpdir(), pas d'héritage process.env) et blocklist de commandes (~36 patterns, dont 6 anti-évasion shell : backticks, $(), source/dot-script en position commande, séquences hex, ANSI-C quoting) + writeFile limité à 5MB (Zod .max). MCP servers : env minimal stdio (PATH/HOME/TMPDIR/LANG/SHELL/USER — plus d'héritage process.env complet), env vars custom chiffrées, headers HTTP masqués du renderer. Git : env immutable GIT_BASE_ENV (Readonly) + getEnv() construit par appel (pas de mutation globale entre instances), HOME=process.env.HOME (plus rootPath — empêche l'injection .gitconfig), GIT_CONFIG_NOSYSTEM=1 (bloque la config système). Git IPC : validateGitPaths() sur getDiff, stageFiles ET unstageFiles (path traversal : rejet chemins absolus, "..", resolve+startsWith). files:read confiné via isPathAllowed() (userData + workspace uniquement). Path traversal protection (path.resolve + startsWith, path segments via normalize+sep cross-platform). Fichiers sensibles bloqués (SENSITIVE_PATTERNS case-insensitive). Custom protocol local-image:// avec allowlist de répertoires + fs.realpathSync() anti-symlink escape. shell.openExternal avec confirmation dialog pour domaines non-trusted. Workspace open : 2 niveaux de protection — HARD_BLOCKED_ROOTS (/, /etc, /usr, /System, /Library, /var, /bin, /sbin, /tmp, /private/*, /opt, /cores, /dev, /proc, /sys → bloqués définitivement) + SENSITIVE_ROOTS (/Applications, /Volumes, /Users → dialog natif showMessageBox avec avertissement explicite, l'utilisateur peut approuver). Factory reset + data cleanup : double confirmation (renderer "DELETE" + dialog.showMessageBox natif côté main pour les deux). Task executor : settings whitelist TASK_ALLOWED_KEYS (pas d'accès direct DB sans filtre). Recherche FTS5 : sanitizeFtsQuery() neutralise les opérateurs MATCH (AND/OR/NOT/NEAR, accolades, astérisques, préfixes colonne:) + résultats tronqués à 500 chars. XML context injection sanitisé (</file> et </workspace-context> échappés dans buildWorkspaceContextBlock). Chat fileContexts : sanitizeContent() sur path et contenu avant injection XML dans le system prompt. Remote Telegram/Web : comparaison pairing code via crypto.timingSafeEqual (anti timing side-channel), .slice(0,6).padEnd(6) pour normaliser la longueur des buffers. Remote Web : maxPayload 64KB sur WebSocketServer (anti-DoS), broadcastToAuthenticatedClients uniquement (plus de broadcast aux clients non-pairés), sanitize sur sendToolResult avant envoi. Export/import sécurisé : token d'instance 32 bytes généré au premier lancement, stocké chiffré via safeStorage (pas dans ALLOWED_SETTING_KEYS — inaccessible depuis le renderer via settings:get/set), export .mlx chiffré AES-256-GCM (IV 12 bytes unique par export, authTag 16 bytes pour intégrité), import avec validation Zod du payload déchiffré, import:bulk-with-token valide le token hex (64 chars, regex hex strict), taille fichier limitée à 200 MB (statSync avant lecture).
 
 Flux principaux à montrer :
-- Renderer → IPC (Zod validation) → Main → LLM APIs (clés chiffrées)
+- Renderer → IPC (Zod validation) → Main → LLM APIs (clés chiffrées, dont OpenRouter passerelle multi-modèles)
 - Main → IPC streaming chunks → Renderer (DOMPurify)
 - Workspace open : resolvedRoot → HARD_BLOCKED_ROOTS (hard block) → SENSITIVE_ROOTS (dialog approbation) → stat isDirectory → WorkspaceService
 - Workspace : bash tool sandboxé → child_process (env minimal, timeout 30s, blocklist ~36 patterns dont anti-évasion shell)
@@ -43,7 +43,7 @@ Style : technique et épuré, fond sombre, couleurs : rouge pour les barrières 
 
 ## Prompt pour diagramme sur la base de données (schéma table)
 
-Crée un diagramme de schéma de base de données (ERD) pour une app desktop multi-LLM avec 22 tables SQLite. Montre les tables, leurs colonnes principales, types, et les relations (foreign keys).
+Crée un diagramme de schéma de base de données (ERD) pour une app desktop multi-LLM avec 23 tables SQLite. Montre les tables, leurs colonnes principales, types, et les relations (foreign keys).
 
 Tables et relations :
 
@@ -98,6 +98,8 @@ Tables et relations :
 
 **library_chunks** (id PK, libraryId FK→libraries CASCADE, sourceId FK→library_sources CASCADE, pointId UUID, chunkIndex, startChar, endChar, heading?, lineStart?, lineEnd?)
 
+**custom_models** (id PK, providerId, label, modelId, type [text|image], isEnabled, createdAt, updatedAt)
+
 Relations FK à montrer avec des flèches :
 - models → providers
 - conversations → projects, roles
@@ -115,7 +117,7 @@ Relations FK à montrer avec des flèches :
 - library_chunks → libraries (CASCADE), library_sources (CASCADE)
 - conversations → libraries (via activeLibraryId)
 
-Style : ERD classique, fond sombre, groupes logiques par couleur : bleu pour le coeur chat (conversations, messages, attachments), violet pour la config (providers, models, settings), vert pour les features (prompts, roles, projects, slash_commands), orange pour les extensions (scheduled_tasks, mcp_servers, memory_fragments, remote_sessions, remote_server_sessions), rouge pour le tracking (statistics, tts_usage, images), cyan pour la mémoire sémantique (vector_sync_state), indigo pour les référentiels RAG (libraries, library_sources, library_chunks).
+Style : ERD classique, fond sombre, groupes logiques par couleur : bleu pour le coeur chat (conversations, messages, attachments), violet pour la config (providers, models, settings, custom_models), vert pour les features (prompts, roles, projects, slash_commands), orange pour les extensions (scheduled_tasks, mcp_servers, memory_fragments, remote_sessions, remote_server_sessions), rouge pour le tracking (statistics, tts_usage, images), cyan pour la mémoire sémantique (vector_sync_state), indigo pour les référentiels RAG (libraries, library_sources, library_chunks).
 
 ---
 
@@ -128,8 +130,8 @@ Titre principal : **Multi-LLM Desktop** — "Tous vos LLMs, une seule interface"
 Catégories et fonctionnalités :
 
 **Chat Multi-Provider** (icône : bulles de conversation)
-- 10 providers : OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek, Alibaba Qwen, Perplexity, Ollama, LM Studio
-- 8 providers cloud + 2 locaux (Ollama, LM Studio)
+- 11 providers : OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek, Alibaba Qwen, Perplexity, OpenRouter, Ollama, LM Studio
+- 9 providers cloud + 2 locaux (Ollama, LM Studio)
 - Streaming temps réel token par token
 - Historique illimité avec recherche full-text (FTS5)
 - Mode Thinking/Reasoning avec 14 modèles supportés (Anthropic, OpenAI, Google, xAI, DeepSeek)
@@ -169,6 +171,14 @@ Catégories et fonctionnalités :
 - Continue la conversation desktop active (pas de conversation séparée)
 - Badge status dans la barre de tokens (vert connecté, jaune pairing, gris déconnecté)
 - Reconnexion automatique avec backoff exponentiel (1s→60s), expiration après 10 min d'inactivité
+
+**OpenRouter** (icône : routeur/passerelle)
+- Passerelle multi-modèles : accès à 300+ modèles via une seule clé API
+- Provider officiel `@openrouter/ai-sdk-provider` intégré au routeur AI SDK
+- Modèles custom gérés par l'utilisateur (table `custom_models` en DB)
+- CRUD modèles dans Settings > Providers : ajout par model ID OpenRouter, label personnalisé, activation/désactivation
+- Modèles dynamiques chargés depuis la DB et fusionnés avec le registre statique
+- Clé API chiffrée via safeStorage (même sécurité que les autres providers)
 
 **LM Studio** (icône : serveur local)
 - URL configurable (auto-détection sur localhost)
