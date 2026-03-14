@@ -2,12 +2,14 @@ import { FileOperationCard } from '@/components/workspace/FileOperationCard'
 import { cn } from '@/lib/utils'
 import type { Message, ToolCallDisplay } from '@/stores/messages.store'
 import { useMessagesStore } from '@/stores/messages.store'
-import { Brain, Check, CheckCircle2, ChevronDown, ChevronRight, Copy, File as FileIcon, FileText, FolderSearch, Image as ImageIcon, Loader2, Network, Pencil, Search, Sparkles, Terminal, Wrench, XCircle } from 'lucide-react'
+import { BookOpen, Brain, Check, CheckCircle2, ChevronDown, ChevronRight, Copy, File as FileIcon, FileText, FolderSearch, Image as ImageIcon, Loader2, Network, Pencil, Search, Sparkles, Terminal, Wrench, XCircle } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FileOperation } from '../../../../preload/types'
 import { AudioPlayer } from './AudioPlayer'
 import { MessageContent } from './MessageContent'
 import { PerplexitySources, type PerplexitySource } from './PerplexitySources'
+import { SourceCitation } from './SourceCitation'
+import type { LibrarySourceForMessage } from '../../../../preload/types'
 
 interface MessageItemProps {
   message: Message
@@ -97,7 +99,8 @@ const TOOL_CONFIG: Record<string, { icon: typeof FileText; label: string }> = {
   writeFile: { icon: Pencil, label: 'Ecriture du fichier' },
   listFiles: { icon: FolderSearch, label: 'Exploration des fichiers' },
   searchInFiles: { icon: Search, label: 'Recherche dans les fichiers' },
-  search: { icon: Search, label: 'Recherche web' }
+  search: { icon: Search, label: 'Recherche web' },
+  librarySearch: { icon: BookOpen, label: 'Recherche referentiel' }
 }
 
 /** Resolve tool config — handles MCP prefixed tools (e.g. github__create_issue) */
@@ -159,7 +162,7 @@ function ToolCallBlock({ toolCalls, isStreaming }: { toolCalls: ToolCallDisplay[
           {toolCalls.map((tc, i) => {
             const config = getToolConfig(tc.toolName)
             const Icon = config.icon
-            const detail = tc.args?.command || tc.args?.path || tc.args?.query || ''
+            const detail = tc.args?.library || tc.args?.command || tc.args?.path || tc.args?.query || ''
 
             return (
               <div key={i} className="flex items-center gap-2 text-xs">
@@ -263,6 +266,7 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
   const tokens = formatTokens(message.tokensIn, message.tokensOut)
   const fileOperations = (message.contentData?.fileOperations as FileOperation[] | undefined) ?? []
   const searchSources = (message.contentData?.searchSources as PerplexitySource[] | undefined) ?? []
+  const librarySources = (message.contentData?.librarySources as LibrarySourceForMessage[] | undefined) ?? []
 
   return (
     <div
@@ -373,6 +377,11 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
         {/* Perplexity search sources */}
         {!isUser && searchSources.length > 0 && (
           <PerplexitySources sources={searchSources} />
+        )}
+
+        {/* Library RAG sources */}
+        {!isUser && librarySources.length > 0 && (
+          <SourceCitation sources={librarySources} />
         )}
 
         {/* Streaming indicator — generating phase */}

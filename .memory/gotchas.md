@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-13 (S33)
+> Derniere mise a jour : 2026-03-14 (S35)
 
 ## AI SDK v6 — Breaking changes
 
@@ -35,7 +35,7 @@
 - FTS5 : table virtuelle manuelle, WAL checkpoint au demarrage
 - `foreign_keys = ON` via pragma (desactive par defaut)
 - Tables dans `migrate.ts` avec `CREATE TABLE IF NOT EXISTS` (pas migrations Drizzle)
-- Cleanup : ordre FK strict, `slash_commands` avant `projects`
+- Cleanup : ordre FK strict, `library_chunks` → `library_sources` → `libraries`, `slash_commands` avant `projects`
 
 ## React 19
 
@@ -75,6 +75,14 @@
 - Remote badge : dans ContextWindowIndicator, PAS dans la toolbar
 - UI web remote : calque visuel exact du desktop
 
+## Referentiels RAG Custom (S35)
+
+- **pdf-parse v1.1.1 `index.js`** : execute du code de test quand `module.parent` est null (cas electron-vite bundle) → ENOENT `./test/data/05-versions-space.pdf`. Fix : importer `pdf-parse/lib/pdf-parse.js` directement
+- **Google embedding model** : `gemini-embedding-exp-03-07` deprecie (404). Modele actuel : `gemini-embedding-2-preview` (768d, multimodal)
+- **AI SDK v6 embedding API** : `.textEmbeddingModel()` renomme en `.embedding()` — `google.embedding('gemini-embedding-2-preview')`
+- **Dynamic `require()` dans electron-vite** : les `require('../relative/path')` echouent car tout est compile en un seul fichier bundle (les chemins relatifs n'existent plus). Fix : utiliser des imports statiques en haut du fichier
+- **mammoth DOCX** : `convertToMarkdown()` pour les referentiels (preserve headings), `extractRawText()` pour les attachments chat
+
 ## Securite — points a surveiller
 
 - **pdf-parse v1.1.1** : non maintenu. Migrer vers pdfjs-dist eventuel
@@ -89,5 +97,4 @@
 - MCP : presets serveurs, import config Claude Desktop, chiffrer headers HTTP
 - Certificat Apple Developer ID (99$/an)
 - Remote Web : branche `feature-remote-web`, a valider visuellement
-- Slash Commands : PR #13 sur `feature-slash-command`, en attente merge
-- Memoire semantique : fonctionnelle (S33), operation silencieuse (pas de badge visible)
+- Referentiels RAG : strategie d'embedding custom (spec `feature-custom-rag-embedding-strategy.md`), branche `feature-rag`

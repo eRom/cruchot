@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-13 (S33)
+> Derniere mise a jour : 2026-03-14 (S35)
 
 ## Conventions de nommage
 
@@ -72,10 +72,25 @@
 - Export : `Blob` + `URL.createObjectURL()` + `<a download>`
 - Import : `FileReader` → validation type/items + `window.api.create*()`. Dedup suffixe `-1`, `-2`
 
+## Referentiels RAG Custom (S35)
+
+- **LibraryService** singleton : CRUD, import documents (PDF/DOCX/MD/code/CSV), chunking adapte par type, dual embedding, Qdrant upsert, retrieval
+- **Dual embedding** : local (all-MiniLM-L6-v2, 384d) ou Google (gemini-embedding-2-preview, 768d via `google.embedding()`)
+- **Collection Qdrant** par referentiel : `library_{id}`, isolee de `conversations_memory`
+- **Sticky attach** : `activeLibraryId` dans table `conversations`, persiste entre sessions, 1 referentiel par conversation (v1)
+- **Injection system prompt** : `<library-context>` XML en PREMIER (avant `<semantic-memory>` et `<user-memory>`), via `library-prompt.ts`
+- **Retrieval dans chat.ipc.ts** : avant `streamText()`, query Qdrant, build XML context, chunks injectes dans `contentData.librarySources`
+- **Synthetic tool chunks** : `tool-call` + `tool-result` IPC (`toolName: 'librarySearch'`) envoyes autour du retrieval pour feedback visuel dans ToolCallBlock
+- **SourceCitation** : section "Sources utilisees" deterministe en bas du message (pas LLM), basee sur `contentData.librarySources`
+- **LibraryPicker** : badge colore sticky dans InputZone (entre RoleSelector et PromptPicker), dropdown select simple, detach via bouton X
+- **3 tables Drizzle** : `libraries`, `library_sources`, `library_chunks` — FK cascade, cleanup ordre strict chunks → sources → libraries
+- **pdf-parse** : import `pdf-parse/lib/pdf-parse.js` directement (contourne test code dans index.js)
+
 ## Data Cleanup / Factory Reset
 
-- Zone orange : nettoyage partiel (conversations, projets, images, taches, MCP). Zone rouge : factory reset complet (18 tables + `localStorage.clear()`)
+- Zone orange : nettoyage partiel (conversations, projets, images, taches, MCP). Zone rouge : factory reset complet (22 tables + `localStorage.clear()`)
 - Backend : ordre FK strict, stop services avant delete, trash fichiers, confirmation dialog natif main
+- Cleanup libraries : `library_chunks` → `library_sources` → `libraries` (ordre FK) + drop collections Qdrant `library_*`
 - Singletons : `export const fooService = new FooService()` (pas getInstance())
 
 ## Conventions UI

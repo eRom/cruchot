@@ -136,9 +136,10 @@ export function validateAttachment(filePath: string, workspaceRoot?: string | nu
 // ── Text extraction ──────────────────────────────────────────────
 
 async function extractPdfText(filePath: string): Promise<string> {
-  // pdf-parse is CJS (module.exports = fn) — require() works reliably in Electron main
+  // Import lib/pdf-parse directly to avoid index.js test code
+  // (pdf-parse v1.1.1 runs a test file read when module.parent is null in bundled context)
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const pdfParse = require('pdf-parse')
+  const pdfParse = require('pdf-parse/lib/pdf-parse.js')
   const buffer = fs.readFileSync(filePath)
   const data = await pdfParse(buffer)
   const text = data.text?.trim() ?? ''
