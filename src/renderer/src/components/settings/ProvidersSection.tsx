@@ -1,12 +1,14 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
 import {
   Eye, EyeOff, Check, ExternalLink,
-  Monitor, RefreshCw, Loader2, ChevronDown, ChevronRight
+  Monitor, RefreshCw, Loader2, ChevronDown, ChevronRight,
+  Plus, Pencil, Trash2, X
 } from 'lucide-react'
 import { ProviderIcon } from '@/components/chat/ProviderIcon'
 import { useProvidersStore, type Model } from '@/stores/providers.store'
 import { cn } from '@/lib/utils'
+import type { CustomModelInfo } from '../../../../preload/types'
 
 // ── API key creation URLs per cloud provider ────────────────────────────────
 
@@ -18,7 +20,8 @@ const API_KEY_URLS: Record<string, string> = {
   xai: 'https://console.x.ai',
   deepseek: 'https://platform.deepseek.com/api_keys',
   qwen: 'https://dashscope.console.aliyun.com/apiKey',
-  perplexity: 'https://www.perplexity.ai/settings/api'
+  perplexity: 'https://www.perplexity.ai/settings/api',
+  openrouter: 'https://openrouter.ai/settings/keys'
 }
 
 // ── Main Component ──────────────────────────────────────────────────────────
@@ -74,11 +77,15 @@ function CloudProviders() {
   return (
     <div className="space-y-3">
       {cloudProviders.map((provider) => (
-        <ApiKeyRow
-          key={provider.id}
-          provider={provider}
-          onConfigured={() => updateProviderStatus(provider.id, true)}
-        />
+        <div key={provider.id} className="space-y-0">
+          <ApiKeyRow
+            provider={provider}
+            onConfigured={() => updateProviderStatus(provider.id, true)}
+          />
+          {provider.id === 'openrouter' && provider.isConfigured && (
+            <OpenRouterModelsManager />
+          )}
+        </div>
       ))}
       {cloudProviders.length === 0 && (
         <p className="text-sm text-muted-foreground">Aucun provider configure.</p>
@@ -202,6 +209,254 @@ function ApiKeyRow({
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── OpenRouter Models Manager ───────────────────────────────────────────────
+
+function OpenRouterModelsManager() {
+  const [models, setModels] = useState<CustomModelInfo[]>([])
+  const [adding, setAdding] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+
+  // Form state
+  const [label, setLabel] = useState('')
+  const [modelId, setModelId] = useState('')
+  const [type, setType] = useState<'text' | 'image'>('text')
+
+  const loadModels = useCallback(async () => {
+    const list = await window.api.getCustomModels('openrouter')
+    setModels(list)
+  }, [])
+
+  useEffect(() => {
+    loadModels()
+  }, [loadModels])
+
+  function resetForm() {
+    setLabel('')
+    setModelId('')
+    setType('text')
+  }
+
+  async function handleCreate() {
+    if (!label.trim() || !modelId.trim()) return
+    try {
+      await window.api.createCustomModel({
+        providerId: 'openrouter',
+        label: label.trim(),
+        modelId: modelId.trim(),
+        type
+      })
+      toast.success('Modele ajoute')
+      resetForm()
+      setAdding(false)
+      loadModels()
+      // Refresh models in the global store
+      const allModels = await window.api.getModels()
+      useProvidersStore.getState().setModels(allModels as Model[])
+    } catch {
+      toast.error("Erreur lors de l'ajout du modele")
+    }
+  }
+
+  async function handleUpdate(id: string) {
+    if (!label.trim() || !modelId.trim()) return
+    try {
+      await window.api.updateCustomModel(id, {
+        label: label.trim(),
+        modelId: modelId.trim(),
+        type
+      })
+      toast.success('Modele mis a jour')
+      resetForm()
+      setEditingId(null)
+      loadModels()
+      const allModels = await window.api.getModels()
+      useProvidersStore.getState().setModels(allModels as Model[])
+    } catch {
+      toast.error('Erreur lors de la mise a jour')
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      await window.api.deleteCustomModel(id)
+      toast.success('Modele supprime')
+      loadModels()
+      const allModels = await window.api.getModels()
+      useProvidersStore.getState().setModels(allModels as Model[])
+    } catch {
+      toast.error('Erreur lors de la suppression')
+    }
+  }
+
+  function startEdit(model: CustomModelInfo) {
+    setEditingId(model.id)
+    setLabel(model.label)
+    setModelId(model.modelId)
+    setType(model.type)
+    setAdding(false)
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setAdding(false)
+    resetForm()
+  }
+
+  return (
+    <div className="ml-11 mt-2 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          {models.length} modele(s) configure(s)
+        </p>
+        {!adding && !editingId && (
+          <button
+            onClick={() => { setAdding(true); resetForm() }}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <Plus className="size-3" />
+            Ajouter
+          </button>
+        )}
+      </div>
+
+      {/* Model list */}
+      {models.length > 0 && (
+        <div className="space-y-1">
+          {models.map((model) => (
+            <div key={model.id}>
+              {editingId === model.id ? (
+                <ModelForm
+                  label={label}
+                  modelId={modelId}
+                  type={type}
+                  onLabelChange={setLabel}
+                  onModelIdChange={setModelId}
+                  onTypeChange={setType}
+                  onSave={() => handleUpdate(model.id)}
+                  onCancel={cancelEdit}
+                  saveLabel="Enregistrer"
+                />
+              ) : (
+                <div className="flex items-center justify-between rounded-md border border-border/40 bg-muted/20 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <ProviderIcon providerId="openrouter" size={14} />
+                    <span className="text-sm text-foreground">{model.label}</span>
+                    <span className="text-xs text-muted-foreground font-mono">{model.modelId}</span>
+                    <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                      {model.type === 'text' ? 'Texte' : 'Image'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => startEdit(model)}
+                      className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent"
+                    >
+                      <Pencil className="size-3" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(model.id)}
+                      className="rounded p-1 text-muted-foreground hover:text-red-500 hover:bg-accent"
+                    >
+                      <Trash2 className="size-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add form */}
+      {adding && (
+        <ModelForm
+          label={label}
+          modelId={modelId}
+          type={type}
+          onLabelChange={setLabel}
+          onModelIdChange={setModelId}
+          onTypeChange={setType}
+          onSave={handleCreate}
+          onCancel={cancelEdit}
+          saveLabel="Ajouter"
+        />
+      )}
+    </div>
+  )
+}
+
+function ModelForm({
+  label,
+  modelId,
+  type,
+  onLabelChange,
+  onModelIdChange,
+  onTypeChange,
+  onSave,
+  onCancel,
+  saveLabel
+}: {
+  label: string
+  modelId: string
+  type: 'text' | 'image'
+  onLabelChange: (v: string) => void
+  onModelIdChange: (v: string) => void
+  onTypeChange: (v: 'text' | 'image') => void
+  onSave: () => void
+  onCancel: () => void
+  saveLabel: string
+}) {
+  return (
+    <div className="rounded-md border border-border/60 bg-muted/20 p-3 space-y-2">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={label}
+          onChange={(e) => onLabelChange(e.target.value)}
+          placeholder="Nom (ex: Claude Sonnet via OR)"
+          className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none"
+          autoFocus
+        />
+        <select
+          value={type}
+          onChange={(e) => onTypeChange(e.target.value as 'text' | 'image')}
+          className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+        >
+          <option value="text">Texte</option>
+          <option value="image">Image</option>
+        </select>
+      </div>
+      <input
+        type="text"
+        value={modelId}
+        onChange={(e) => onModelIdChange(e.target.value)}
+        placeholder="Model ID (ex: anthropic/claude-sonnet-4)"
+        className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm font-mono text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') onSave()
+          if (e.key === 'Escape') onCancel()
+        }}
+      />
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={onCancel}
+          className="rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent"
+        >
+          Annuler
+        </button>
+        <button
+          onClick={onSave}
+          disabled={!label.trim() || !modelId.trim()}
+          className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          <Check className="size-3" />
+          {saveLabel}
+        </button>
+      </div>
     </div>
   )
 }

@@ -30,6 +30,7 @@ import { registerSummaryIpc } from './summary.ipc'
 import { registerDataIpc } from './data.ipc'
 import { registerSlashCommandsIpc } from './slash-commands.ipc'
 import { registerQdrantMemoryIpc } from './qdrant-memory.ipc'
+import { registerCustomModelsIpc } from './custom-models.ipc'
 import { registerLibraryIpc } from './library.ipc'
 
 /**
@@ -120,6 +121,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Qdrant Memory (semantic) ──────────────────
   registerQdrantMemoryIpc()
+
+  // ── Custom Models (OpenRouter, etc.) ───────────
+  registerCustomModelsIpc()
 
   // ── Libraries (RAG referentiels) ───────────────
   registerLibraryIpc()
