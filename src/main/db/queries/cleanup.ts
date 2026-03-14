@@ -16,7 +16,10 @@ import {
   statistics,
   ttsUsage,
   settings,
-  vectorSyncState
+  vectorSyncState,
+  libraryChunks,
+  librarySources,
+  libraries
 } from '../schema'
 
 /**
@@ -39,6 +42,10 @@ export function deleteConversationsProjectsImages(): { imagePaths: string[] } {
   db.delete(scheduledTasks).run()
   db.delete(mcpServers).run()
   db.delete(slashCommands).run()
+  // Libraries (chunks → sources → libraries)
+  db.delete(libraryChunks).run()
+  db.delete(librarySources).run()
+  db.delete(libraries).run()
   db.delete(conversations).run()
   db.delete(projects).run()
 
@@ -66,6 +73,10 @@ export function factoryResetDatabase(): { imagePaths: string[] } {
   db.delete(scheduledTasks).run()
   db.delete(mcpServers).run()
   db.delete(slashCommands).run()
+  // Libraries (chunks → sources → libraries)
+  db.delete(libraryChunks).run()
+  db.delete(librarySources).run()
+  db.delete(libraries).run()
   db.delete(projects).run()
   db.delete(roles).run()
   db.delete(prompts).run()

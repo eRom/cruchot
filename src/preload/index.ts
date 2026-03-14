@@ -459,6 +459,28 @@ const api: ElectronAPI = {
   semanticMemoryToggle: (payload) => ipcRenderer.invoke('memory:semantic-toggle', payload),
   semanticMemoryStats: () => ipcRenderer.invoke('memory:semantic-stats'),
 
+  // ── Libraries (RAG Referentiels) ──────────────────────
+  libraryList: () => ipcRenderer.invoke('library:list'),
+  libraryGet: (payload) => ipcRenderer.invoke('library:get', payload),
+  libraryCreate: (payload) => ipcRenderer.invoke('library:create', payload),
+  libraryUpdate: (payload) => ipcRenderer.invoke('library:update', payload),
+  libraryDelete: (payload) => ipcRenderer.invoke('library:delete', payload),
+  libraryAddSources: (payload) => ipcRenderer.invoke('library:add-sources', payload),
+  libraryRemoveSource: (payload) => ipcRenderer.invoke('library:remove-source', payload),
+  libraryGetSources: (payload) => ipcRenderer.invoke('library:get-sources', payload),
+  libraryReindexSource: (payload) => ipcRenderer.invoke('library:reindex-source', payload),
+  libraryReindexAll: (payload) => ipcRenderer.invoke('library:reindex-all', payload),
+  librarySearch: (payload) => ipcRenderer.invoke('library:search', payload),
+  libraryStats: (payload) => ipcRenderer.invoke('library:stats', payload),
+  libraryPickFiles: () => ipcRenderer.invoke('library:pick-files'),
+  libraryAttach: (payload) => ipcRenderer.invoke('library:attach', payload),
+  libraryDetach: (payload) => ipcRenderer.invoke('library:detach', payload),
+  libraryGetAttached: (payload) => ipcRenderer.invoke('library:get-attached', payload),
+  onLibraryIndexingProgress: (callback) => {
+    ipcRenderer.on('library:indexing-progress', (_, progress) => callback(progress))
+  },
+  offLibraryIndexingProgress: () => ipcRenderer.removeAllListeners('library:indexing-progress'),
+
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>
     ipcRenderer.invoke('settings:get', key),
