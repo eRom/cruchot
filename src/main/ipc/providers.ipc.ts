@@ -11,6 +11,7 @@ import {
   isEncryptionAvailable
 } from '../services/credential.service'
 import { PROVIDERS, MODELS } from '../llm/registry'
+import { customModels } from '../db/schema'
 import {
   detectLocalProviders,
   getLMStudioModels,
@@ -63,6 +64,28 @@ export function registerProvidersIpc(): void {
     const staticModels = providerId ? MODELS.filter(m => m.providerId === providerId) : [...MODELS]
 
     let allModels = staticModels
+
+    // Merge custom models from DB (OpenRouter, etc.)
+    if (!providerId || providerId === 'openrouter') {
+      const db = getDatabase()
+      const dbModels = providerId
+        ? db.select().from(customModels).where(eq(customModels.providerId, providerId)).all()
+        : db.select().from(customModels).all()
+      const mapped = dbModels.map(cm => ({
+        id: cm.modelId,
+        providerId: cm.providerId,
+        name: cm.modelId,
+        displayName: cm.label,
+        type: cm.type as 'text' | 'image',
+        contextWindow: 0,
+        inputPrice: 0,
+        outputPrice: 0,
+        supportsImages: false,
+        supportsStreaming: true,
+        supportsThinking: false
+      }))
+      allModels = [...allModels, ...mapped]
+    }
 
     // Attempt to fetch LM Studio models (non-blocking, silent fail)
     if (!providerId || providerId === 'lmstudio') {

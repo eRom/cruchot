@@ -307,6 +307,20 @@ export const vectorSyncState = sqliteTable('vector_sync_state', {
 })
 
 // ---------------------------------------------------------------------------
+// Custom Models (user-managed, e.g. OpenRouter)
+// ---------------------------------------------------------------------------
+export const customModels = sqliteTable('custom_models', {
+  id: text('id').primaryKey(),
+  providerId: text('provider_id').notNull(),
+  label: text('label').notNull(),
+  modelId: text('model_id').notNull(),
+  type: text('type', { enum: ['text', 'image'] }).notNull().default('text'),
+  isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+})
+
+// ---------------------------------------------------------------------------
 // Images
 // ---------------------------------------------------------------------------
 export const images = sqliteTable('images', {

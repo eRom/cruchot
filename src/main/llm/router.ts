@@ -8,6 +8,7 @@ import {
   getDeepSeekProvider,
   getQwenProvider,
   getPerplexityProvider,
+  getOpenRouterProvider,
   getLmStudioProvider,
   getOllamaProvider
 } from './providers'
@@ -41,6 +42,9 @@ export function getModel(providerId: string, modelId: string): LanguageModel {
 
     case 'perplexity':
       return getPerplexityProvider()(modelId)
+
+    case 'openrouter':
+      return getOpenRouterProvider()(modelId)
 
     case 'lmstudio':
       return getLmStudioProvider()(modelId)

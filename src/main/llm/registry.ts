@@ -68,6 +68,14 @@ export const PROVIDERS: ProviderDefinition[] = [
     icon: 'search'
   },
   {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    type: 'cloud',
+    description: 'Passerelle multi-modèles — ajoutez vos modèles',
+    requiresApiKey: true,
+    icon: 'openrouter'
+  },
+  {
     id: 'ollama',
     name: 'Ollama',
     type: 'local',

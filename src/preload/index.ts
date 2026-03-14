@@ -59,6 +59,19 @@ const api: ElectronAPI = {
   getApiKeyMasked: (providerId: string): Promise<string | null> =>
     ipcRenderer.invoke('providers:getApiKeyMasked', providerId),
 
+  // ── Custom Models (OpenRouter, etc.) ──────────────────────
+  getCustomModels: (providerId?: string) =>
+    ipcRenderer.invoke('custom-models:list', providerId),
+
+  createCustomModel: (data: { providerId: string; label: string; modelId: string; type: 'text' | 'image' }) =>
+    ipcRenderer.invoke('custom-models:create', data),
+
+  updateCustomModel: (id: string, data: { label?: string; modelId?: string; type?: 'text' | 'image' }) =>
+    ipcRenderer.invoke('custom-models:update', id, data),
+
+  deleteCustomModel: (id: string) =>
+    ipcRenderer.invoke('custom-models:delete', id),
+
   // ── Local Providers ─────────────────────────────────────
   detectLocalProviders: () =>
     ipcRenderer.invoke('localProviders:detect'),

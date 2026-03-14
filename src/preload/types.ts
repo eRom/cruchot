@@ -532,6 +532,18 @@ export interface SummarizeResult {
   text: string
 }
 
+// ── Custom Models (OpenRouter, etc.) ─────────────────────────────
+export interface CustomModelInfo {
+  id: string
+  providerId: string
+  label: string
+  modelId: string
+  type: 'text' | 'image'
+  isEnabled: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
 // ── Local Providers ─────────────────────────────────────────
 export interface LocalProviderStatus { ollama: boolean; lmstudio: boolean }
 export interface LocalProviderTestResult { reachable: boolean; modelCount: number; models: ModelInfo[] }
@@ -560,6 +572,12 @@ export interface ElectronAPI {
   validateApiKey: (providerId: string, apiKey: string) => Promise<boolean>
   hasApiKey: (providerId: string) => Promise<boolean>
   getApiKeyMasked: (providerId: string) => Promise<string | null>
+
+  // Custom Models (OpenRouter, etc.)
+  getCustomModels: (providerId?: string) => Promise<CustomModelInfo[]>
+  createCustomModel: (data: { providerId: string; label: string; modelId: string; type: 'text' | 'image' }) => Promise<CustomModelInfo>
+  updateCustomModel: (id: string, data: { label?: string; modelId?: string; type?: 'text' | 'image' }) => Promise<CustomModelInfo | undefined>
+  deleteCustomModel: (id: string) => Promise<void>
 
   // Local Providers
   detectLocalProviders: () => Promise<LocalProviderStatus>

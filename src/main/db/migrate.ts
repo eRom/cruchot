@@ -233,6 +233,17 @@ export function runMigrations(): void {
       indexed_at INTEGER
     );
 
+    CREATE TABLE IF NOT EXISTS custom_models (
+      id TEXT PRIMARY KEY,
+      provider_id TEXT NOT NULL,
+      label TEXT NOT NULL,
+      model_id TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'text' CHECK(type IN ('text', 'image')),
+      is_enabled INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
     CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(content);
   `)
 
