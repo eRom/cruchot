@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-13 (S33)
+> Derniere mise a jour : 2026-03-13 (S35)
 
 ## AI SDK v6 — Breaking changes
 
@@ -82,6 +82,12 @@
 - **`currentAbortController` global** : fragile en multi-fenetres
 - **`removeAllListeners(channel)`** : trop large, risque en multi-fenetre
 
+## Export/Import .mlx (S34)
+
+- **Token instance hors whitelist** : stocke dans settings avec cle `multi-llm:instance-token`, mais PAS dans `ALLOWED_SETTING_KEYS` — acces uniquement depuis le main process, le renderer ne peut pas lire/ecrire via `settings:get/set`
+- **Timestamps Drizzle** : `createdAt` peut etre `Date` ou `number` (secondes epoch) selon le contexte — le buildExportPayload() gere les deux cas via instanceof check
+- **Import externe (ChatGPT/Claude/Gemini)** : hors scope, bouton grise "bientot disponible"
+
 ## Restant a faire
 
 - Search bar sidebar, BranchNavigation, Prompt Optimizer, Export PDF
@@ -89,5 +95,5 @@
 - MCP : presets serveurs, import config Claude Desktop, chiffrer headers HTTP
 - Certificat Apple Developer ID (99$/an)
 - Remote Web : branche `feature-remote-web`, a valider visuellement
-- Slash Commands : PR #13 sur `feature-slash-command`, en attente merge
+- Import externe conversations (ChatGPT, Claude, Gemini) — bouton grise dans DataSettings
 - Memoire semantique : fonctionnelle (S33), operation silencieuse (pas de badge visible)

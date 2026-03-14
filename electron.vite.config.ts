@@ -28,7 +28,8 @@ export default defineConfig({
           'sonner',
           'zod',
           'mammoth',
-          'pdf-parse'
+          'pdf-parse',
+          'gray-matter'
         ]
       })
     ],

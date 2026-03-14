@@ -26,6 +26,7 @@ import {
   Image,
   Network,
   Settings,
+  Sparkles,
   UserCircle,
   UserPen
 } from 'lucide-react'
@@ -121,7 +122,7 @@ export function UserMenu({ isCollapsed, currentView, onNavigate, enabledTasksCou
             <DropdownMenuSubTrigger
               className={cn(
                 'gap-2',
-                (currentView === 'prompts' || currentView === 'roles' || currentView === 'mcp' || currentView === 'memory' || currentView === 'commands')
+                (currentView === 'prompts' || currentView === 'roles' || currentView === 'mcp' || currentView === 'memory' || currentView === 'commands' || currentView === 'skills')
                   && 'font-semibold text-accent-foreground'
               )}
             >
@@ -158,6 +159,12 @@ export function UserMenu({ isCollapsed, currentView, onNavigate, enabledTasksCou
                 label="Commandes"
                 isActive={currentView === 'commands'}
                 onSelect={() => onNavigate('commands')}
+              />
+              <MenuItem
+                icon={Sparkles}
+                label="Skills"
+                isActive={currentView === 'skills'}
+                onSelect={() => onNavigate('skills')}
               />
             </DropdownMenuSubContent>
           </DropdownMenuSub>

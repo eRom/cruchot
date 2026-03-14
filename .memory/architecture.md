@@ -1,9 +1,9 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-13 (S33)
+> Derniere mise a jour : 2026-03-13 (S35)
 
 ## Vue d'ensemble
 
-App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud, statistiques de couts, workspace co-work, integration Git, taches planifiees, integration MCP, memory fragments, memoire semantique (RAG local Qdrant), Remote Telegram, Remote Web, export/import JSON, slash commands, @mention fichiers. Zero serveur backend.
+App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud, statistiques de couts, workspace co-work, integration Git, taches planifiees, integration MCP, memory fragments, memoire semantique (RAG local Qdrant), Remote Telegram, Remote Web, export/import securise (.mlx chiffre AES-256-GCM), slash commands, @mention fichiers, skills (SKILL.md). Zero serveur backend.
 
 ## Stack
 
@@ -16,7 +16,7 @@ Renderer (React UI) → contextBridge IPC → Preload (bridge) → ipcMain → M
 ```
 
 - **Main** : cles API (safeStorage), appels LLM, DB SQLite, services
-- **Preload** : `window.api` via contextBridge (~115 methodes typees)
+- **Preload** : `window.api` via contextBridge (~120 methodes typees)
 - **Renderer** : UI React pure, aucun acces Node.js
 
 ## Arborescence
@@ -30,20 +30,20 @@ src/
     llm/                  # Router AI SDK, cost-calculator, image gen, workspace-tools, errors, thinking
     db/schema.ts          # 19 tables Drizzle
     db/queries/           # Queries par domaine
-    services/             # Credential, backup, workspace, file-watcher, tts, scheduler, task-executor, mcp-manager, git, telegram-bot, remote-server, qdrant-memory, qdrant-process, embedding
+    services/             # Credential, backup, workspace, file-watcher, tts, scheduler, task-executor, mcp-manager, git, telegram-bot, remote-server, qdrant-memory, qdrant-process, embedding, instance-token, bulk-export, bulk-import, skill
   preload/
     index.ts              # contextBridge
     types.ts              # Types partages + DTOs
   renderer/src/
     App.tsx               # Routing par ViewMode
     stores/               # Zustand stores
-    components/           # chat/, layout/, projects/, prompts/, roles/, tasks/, mcp/, memory/, commands/, settings/, statistics/, images/, conversations/, workspace/, common/
+    components/           # chat/, layout/, projects/, prompts/, roles/, tasks/, mcp/, memory/, commands/, skills/, settings/, statistics/, images/, conversations/, workspace/, common/
     hooks/                # useStreaming, useInitApp, useKeyboardShortcuts, useAudioPlayer, useContextWindow, useFileMention, useSlashCommands
 ```
 
 ## Navigation (ViewMode)
 
-`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (10 tabs), images, roles, tasks, mcp, memory, commands, statistics
+`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (10 tabs), images, roles, tasks, mcp, memory, commands, skills, statistics
 
 ## Flux principal — Chat
 
@@ -64,6 +64,8 @@ InputZone → IPC "chat:send" → Main: streamText() → forward chunks IPC → 
 - **@Mention Fichiers** : transparent overlay pattern (textarea invisible + overlay cyan), useFileMention hook, autocomplete FileMentionPopover, fichiers charges au send via workspaceReadFile, zero backend
 - **Memoire Semantique** : QdrantMemoryService singleton, Qdrant embedded (binaire v1.17), embeddings all-MiniLM-L6-v2 (384d ONNX via @huggingface/transformers + onnxruntime-node CPU), ingestion fire-and-forget, recall silencieux injecte dans system prompt (`<semantic-memory>` XML), UI MemoryExplorer dans settings, badge discret retire (operation silencieuse)
 - **Workspace Context** : `buildWorkspaceContextBlock()` auto-lit CLAUDE.md, README.md etc. → injecte dans system prompt
+- **Export/Import Securise** : token instance 32 bytes (safeStorage), export bulk chiffre AES-256-GCM (.mlx), import cross-machine avec token externe, dedup projets, transaction SQLite
+- **Skills** : SkillService singleton, discovery fichier (global `~/.multi-llm/skills/` + projet `{workspace}/.multi-llm/skills/`), SKILL.md (YAML frontmatter + markdown), tool AI SDK `loadSkill`, injection `<available-skills>` system prompt, companion files, UI SkillsView read-only
 
 ## Donnees
 
@@ -82,6 +84,7 @@ InputZone → IPC "chat:send" → Main: streamText() → forward chunks IPC → 
 - MCP : env minimal stdio, env vars chiffrees, headers masques du renderer
 - Git : `GIT_BASE_ENV` Readonly, `getEnv()` par appel, `validateGitPaths()`
 - Remote : triple verrou Telegram, `validateSessionToken()` sur tous handlers WS, ecoute 127.0.0.1
+- Export/import : token instance chiffre safeStorage (hors ALLOWED_SETTING_KEYS), AES-256-GCM, Zod validation payload, taille max 200 MB
 - Factory reset : double confirmation (renderer + dialog natif main)
 
 ## Distribution

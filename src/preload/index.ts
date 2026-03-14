@@ -310,6 +310,13 @@ const api: ElectronAPI = {
 
   slashCommandsSeed: () => ipcRenderer.invoke('slash-commands:seed'),
 
+  // ── Skills ─────────────────────────────────────────────
+  skillsList: () => ipcRenderer.invoke('skills:list'),
+
+  skillsGet: (name) => ipcRenderer.invoke('skills:get', { name }),
+
+  skillsRefresh: (data) => ipcRenderer.invoke('skills:refresh', data),
+
   // ── MCP Servers ─────────────────────────────────────────
   mcpList: () => ipcRenderer.invoke('mcp:list'),
 

@@ -3,9 +3,12 @@ import { z } from 'zod'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import { existsSync, readFileSync } from 'fs'
-import { join, sep, normalize } from 'path'
-import { tmpdir } from 'os'
+import { join, sep, normalize, resolve } from 'path'
+import { tmpdir, homedir } from 'os'
 import type { WorkspaceService } from '../services/workspace.service'
+
+// Skills directory (global) — authorized for readFile
+const SKILLS_GLOBAL_DIR = join(homedir(), '.multi-llm') + sep
 
 const execAsync = promisify(exec)
 
@@ -238,19 +241,54 @@ export function buildWorkspaceTools(workspace: WorkspaceService) {
 
     readFile: tool({
       description:
-        'Read the contents of a TEXT file in the workspace. Only works on textual files (code, config, docs). Cannot read binary files (images, PDFs, archives), .env files, or files inside node_modules/.git/dist/build.',
+        'Read the contents of a TEXT file in the workspace or from a skill directory. Only works on textual files (code, config, docs). Cannot read binary files (images, PDFs, archives), .env files, or files inside node_modules/.git/dist/build. For skill files, use the absolute path provided by loadSkill.',
       inputSchema: z.object({
-        path: z.string().describe('Relative file path from workspace root (e.g. "src/index.ts", "package.json")')
+        path: z.string().describe('File path: relative from workspace root (e.g. "src/index.ts") or absolute path to a skill file')
       }),
-      execute: async ({ path }) => {
-        // Security: check if the file is readable (text, not sensitive, not in gitignored dirs)
-        const check = isReadableFile(path)
+      execute: async ({ path: filePath }) => {
+        // Check if this is an absolute path to a skill file (~/.multi-llm/ or workspace/.multi-llm/skills/)
+        const isAbsolute = filePath.startsWith('/')
+        if (isAbsolute) {
+          const resolved = resolve(filePath)
+          const isGlobalSkill = resolved.startsWith(SKILLS_GLOBAL_DIR)
+          const isProjectSkill = resolved.startsWith(rootPath + sep) && resolved.includes(sep + '.multi-llm' + sep + 'skills' + sep)
+
+          if (isGlobalSkill || isProjectSkill) {
+            // Security: no .. in path
+            if (normalize(resolved).includes('..')) {
+              return { error: 'Chemin invalide' }
+            }
+            // Check readable (text extension, not sensitive)
+            const segments = normalize(resolved).split(sep)
+            const filename = segments[segments.length - 1] || ''
+            const check = isReadableFile(filename)
+            if (!check.allowed) {
+              return { error: check.reason! }
+            }
+            try {
+              const content = readFileSync(resolved, 'utf-8')
+              const ext = filename.includes('.') ? filename.split('.').pop()! : ''
+              return {
+                path: resolved,
+                content: content.length > 500_000 ? content.slice(0, 500_000) + '\n... (tronque)' : content,
+                language: ext,
+                size: content.length
+              }
+            } catch (error) {
+              return { error: error instanceof Error ? error.message : 'Cannot read file' }
+            }
+          }
+          return { error: 'Chemin absolu non autorise. Utilise un chemin relatif au workspace.' }
+        }
+
+        // Standard workspace-relative read
+        const check = isReadableFile(filePath)
         if (!check.allowed) {
           return { error: check.reason! }
         }
 
         try {
-          const file = workspace.readFile(path)
+          const file = workspace.readFile(filePath)
           return {
             path: file.path,
             content: file.content,

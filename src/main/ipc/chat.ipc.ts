@@ -14,6 +14,9 @@ import { mcpManagerService } from '../services/mcp-manager.service'
 import { telegramBotService } from '../services/telegram-bot.service'
 import { remoteServerService } from '../services/remote-server.service'
 import { buildMemoryBlock } from '../db/queries/memory-fragments'
+import { skillService } from '../services/skill.service'
+import { buildAvailableSkillsBlock } from '../llm/skill-prompt'
+import { buildSkillTool } from '../llm/skill-tool'
 import { qdrantMemoryService } from '../services/qdrant-memory.service'
 import { buildSemanticMemoryBlock } from '../llm/memory-prompt'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
@@ -63,6 +66,7 @@ interface ToolLike {
 function shouldAutoApprove(toolName: string, session: { autoApproveRead: boolean; autoApproveWrite: boolean; autoApproveBash: boolean; autoApproveList: boolean; autoApproveMcp: boolean }): boolean {
   // Workspace tools
   if (toolName === 'readFile') return session.autoApproveRead
+  if (toolName === 'loadSkill') return session.autoApproveRead
   if (toolName === 'listFiles') return session.autoApproveList
   if (toolName === 'writeFile') return session.autoApproveWrite
   if (toolName === 'bash') return session.autoApproveBash
@@ -226,6 +230,10 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
     const dbMessages = getMessagesForConversation(conversationId)
     const aiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<{ type: string; text?: string; image?: string; mimeType?: string }> }> = []
 
+    // Refresh skills for this conversation (scan project if workspace)
+    const skillsWorkspaceRoot = hasWorkspace ? getActiveWorkspaceRoot() : undefined
+    skillService.scanAll(skillsWorkspaceRoot ?? undefined)
+
     // Semantic memory recall (if enabled)
     let semanticMemoryBlock = ''
     if (qdrantMemoryService.getStatus() === 'ready') {
@@ -255,6 +263,13 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
     if (systemPrompt) {
       if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
       combinedSystemPrompt += systemPrompt
+    }
+    // Inject available skills block
+    const availableSkills = skillService.getAll()
+    const skillsBlock = buildAvailableSkillsBlock(availableSkills)
+    if (skillsBlock) {
+      if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
+      combinedSystemPrompt += skillsBlock
     }
     if (combinedSystemPrompt) {
       aiMessages.push({ role: 'system', content: combinedSystemPrompt })
@@ -335,8 +350,11 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       }
     }
 
+    // Build skill tool (loadSkill)
+    const skillTools = buildSkillTool()
+
     // Merge all tools
-    let tools = { ...workspaceTools, ...mcpTools } as Record<string, ToolLike>
+    let tools = { ...workspaceTools, ...skillTools, ...mcpTools } as Record<string, ToolLike>
 
     // Wrap tools with approval gate when Remote is connected
     if (isRemoteConnected && source === 'telegram') {

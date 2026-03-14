@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-13 (S33)
+> Derniere mise a jour : 2026-03-13 (S35)
 
 ## Main process
 
@@ -24,6 +24,8 @@
 | `src/main/ipc/prompts.ipc.ts` | CRUD prompts |
 | `src/main/ipc/scheduled-tasks.ipc.ts` | CRUD taches planifiees |
 | `src/main/ipc/tts.ipc.ts` | TTS synthesize |
+| `src/main/ipc/export.ipc.ts` | Export conversation + bulk export chiffre (.mlx) + instance token |
+| `src/main/ipc/import.ipc.ts` | Import conversation + bulk import (.mlx) avec/sans token externe |
 | `src/main/llm/router.ts` | Routeur `getModel()` AI SDK |
 | `src/main/llm/registry.ts` | 11 providers, modeles text + image |
 | `src/main/llm/thinking.ts` | providerOptions par provider |
@@ -46,10 +48,17 @@
 | `src/main/services/scheduler.service.ts` | Timers lifecycle |
 | `src/main/services/task-executor.ts` | Execution LLM programmatique |
 | `src/main/services/tts.service.ts` | TTS OpenAI + Google |
+| `src/main/services/instance-token.service.ts` | Token instance 32 bytes, safeStorage, ensure/get/getHex |
+| `src/main/services/bulk-export.service.ts` | buildExportPayload + encryptPayload AES-256-GCM |
+| `src/main/services/bulk-import.service.ts` | decryptPayload + tryDecryptWithLocalToken + importPayload (transaction) |
 | `src/main/services/qdrant-memory.service.ts` | Singleton memoire semantique — ingestion, recall, search, forget, stats, reindex |
 | `src/main/services/qdrant-process.ts` | Lifecycle binaire Qdrant — start/stop, config YAML, healthcheck |
 | `src/main/services/embedding.service.ts` | Pipeline @huggingface/transformers — initEmbedding, embed, embedBatch (384d) |
 | `src/main/llm/memory-prompt.ts` | Injection `<semantic-memory>` XML dans system prompt |
+| `src/main/services/skill.service.ts` | Singleton skills — discovery fichier, cache, scan, parsing SKILL.md |
+| `src/main/ipc/skills.ipc.ts` | 3 handlers IPC skills read-only (Zod) |
+| `src/main/llm/skill-tool.ts` | Tool AI SDK `loadSkill` — charge skill complet |
+| `src/main/llm/skill-prompt.ts` | Builder XML `<available-skills>` pour system prompt |
 | `src/main/ipc/qdrant-memory.ipc.ts` | IPC handlers memoire semantique (Zod) |
 | `src/main/db/queries/vector-sync.ts` | CRUD table `vector_sync_state` (sync SQLite ↔ Qdrant) |
 | `src/main/window.ts` | BrowserWindow config, CSP, shell.openExternal |
@@ -58,7 +67,7 @@
 
 | Fichier | Role |
 |---------|------|
-| `src/preload/index.ts` | contextBridge ~115 methodes |
+| `src/preload/index.ts` | contextBridge ~120 methodes |
 | `src/preload/types.ts` | Types partages, DTOs |
 
 ## Renderer — Composants cles
@@ -83,8 +92,10 @@
 | `components/workspace/ChangesPanel.tsx` | Staged/unstaged, commit, AI message |
 | `components/settings/SettingsView.tsx` | 10 tabs |
 | `components/commands/CommandsView.tsx` | Grille CRUD + export/import JSON |
+| `components/skills/SkillsView.tsx` | Vue liste read-only skills (expand/collapse, filtres) |
 | `components/prompts/PromptsView.tsx` | Grille CRUD + export/import JSON |
 | `components/roles/RolesView.tsx` | Grille CRUD + export/import JSON |
+| `components/settings/DataSettings.tsx` | Token instance, export/import bulk .mlx, cleanup, factory reset |
 | `components/common/CommandPalette.tsx` | Cmd+K recherche globale |
 
 ## Renderer — Stores & Hooks
@@ -97,6 +108,7 @@
 | `stores/workspace.store.ts` | rootPath, tree, attachedFiles, isPanelOpen |
 | `stores/slash-commands.store.ts` | Slash commands CRUD |
 | `stores/semantic-memory.store.ts` | Status memoire semantique (status, stats, lastRecallCount) |
+| `stores/skills.store.ts` | Skills list + refresh |
 | `hooks/useStreaming.ts` | Ecoute chat:chunk |
 | `hooks/useFileMention.ts` | Detection @mention, filtrage arbre, keyboard nav |
 | `hooks/useSlashCommands.ts` | Detection slash, resolution variables |

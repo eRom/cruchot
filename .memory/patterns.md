@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-13 (S33)
+> Derniere mise a jour : 2026-03-13 (S35)
 
 ## Conventions de nommage
 
@@ -71,6 +71,26 @@
 - 100% renderer (donnees deja en stores Zustand)
 - Export : `Blob` + `URL.createObjectURL()` + `<a download>`
 - Import : `FileReader` → validation type/items + `window.api.create*()`. Dedup suffixe `-1`, `-2`
+
+## Export/Import Securise (.mlx)
+
+- **Token instance** : 32 bytes (`crypto.randomBytes`), stocke chiffre via `encryptApiKey()` dans settings (cle `multi-llm:instance-token`), hors `ALLOWED_SETTING_KEYS` (inaccessible du renderer via settings:get/set)
+- **Export** : `buildExportPayload()` serialise projets (sans workspacePath) + conversations + messages → JSON, `encryptPayload()` chiffre AES-256-GCM → binaire `[IV:12][AuthTag:16][Ciphertext:N]`
+- **Import** : `tryDecryptWithLocalToken()` auto-tente le token local, sinon demande token externe (hex 64 chars, Zod regex strict), `importPayload()` en transaction SQLite
+- **Dedup** : noms projets suffixes `-1`, `-2` (existants + intra-batch)
+- **Format** : `.mlx`, dialog save/open natif Electron, taille max 200 MB
+
+## Skills
+
+- **Discovery fichier** : 2 sources (global `~/.multi-llm/skills/` + projet `{workspace}/.multi-llm/skills/`), projet ecrase global sur conflit de nom
+- **SKILL.md** : YAML frontmatter (`name` kebab-case, `description`) + markdown body, parse via `gray-matter`
+- **Companion files** : scan recursif du dossier skill, chemins relatifs, exclut SKILL.md et LICENSE*
+- **Injection system prompt** : `<available-skills>` XML avec noms + descriptions, scan a chaque conversation
+- **Tool AI SDK** : `loadSkill(name)` retourne instructions completes + chemins absolus companion files dans `<skill_content>` XML
+- **readFile etendu** : chemins absolus `~/.multi-llm/` et `{workspace}/.multi-llm/skills/` autorises (verification isReadableFile + anti-traversal)
+- **Pas de DB** : 100% fichier, cache Map en memoire, pas de hot-reload (scan au demarrage conversation ou refresh manuel)
+- **Securite** : nom `/^[a-z][a-z0-9-]{0,49}$/`, content max 200KB, pas de `..` dans les chemins
+- **Auto-approve remote** : `loadSkill` = autoApproveRead (lecture seule)
 
 ## Data Cleanup / Factory Reset
 

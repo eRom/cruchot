@@ -30,6 +30,7 @@ import { registerSummaryIpc } from './summary.ipc'
 import { registerDataIpc } from './data.ipc'
 import { registerSlashCommandsIpc } from './slash-commands.ipc'
 import { registerQdrantMemoryIpc } from './qdrant-memory.ipc'
+import { registerSkillsIpc } from './skills.ipc'
 
 /**
  * Registre central des IPC handlers.
@@ -119,6 +120,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Qdrant Memory (semantic) ──────────────────
   registerQdrantMemoryIpc()
+
+  // ── Skills ──────────────────────────────────────
+  registerSkillsIpc()
 
   // ── Settings ────────────────────────────────────────
   const ALLOWED_SETTING_KEYS = new Set([

@@ -14,6 +14,7 @@ import { seedBuiltinCommands } from './db/queries/slash-commands'
 import { BUILTIN_COMMANDS } from './commands/builtin'
 import { qdrantMemoryService } from './services/qdrant-memory.service'
 import { ensureInstanceToken } from './services/instance-token.service'
+import { skillService } from './services/skill.service'
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'
 
@@ -61,6 +62,9 @@ app.whenReady().then(() => {
 
   // Seed builtin slash commands
   seedBuiltinCommands(BUILTIN_COMMANDS)
+
+  // Skills — create global dir + initial scan
+  skillService.init()
 
   mainWindow = createMainWindow()
 

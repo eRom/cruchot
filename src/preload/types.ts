@@ -411,6 +411,17 @@ export interface SemanticMemoryStats {
   status: string
 }
 
+// ── Skills ─────────────────────────────────────────
+export interface SkillInfo {
+  name: string
+  description: string
+  content: string
+  source: 'global' | 'project'
+  location: string
+  baseDir: string
+  companionFiles: string[]
+}
+
 // ── MCP Servers ─────────────────────────────────────────
 export type McpTransportType = 'stdio' | 'http' | 'sse'
 export type McpServerStatus = 'connected' | 'error' | 'stopped'
@@ -721,6 +732,11 @@ export interface ElectronAPI {
   slashCommandsReset: (id: string) => Promise<SlashCommandInfo | undefined>
   slashCommandsReorder: (orderedIds: string[]) => Promise<void>
   slashCommandsSeed: () => Promise<void>
+
+  // Skills
+  skillsList: () => Promise<SkillInfo[]>
+  skillsGet: (name: string) => Promise<SkillInfo | undefined>
+  skillsRefresh: (data?: { workspaceRoot?: string }) => Promise<SkillInfo[]>
 
   // MCP Servers
   mcpList: () => Promise<McpServerInfo[]>
