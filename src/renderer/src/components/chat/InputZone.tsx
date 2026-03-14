@@ -21,6 +21,7 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useContextWindow } from '@/hooks/useContextWindow'
 import { cn } from '@/lib/utils'
 import { FileReference } from '@/components/workspace/FileReference'
+import { LibraryPicker } from '@/components/chat/LibraryPicker'
 import { SlashCommandPicker } from '@/components/chat/SlashCommandPicker'
 import { FileMentionPopover } from '@/components/chat/FileMentionPopover'
 import { MentionOverlay } from '@/components/chat/MentionOverlay'
@@ -113,6 +114,9 @@ export function InputZone({
   const detachWorkspaceFile = useWorkspaceStore((s) => s.detachFile)
   const toggleWorkspacePanel = useWorkspaceStore((s) => s.togglePanel)
   const searchEnabled = useSettingsStore((s) => s.searchEnabled) ?? false
+
+  // ── Active library (sticky per conversation) ────────────────
+  const [activeLibraryId, setActiveLibraryId] = useState<string | null>(null)
 
   // ── Cursor position for @ mention ──────────────────────────
   const [cursorPos, setCursorPos] = useState(0)
@@ -609,7 +613,8 @@ export function InputZone({
         attachments: attachmentRefsForIpc.length > 0 ? attachmentRefsForIpc : undefined,
         fileContexts: fileContexts && fileContexts.length > 0 ? fileContexts : undefined,
         hasWorkspace: workspaceIsOpen || undefined,
-        searchEnabled: searchEnabled || undefined
+        searchEnabled: searchEnabled || undefined,
+        libraryId: activeLibraryId || undefined
       })
     } catch {
       // Erreur geree par le stream handler dans le main
@@ -651,6 +656,7 @@ export function InputZone({
     thinkingEffort,
     selectedModel?.supportsThinking,
     searchEnabled,
+    activeLibraryId,
     activeRoleId,
     activeSystemPrompt,
     conversationMessages.length,
@@ -1032,6 +1038,12 @@ export function InputZone({
               )}
               {!isImageMode && (
                 <RoleSelector disabled={isBusy || isRoleLocked} />
+              )}
+              {!isImageMode && (
+                <LibraryPicker
+                  disabled={isBusy}
+                  onLibraryChange={setActiveLibraryId}
+                />
               )}
               <PromptPicker
                 onInsert={handlePromptInsert}
