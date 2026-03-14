@@ -5,6 +5,7 @@ import { createMistral } from '@ai-sdk/mistral'
 import { createXai } from '@ai-sdk/xai'
 import { createDeepSeek } from '@ai-sdk/deepseek'
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
+import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { getApiKeyForProvider } from '../ipc/providers.ipc'
 import { getLmStudioBaseUrl, getOllamaBaseUrl } from '../services/local-providers.service'
 
@@ -67,6 +68,12 @@ export function getPerplexityProvider() {
     baseURL: 'https://api.perplexity.ai',
     headers: { Authorization: `Bearer ${apiKey}` }
   })
+}
+
+export function getOpenRouterProvider() {
+  const apiKey = getApiKeyForProvider('openrouter')
+  if (!apiKey) throw new Error('OpenRouter API key not configured')
+  return createOpenRouter({ apiKey })
 }
 
 export function getLmStudioProvider() {
