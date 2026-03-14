@@ -35,6 +35,7 @@ Flux principaux à montrer :
 - Recherche FTS5 : sanitizeFtsQuery() empêche l'injection d'opérateurs MATCH, résultats tronqués à 500 chars (anti-DoS IPC)
 - CI/CD : npm audit strict (sans continue-on-error, --omit=dev)
 - Mémoire sémantique : Qdrant binaire local 127.0.0.1 uniquement (pas d'accès réseau), embeddings ONNX CPU locaux (zéro cloud), contenu des recalls sanitisé avant injection XML dans le system prompt, données vectorielles stockées dans userData (même protection que SQLite)
+- Référentiels RAG Custom : fichiers copiés dans userData (pas de lecture directe depuis le filesystem utilisateur après import), contenu des chunks sanitisé avant injection XML `<library-context>` dans le system prompt (mêmes gardes anti-injection que semantic-memory et workspace files), collections Qdrant par référentiel (isolation des données), IPC handlers validés Zod (taille fichier max 20MB, max 100 sources/référentiel, extensions whitelist), cleanup intégré au factory reset (FK cascade + drop collections Qdrant), embedding Google via clé API chiffrée safeStorage (jamais exposée au renderer)
 - Export/import .mlx : token d'instance chiffré safeStorage (hors whitelist renderer), AES-256-GCM avec IV unique par export + authTag intégrité, Zod validation du payload déchiffré (version + structure), token externe validé regex hex strict (64 chars), taille fichier max 200 MB, import transactionnel SQLite
 
 Style : technique et épuré, fond sombre, couleurs : rouge pour les barrières de sécurité hard block, vert pour les flux validés, jaune/orange pour les zones à risque contrôlé (bash tool, MCP subprocess, SENSITIVE_ROOTS avec dialog approbation), bleu pour les protections anti-timing/anti-DoS.
@@ -42,7 +43,7 @@ Style : technique et épuré, fond sombre, couleurs : rouge pour les barrières 
 
 ## Prompt pour diagramme sur la base de données (schéma table)
 
-Crée un diagramme de schéma de base de données (ERD) pour une app desktop multi-LLM avec 19 tables SQLite. Montre les tables, leurs colonnes principales, types, et les relations (foreign keys).
+Crée un diagramme de schéma de base de données (ERD) pour une app desktop multi-LLM avec 22 tables SQLite. Montre les tables, leurs colonnes principales, types, et les relations (foreign keys).
 
 Tables et relations :
 
@@ -57,7 +58,7 @@ Tables et relations :
 **roles** (id PK, name, description?, systemPrompt?, icon?, isBuiltin, category?, tags JSON, variables JSON, createdAt, updatedAt)
   ← conversations.role_id, scheduledTasks.role_id
 
-**conversations** (id PK, title, projectId FK→projects, modelId?, roleId FK→roles, createdAt, updatedAt)
+**conversations** (id PK, title, projectId FK→projects, modelId?, roleId FK→roles, activeLibraryId FK→libraries?, createdAt, updatedAt)
   ← messages.conversation_id, images.conversation_id
 
 **messages** (id PK, conversationId FK→conversations, parentMessageId?, role [user|assistant|system], content, contentData JSON, modelId?, providerId?, tokensIn?, tokensOut?, cost?, responseTimeMs?, createdAt)
@@ -89,6 +90,14 @@ Tables et relations :
 
 **vector_sync_state** (id PK, messageId UNIQUE, conversationId, status [pending|indexed|failed], pointId?, errorMessage?, createdAt, indexedAt?)
 
+**libraries** (id PK, name, description?, color?, icon?, projectId FK→projects?, embeddingModel [local|google], embeddingDimensions, sourcesCount, chunksCount, totalSizeBytes, status [empty|indexing|ready|error], lastIndexedAt?, createdAt, updatedAt)
+  ← library_sources.library_id, library_chunks.library_id, conversations.active_library_id
+
+**library_sources** (id PK, libraryId FK→libraries CASCADE, filename, originalPath, storedPath, mimeType, sizeBytes, extractedLength?, chunksCount, status [pending|extracting|chunking|indexing|ready|error], errorMessage?, contentHash?, createdAt, updatedAt)
+  ← library_chunks.source_id
+
+**library_chunks** (id PK, libraryId FK→libraries CASCADE, sourceId FK→library_sources CASCADE, pointId UUID, chunkIndex, startChar, endChar, heading?, lineStart?, lineEnd?)
+
 Relations FK à montrer avec des flèches :
 - models → providers
 - conversations → projects, roles
@@ -101,8 +110,12 @@ Relations FK à montrer avec des flèches :
 - remote_server_sessions → conversations
 - slash_commands → projects
 - vector_sync_state → messages (via messageId), conversations (via conversationId)
+- libraries → projects
+- library_sources → libraries (CASCADE)
+- library_chunks → libraries (CASCADE), library_sources (CASCADE)
+- conversations → libraries (via activeLibraryId)
 
-Style : ERD classique, fond sombre, groupes logiques par couleur : bleu pour le coeur chat (conversations, messages, attachments), violet pour la config (providers, models, settings), vert pour les features (prompts, roles, projects, slash_commands), orange pour les extensions (scheduled_tasks, mcp_servers, memory_fragments, remote_sessions, remote_server_sessions), rouge pour le tracking (statistics, tts_usage, images), cyan pour la mémoire sémantique (vector_sync_state).
+Style : ERD classique, fond sombre, groupes logiques par couleur : bleu pour le coeur chat (conversations, messages, attachments), violet pour la config (providers, models, settings), vert pour les features (prompts, roles, projects, slash_commands), orange pour les extensions (scheduled_tasks, mcp_servers, memory_fragments, remote_sessions, remote_server_sessions), rouge pour le tracking (statistics, tts_usage, images), cyan pour la mémoire sémantique (vector_sync_state), indigo pour les référentiels RAG (libraries, library_sources, library_chunks).
 
 ---
 
@@ -201,6 +214,20 @@ Catégories et fonctionnalités :
 - Activable/désactivable individuellement
 - Injection automatique dans le system prompt
 
+**Référentiels RAG Custom** (icône : bibliothèque/livres)
+- Import de documents (PDF, DOCX, Markdown, code, CSV, TXT) dans des référentiels thématiques
+- Dual embedding : local (all-MiniLM-L6-v2, 384d, gratuit) ou Google (gemini-embedding-2-preview, 768d, meilleure qualité)
+- Chunking intelligent adapté par type de contenu (séparateurs Markdown, code, CSV avec header prepend, plaintext)
+- Mono-référentiel par conversation (v1) — sticky : reste attaché jusqu'à détachement explicite
+- Retrieval automatique à chaque message (top chunks, cosine similarity via Qdrant)
+- Contexte injecté en premier dans le system prompt (`<library-context>` XML, max 3000 chars)
+- Section "Sources utilisées" déterministe sous les réponses (générée par le renderer, pas par le LLM)
+- Indicateur outil visuel "Recherche référentiel" dans le bloc outils (comme ReadFile/Bash)
+- LibraryPicker dans la zone de saisie (badge sticky + dropdown + détachement)
+- Vue CRUD complète : grille colorée, détail avec sources, ajout fichiers, re-indexation, progress bar
+- Collection Qdrant par référentiel (`library_{id}`), cleanup intégré au factory reset
+- Scope optionnel par projet
+
 **Mémoire Sémantique (RAG local)** (icône : réseau neuronal/étoiles)
 - Rappel automatique des conversations passées via recherche vectorielle locale
 - Qdrant (binaire Rust embarqué) sur 127.0.0.1:6333, stockage dans userData
@@ -243,8 +270,8 @@ Catégories et fonctionnalités :
 - Export/import sécurisé (.mlx) : toutes les conversations et projets exportés dans un fichier binaire chiffré AES-256-GCM, token d'instance 32 bytes stocké via safeStorage, import cross-machine avec saisie du token externe (hex 64 chars), déduplication des noms de projets (suffixe -1, -2), import transactionnel SQLite
 - Token d'instance : généré automatiquement au premier lancement, copiable depuis Settings > Données, nécessaire pour importer un .mlx sur une autre machine
 - Export/import JSON pour les prompts, rôles et commandes (sauvegarde légère)
-- Nettoyage partiel (zone orange) : supprime conversations, projets, images, tâches, serveurs MCP — conserve rôles, prompts, mémoire, paramètres, clés API
-- Factory reset complet (zone rouge) : suppression de TOUTES les tables DB, arrêt des services actifs, trash des fichiers (images, attachments, avatar)
+- Nettoyage partiel (zone orange) : supprime conversations, projets, images, tâches, serveurs MCP, référentiels RAG (chunks → sources → libraries, FK cascade) — conserve rôles, prompts, mémoire, paramètres, clés API
+- Factory reset complet (zone rouge) : suppression de TOUTES les tables DB (dont 3 tables library), arrêt des services actifs, trash des fichiers (images, attachments, avatar)
 - Validation "DELETE" (case-sensitive) obligatoire pour le factory reset
 - Retour à l'état initial (Welcome wizard) après factory reset
 

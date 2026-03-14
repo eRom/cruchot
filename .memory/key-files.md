@@ -1,12 +1,12 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-13 (S33)
+> Derniere mise a jour : 2026-03-14 (S35)
 
 ## Main process
 
 | Fichier | Role |
 |---------|------|
 | `src/main/index.ts` | Lifecycle, auto-updater, protocol `local-image://` |
-| `src/main/ipc/chat.ipc.ts` | Chat handler + `handleChatMessage()` exportee, streamText, dual-forward |
+| `src/main/ipc/chat.ipc.ts` | Chat handler + `handleChatMessage()` exportee, streamText, dual-forward, library retrieval + synthetic tool chunks |
 | `src/main/ipc/index.ts` | Registre IPC, `ALLOWED_SETTING_KEYS` whitelist |
 | `src/main/ipc/conversations.ipc.ts` | CRUD conversations (Zod) |
 | `src/main/ipc/workspace.ipc.ts` | 8 handlers workspace + couplage Git |
@@ -15,6 +15,7 @@
 | `src/main/ipc/remote.ipc.ts` | 8 handlers Remote Telegram |
 | `src/main/ipc/remote-server.ipc.ts` | Handlers Remote Web |
 | `src/main/ipc/slash-commands.ipc.ts` | 8 handlers slash commands (Zod) |
+| `src/main/ipc/library.ipc.ts` | 15 handlers referentiels RAG (Zod) — CRUD, sources, search, attach/detach, pick-files, get-attached |
 | `src/main/ipc/summary.ipc.ts` | Summary one-shot generateText |
 | `src/main/ipc/data.ipc.ts` | Cleanup + factory reset, confirmation dialog |
 | `src/main/ipc/files.ipc.ts` | Read/save securises, `isPathAllowed()` |
@@ -28,13 +29,17 @@
 | `src/main/llm/registry.ts` | 11 providers, modeles text + image |
 | `src/main/llm/thinking.ts` | providerOptions par provider |
 | `src/main/llm/workspace-tools.ts` | 4 outils AI SDK + `buildWorkspaceContextBlock()` |
+| `src/main/llm/library-prompt.ts` | Injection `<library-context>` XML dans system prompt, sanitisation |
 | `src/main/llm/errors.ts` | Classification erreurs |
 | `src/main/llm/cost-calculator.ts` | Table PRICING + calcul cout |
 | `src/main/llm/image.ts` | Generation images multi-provider |
-| `src/main/db/schema.ts` | 19 tables Drizzle |
-| `src/main/db/queries/cleanup.ts` | Bulk delete, ordre FK strict |
+| `src/main/db/schema.ts` | 22 tables Drizzle |
+| `src/main/db/queries/cleanup.ts` | Bulk delete, ordre FK strict (dont library_chunks → library_sources → libraries) |
+| `src/main/db/queries/libraries.ts` | CRUD libraries + sources + chunks + sticky attach/detach |
 | `src/main/db/queries/slash-commands.ts` | CRUD + seed builtins |
 | `src/main/commands/builtin.ts` | 8 builtins + `RESERVED_COMMAND_NAMES` |
+| `src/main/services/library.service.ts` | Singleton LibraryService — CRUD, import, extract, chunk, embed, Qdrant upsert, retrieval, ~500 lignes |
+| `src/main/services/library-embedding.service.ts` | Abstraction dual embedding local/Google (gemini-embedding-2-preview 768d) |
 | `src/main/services/mcp-manager.service.ts` | Singleton MCP lifecycle |
 | `src/main/services/telegram-bot.service.ts` | Singleton Remote Telegram (~550 lignes) |
 | `src/main/services/remote-server.service.ts` | Singleton Remote Web (~960 lignes) |
@@ -58,26 +63,31 @@
 
 | Fichier | Role |
 |---------|------|
-| `src/preload/index.ts` | contextBridge ~115 methodes |
-| `src/preload/types.ts` | Types partages, DTOs |
+| `src/preload/index.ts` | contextBridge ~135 methodes |
+| `src/preload/types.ts` | Types partages, DTOs (LibraryInfo, LibrarySourceInfo, LibrarySearchResult, LibrarySourceForMessage, LibraryIndexingProgress) |
 
 ## Renderer — Composants cles
 
 | Fichier | Role |
 |---------|------|
-| `src/renderer/src/App.tsx` | Routing ViewMode, shortcuts, onboarding |
+| `src/renderer/src/App.tsx` | Routing ViewMode (12 vues dont libraries), shortcuts, onboarding |
 | `components/chat/ChatView.tsx` | Message list + WorkspacePanel |
-| `components/chat/InputZone.tsx` | Saisie, pills, FileReference, SlashCommandPicker, MentionOverlay |
+| `components/chat/InputZone.tsx` | Saisie, pills, FileReference, SlashCommandPicker, MentionOverlay, LibraryPicker |
+| `components/chat/LibraryPicker.tsx` | Select simple referentiel sticky — badge actif + dropdown + detachement |
+| `components/chat/SourceCitation.tsx` | Section "Sources utilisees" collapsible, deterministe (pas LLM) |
 | `components/chat/MentionOverlay.tsx` | Overlay transparent, @mentions cyan |
 | `components/chat/FileMentionPopover.tsx` | Autocomplete @mention fichiers |
 | `components/chat/SlashCommandPicker.tsx` | Autocomplete slash commands |
-| `components/chat/MessageItem.tsx` | Markdown, images, reasoning, tools, footer |
+| `components/chat/MessageItem.tsx` | Markdown, images, reasoning, tools (dont librarySearch), SourceCitation, footer |
 | `components/chat/ModelSelector.tsx` | Liste plate, filtre favoris |
 | `components/chat/MarkdownRenderer.tsx` | react-markdown + Shiki + KaTeX + Mermaid |
-| `components/chat/ContextWindowIndicator.tsx` | Barre tokens + RemoteBadge + WebServerBadge + SummaryButton (badge memoire retire S33) |
+| `components/chat/ContextWindowIndicator.tsx` | Barre tokens + RemoteBadge + WebServerBadge + SummaryButton |
+| `components/libraries/LibrariesView.tsx` | Vue grille CRUD referentiels (cards colorees, search, tri, formulaire creation/edition) |
+| `components/libraries/LibraryDetailView.tsx` | Detail referentiel — sources, ajout fichiers, reindex, progress bar |
 | `components/settings/SemanticMemorySection.tsx` | Settings tab memoire semantique — toggle, stats, reindex, purge |
 | `components/memory/MemoryExplorer.tsx` | Vue recherche/exploration memoire semantique |
 | `components/layout/Sidebar.tsx` | Nav, ProjectSelector, ConversationList |
+| `components/layout/UserMenu.tsx` | Menu dropdown navigation — sous-menu Personnalisation (dont Referentiels) |
 | `components/mcp/McpView.tsx` | Vue MCP standalone |
 | `components/workspace/WorkspacePanel.tsx` | FileTree + FilePanel + Git tabs |
 | `components/workspace/ChangesPanel.tsx` | Staged/unstaged, commit, AI message |
@@ -93,9 +103,10 @@
 |---------|------|
 | `stores/settings.store.ts` | Persist localStorage (theme, model params, favorites, summary) |
 | `stores/messages.store.ts` | Messages conversation active |
-| `stores/ui.store.ts` | ViewMode, isStreaming |
+| `stores/ui.store.ts` | ViewMode (12 vues), isStreaming |
 | `stores/workspace.store.ts` | rootPath, tree, attachedFiles, isPanelOpen |
 | `stores/slash-commands.store.ts` | Slash commands CRUD |
+| `stores/library.store.ts` | Libraries CRUD + indexing progress Map |
 | `stores/semantic-memory.store.ts` | Status memoire semantique (status, stats, lastRecallCount) |
 | `hooks/useStreaming.ts` | Ecoute chat:chunk |
 | `hooks/useFileMention.ts` | Detection @mention, filtrage arbre, keyboard nav |
