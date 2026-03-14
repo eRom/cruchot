@@ -1,6 +1,6 @@
 # Multi-LLM Desktop
 
-> Tous vos LLMs, une seule interface.
+> Tous vos LLMs, une seule interface. **Open source**, **gratuit** et **100% locale**.
 
 App desktop locale de chat multi-LLM construite avec Electron. 11 providers, generation d'images, RAG custom, memoire semantique, workspace co-work, integration Git, controle a distance, et bien plus. Zero serveur backend, donnees 100% locales.
 
@@ -61,7 +61,7 @@ npm run dev:web       # Dev SPA Remote Web (standalone)
 
 Au premier lancement, l'assistant de bienvenue guide la configuration. Les cles API sont chiffrees via `safeStorage` (Keychain macOS) et ne transitent jamais par le renderer.
 
-Providers supportes : OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek, Alibaba Qwen, Perplexity, OpenRouter. Providers locaux (sans cle) : Ollama, LM Studio.
+Providers supportes : OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek, Alibaba, Perplexity, OpenRouter. Providers locaux (sans cle) : Ollama, LM Studio.
 
 ## Architecture
 
@@ -90,17 +90,14 @@ src/
 ## Fonctionnalites
 
 ### Chat Multi-Provider
-- **11 providers** : OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek, Alibaba Qwen, Perplexity, OpenRouter, Ollama, LM Studio
+- **11 providers** : OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek, Alibaba, Perplexity, Ollama, LM Studio
 - Streaming temps reel, historique illimite avec recherche full-text (FTS5)
 - Mode Thinking/Reasoning (Anthropic, OpenAI, Google, xAI, DeepSeek)
 - Annulation de stream en cours
 
-### OpenRouter
-- Passerelle multi-modeles : acces a 300+ modeles via une seule cle API
-- Modeles custom geres par l'utilisateur (ajout/suppression dans Settings)
-
 ### Generation d'images
 - 3 modeles : Gemini Flash, Gemini Pro, GPT Image
+- Modèles d'OpenRouter spécifiques pour Image
 - Selection d'aspect ratio, galerie avec apercu
 
 ### Workspace Co-Work
@@ -110,12 +107,7 @@ src/
 - `@mention` de fichiers inline dans le textarea (autocomplete + overlay cyan)
 - Auto-injection des fichiers de contexte (CLAUDE.md, README.md, etc.)
 
-### Integration Git
-- Branche courante, vue Changes (staged/unstaged), diff viewer colore
-- AI Commit Message : generation one-shot du message via le LLM selectionne
-- Commit direct depuis l'interface
-
-### Referentiels RAG Custom
+### Referentiels RAG Custom (Bibliothèques de connaissances)
 - Import de documents (PDF, DOCX, Markdown, code, CSV, TXT) dans des referentiels thematiques
 - Dual embedding : local (all-MiniLM-L6-v2, 384d) ou Google (gemini-embedding-2-preview, 768d)
 - Retrieval automatique sticky par conversation (Qdrant, cosine similarity)
@@ -133,16 +125,16 @@ src/
 - Variables d'environnement chiffrees, scope par projet
 - Outils MCP fusionnes avec les workspace tools dans le chat
 
-### Remote Telegram
-- Controle a distance depuis un smartphone via Telegram Bot API
-- Triple verrou : token chiffre + code pairing 6 chiffres + ID Telegram verifie
-- Streaming en temps reel, tool approval via inline keyboards
-- Zero serveur backend, long polling HTTPS sortant
-
-### Remote Web
-- SPA standalone (React + Tailwind), WebSocket sur localhost
-- Pairing par code 6 chiffres + QR code
-- Calque visuel exact du desktop
+### Remote access
+- Telegram
+  - Controle a distance depuis un smartphone via Telegram Bot API
+  - Triple verrou : token chiffre + code pairing 6 chiffres + ID Telegram verifie
+  - Streaming en temps reel, tool approval via inline keyboards
+  - Zero serveur backend, long polling HTTPS sortant
+- Web
+  - SPA standalone (React + Tailwind), WebSocket sur localhost
+  - Pairing par code 6 chiffres + QR code
+  - Calque visuel exact du desktop
 
 ### Slash Commands
 - 8 commandes builtins (`/resume`, `/explain`, `/refactor`, `/debug`, `/translate`, `/commit-msg`, `/review`, `/test`)
@@ -159,7 +151,7 @@ src/
 - Token d'instance 32 bytes (safeStorage), import cross-machine
 - Import transactionnel SQLite avec deduplication
 
-### Autres
+### Autres fonctionnalites
 - **Projets** : organisation avec modele par defaut, workspace lie, system prompt
 - **Roles** : builtin et custom, variables dynamiques `{{varName}}`
 - **Prompts** : bibliotheque reutilisable (complet, complement, system)
