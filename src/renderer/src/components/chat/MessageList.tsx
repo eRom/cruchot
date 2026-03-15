@@ -29,22 +29,27 @@ function MessageList({ messages, streamingMessageId }: MessageListProps) {
     overscan: 5,
   })
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom on new messages (smooth for user-initiated, instant during streaming)
   useEffect(() => {
     if (messages.length > 0) {
-      virtualizer.scrollToIndex(messages.length - 1, { align: 'end', behavior: 'smooth' })
+      virtualizer.scrollToIndex(messages.length - 1, { align: 'end', behavior: streamingMessageId ? 'auto' : 'smooth' })
     }
   }, [messages.length])
 
-  // Auto-scroll during streaming
+  // Auto-scroll during streaming — throttled via rAF to avoid stacking scroll calls per token
+  const scrollRafRef = useRef<number>(0)
   const streamingMessage = streamingMessageId
     ? messages.find((m) => m.id === streamingMessageId)
     : null
 
   useEffect(() => {
     if (streamingMessage) {
-      virtualizer.scrollToIndex(messages.length - 1, { align: 'end', behavior: 'smooth' })
+      if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current)
+      scrollRafRef.current = requestAnimationFrame(() => {
+        virtualizer.scrollToIndex(messages.length - 1, { align: 'end', behavior: 'auto' })
+      })
     }
+    return () => { if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current) }
   }, [streamingMessage?.content.length, streamingMessage?.reasoning?.length, streamingMessage?.streamPhase])
 
   const measureElement = useCallback(

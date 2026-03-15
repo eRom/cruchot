@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import type { Message, ToolCallDisplay } from '@/stores/messages.store'
 import { useMessagesStore } from '@/stores/messages.store'
 import { BookOpen, Brain, Check, CheckCircle2, ChevronDown, ChevronRight, Copy, File as FileIcon, FileText, FolderSearch, Image as ImageIcon, Loader2, Network, Pencil, Search, Sparkles, Terminal, Wrench, XCircle } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import type { FileOperation } from '../../../../preload/types'
 import { AudioPlayer } from './AudioPlayer'
 import { MessageContent } from './MessageContent'
@@ -461,4 +461,4 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
   )
 }
 
-export default MessageItem
+export default React.memo(MessageItem)

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react'
+import React, { useEffect, useRef, useCallback, useMemo } from 'react'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useMessagesStore, type Message } from '@/stores/messages.store'
 import { useProvidersStore } from '@/stores/providers.store' // used via getState()
@@ -129,10 +129,11 @@ export default function ChatView() {
     loadMessages()
   }, [activeConversationId, setMessages])
 
-  // Filter messages for the active conversation
-  const conversationMessages = activeConversationId
-    ? messages.filter((m) => m.conversationId === activeConversationId)
-    : []
+  // Filter messages for the active conversation (memoized — avoids O(n) filter on every streaming token)
+  const conversationMessages = useMemo(
+    () => activeConversationId ? messages.filter((m) => m.conversationId === activeConversationId) : [],
+    [messages, activeConversationId]
+  )
 
   const hasMessages = conversationMessages.length > 0
 
