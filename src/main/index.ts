@@ -54,15 +54,13 @@ app.whenReady().then(() => {
   initDatabase(getDbPath())
   runMigrations()
 
-  // Ensure instance token exists (for encrypted export/import)
-  ensureInstanceToken()
-
   registerAllIpcHandlers()
 
-  // Seed builtin slash commands
-  seedBuiltinCommands(BUILTIN_COMMANDS)
-
   mainWindow = createMainWindow()
+
+  // Defer non-critical init to after window creation (improves cold start)
+  ensureInstanceToken()
+  seedBuiltinCommands(BUILTIN_COMMANDS)
 
   // Scheduler — start timers for enabled scheduled tasks
   schedulerService.init(mainWindow)

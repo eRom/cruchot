@@ -297,6 +297,25 @@ export function runMigrations(): void {
     );
   `)
 
+  // ── Performance indexes (CREATE INDEX IF NOT EXISTS is idempotent) ──
+  sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
+    CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);
+    CREATE INDEX IF NOT EXISTS idx_conversations_project_id ON conversations(project_id);
+    CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_attachments_message_id ON attachments(message_id);
+    CREATE INDEX IF NOT EXISTS idx_statistics_date ON statistics(date);
+    CREATE INDEX IF NOT EXISTS idx_statistics_project_id ON statistics(project_id);
+    CREATE INDEX IF NOT EXISTS idx_images_conversation_id ON images(conversation_id);
+    CREATE INDEX IF NOT EXISTS idx_vector_sync_conversation ON vector_sync_state(conversation_id);
+    CREATE INDEX IF NOT EXISTS idx_vector_sync_status ON vector_sync_state(status);
+    CREATE INDEX IF NOT EXISTS idx_library_sources_library ON library_sources(library_id);
+    CREATE INDEX IF NOT EXISTS idx_library_chunks_library ON library_chunks(library_id);
+    CREATE INDEX IF NOT EXISTS idx_library_chunks_source ON library_chunks(source_id);
+    CREATE INDEX IF NOT EXISTS idx_slash_commands_project ON slash_commands(project_id);
+    CREATE INDEX IF NOT EXISTS idx_mcp_servers_project ON mcp_servers(project_id);
+  `)
+
   // ── Incremental migrations (idempotent) ────────────────
   // Add category, tags, variables columns to roles table
   const roleMigrations = [
