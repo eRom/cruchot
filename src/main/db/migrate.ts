@@ -371,4 +371,11 @@ export function runMigrations(): void {
   } catch {
     // Column already exists — ignore
   }
+
+  // Add is_favorite column to conversations table (favorites feature)
+  try {
+    sqlite.exec('ALTER TABLE conversations ADD COLUMN is_favorite INTEGER DEFAULT 0')
+  } catch {
+    // Column already exists — ignore
+  }
 }

@@ -127,6 +127,7 @@ export interface ConversationInfo {
   modelId?: string
   roleId?: string | null
   activeLibraryId?: string | null
+  isFavorite?: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -646,6 +647,7 @@ export interface ElectronAPI {
   deleteAllConversations: () => Promise<void>
   renameConversation: (id: string, title: string) => Promise<void>
   setConversationProject: (id: string, projectId: string | null) => Promise<void>
+  toggleConversationFavorite: (id: string, isFavorite: boolean) => Promise<ConversationInfo>
   getMessages: (conversationId: string) => Promise<MessageInfo[]>
 
   // Providers
