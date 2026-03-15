@@ -1,6 +1,7 @@
 import { ipcMain, dialog, shell, BrowserWindow, app, nativeImage } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
+import { z } from 'zod'
 import { saveAttachment, readAttachment } from '../services/file.service'
 import { getActiveWorkspaceRoot } from './workspace.ipc'
 
@@ -250,6 +251,83 @@ export function registerFilesIpc(): void {
       await trash(avatarPath)
     }
     return true
+  })
+
+  // ── Read text file by absolute path (for drag & drop from Finder) ──
+  const TEXT_EXTENSIONS = new Set([
+    '.txt', '.md', '.csv', '.json', '.yaml', '.yml', '.toml', '.xml', '.sql',
+    '.js', '.ts', '.tsx', '.jsx', '.py', '.java', '.go', '.rs', '.c', '.cpp', '.h',
+    '.html', '.css', '.rb', '.php', '.swift', '.kt', '.sh', '.log',
+    '.vue', '.svelte', '.scss', '.less', '.graphql', '.prisma',
+    '.env', '.dockerfile', '.zsh', '.bash', '.hpp', '.cs'
+  ])
+
+  const EXT_TO_LANG: Record<string, string> = {
+    '.ts': 'typescript', '.tsx': 'tsx', '.js': 'javascript', '.jsx': 'jsx',
+    '.py': 'python', '.rb': 'ruby', '.go': 'go', '.rs': 'rust',
+    '.java': 'java', '.kt': 'kotlin', '.swift': 'swift',
+    '.c': 'c', '.cpp': 'cpp', '.h': 'c', '.hpp': 'cpp', '.cs': 'csharp',
+    '.php': 'php', '.vue': 'vue', '.svelte': 'svelte',
+    '.html': 'html', '.css': 'css', '.scss': 'scss', '.less': 'less',
+    '.json': 'json', '.yaml': 'yaml', '.yml': 'yaml', '.toml': 'toml',
+    '.xml': 'xml', '.md': 'markdown', '.sql': 'sql',
+    '.sh': 'bash', '.zsh': 'bash', '.bash': 'bash',
+    '.dockerfile': 'dockerfile', '.graphql': 'graphql', '.prisma': 'prisma',
+    '.env': 'plaintext', '.txt': 'plaintext', '.csv': 'csv', '.log': 'plaintext'
+  }
+
+  const MAX_TEXT_FILE_SIZE = 500 * 1024 // 500 KB for text context
+
+  ipcMain.handle('files:readText', async (_event, payload: unknown) => {
+    const schema = z.object({
+      filePath: z.string().min(1).max(2000)
+    })
+    const parsed = schema.safeParse(payload)
+    if (!parsed.success) throw new Error('Invalid files:readText payload')
+
+    const { filePath } = parsed.data
+
+    // Resolve to real path (follow symlinks)
+    let resolved: string
+    try {
+      resolved = fs.realpathSync(filePath)
+    } catch {
+      resolved = path.resolve(filePath)
+    }
+
+    // Validate: no dangerous extension
+    if (hasDangerousExtension(resolved)) {
+      throw new Error('Extension de fichier non autorisee')
+    }
+
+    // Validate: must be a text-compatible extension
+    const ext = path.extname(resolved).toLowerCase()
+    if (!TEXT_EXTENSIONS.has(ext)) {
+      throw new Error(`Extension non supportee pour la lecture texte : ${ext}`)
+    }
+
+    // Validate: file exists and is not too large
+    let stats: fs.Stats
+    try {
+      stats = fs.statSync(resolved)
+    } catch {
+      throw new Error('Fichier introuvable')
+    }
+
+    if (!stats.isFile()) {
+      throw new Error('Le chemin ne pointe pas vers un fichier')
+    }
+
+    if (stats.size > MAX_TEXT_FILE_SIZE) {
+      throw new Error(`Fichier trop volumineux (${(stats.size / 1024).toFixed(0)} KB > 500 KB)`)
+    }
+
+    // Read as UTF-8
+    const content = fs.readFileSync(resolved, 'utf-8')
+    const language = EXT_TO_LANG[ext] ?? 'plaintext'
+    const name = path.basename(resolved)
+
+    return { path: resolved, name, content, language, size: stats.size }
   })
 
   console.log('[IPC] Files handlers registered')
