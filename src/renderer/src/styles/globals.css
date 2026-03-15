@@ -123,3 +123,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Arena VS badge pulse animation */
+@keyframes arena-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
+  50% { box-shadow: 0 0 24px rgba(239, 68, 68, 0.6), 0 0 48px rgba(239, 68, 68, 0.15); }
+}

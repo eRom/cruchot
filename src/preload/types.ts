@@ -128,6 +128,7 @@ export interface ConversationInfo {
   roleId?: string | null
   activeLibraryId?: string | null
   isFavorite?: boolean
+  isArena?: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -595,6 +596,61 @@ export interface RemoteServerPairingResult {
   qrDataUrl: string | null
 }
 
+// ── Arena (LLM vs LLM) ─────────────────────────────────────────
+export interface ArenaSendPayload {
+  conversationId: string
+  content: string
+  leftProviderId: string
+  leftModelId: string
+  rightProviderId: string
+  rightModelId: string
+  systemPrompt?: string
+  temperature?: number
+  maxTokens?: number
+  thinkingEffort?: ThinkingEffort
+}
+
+export interface ArenaVotePayload {
+  matchId: string
+  vote: 'left' | 'right' | 'tie'
+}
+
+export interface ArenaMatch {
+  id: string
+  conversationId: string
+  userMessageId: string
+  leftMessageId: string | null
+  rightMessageId: string | null
+  leftProviderId: string
+  leftModelId: string
+  rightProviderId: string
+  rightModelId: string
+  vote: string | null
+  votedAt: Date | null
+  createdAt: Date
+}
+
+export interface ArenaChunk {
+  type: 'start' | 'text-delta' | 'reasoning-delta' | 'finish' | 'error'
+  content?: string
+  modelId?: string
+  providerId?: string
+  messageId?: string
+  error?: string
+  usage?: { promptTokens: number; completionTokens: number }
+  cost?: number
+  responseTimeMs?: number
+}
+
+export interface ArenaStat {
+  modelId: string
+  providerId: string
+  wins: number
+  losses: number
+  ties: number
+  totalMatches: number
+}
+
 // ── Prompt Optimizer ─────────────────────────────────────────
 export interface OptimizePromptPayload {
   text: string
@@ -965,6 +1021,19 @@ export interface ElectronAPI {
   libraryGetAttached: (payload: { conversationId: string }) => Promise<string | null>
   onLibraryIndexingProgress: (callback: (progress: LibraryIndexingProgress) => void) => void
   offLibraryIndexingProgress: () => void
+
+  // Arena (LLM vs LLM)
+  arenaSend: (payload: ArenaSendPayload) => Promise<void>
+  arenaCancel: () => Promise<void>
+  arenaVote: (payload: ArenaVotePayload) => Promise<void>
+  arenaGetMatches: (payload: { conversationId: string }) => Promise<ArenaMatch[]>
+  arenaGetStats: () => Promise<ArenaStat[]>
+  onArenaChunkLeft: (callback: (chunk: ArenaChunk) => void) => void
+  offArenaChunkLeft: () => void
+  onArenaChunkRight: (callback: (chunk: ArenaChunk) => void) => void
+  offArenaChunkRight: () => void
+  onArenaMatchCreated: (callback: (data: { matchId: string }) => void) => void
+  offArenaMatchCreated: () => void
 
   // Settings
   getSetting: (key: string) => Promise<string | null>

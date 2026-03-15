@@ -43,7 +43,7 @@ Style : technique et épuré, fond sombre, couleurs : rouge pour les barrières 
 
 ## Prompt pour diagramme sur la base de données (schéma table)
 
-Crée un diagramme de schéma de base de données (ERD) pour une app desktop multi-LLM avec 23 tables SQLite. Montre les tables, leurs colonnes principales, types, et les relations (foreign keys).
+Crée un diagramme de schéma de base de données (ERD) pour une app desktop multi-LLM avec 24 tables SQLite. Montre les tables, leurs colonnes principales, types, et les relations (foreign keys).
 
 Tables et relations :
 
@@ -58,7 +58,7 @@ Tables et relations :
 **roles** (id PK, name, description?, systemPrompt?, icon?, isBuiltin, category?, tags JSON, variables JSON, createdAt, updatedAt)
   ← conversations.role_id, scheduledTasks.role_id
 
-**conversations** (id PK, title, projectId FK→projects, modelId?, roleId FK→roles, activeLibraryId FK→libraries?, isFavorite BOOL DEFAULT false, createdAt, updatedAt)
+**conversations** (id PK, title, projectId FK→projects, modelId?, roleId FK→roles, activeLibraryId FK→libraries?, isFavorite BOOL DEFAULT false, isArena BOOL DEFAULT false, createdAt, updatedAt)
   ← messages.conversation_id, images.conversation_id
 
 **messages** (id PK, conversationId FK→conversations, parentMessageId?, role [user|assistant|system], content, contentData JSON, modelId?, providerId?, tokensIn?, tokensOut?, cost?, responseTimeMs?, createdAt)
@@ -100,6 +100,9 @@ Tables et relations :
 
 **custom_models** (id PK, providerId, label, modelId, type [text|image], isEnabled, createdAt, updatedAt)
 
+**arena_matches** (id PK, conversationId, userMessageId, leftMessageId?, rightMessageId?, leftProviderId, leftModelId, rightProviderId, rightModelId, vote [left|right|tie]?, votedAt?, createdAt)
+  — Référence conversations via conversationId, messages via userMessageId/leftMessageId/rightMessageId
+
 Relations FK à montrer avec des flèches :
 - models → providers
 - conversations → projects, roles
@@ -116,6 +119,7 @@ Relations FK à montrer avec des flèches :
 - library_sources → libraries (CASCADE)
 - library_chunks → libraries (CASCADE), library_sources (CASCADE)
 - conversations → libraries (via activeLibraryId)
+- arena_matches → conversations (via conversationId), messages (via userMessageId, leftMessageId, rightMessageId)
 
 Style : ERD classique, fond sombre, groupes logiques par couleur : bleu pour le coeur chat (conversations, messages, attachments), violet pour la config (providers, models, settings, custom_models), vert pour les features (prompts, roles, projects, slash_commands), orange pour les extensions (scheduled_tasks, mcp_servers, memory_fragments, remote_sessions, remote_server_sessions), rouge pour le tracking (statistics, tts_usage, images), cyan pour la mémoire sémantique (vector_sync_state), indigo pour les référentiels RAG (libraries, library_sources, library_chunks).
 
@@ -138,6 +142,19 @@ Catégories et fonctionnalités :
 - Annulation de stream en cours
 - Conversations favorites : pin/star pour garder les conversations importantes en haut de la sidebar (icône étoile ambrée, section dédiée "Favoris" avec séparateur visuel)
 - Prompt Optimizer : bouton Sparkles dans la zone de saisie, envoie le prompt courant au LLM pour reformulation/amélioration one-shot via generateText(), le résultat remplace le texte dans le textarea
+
+**Arena (LLM vs LLM)** (icône : épées croisées/Swords)
+- Mode comparatif côte à côte : 2 modèles reçoivent le même prompt simultanément
+- Streaming parallèle des deux réponses (2 canaux IPC indépendants : arena:chunk:left, arena:chunk:right)
+- Séparateur VS central animé : cercle rouge-orange avec glow pulse pendant le streaming (keyframe arena-pulse)
+- Vote après chaque round : gauche, droite ou égalité — persisté en DB (table arena_matches, 24ème table)
+- Métriques comparées en bas de chaque colonne : tokens in/out, coût, temps de réponse (coloration verte = meilleur, rouge = moins bon)
+- Multi-rounds : après le vote, l'utilisateur peut envoyer un nouveau prompt dans la même conversation
+- Conversations arena marquées is_arena=1, affichées avec icône Swords dans la sidebar
+- Simplifié volontairement : pas de workspace tools, pas de MCP, pas de @mentions — comparaison LLM vanilla pure
+- ArenaInputZone minimaliste (textarea + send/cancel, pas de pills)
+- Statistiques agrégées win/loss/tie par modèle (getArenaStats)
+- Accessible via UserMenu (icône Swords) et Command Palette (Cmd+K → "Arena")
 
 **Génération d'images** (icône : palette/pinceau)
 - 3 modèles : Gemini Flash, Gemini Pro, GPT Image

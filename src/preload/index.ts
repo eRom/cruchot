@@ -504,6 +504,19 @@ const api: ElectronAPI = {
   },
   offLibraryIndexingProgress: () => ipcRenderer.removeAllListeners('library:indexing-progress'),
 
+  // ── Arena (LLM vs LLM) ─────────────────────────────
+  arenaSend: (payload) => ipcRenderer.invoke('arena:send', payload),
+  arenaCancel: () => ipcRenderer.invoke('arena:cancel'),
+  arenaVote: (payload) => ipcRenderer.invoke('arena:vote', payload),
+  arenaGetMatches: (payload) => ipcRenderer.invoke('arena:getMatches', payload),
+  arenaGetStats: () => ipcRenderer.invoke('arena:getStats'),
+  onArenaChunkLeft: (cb) => { ipcRenderer.on('arena:chunk:left', (_, chunk) => cb(chunk)) },
+  offArenaChunkLeft: () => { ipcRenderer.removeAllListeners('arena:chunk:left') },
+  onArenaChunkRight: (cb) => { ipcRenderer.on('arena:chunk:right', (_, chunk) => cb(chunk)) },
+  offArenaChunkRight: () => { ipcRenderer.removeAllListeners('arena:chunk:right') },
+  onArenaMatchCreated: (cb) => { ipcRenderer.on('arena:match-created', (_, data) => cb(data)) },
+  offArenaMatchCreated: () => { ipcRenderer.removeAllListeners('arena:match-created') },
+
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>
     ipcRenderer.invoke('settings:get', key),

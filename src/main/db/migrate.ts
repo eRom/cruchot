@@ -282,6 +282,21 @@ export function runMigrations(): void {
       updated_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS arena_matches (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL,
+      user_message_id TEXT NOT NULL,
+      left_message_id TEXT,
+      right_message_id TEXT,
+      left_provider_id TEXT NOT NULL,
+      left_model_id TEXT NOT NULL,
+      right_provider_id TEXT NOT NULL,
+      right_model_id TEXT NOT NULL,
+      vote TEXT,
+      voted_at INTEGER,
+      created_at INTEGER NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS library_chunks (
       id TEXT PRIMARY KEY,
       library_id TEXT NOT NULL REFERENCES libraries(id) ON DELETE CASCADE,
@@ -314,6 +329,7 @@ export function runMigrations(): void {
     CREATE INDEX IF NOT EXISTS idx_library_chunks_source ON library_chunks(source_id);
     CREATE INDEX IF NOT EXISTS idx_slash_commands_project ON slash_commands(project_id);
     CREATE INDEX IF NOT EXISTS idx_mcp_servers_project ON mcp_servers(project_id);
+    CREATE INDEX IF NOT EXISTS idx_arena_matches_conversation ON arena_matches(conversation_id);
   `)
 
   // ── Incremental migrations (idempotent) ────────────────
@@ -375,6 +391,13 @@ export function runMigrations(): void {
   // Add is_favorite column to conversations table (favorites feature)
   try {
     sqlite.exec('ALTER TABLE conversations ADD COLUMN is_favorite INTEGER DEFAULT 0')
+  } catch {
+    // Column already exists — ignore
+  }
+
+  // Add is_arena column to conversations table (arena mode)
+  try {
+    sqlite.exec('ALTER TABLE conversations ADD COLUMN is_arena INTEGER DEFAULT 0')
   } catch {
     // Column already exists — ignore
   }

@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-15 (S38)
+> Derniere mise a jour : 2026-03-15 (S39)
 
 ## Conventions de nommage
 
@@ -114,11 +114,26 @@
 - **3 tables Drizzle** : `libraries`, `library_sources`, `library_chunks` — FK cascade, cleanup ordre strict chunks → sources → libraries
 - **pdf-parse** : import `pdf-parse/lib/pdf-parse.js` directement (contourne test code dans index.js)
 
+## Arena Mode (LLM vs LLM) (S39)
+
+- **Architecture duale** : 2 `AbortController` independants (`leftAbortController`, `rightAbortController`), `Promise.allSettled()` pour que chaque cote puisse fail sans bloquer l'autre
+- **2 canaux IPC streaming** : `arena:chunk:left` et `arena:chunk:right` (webContents.send fire-and-forget), meme format que `chat:chunk` (start/text-delta/reasoning-delta/finish/error)
+- **Store dedie** : `arena.store.ts` completement isole du chat normal (pas dans messages.store), state : leftMessage/rightMessage/rounds/vote/currentMatchId
+- **Hook dedie** : `useArenaStreaming.ts` ecoute les 2 canaux + `arena:match-created`, cleanup cancel au unmount
+- **Simplifie volontairement** : pas de workspace tools, pas de MCP, pas de @mentions, pas de drag&drop, pas de search, pas de library retrieval, pas de Remote forwarding — comparaison LLM vanilla pure
+- **Multi-rounds** : apres vote, `archiveCurrentRound()` deplace le round courant dans `rounds[]`, reset le state streaming
+- **Conversation arena** : `is_arena` colonne boolean sur `conversations`, set via `setConversationArena()` au premier `arena:send`
+- **Sidebar integration** : ConversationItem affiche `Swords` icon si `isArena`, Sidebar route vers `'arena'` view au clic
+- **VS animation** : CSS custom `@keyframes arena-pulse` dans `globals.css` (box-shadow pulse rouge)
+- **Metriques comparees** : ArenaMetrics colore en vert le meilleur et rouge le moins bon sur chaque axe (cout, temps, tokens out)
+- **Table `arena_matches`** : 24eme table Drizzle, stocke les 2 modeles, vote, timestamps, FK vers messages via leftMessageId/rightMessageId
+- **Stats agregees** : `getArenaStats()` utilise UNION ALL SQL pour merger les stats gauche/droite par modele
+
 ## Data Cleanup / Factory Reset
 
-- Zone orange : nettoyage partiel (conversations, projets, images, taches, MCP). Zone rouge : factory reset complet (22 tables + `localStorage.clear()`)
+- Zone orange : nettoyage partiel (conversations, projets, images, taches, MCP). Zone rouge : factory reset complet (24 tables + `localStorage.clear()`)
 - Backend : ordre FK strict, stop services avant delete, trash fichiers, confirmation dialog natif main
-- Cleanup libraries : `library_chunks` → `library_sources` → `libraries` (ordre FK) + drop collections Qdrant `library_*`
+- Cleanup : `arena_matches` avant `messages`, `library_chunks` → `library_sources` → `libraries` (ordre FK) + drop collections Qdrant `library_*`
 - Singletons : `export const fooService = new FooService()` (pas getInstance())
 
 ## Conventions UI
@@ -131,7 +146,7 @@
 
 ## Performance (S37)
 
-- **React.lazy + Suspense** : 11 vues non-chat lazy-loaded dans App.tsx (seul ChatView est eager)
+- **React.lazy + Suspense** : 12 vues non-chat lazy-loaded dans App.tsx (seul ChatView est eager)
 - **React.memo** : MessageItem wrappe pour eviter re-renders pendant streaming
 - **useMemo** : `conversationMessages` dans ChatView (evite .filter() sur chaque token)
 - **manualChunks** : vendor splitting par fonction (id) dans electron.vite.config.ts — chunks react, icons, charts, markdown, radix

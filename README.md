@@ -6,6 +6,12 @@
 
 App desktop locale de chat multi-LLM construite avec Electron. 11 providers, generation d'images, RAG custom, memoire semantique, workspace co-work, integration Git, controle a distance, et bien plus. Zero serveur backend, donnees 100% locales.
 
+## Update (15/03/2026)
+
+- **Conversations favorites** : pin/star pour garder les conversations importantes en haut de la sidebar
+- **Prompt Optimizer** : amelioration automatique du prompt via LLM avant envoi (one-shot)
+- **Arena** : mode comparatif cote a cote pour evaluer 2 LLMs sur le meme prompt (streaming parallele, vote, metriques comparees, design VS Street Fighter)
+
 ## Stack
 
 | Couche | Technologies |
@@ -79,7 +85,7 @@ src/
   main/           # Electron main process
     ipc/          #   Handlers IPC par domaine (Zod validation)
     llm/          #   Routeur AI SDK, cost-calculator, tools, prompts
-    db/           #   Schema Drizzle (23 tables), queries
+    db/           #   Schema Drizzle (24 tables), queries
     services/     #   Singletons metier (library, qdrant, git, mcp, remote...)
   preload/        # Bridge IPC securise (contextBridge)
   renderer/src/   # React app
@@ -98,6 +104,15 @@ src/
 - Annulation de stream en cours
 - **Conversations favorites** : pin/star pour garder les conversations importantes en haut de la sidebar
 - **Prompt Optimizer** : amelioration automatique du prompt via LLM avant envoi (one-shot)
+
+### Arena (LLM vs LLM)
+- Comparaison cote a cote de 2 modeles sur le meme prompt
+- Streaming parallele des deux reponses simultanement
+- Separateur VS anime (glow pulse pendant le streaming)
+- Vote (gauche/droite/egalite) persiste en DB avec statistiques par modele
+- Metriques comparees : tokens, cout, temps de reponse (coloration vert/rouge)
+- Multi-rounds : continuer la conversation apres chaque vote
+- Conversations arena identifiees dans la sidebar (icone Swords)
 
 ### Generation d'images
 - 3 modeles : Gemini Flash, Gemini Pro, GPT Image
@@ -194,7 +209,7 @@ L'architecture de securite repose sur l'isolation stricte des 3 couches Electron
 - **Export .mlx** : AES-256-GCM, IV unique par export, token hors whitelist renderer
 
 ### Donnees
-- SQLite WAL + 23 tables Drizzle, donnees 100% locales
+- SQLite WAL + 24 tables Drizzle, donnees 100% locales
 - Qdrant vector DB embedded (127.0.0.1 uniquement)
 - Zero telemetrie, zero serveur backend
 

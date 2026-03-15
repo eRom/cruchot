@@ -1,9 +1,9 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-15 (S38)
+> Derniere mise a jour : 2026-03-15 (S39)
 
 ## Vue d'ensemble
 
-App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud, statistiques de couts, workspace co-work, integration Git, taches planifiees, integration MCP, memory fragments, memoire semantique (RAG local Qdrant), referentiels RAG custom (documents), Remote Telegram, Remote Web, export/import securise (.mlx), slash commands, @mention fichiers, prompt optimizer, drag & drop fichiers, conversations favorites. Zero serveur backend.
+App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud, statistiques de couts, workspace co-work, integration Git, taches planifiees, integration MCP, memory fragments, memoire semantique (RAG local Qdrant), referentiels RAG custom (documents), Remote Telegram, Remote Web, export/import securise (.mlx), slash commands, @mention fichiers, prompt optimizer, drag & drop fichiers, conversations favorites, mode Arena (LLM vs LLM). Zero serveur backend.
 
 ## Stack
 
@@ -28,8 +28,8 @@ src/
     ipc/                  # Handlers IPC par domaine
     commands/             # Builtin slash commands definitions
     llm/                  # Router AI SDK, cost-calculator, image gen, workspace-tools, errors, thinking, library-prompt
-    db/schema.ts          # 22 tables Drizzle
-    db/queries/           # Queries par domaine (dont libraries.ts)
+    db/schema.ts          # 24 tables Drizzle
+    db/queries/           # Queries par domaine (dont libraries.ts, arena.ts)
     services/             # Credential, backup, workspace, file-watcher, tts, scheduler, task-executor, mcp-manager, git, telegram-bot, remote-server, qdrant-memory, qdrant-process, embedding, library, library-embedding
   preload/
     index.ts              # contextBridge
@@ -37,13 +37,13 @@ src/
   renderer/src/
     App.tsx               # Routing par ViewMode
     stores/               # Zustand stores
-    components/           # chat/, layout/, projects/, prompts/, roles/, tasks/, mcp/, memory/, commands/, libraries/, settings/, statistics/, images/, conversations/, workspace/, common/
-    hooks/                # useStreaming, useInitApp, useKeyboardShortcuts, useAudioPlayer, useContextWindow, useFileMention, useSlashCommands
+    components/           # chat/, layout/, projects/, prompts/, roles/, tasks/, mcp/, memory/, commands/, libraries/, arena/, settings/, statistics/, images/, conversations/, workspace/, common/
+    hooks/                # useStreaming, useArenaStreaming, useInitApp, useKeyboardShortcuts, useAudioPlayer, useContextWindow, useFileMention, useSlashCommands
 ```
 
 ## Navigation (ViewMode)
 
-`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (10 tabs), images, roles, tasks, mcp, memory, commands, statistics, libraries. **11 vues non-chat lazy-loaded via React.lazy() + Suspense** (S37)
+`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (10 tabs), images, roles, tasks, mcp, memory, commands, statistics, libraries, arena. **12 vues non-chat lazy-loaded via React.lazy() + Suspense** (S39)
 
 ## Flux principal — Chat
 
@@ -76,10 +76,11 @@ InputZone → IPC "chat:send" → Main: streamText() → forward chunks IPC → 
 - **Prompt Optimizer** : bouton Sparkles dans InputZone, `generateText()` one-shot pour reformuler/ameliorer le prompt avant envoi, handler IPC `prompt:optimize` (Zod)
 - **Drag & Drop Fichiers** : drop depuis le Finder dans InputZone, handler IPC `files:readText` (chemin absolu, whitelist extensions, 500KB max, DANGEROUS_EXTENSIONS), pills FileReference cyan, merge avec @mentions au send
 - **Conversations Favorites** : colonne `is_favorite` sur table `conversations`, toggle via icone etoile ambre dans sidebar, section "Favoris" en haut de ConversationList avec separateur
+- **Arena (LLM vs LLM)** : mode comparatif cote a cote, 2 modeles streamant en parallele (2 canaux IPC `arena:chunk:left`/`right`), separateur VS anime, vote persiste en DB (`arena_matches`), metriques comparees (tokens, cout, temps), multi-rounds, conversations marquees `is_arena`, store Zustand dedie, simplifie (pas de tools/MCP/mentions)
 
 ## Donnees
 
-- SQLite WAL + FTS5, 23 tables (+ `libraries`, `library_sources`, `library_chunks` S35, + colonne `is_favorite` sur conversations S38), **15 index de performance** (S37)
+- SQLite WAL + FTS5, 24 tables (+ `arena_matches` S39, + colonne `is_arena` sur conversations S39), **16 index de performance** (S39)
 - Qdrant vector DB embedded (stockage `userData/qdrant-storage/`, config YAML `userData/qdrant-config/`)
 - Collections Qdrant : `conversations_memory` (memoire semantique) + `library_{id}` (referentiels RAG)
 - Cles API chiffrees via safeStorage (Keychain macOS)
