@@ -26,9 +26,12 @@ export function ModelTableLLM() {
     .filter((p) => p.isEnabled)
     .map((provider) => ({
       provider,
-      models: textModels.filter((m) => m.providerId === provider.id)
+      models: textModels
+        .filter((m) => m.providerId === provider.id)
+        .sort((a, b) => a.displayName.localeCompare(b.displayName))
     }))
     .filter((g) => g.models.length > 0)
+    .sort((a, b) => a.provider.name.localeCompare(b.provider.name))
 
   return (
     <div className="space-y-6">

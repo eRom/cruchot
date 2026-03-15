@@ -21,6 +21,10 @@ export function ModelTableImages() {
       return { model: m, provider }
     })
     .filter((item) => item.provider?.isEnabled)
+    .sort((a, b) =>
+      (a.provider?.name ?? '').localeCompare(b.provider?.name ?? '') ||
+      a.model.displayName.localeCompare(b.model.displayName)
+    )
 
   return (
     <div className="space-y-6">

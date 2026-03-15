@@ -84,16 +84,16 @@ export function UserMenu({ isCollapsed, currentView, onNavigate, enabledTasksCou
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        {isCollapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>{trigger}</TooltipTrigger>
-            <TooltipContent side="right">{displayName}</TooltipContent>
-          </Tooltip>
-        ) : (
-          trigger
-        )}
-      </DropdownMenuTrigger>
+      {isCollapsed ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="right">{displayName}</TooltipContent>
+        </Tooltip>
+      ) : (
+        <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      )}
 
       <DropdownMenuContent
         side="top"
