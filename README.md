@@ -1,4 +1,8 @@
-# Multi-LLM Desktop
+<p align="center">
+  <img src="resources/logo-cruchot.png" alt="Cruchot" width="200" />
+</p>
+
+<h1 align="center">Cruchot</h1>
 
 > Tous vos LLMs, une seule interface. **Open source**, **gratuit** et **100% locale**.
 
@@ -29,8 +33,8 @@ App desktop locale de chat multi-LLM construite avec Electron. 11 providers, gen
 
 ```bash
 # Cloner le repo
-git clone https://github.com/eRom/app-desktop-llmx.git
-cd app-desktop-llmx
+git clone https://github.com/eRom/cruchot.git
+cd cruchot
 
 # Installer les dependances
 npm install --legacy-peer-deps
