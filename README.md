@@ -2,9 +2,7 @@
   <img src="resources/logo-cruchot.png" alt="Cruchot" width="200" />
 </p>
 
-<h1 align="center">Cruchot</h1>
-
-> Tous vos LLMs, une seule interface. **Open source**, **gratuit** et **App 100% locale**.
+> **Cruchot** : Tous vos LLMs, une seule interface. **Open source**, **gratuit** et **App 100% locale**.
 
 App desktop locale de chat multi-LLM construite avec Electron. 11 providers, generation d'images, RAG custom, memoire semantique, workspace co-work, integration Git, controle a distance, et bien plus. Zero serveur backend, donnees 100% locales.
 
