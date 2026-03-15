@@ -56,7 +56,7 @@ export function registerImportIpc(): void {
 
     const { filePaths, canceled } = await dialog.showOpenDialog(win, {
       title: 'Importer un fichier .mlx',
-      filters: [{ name: 'Multi-LLM Export', extensions: ['mlx'] }],
+      filters: [{ name: 'Cruchot Export', extensions: ['mlx'] }],
       properties: ['openFile']
     })
 

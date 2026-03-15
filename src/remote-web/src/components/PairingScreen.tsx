@@ -80,7 +80,7 @@ export function PairingScreen({ onPair, error, connectionStatus, wsUrl }: Pairin
               <path d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m9.86-2.54a4.5 4.5 0 0 0-6.364-6.364L4.5 8.25" />
             </svg>
           </div>
-          <h1 className="text-lg font-semibold text-foreground">Multi-LLM Remote</h1>
+          <h1 className="text-lg font-semibold text-foreground">Cruchot Remote</h1>
           <p className="text-xs text-muted-foreground leading-relaxed">
             Connectez-vous a votre desktop pour chatter avec vos LLMs.
           </p>

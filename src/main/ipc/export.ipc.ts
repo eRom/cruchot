@@ -63,7 +63,7 @@ export function registerExportIpc(): void {
     const { filePath, canceled } = await dialog.showSaveDialog(win, {
       title: 'Exporter toutes les donnees (chiffre)',
       defaultPath: defaultName,
-      filters: [{ name: 'Multi-LLM Export', extensions: ['mlx'] }]
+      filters: [{ name: 'Cruchot Export', extensions: ['mlx'] }]
     })
 
     if (canceled || !filePath) return { exported: false }

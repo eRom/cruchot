@@ -1,6 +1,6 @@
 {
-  "name": "Multi-LLM Remote",
-  "short_name": "LLM Remote",
+  "name": "Cruchot Remote",
+  "short_name": "Cruchot",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#09090b",

@@ -61,7 +61,7 @@ function WelcomeStep({
 }) {
   return (
     <OnboardingStep
-      title="Multi-LLM Desktop"
+      title="Cruchot"
       description="Discutez avec tous vos modeles IA preferes depuis une seule application, 100% locale et privee."
       stepNumber={stepNumber}
       totalSteps={TOTAL_STEPS}

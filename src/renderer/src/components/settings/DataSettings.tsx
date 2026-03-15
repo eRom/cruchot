@@ -110,7 +110,7 @@ export function DataSettings() {
             <div>
               <p className="text-sm font-medium text-foreground">Base de donnees</p>
               <p className="font-mono text-xs text-muted-foreground">
-                ~/Library/Application Support/multi-llm-desktop/data.db
+                ~/Library/Application Support/cruchot/data.db
               </p>
             </div>
           </div>
