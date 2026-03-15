@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { ElectronAPI, SendMessagePayload, StreamChunk } from './types'
 
 // Expose une API securisee au renderer — JAMAIS ipcRenderer directement
@@ -193,6 +193,10 @@ const api: ElectronAPI = {
   fileSave: (data) => ipcRenderer.invoke('files:save', data),
 
   fileRead: (filePath) => ipcRenderer.invoke('files:read', filePath),
+
+  fileReadText: (filePath: string) => ipcRenderer.invoke('files:readText', { filePath }),
+
+  getFilePath: (file: File) => webUtils.getPathForFile(file),
 
   fileOpenInOS: (filePath) => ipcRenderer.invoke('files:openInOS', filePath),
 

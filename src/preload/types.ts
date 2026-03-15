@@ -728,6 +728,8 @@ export interface ElectronAPI {
   filePick: () => Promise<AttachmentRef[]>
   fileSave: (data: { buffer: ArrayBuffer; filename: string }) => Promise<{ path: string; size: number }>
   fileRead: (filePath: string) => Promise<ArrayBuffer>
+  fileReadText: (filePath: string) => Promise<{ path: string; name: string; content: string; language: string; size: number }>
+  getFilePath: (file: File) => string
   fileOpenInOS: (filePath: string) => Promise<string>
   fileShowInFolder: (filePath: string) => Promise<void>
 

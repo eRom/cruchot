@@ -61,6 +61,12 @@ const CODE_EXTENSIONS = new Set([
 ])
 const ALL_ALLOWED = new Set([...IMAGE_EXTENSIONS, ...DOCUMENT_EXTENSIONS, ...CODE_EXTENSIONS])
 
+// Extensions that can be read as text context (for drag & drop from Finder)
+const TEXT_CONTEXT_EXTENSIONS = new Set([...DOCUMENT_EXTENSIONS, ...CODE_EXTENSIONS])
+// Remove binary document types that shouldn't be read as text
+TEXT_CONTEXT_EXTENSIONS.delete('.pdf')
+TEXT_CONTEXT_EXTENSIONS.delete('.docx')
+
 const IMAGE_MIMES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml'])
 
 function getFileCategory(ext: string): 'image' | 'document' | 'code' | null {
@@ -94,6 +100,7 @@ export function InputZone({
   const [pendingAttachments, setPendingAttachments] = useState<AttachmentItem[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [dragCounter, setDragCounter] = useState(0)
+  const [droppedFileContexts, setDroppedFileContexts] = useState<Map<string, { content: string; language: string; name: string }>>(new Map())
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // ── Stores ───────────────────────────────────────────────
@@ -192,7 +199,8 @@ export function InputZone({
   // ── Derived state ────────────────────────────────────────
   const isBusy = isStreaming || isGeneratingImage
   const hasAttachments = pendingAttachments.length > 0
-  const canSend = (content.trim().length > 0 || hasAttachments) && !isBusy && !!selectedModelId && !!selectedProviderId
+  const hasDroppedFiles = droppedFileContexts.size > 0
+  const canSend = (content.trim().length > 0 || hasAttachments || hasDroppedFiles) && !isBusy && !!selectedModelId && !!selectedProviderId
   const isRoleLocked = conversationMessages.length > 0
 
   // ── Auto-grow textarea ───────────────────────────────────
@@ -313,6 +321,15 @@ export function InputZone({
     })
   }, [])
 
+  // ── Remove dropped file context ────────────────────────────
+  const handleRemoveDroppedFile = useCallback((filePath: string) => {
+    setDroppedFileContexts((prev) => {
+      const next = new Map(prev)
+      next.delete(filePath)
+      return next
+    })
+  }, [])
+
   // ── Paperclip click → native file dialog via main process ──
   const handlePaperclipClick = useCallback(async () => {
     try {
@@ -353,19 +370,60 @@ export function InputZone({
   }, [])
 
   const handleDrop = useCallback(
-    (e: React.DragEvent) => {
+    async (e: React.DragEvent) => {
       e.preventDefault()
       e.stopPropagation()
       setIsDragging(false)
       setDragCounter(0)
       if (isImageMode) return
 
-      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-        addBrowserFiles(e.dataTransfer.files)
-        e.dataTransfer.clearData()
+      if (!e.dataTransfer.files || e.dataTransfer.files.length === 0) return
+
+      const files = Array.from(e.dataTransfer.files)
+      const imageFiles: File[] = []
+
+      // Process each dropped file
+      for (const file of files) {
+        const name = file.name
+        if (name.startsWith('.')) continue
+
+        const ext = name.includes('.') ? '.' + name.split('.').pop()!.toLowerCase() : ''
+
+        // Text/code files → read as context via IPC (like workspace files)
+        if (TEXT_CONTEXT_EXTENSIONS.has(ext)) {
+          try {
+            const filePath = window.api.getFilePath(file)
+            if (!filePath) continue
+
+            // Skip if already attached
+            if (droppedFileContexts.has(filePath)) continue
+
+            const result = await window.api.fileReadText(filePath)
+            setDroppedFileContexts((prev) => {
+              const next = new Map(prev)
+              next.set(result.path, { content: result.content, language: result.language, name: result.name })
+              return next
+            })
+          } catch (err) {
+            console.warn(`[InputZone] Impossible de lire le fichier texte : ${name}`, err)
+          }
+          continue
+        }
+
+        // Images and other binary attachments → existing flow
+        if (ALL_ALLOWED.has(ext)) {
+          imageFiles.push(file)
+        }
       }
+
+      // Process non-text files via existing addBrowserFiles
+      if (imageFiles.length > 0) {
+        addBrowserFiles(imageFiles)
+      }
+
+      e.dataTransfer.clearData()
     },
-    [addBrowserFiles, isImageMode]
+    [addBrowserFiles, isImageMode, droppedFileContexts]
   )
 
   // ── Cmd+V paste image from clipboard ────────────────────
@@ -508,7 +566,7 @@ export function InputZone({
   // ── Envoi du message texte ─────────────────────────────
   const handleSendText = useCallback(async () => {
     const trimmed = content.trim()
-    if (!trimmed && !hasAttachments) return
+    if (!trimmed && !hasAttachments && !hasDroppedFiles) return
     if (!selectedModelId || !selectedProviderId) return
     if (isStreaming) return
 
@@ -540,7 +598,7 @@ export function InputZone({
     const userContentData = Object.keys(baseContentData).length > 0 ? baseContentData : undefined
 
     // Ajouter le message user au store local (optimistic update)
-    const messageContent = resolvedContent || (hasAttachments ? `[${pendingAttachments.length} fichier(s) joint(s)]` : '')
+    const messageContent = resolvedContent || (hasAttachments ? `[${pendingAttachments.length} fichier(s) joint(s)]` : hasDroppedFiles ? `[${droppedFileContexts.size} fichier(s) depose(s)]` : '')
     const userMessage = {
       id: crypto.randomUUID(),
       conversationId,
@@ -594,6 +652,16 @@ export function InputZone({
       }
     }
 
+    // From dropped files (drag & drop from Finder)
+    if (droppedFileContexts.size > 0) {
+      if (!fileContexts) fileContexts = []
+      for (const [filePath, ctx] of droppedFileContexts) {
+        if (loadedPaths.has(filePath)) continue
+        fileContexts.push({ path: filePath, content: ctx.content, language: ctx.language })
+        loadedPaths.add(filePath)
+      }
+    }
+
     // Envoyer via IPC
     try {
       // Check if workspace is active for tool-based file access
@@ -627,6 +695,9 @@ export function InputZone({
     if (mentionedFiles.size > 0) {
       setMentionedFiles(new Set())
     }
+    if (droppedFileContexts.size > 0) {
+      setDroppedFileContexts(new Map())
+    }
 
     // Persist role on conversation after first message
     if (activeRoleId && conversationMessages.length === 0) {
@@ -641,6 +712,7 @@ export function InputZone({
   }, [
     content,
     hasAttachments,
+    hasDroppedFiles,
     pendingAttachments.length,
     selectedModelId,
     selectedProviderId,
@@ -662,7 +734,8 @@ export function InputZone({
     conversationMessages.length,
     onMessageSent,
     resolveSlashCommand,
-    mentionedFiles
+    mentionedFiles,
+    droppedFileContexts
   ])
 
   // ── Dispatch send ──────────────────────────────────────
@@ -894,6 +967,19 @@ export function InputZone({
                   key={path}
                   path={path}
                   onRemove={() => detachWorkspaceFile(path)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Dropped file references (drag & drop from Finder) */}
+          {hasDroppedFiles && (
+            <div className="flex flex-wrap gap-1.5 px-3 pt-2">
+              {Array.from(droppedFileContexts.entries()).map(([filePath, ctx]) => (
+                <FileReference
+                  key={filePath}
+                  path={ctx.name}
+                  onRemove={() => handleRemoveDroppedFile(filePath)}
                 />
               ))}
             </div>
