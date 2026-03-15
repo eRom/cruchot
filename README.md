@@ -96,6 +96,8 @@ src/
 - Streaming temps reel, historique illimite avec recherche full-text (FTS5)
 - Mode Thinking/Reasoning (Anthropic, OpenAI, Google, xAI, DeepSeek)
 - Annulation de stream en cours
+- **Conversations favorites** : pin/star pour garder les conversations importantes en haut de la sidebar
+- **Prompt Optimizer** : amelioration automatique du prompt via LLM avant envoi (one-shot)
 
 ### Generation d'images
 - 3 modeles : Gemini Flash, Gemini Pro, GPT Image
@@ -107,6 +109,7 @@ src/
 - 4 outils IA : bash (terminal sandbox), readFile, writeFile, listFiles
 - Detection de changements en temps reel (Chokidar)
 - `@mention` de fichiers inline dans le textarea (autocomplete + overlay cyan)
+- **Drag & drop de fichiers** depuis le Finder directement dans la zone de saisie (texte, code, documents)
 - Auto-injection des fichiers de contexte (CLAUDE.md, README.md, etc.)
 
 ### Referentiels RAG Custom (Bibliothèques de connaissances)
