@@ -4,7 +4,7 @@
 
 <h1 align="center">Cruchot</h1>
 
-> Tous vos LLMs, une seule interface. **Open source**, **gratuit** et **100% locale**.
+> Tous vos LLMs, une seule interface. **Open source**, **gratuit** et **App 100% locale**.
 
 App desktop locale de chat multi-LLM construite avec Electron. 11 providers, generation d'images, RAG custom, memoire semantique, workspace co-work, integration Git, controle a distance, et bien plus. Zero serveur backend, donnees 100% locales.
 
@@ -16,7 +16,7 @@ App desktop locale de chat multi-LLM construite avec Electron. 11 providers, gen
 | Frontend | React 19 + TypeScript 5.7 + Tailwind CSS 4 + shadcn/ui |
 | LLM | Vercel AI SDK 6 (`ai@^6`) |
 | Database | SQLite (better-sqlite3) + Drizzle ORM + Qdrant (embedded) |
-| Embeddings | `@huggingface/transformers` (ONNX) + Google Gemini |
+| Embeddings | `@huggingface/transformers` (ONNX) + Google Gemini 2 |
 | State | Zustand |
 | Build | electron-vite + electron-builder |
 
