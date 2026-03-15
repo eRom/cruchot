@@ -76,7 +76,12 @@ function getAllowedDirs(): string[] {
 }
 
 function isPathAllowed(filePath: string): boolean {
-  const resolved = path.resolve(filePath)
+  let resolved: string
+  try {
+    resolved = fs.realpathSync(filePath)
+  } catch {
+    resolved = path.resolve(filePath)
+  }
   return getAllowedDirs().some((dir) => resolved.startsWith(dir) || resolved === dir.slice(0, -1))
 }
 

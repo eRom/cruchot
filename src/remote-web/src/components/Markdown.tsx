@@ -1,9 +1,11 @@
+import DOMPurify from 'dompurify'
+
 interface MarkdownProps {
   content: string
 }
 
 export function Markdown({ content }: MarkdownProps) {
-  const html = renderMarkdown(content)
+  const html = DOMPurify.sanitize(renderMarkdown(content))
   return (
     <div
       className="text-sm leading-relaxed prose-msg max-w-none"

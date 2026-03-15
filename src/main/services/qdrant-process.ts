@@ -42,9 +42,10 @@ function createConfigFile(storagePath: string): string {
   fs.mkdirSync(configDir, { recursive: true })
 
   const configPath = path.join(configDir, 'config.yaml')
+  const escapedPath = storagePath.replace(/"/g, '\\"')
   const configContent = `
 storage:
-  storage_path: ${storagePath}
+  storage_path: "${escapedPath}"
 
 service:
   host: 127.0.0.1

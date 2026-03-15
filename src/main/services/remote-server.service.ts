@@ -191,8 +191,8 @@ class RemoteServerService extends EventEmitter {
   }
 
   async stop(): Promise<void> {
-    // Notify all clients
-    this.broadcastToClients({ type: 'session-expired', reason: 'Server stopped' })
+    // Notify authenticated clients only
+    this.broadcastToAuthenticatedClients({ type: 'session-expired', reason: 'Server stopped' })
 
     // Close all client connections
     for (const [, client] of this.clients) {
@@ -674,7 +674,7 @@ class RemoteServerService extends EventEmitter {
 
   // ── Broadcasting ────────────────────────────────────────
 
-  broadcastToClients(data: Record<string, unknown>): void {
+  private broadcastToClients(data: Record<string, unknown>): void {
     const json = JSON.stringify(data)
     for (const [, client] of this.clients) {
       if (client.ws.readyState === 1) { // OPEN
@@ -760,7 +760,9 @@ class RemoteServerService extends EventEmitter {
     if (!session || !session.wsSessionToken) return false
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
-    return tokenHash === session.wsSessionToken
+    const storedHash = session.wsSessionToken
+    if (tokenHash.length !== storedHash.length) return false
+    return crypto.timingSafeEqual(Buffer.from(tokenHash), Buffer.from(storedHash))
   }
 
   private computeFingerprint(ip: string, userAgent: string): string {

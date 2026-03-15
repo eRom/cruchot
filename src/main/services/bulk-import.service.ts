@@ -50,7 +50,7 @@ export function decryptPayload(encrypted: Buffer, token: Buffer): ExportPayload 
   const authTag = encrypted.subarray(12, 28)
   const ciphertext = encrypted.subarray(28)
 
-  const decipher = crypto.createDecipheriv('aes-256-gcm', token, iv)
+  const decipher = crypto.createDecipheriv('aes-256-gcm', token, iv, { authTagLength: 16 })
   decipher.setAuthTag(authTag)
 
   let decrypted: Buffer

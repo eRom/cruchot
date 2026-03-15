@@ -11,7 +11,6 @@ export function DataSettings() {
 
   // Import state machine
   const [importState, setImportState] = useState<'idle' | 'needs-token' | 'importing'>('idle')
-  const [pendingFilePath, setPendingFilePath] = useState('')
   const [tokenInput, setTokenInput] = useState('')
 
   // ── Token ────────────────────────────────────────────
@@ -43,8 +42,7 @@ export function DataSettings() {
       if (result.imported) {
         alert(`Import reussi : ${result.projectsImported} projets, ${result.conversationsImported} conversations, ${result.messagesImported} messages`)
         window.location.reload()
-      } else if (result.needsToken && result.filePath) {
-        setPendingFilePath(result.filePath)
+      } else if (result.needsToken) {
         setImportState('needs-token')
       } else {
         setImportState('idle')
@@ -60,7 +58,6 @@ export function DataSettings() {
     setImportState('importing')
     try {
       const result = await window.api.importBulkWithToken({
-        filePath: pendingFilePath,
         tokenHex: tokenInput
       })
       if (result.imported) {
@@ -210,7 +207,6 @@ export function DataSettings() {
                   onClick={() => {
                     setImportState('idle')
                     setTokenInput('')
-                    setPendingFilePath('')
                   }}
                 >
                   Annuler

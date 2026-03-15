@@ -118,8 +118,7 @@ function handleServerMessage(message: ServerMessage, dispatch: React.Dispatch<Ap
         title: message.conversationTitle,
         conversationId: message.conversationId
       })
-      // Save token to sessionStorage
-      sessionStorage.setItem('ws-session-token', message.sessionToken)
+      // Token stored in React state only (not sessionStorage — XSS-exfiltrable)
       break
 
     case 'pair-failed':
@@ -184,7 +183,6 @@ function handleServerMessage(message: ServerMessage, dispatch: React.Dispatch<Ap
 
     case 'session-expired':
       dispatch({ type: 'SESSION_EXPIRED' })
-      sessionStorage.removeItem('ws-session-token')
       break
 
     case 'pong':
