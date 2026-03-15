@@ -72,7 +72,9 @@ function CloudProviders() {
   const providers = useProvidersStore((s) => s.providers)
   const updateProviderStatus = useProvidersStore((s) => s.updateProviderStatus)
 
-  const cloudProviders = providers.filter((p) => p.requiresApiKey)
+  const cloudProviders = providers
+    .filter((p) => p.requiresApiKey)
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   return (
     <div className="space-y-3">
@@ -227,7 +229,7 @@ function OpenRouterModelsManager() {
 
   const loadModels = useCallback(async () => {
     const list = await window.api.getCustomModels('openrouter')
-    setModels(list)
+    setModels(list.sort((a, b) => a.label.localeCompare(b.label)))
   }, [])
 
   useEffect(() => {
