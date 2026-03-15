@@ -80,7 +80,7 @@ dmg:
 publish:
   provider: github
   owner: eRom
-  repo: app-desktop-llmx
+  repo: cruchot
 
 # --- Fichiers supplementaires ---
 extraResources:
