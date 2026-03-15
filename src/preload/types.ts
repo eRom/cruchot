@@ -594,6 +594,17 @@ export interface RemoteServerPairingResult {
   qrDataUrl: string | null
 }
 
+// ── Prompt Optimizer ─────────────────────────────────────────
+export interface OptimizePromptPayload {
+  text: string
+  modelId: string       // "providerId::modelId"
+}
+export interface OptimizePromptResult {
+  optimizedText: string
+  inputTokens: number
+  outputTokens: number
+}
+
 // ── Summary ─────────────────────────────────────────────────
 export interface SummarizePayload {
   conversationId: string
@@ -906,6 +917,9 @@ export interface ElectronAPI {
   offRemoteServerClientConnected: () => void
   onRemoteServerClientDisconnected: (callback: (data: { id: string }) => void) => void
   offRemoteServerClientDisconnected: () => void
+
+  // Prompt Optimizer
+  optimizePrompt: (payload: OptimizePromptPayload) => Promise<OptimizePromptResult>
 
   // Summary
   summarizeConversation: (payload: SummarizePayload) => Promise<SummarizeResult>

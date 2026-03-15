@@ -32,6 +32,7 @@ import { registerSlashCommandsIpc } from './slash-commands.ipc'
 import { registerQdrantMemoryIpc } from './qdrant-memory.ipc'
 import { registerCustomModelsIpc } from './custom-models.ipc'
 import { registerLibraryIpc } from './library.ipc'
+import { registerPromptOptimizerIpc } from './prompt-optimizer.ipc'
 
 /**
  * Registre central des IPC handlers.
@@ -127,6 +128,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Libraries (RAG referentiels) ───────────────
   registerLibraryIpc()
+
+  // ── Prompt Optimizer ──────────────────────────
+  registerPromptOptimizerIpc()
 
   // ── Settings ────────────────────────────────────────
   const ALLOWED_SETTING_KEYS = new Set([
