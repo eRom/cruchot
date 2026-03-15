@@ -72,6 +72,7 @@ export const conversations = sqliteTable('conversations', {
   modelId: text('model_id'),
   roleId: text('role_id').references(() => roles.id),
   activeLibraryId: text('active_library_id'),
+  isFavorite: integer('is_favorite', { mode: 'boolean' }).default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
