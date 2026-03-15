@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-14 (S35)
+> Derniere mise a jour : 2026-03-15 (S36)
 
 ## Conventions de nommage
 
@@ -34,7 +34,7 @@
 
 ## Workspace Co-Work + Tools
 
-- 4 outils AI SDK : bash (env minimal, blocklist ~36), readFile (whitelist ~80 ext), writeFile, listFiles
+- 4 outils AI SDK : bash (env minimal, blocklist ~39 + newline guard), readFile (whitelist ~80 ext), writeFile, listFiles
 - `buildWorkspaceContextBlock()` auto-lit CLAUDE.md, README.md etc. → system prompt
 - Fichiers attaches en system prompt (`<workspace-files>` XML)
 - ToolCallBlock/ReasoningBlock : auto-collapse quand stream finit (useRef + useEffect)
@@ -106,3 +106,19 @@
 - externalizeDepsPlugin : `exclude` liste les deps JS pures a bundler
 - Modules natifs/ESM restent external : better-sqlite3, chokidar, @ai-sdk/mcp, electron-updater, trash, @huggingface/transformers, onnxruntime-node, onnxruntime-web, onnxruntime-common
 - Build universal macOS, auto-updater check 4h, `app.isPackaged` guard
+- `forceCodeSigning: true` — builds echouent sans certificat (pas de binaires non signes)
+- `sourcemap: false` partout (main, preload, renderer, remote-web, tsconfig)
+
+## Securite — Patterns (S36)
+
+- **Bash blocklist** : newlines bloquees en premier (`/[\r\n]/`), puis ~39 regex patterns (heredoc, alias, backtick, $(), sudo, rm, exfiltration, etc.)
+- **Path validation** : `realpathSync()` avant `isPathAllowed()` ou `validatePath()` — resout symlinks
+- **Library addSources** : `validateSourcePath()` avec BLOCKED_SOURCE_ROOTS (15 chemins systeme) + SENSITIVE_FILE_PATTERNS (14 patterns)
+- **Filename sanitization** : `path.basename(filename) !== filename` bloque les separateurs de chemin
+- **DANGEROUS_EXTENSIONS** : 23 extensions (.app, .exe, .pkg, .dmg, .jar, .ps1, .vbs, etc.)
+- **Workspace deleteFile** : `isIgnored()` bloque `.git/`, `node_modules/`, etc.
+- **CF tunnel** : token via env var `TUNNEL_TOKEN` (pas CLI arg, invisible dans `ps aux`)
+- **Remote message length** : `text.length > 100_000` pour WebSocket (coherent avec desktop Zod)
+- **Bulk import** : `statSync().size > 200MB` avant `readFileSync()`
+- **will-navigate** : bloque navigation hors `file://` et dev URL
+- **Remote-web CSP** : `connect-src` restreint au reseau local (localhost, 127.0.0.1, 192.168.*, 10.*)

@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-14 (S35)
+> Derniere mise a jour : 2026-03-15 (S36)
 
 ## Main process
 
@@ -57,7 +57,10 @@
 | `src/main/llm/memory-prompt.ts` | Injection `<semantic-memory>` XML dans system prompt |
 | `src/main/ipc/qdrant-memory.ipc.ts` | IPC handlers memoire semantique (Zod) |
 | `src/main/db/queries/vector-sync.ts` | CRUD table `vector_sync_state` (sync SQLite ↔ Qdrant) |
-| `src/main/window.ts` | BrowserWindow config, CSP, shell.openExternal |
+| `src/main/window.ts` | BrowserWindow config, CSP, shell.openExternal, will-navigate guard |
+| `src/main/services/instance-token.service.ts` | Token instance 32 bytes safeStorage pour export/import .mlx |
+| `src/main/services/bulk-export.service.ts` | Export bulk AES-256-GCM → fichier .mlx |
+| `src/main/services/bulk-import.service.ts` | Import .mlx, decrypt, Zod validation, size check 200MB |
 
 ## Preload
 
@@ -117,10 +120,11 @@
 | Fichier | Role |
 |---------|------|
 | `electron.vite.config.ts` | Build main + preload + renderer, externalizeDepsPlugin |
-| `electron-builder.yml` | Packaging, targets, publish GitHub |
+| `electron-builder.yml` | Packaging, targets, publish GitHub, forceCodeSigning |
 | `.npmrc` | `legacy-peer-deps=true` (fix peer dep conflict) |
 | `.github/workflows/release.yml` | CI/CD release (tag v*) |
-| `.github/workflows/ci.yml` | CI typecheck + audit + build |
+| `.github/workflows/ci.yml` | CI typecheck renderer+main + audit + lint + build |
+| `security-audit-s36.md` | Rapport audit secu S36 — 31 vulns, 20 fixes, score 97/100 |
 | `scripts/prepare-models.sh` | Copie modele ONNX dans vendor/models/ pour production bundling |
 
 ## Remote Web (SPA standalone)

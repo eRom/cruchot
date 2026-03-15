@@ -1,5 +1,5 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-14 (S35)
+> Derniere mise a jour : 2026-03-15 (S36)
 
 ## Vue d'ensemble
 
@@ -83,23 +83,29 @@ InputZone → IPC "chat:send" → Main: streamText() → forward chunks IPC → 
 - Settings UI via Zustand persist (localStorage)
 - Images/attachments sur filesystem, servis via `local-image://` protocol
 
-## Securite (resume)
+## Securite (resume — score 97/100 apres audit S36)
 
-- Renderer : sandbox true, CSP stricte, DOMPurify sur Shiki + Mermaid
-- IPC : Zod validation partout, settings whitelist `ALLOWED_SETTING_KEYS`
-- Files : `isPathAllowed()`, SENSITIVE_PATTERNS, extension blocklist
-- Bash tool : env minimal, blocklist ~36 patterns, timeout 30s
+- Renderer : sandbox true, CSP stricte, DOMPurify sur Shiki + Mermaid, `will-navigate` guard
+- IPC : Zod validation partout (y compris prompts:search, workspace:getTree), settings whitelist `ALLOWED_SETTING_KEYS`
+- Files : `isPathAllowed()` + `realpathSync()`, SENSITIVE_PATTERNS, extension blocklist (23 ext dangereuses), filename path traversal check
+- Bash tool : env minimal, blocklist ~39 patterns + newline guard + heredoc/alias/export, timeout 30s
 - MCP : env minimal stdio, env vars chiffrees, headers masques du renderer
 - Git : `GIT_BASE_ENV` Readonly, `getEnv()` par appel, `validateGitPaths()`
-- Remote : triple verrou Telegram, `validateSessionToken()` sur tous handlers WS, ecoute 127.0.0.1
+- Remote : triple verrou Telegram, `validateSessionToken()` sur tous handlers WS, ecoute 127.0.0.1, CF token via env var (pas CLI), message length validation 100K
+- Remote-web CSP : `connect-src` restreint au reseau local (localhost, 127.0.0.1, 192.168.*, 10.*)
+- Workspace : `deleteFile` bloque `.git/`/`node_modules/` via `isIgnored()`, root path resolu (symlinks)
+- Library RAG : Zod validation IPC, `validateSourcePath()` (BLOCKED_SOURCE_ROOTS + SENSITIVE_FILE_PATTERNS + realpathSync), fichiers copies dans userData, XML sanitise, collections Qdrant isolees, cleanup FK cascade
+- Sourcemaps : desactives partout (main, preload, renderer, remote-web, tsconfig)
 - Factory reset : double confirmation (renderer + dialog natif main)
-- Library RAG : Zod validation IPC, fichiers copies dans userData, XML sanitise, collections Qdrant isolees, cleanup FK cascade
+- Bulk import : size check 200MB avant readFileSync
+- Distribution : `forceCodeSigning: true`, macOS hardenedRuntime + notarize
 
 ## Distribution
 
 - electron-builder v26.8.1, targets macOS DMG + ZIP (universal)
 - Auto-updater electron-updater, publish GitHub Releases (`eRom/app-desktop-llmx`)
-- CI/CD : `release.yml` (tag v*), `ci.yml` (typecheck + audit + build)
+- CI/CD : `release.yml` (tag v*), `ci.yml` (typecheck renderer+main + audit + lint + build)
+- `forceCodeSigning: true` — builds echouent sans certificat
 - Pas encore de certificat Apple Developer ID — ad-hoc pour dev local
 
 ## GitHub

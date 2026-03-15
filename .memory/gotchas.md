@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-14 (S35)
+> Derniere mise a jour : 2026-03-15 (S36)
 
 ## AI SDK v6 — Breaking changes
 
@@ -83,12 +83,18 @@
 - **Dynamic `require()` dans electron-vite** : les `require('../relative/path')` echouent car tout est compile en un seul fichier bundle (les chemins relatifs n'existent plus). Fix : utiliser des imports statiques en haut du fichier
 - **mammoth DOCX** : `convertToMarkdown()` pour les referentiels (preserve headings), `extractRawText()` pour les attachments chat
 
-## Securite — points a surveiller
+## Securite — points a surveiller (audit S36 : score 97/100)
 
-- **pdf-parse v1.1.1** : non maintenu. Migrer vers pdfjs-dist eventuel
+- **pdf-parse v1.1.1** : non maintenu. Migrer vers pdfjs-dist eventuel (risque accepte, mitige par import direct)
 - **MCP headers HTTP** : en clair en DB (masques du renderer mais pas chiffres au repos)
-- **`currentAbortController` global** : fragile en multi-fenetres
+- **MCP stdio** : execute un binaire arbitraire configure par l'utilisateur — by design, risque accepte (mono-user)
+- **`currentAbortController` global** : fragile en multi-fenetres, race condition theorique (mono-user, risque accepte)
 - **`removeAllListeners(channel)`** : trop large, risque en multi-fenetre
+- **Settings localStorage** : persist Zustand duplique les settings SQLite — pas de secrets, UI prefs seulement (risque accepte)
+- **`legacy-peer-deps=true`** dans `.npmrc` : desactive detection conflits peer deps — isole a @perplexity-ai/ai-sdk
+- **`forceCodeSigning: true`** : les builds echouent sans certificat — voulu, mais attention en dev local (ad-hoc signing necessaire)
+- **Semgrep faux positif** : `react-insecure-request` sur `qdrant-process.ts:106` (HTTP vers localhost Qdrant) — toujours present, ignorer
+- **Typecheck main process** : erreurs pre-existantes dans chat.ipc.ts, git.ipc.ts, mcp.ipc.ts (types AI SDK v6) — `continue-on-error: true` en CI
 
 ## Restant a faire
 
