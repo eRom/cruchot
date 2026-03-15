@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-15 (S36)
+> Derniere mise a jour : 2026-03-15 (S37)
 
 ## AI SDK v6 — Breaking changes
 
@@ -58,6 +58,7 @@
 - **chunkText boucle infinie** : si `start = end - CHUNK_OVERLAP` recule, boucle infinie → `Math.max(nextStart, start + 1)` + `if (end >= text.length) break`
 - **NODE_ENV_ELECTRON_VITE** : electron-vite utilise cette var (pas `NODE_ENV`) pour signaler prod → `isProd` doit checker les deux
 - **drop_console terser** : si applique sans condition `isProd`, supprime TOUS les console.* meme en dev → conditionner sur `isProd`
+- **esbuild drop console** : `esbuild: { drop: ['console'] }` va au top-level de la section main (pas sous `build`), conditionne sur `isProd`
 
 ## Distribution
 
@@ -95,6 +96,18 @@
 - **`forceCodeSigning: true`** : les builds echouent sans certificat — voulu, mais attention en dev local (ad-hoc signing necessaire)
 - **Semgrep faux positif** : `react-insecure-request` sur `qdrant-process.ts:106` (HTTP vers localhost Qdrant) — toujours present, ignorer
 - **Typecheck main process** : erreurs pre-existantes dans chat.ipc.ts, git.ipc.ts, mcp.ipc.ts (types AI SDK v6) — `continue-on-error: true` en CI
+
+## Performance — points a surveiller (audit S37)
+
+- **Streaming token-by-token** : chaque token = 1 IPC + 2 Zustand map() + 1 re-render. Batching 50ms serait un gros gain (non implemente)
+- **Shiki re-highlight pendant streaming** : `useEffect([code, language])` fire par token pour chaque code block visible. `codeToHtml()` execute puis discard si le code change entre-temps
+- **Mermaid 800KB dans le bundle ChatView** : import statique dans MermaidBlock, pourrait etre dynamic import()
+- **ONNX model 23MB en memoire** : charge une fois, jamais decharge. Acceptable mono-user mais `dispose()` serait propre
+- **MCP `getToolsForChat()` sans timeout** : appel async vers transport stdio/http, peut bloquer le chat si un serveur MCP est lent
+- **messages store flat array** : pas de pagination, pas d'eviction. Conversations longues (1000+ messages avec tool-use) = plusieurs MB de strings en heap
+- **`removeAllListeners(channel)`** dans useStreaming : trop large, supprime TOUS les listeners du canal (risque si mount multiple)
+- **manualChunks function-based** : les string-array `manualChunks` echouent avec `Could not resolve entry module` pour les packages Radix/Vite → utiliser la forme fonction `manualChunks(id)`
+- **Drizzle `.references()` ne cree PAS d'index** : SQLite n'enforce pas les FK indexes. Toujours ajouter `CREATE INDEX` manuellement dans migrate.ts
 
 ## Restant a faire
 

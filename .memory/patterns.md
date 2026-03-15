@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-15 (S36)
+> Derniere mise a jour : 2026-03-15 (S37)
 
 ## Conventions de nommage
 
@@ -100,6 +100,18 @@
 - Footer message : actions hover a gauche, info a droite
 - ConversationList : `overflow-y-auto` (PAS Radix ScrollArea)
 - Title bar macOS : `hiddenInset`, traffic lights `{x:15, y:10}`, drag zones 38px
+
+## Performance (S37)
+
+- **React.lazy + Suspense** : 11 vues non-chat lazy-loaded dans App.tsx (seul ChatView est eager)
+- **React.memo** : MessageItem wrappe pour eviter re-renders pendant streaming
+- **useMemo** : `conversationMessages` dans ChatView (evite .filter() sur chaque token)
+- **manualChunks** : vendor splitting par fonction (id) dans electron.vite.config.ts — chunks react, icons, charts, markdown, radix
+- **rAF scroll** : `requestAnimationFrame` + `behavior: 'auto'` pendant streaming (pas `smooth` qui empile les animations)
+- **Fire-and-forget settings** : hydration DB dans useInitApp non-bloquante (localStorage fournit les valeurs au t=0)
+- **Deferred init** : `ensureInstanceToken` + `seedBuiltinCommands` apres `createMainWindow()`
+- **esbuild** : remplace Terser pour le main process (build 57% plus rapide)
+- **15 index SQLite** : `CREATE INDEX IF NOT EXISTS` dans migrate.ts sur toutes les FK frequemment requetees
 
 ## Distribution
 

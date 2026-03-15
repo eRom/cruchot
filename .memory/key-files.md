@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-15 (S36)
+> Derniere mise a jour : 2026-03-15 (S37)
 
 ## Main process
 
@@ -73,7 +73,7 @@
 
 | Fichier | Role |
 |---------|------|
-| `src/renderer/src/App.tsx` | Routing ViewMode (12 vues dont libraries), shortcuts, onboarding |
+| `src/renderer/src/App.tsx` | Routing ViewMode (12 vues), 11 vues lazy-loaded (React.lazy + Suspense), shortcuts, onboarding |
 | `components/chat/ChatView.tsx` | Message list + WorkspacePanel |
 | `components/chat/InputZone.tsx` | Saisie, pills, FileReference, SlashCommandPicker, MentionOverlay, LibraryPicker |
 | `components/chat/LibraryPicker.tsx` | Select simple referentiel sticky — badge actif + dropdown + detachement |
@@ -81,7 +81,7 @@
 | `components/chat/MentionOverlay.tsx` | Overlay transparent, @mentions cyan |
 | `components/chat/FileMentionPopover.tsx` | Autocomplete @mention fichiers |
 | `components/chat/SlashCommandPicker.tsx` | Autocomplete slash commands |
-| `components/chat/MessageItem.tsx` | Markdown, images, reasoning, tools (dont librarySearch), SourceCitation, footer |
+| `components/chat/MessageItem.tsx` | Markdown, images, reasoning, tools (dont librarySearch), SourceCitation, footer, **React.memo** (S37) |
 | `components/chat/ModelSelector.tsx` | Liste plate, filtre favoris |
 | `components/chat/MarkdownRenderer.tsx` | react-markdown + Shiki + KaTeX + Mermaid |
 | `components/chat/ContextWindowIndicator.tsx` | Barre tokens + RemoteBadge + WebServerBadge + SummaryButton |
@@ -119,12 +119,13 @@
 
 | Fichier | Role |
 |---------|------|
-| `electron.vite.config.ts` | Build main + preload + renderer, externalizeDepsPlugin |
+| `electron.vite.config.ts` | Build main (esbuild) + preload + renderer (manualChunks vendor splitting), externalizeDepsPlugin |
 | `electron-builder.yml` | Packaging, targets, publish GitHub, forceCodeSigning |
 | `.npmrc` | `legacy-peer-deps=true` (fix peer dep conflict) |
 | `.github/workflows/release.yml` | CI/CD release (tag v*) |
 | `.github/workflows/ci.yml` | CI typecheck renderer+main + audit + lint + build |
 | `security-audit-s36.md` | Rapport audit secu S36 — 31 vulns, 20 fixes, score 97/100 |
+| `prompt-perf.md` | Prompt audit de performance 6 axes (cold-start, bundle, TTFMP, heap, runtime, build) |
 | `scripts/prepare-models.sh` | Copie modele ONNX dans vendor/models/ pour production bundling |
 
 ## Remote Web (SPA standalone)

@@ -1,5 +1,5 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-15 (S36)
+> Derniere mise a jour : 2026-03-15 (S37)
 
 ## Vue d'ensemble
 
@@ -43,7 +43,7 @@ src/
 
 ## Navigation (ViewMode)
 
-`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (10 tabs), images, roles, tasks, mcp, memory, commands, statistics, libraries
+`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (10 tabs), images, roles, tasks, mcp, memory, commands, statistics, libraries. **11 vues non-chat lazy-loaded via React.lazy() + Suspense** (S37)
 
 ## Flux principal — Chat
 
@@ -76,7 +76,7 @@ InputZone → IPC "chat:send" → Main: streamText() → forward chunks IPC → 
 
 ## Donnees
 
-- SQLite WAL + FTS5, 22 tables (+ `libraries`, `library_sources`, `library_chunks` S35)
+- SQLite WAL + FTS5, 22 tables (+ `libraries`, `library_sources`, `library_chunks` S35), **15 index de performance** (S37)
 - Qdrant vector DB embedded (stockage `userData/qdrant-storage/`, config YAML `userData/qdrant-config/`)
 - Collections Qdrant : `conversations_memory` (memoire semantique) + `library_{id}` (referentiels RAG)
 - Cles API chiffrees via safeStorage (Keychain macOS)
@@ -105,6 +105,7 @@ InputZone → IPC "chat:send" → Main: streamText() → forward chunks IPC → 
 - electron-builder v26.8.1, targets macOS DMG + ZIP (universal)
 - Auto-updater electron-updater, publish GitHub Releases (`eRom/app-desktop-llmx`)
 - CI/CD : `release.yml` (tag v*), `ci.yml` (typecheck renderer+main + audit + lint + build)
+- Build : esbuild (main) + esbuild (renderer, defaut Vite), manualChunks vendor splitting (S37)
 - `forceCodeSigning: true` — builds echouent sans certificat
 - Pas encore de certificat Apple Developer ID — ad-hoc pour dev local
 
