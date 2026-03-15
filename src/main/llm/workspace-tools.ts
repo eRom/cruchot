@@ -60,6 +60,9 @@ const BLOCKED_PATTERNS = [
   /(^|[;&|]\s*)\.\s+\//,                         // . /path at command position (dot-script)
   /\\x[0-9a-fA-F]{2}/,                          // hex escape sequences
   /\$'\\/,                                       // $'...' ANSI-C quoting (escape sequences)
+  /<<\s*['"]?\w/,                                // heredoc (<<EOF, <<'EOF', <<"EOF")
+  /\balias\s+\w+=\S/,                            // alias definition (alias r=rm)
+  /\bexport\s+\w+=.*&&/,                         // export VAR=val && use
 
   // ── Data exfiltration ──────────────────────────────────
   /\bscp\b/,                                     // scp (remote copy)
@@ -163,9 +166,14 @@ const COMMAND_TIMEOUT = 30_000   // 30s
 const MAX_OUTPUT_LENGTH = 50_000 // ~50KB
 
 function isCommandAllowed(command: string): { allowed: boolean; reason?: string } {
+  // Block multi-line commands (newline injection, heredoc bypass)
+  if (/[\r\n]/.test(command)) {
+    return { allowed: false, reason: 'Commande bloquee par la politique de securite' }
+  }
+
   for (const pattern of BLOCKED_PATTERNS) {
     if (pattern.test(command)) {
-      return { allowed: false, reason: `Commande bloquee par la politique de securite` }
+      return { allowed: false, reason: 'Commande bloquee par la politique de securite' }
     }
   }
   return { allowed: true }

@@ -60,7 +60,9 @@ function classifyFile(filePath: string): PickedFile | null {
 // ── Security: path validation ─────────────────────────────
 const DANGEROUS_EXTENSIONS = new Set([
   '.app', '.command', '.sh', '.bat', '.cmd', '.exe', '.msi',
-  '.scpt', '.applescript', '.workflow', '.action'
+  '.scpt', '.applescript', '.workflow', '.action',
+  '.pkg', '.dmg', '.jar', '.com', '.lnk', '.pif',
+  '.vbs', '.vbe', '.wsf', '.wsh', '.ps1', '.psm1'
 ])
 
 function getAllowedDirs(): string[] {
@@ -137,6 +139,12 @@ export function registerFilesIpc(): void {
       const buf = Buffer.from(data.buffer)
       if (buf.byteLength > MAX_SAVE_BUFFER_SIZE) {
         throw new Error(`Fichier trop volumineux (${(buf.byteLength / 1024 / 1024).toFixed(1)} MB > 10 MB)`)
+      }
+
+      // Validate filename — no path separators or traversal
+      const basename = path.basename(data.filename)
+      if (basename !== data.filename || data.filename.includes('..') || data.filename.includes('/') || data.filename.includes('\\')) {
+        throw new Error('Le nom de fichier ne doit pas contenir de separateurs de chemin')
       }
 
       // Validate extension

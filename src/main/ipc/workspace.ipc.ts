@@ -105,7 +105,7 @@ export function registerWorkspaceIpc(): void {
       activeWatcher = null
     }
 
-    activeWorkspace = new WorkspaceService(rootPath)
+    activeWorkspace = new WorkspaceService(resolvedRoot)
 
     // Start file watcher
     const win = BrowserWindow.fromWebContents(event.sender)
@@ -137,11 +137,13 @@ export function registerWorkspaceIpc(): void {
   })
 
   // ── Get file tree ──────────────────────────────────────
-  ipcMain.handle('workspace:getTree', async (_event, relativePath?: string) => {
+  ipcMain.handle('workspace:getTree', async (_event, relativePath?: unknown) => {
     if (!activeWorkspace) throw new Error('No workspace open')
 
-    if (relativePath) {
-      return activeWorkspace.scanDirectory(relativePath)
+    if (relativePath !== undefined && relativePath !== null) {
+      const parsed = z.string().max(1000).safeParse(relativePath)
+      if (!parsed.success) throw new Error('Invalid path')
+      return activeWorkspace.scanDirectory(parsed.data)
     }
     return activeWorkspace.scanTree()
   })

@@ -68,6 +68,16 @@ export function createMainWindow(): BrowserWindow {
     return { action: 'deny' }
   })
 
+  // Prevent navigation away from the app (XSS → full renderer takeover)
+  win.webContents.on('will-navigate', (event, url) => {
+    const devUrl = process.env['ELECTRON_RENDERER_URL'] ?? ''
+    const isLocal = url.startsWith('file://') || (devUrl && url.startsWith(devUrl))
+    if (!isLocal) {
+      event.preventDefault()
+      console.warn('[Security] Blocked navigation to:', url)
+    }
+  })
+
   // Load renderer
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])

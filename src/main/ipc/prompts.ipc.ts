@@ -48,9 +48,10 @@ export function registerPromptsIpc(): void {
     return getPromptsByType(type as 'complet' | 'complement' | 'system')
   })
 
-  ipcMain.handle('prompts:search', async (_event, query: string) => {
-    if (!query) throw new Error('Query required')
-    return searchPrompts(query)
+  ipcMain.handle('prompts:search', async (_event, query: unknown) => {
+    const parsed = z.string().min(1).max(500).safeParse(query)
+    if (!parsed.success) throw new Error('Invalid search query')
+    return searchPrompts(parsed.data)
   })
 
   ipcMain.handle('prompts:create', async (_event, data: unknown) => {

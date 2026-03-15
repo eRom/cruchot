@@ -9,7 +9,7 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "resolveJsonModule": true,
-    "sourceMap": true,
+    "sourceMap": false,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "noEmit": true,

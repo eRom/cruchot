@@ -500,7 +500,7 @@ class RemoteServerService extends EventEmitter {
     }
 
     const text = String(message.text ?? '').trim()
-    if (!text) return
+    if (!text || text.length > 100_000) return
 
     // Touch activity
     if (this.sessionId) {
@@ -709,11 +709,17 @@ class RemoteServerService extends EventEmitter {
 
     try {
       const args = this.cfToken
-        ? ['tunnel', 'run', '--token', this.cfToken]
+        ? ['tunnel', 'run']
         : ['tunnel', '--url', `http://localhost:${this.port}`]
 
+      // Pass token via env var (not CLI arg) to avoid exposure in process list
+      const tunnelEnv: Record<string, string> = { PATH: '/usr/local/bin:/usr/bin:/bin' }
+      if (this.cfToken) {
+        tunnelEnv.TUNNEL_TOKEN = this.cfToken
+      }
+
       this.cfProcess = execFile('cloudflared', args, {
-        env: { PATH: '/usr/local/bin:/usr/bin:/bin' }
+        env: tunnelEnv
       })
 
       this.cfProcess.stderr?.on('data', (data: Buffer) => {

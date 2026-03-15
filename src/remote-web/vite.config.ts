@@ -8,7 +8,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
     outDir: resolve(__dirname, '../../out/remote-web'),
-    emptyOutDir: true
+    emptyOutDir: true,
+    sourcemap: false
   },
   resolve: {
     alias: {

@@ -240,6 +240,9 @@ export class WorkspaceService {
     if (this.isSensitive(relativePath)) {
       throw new Error(`Cannot delete sensitive file: ${relativePath}`)
     }
+    if (this.isIgnored(relativePath)) {
+      throw new Error(`Cannot delete file in ignored directory: ${relativePath}`)
+    }
 
     const absPath = this.validatePath(relativePath)
     if (!fs.existsSync(absPath)) {
