@@ -100,6 +100,15 @@ export function deleteConversation(id: string) {
   db.delete(conversations).where(eq(conversations.id, id)).run()
 }
 
+export function toggleFavorite(id: string, isFavorite: boolean) {
+  const db = getDatabase()
+  db.update(conversations)
+    .set({ isFavorite, updatedAt: new Date() })
+    .where(eq(conversations.id, id))
+    .run()
+  return getConversation(id)
+}
+
 export function deleteAllConversations() {
   const db = getDatabase()
   db.delete(conversations).run()

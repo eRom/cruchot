@@ -6,6 +6,7 @@ export interface Conversation {
   projectId?: string
   modelId?: string
   roleId?: string | null
+  isFavorite?: boolean
   createdAt: Date
   updatedAt: Date
 }

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import { cn } from '@/lib/utils'
+import { Star } from 'lucide-react'
 import { ConversationItem } from './ConversationItem'
 import type { Conversation } from '@/stores/conversations.store'
 
@@ -55,6 +56,7 @@ interface ConversationListProps {
   onSelectConversation: (id: string) => void
   onRenameConversation?: (id: string, title: string) => void
   onDeleteConversation?: (id: string) => void
+  onToggleFavorite?: (id: string, isFavorite: boolean) => void
 }
 
 export function ConversationList({
@@ -63,9 +65,26 @@ export function ConversationList({
   isCollapsed,
   onSelectConversation,
   onRenameConversation,
-  onDeleteConversation
+  onDeleteConversation,
+  onToggleFavorite
 }: ConversationListProps): React.JSX.Element {
-  const grouped = useMemo(() => groupConversations(conversations), [conversations])
+  // Split favorites and non-favorites
+  const { favorites, others } = useMemo(() => {
+    const favs: Conversation[] = []
+    const rest: Conversation[] = []
+    for (const c of conversations) {
+      if (c.isFavorite) {
+        favs.push(c)
+      } else {
+        rest.push(c)
+      }
+    }
+    // Sort favorites by updatedAt desc
+    favs.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    return { favorites: favs, others: rest }
+  }, [conversations])
+
+  const grouped = useMemo(() => groupConversations(others), [others])
 
   if (conversations.length === 0) {
     return (
@@ -82,6 +101,39 @@ export function ConversationList({
   return (
     <div className="flex-1 overflow-y-auto overflow-x-hidden">
       <div className={cn(isCollapsed ? 'px-1.5 py-2' : 'px-2 py-1')}>
+        {/* ── Favorites section ─────────────────────────── */}
+        {favorites.length > 0 && (
+          <div className="mb-1">
+            {!isCollapsed && (
+              <div className="sticky top-0 z-10 bg-sidebar/95 backdrop-blur-sm px-2.5 pb-1 pt-3">
+                <span className="flex items-center gap-1 text-[11px] font-semibold tracking-wide text-amber-500/70 uppercase">
+                  <Star className="size-3 fill-amber-500/70" />
+                  Favoris
+                </span>
+              </div>
+            )}
+            <div className="space-y-0.5">
+              {favorites.map((conv) => (
+                <ConversationItem
+                  key={conv.id}
+                  conversation={conv}
+                  isActive={conv.id === activeConversationId}
+                  isCollapsed={isCollapsed}
+                  onSelect={onSelectConversation}
+                  onRename={onRenameConversation}
+                  onDelete={onDeleteConversation}
+                  onToggleFavorite={onToggleFavorite}
+                />
+              ))}
+            </div>
+            {/* Separator between favorites and the rest */}
+            {others.length > 0 && !isCollapsed && (
+              <div className="mx-2 my-2 border-b border-sidebar-border/40" />
+            )}
+          </div>
+        )}
+
+        {/* ── Regular conversations (grouped by date) ──── */}
         {grouped.map((group) => (
           <div key={group.label} className="mb-1">
             {!isCollapsed && (
@@ -101,6 +153,7 @@ export function ConversationList({
                   onSelect={onSelectConversation}
                   onRename={onRenameConversation}
                   onDelete={onDeleteConversation}
+                  onToggleFavorite={onToggleFavorite}
                 />
               ))}
             </div>
