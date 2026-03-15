@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-15 (S38)
+> Derniere mise a jour : 2026-03-15 (S39)
 
 ## AI SDK v6 — Breaking changes
 
@@ -35,7 +35,7 @@
 - FTS5 : table virtuelle manuelle, WAL checkpoint au demarrage
 - `foreign_keys = ON` via pragma (desactive par defaut)
 - Tables dans `migrate.ts` avec `CREATE TABLE IF NOT EXISTS` (pas migrations Drizzle)
-- Cleanup : ordre FK strict, `library_chunks` → `library_sources` → `libraries`, `slash_commands` avant `projects`
+- Cleanup : ordre FK strict, `arena_matches` avant `messages`, `library_chunks` → `library_sources` → `libraries`, `slash_commands` avant `projects`
 
 ## React 19
 
@@ -116,6 +116,14 @@
 - **Worktrees et localStorage** : lancer l'app depuis un worktree partage le meme userData Electron (meme nom d'app) mais peut reinitialiser le localStorage (Zustand persist), donnant l'impression de perte de donnees alors que la DB SQLite est intacte
 - **ALTER TABLE et Drizzle** : si une migration `ALTER TABLE ADD COLUMN` n'a pas eu le temps de s'executer mais que le schema Drizzle reference deja la colonne, les queries plantent silencieusement. Verifier que la migration est passee en DB.
 
+## Arena Mode (S39)
+
+- **AI SDK v6 `maxTokens` type error** : `streamText()` sans tools rejette `maxTokens` comme propriete inconnue dans le type strict. Fix : spread conditionnel `...(maxTokens ? { maxTokens } : {})` ou cast `any` sur les options (meme pattern que chat.ipc.ts qui s'en sort grace a la presence de `tools` qui relaxe le type)
+- **`BrowserWindow.fromWebContents()` null narrowing** : retourne `BrowserWindow | null`, TypeScript ne narrow pas dans les closures internes (streamSide). Fix : assigner a une nouvelle const apres le guard `if (!win) throw` → `const _win = ...; if (!_win) throw; const win = _win`
+- **providerOptions type** : `buildThinkingProviderOptions()` retourne `Record<string, Record<string, unknown>>` qui n'est pas assignable a `SharedV3ProviderOptions`. Fix : cast via `as Parameters<typeof streamText>[0]['providerOptions']` ou `any`
+- **Import path hooks → preload** : depuis `src/renderer/src/hooks/`, le chemin relatif vers preload est `../../../preload/types` (3 niveaux), PAS `../../../../preload/types` (4 niveaux comme depuis components/chat)
+- **Keychain/safeStorage apres rebuild** : un rebuild complet de l'app peut invalider l'acces Keychain aux cles API chiffrees. Symptome : "API key not configured" pour tous les providers. Fix : re-saisir les cles dans Settings > API Keys. Ce n'est PAS un probleme de code, c'est un probleme de signature app qui change entre builds
+
 ## Restant a faire
 
 - Search bar sidebar, BranchNavigation, Export PDF
@@ -125,6 +133,6 @@
 - Remote Web : branche `feature-remote-web`, a valider visuellement
 - Referentiels RAG : strategie d'embedding custom (spec `feature-custom-rag-embedding-strategy.md`), branche `feature-rag`
 - Conversation branching (fork a partir d'un message)
-- Multi-conversation view (mode Arena — comparer 2+ modeles)
+- Arena : enrichir avec workspace tools/MCP, stats view dediee, leaderboard
 - Voice mode (STT Whisper + TTS existant)
 - "Cruchot mode" (easter egg system prompt Marechal des Logis-Chef)

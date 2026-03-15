@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-15 (S38)
+> Derniere mise a jour : 2026-03-15 (S39)
 
 ## Main process
 
@@ -20,6 +20,7 @@
 | `src/main/ipc/data.ipc.ts` | Cleanup + factory reset, confirmation dialog |
 | `src/main/ipc/files.ipc.ts` | Read/save securises, `isPathAllowed()`, `files:readText` (drag & drop, chemin absolu, whitelist ext, 500KB max) |
 | `src/main/ipc/prompt-optimizer.ipc.ts` | Handler `prompt:optimize` — generateText one-shot pour ameliorer un prompt (Zod) |
+| `src/main/ipc/arena.ipc.ts` | 5 handlers Arena (send, cancel, vote, getMatches, getStats) + dual streaming parallele |
 | `src/main/ipc/statistics.ipc.ts` | 5 handlers stats |
 | `src/main/ipc/images.ipc.ts` | Generation images |
 | `src/main/ipc/roles.ipc.ts` | CRUD roles |
@@ -34,8 +35,9 @@
 | `src/main/llm/errors.ts` | Classification erreurs |
 | `src/main/llm/cost-calculator.ts` | Table PRICING + calcul cout |
 | `src/main/llm/image.ts` | Generation images multi-provider |
-| `src/main/db/schema.ts` | 22 tables Drizzle |
-| `src/main/db/queries/cleanup.ts` | Bulk delete, ordre FK strict (dont library_chunks → library_sources → libraries) |
+| `src/main/db/schema.ts` | 24 tables Drizzle |
+| `src/main/db/queries/cleanup.ts` | Bulk delete, ordre FK strict (dont arena_matches, library_chunks → library_sources → libraries) |
+| `src/main/db/queries/arena.ts` | CRUD arena_matches + stats agregees win/loss/tie par modele |
 | `src/main/db/queries/libraries.ts` | CRUD libraries + sources + chunks + sticky attach/detach |
 | `src/main/db/queries/slash-commands.ts` | CRUD + seed builtins |
 | `src/main/commands/builtin.ts` | 8 builtins + `RESERVED_COMMAND_NAMES` |
@@ -67,14 +69,14 @@
 
 | Fichier | Role |
 |---------|------|
-| `src/preload/index.ts` | contextBridge ~140 methodes |
-| `src/preload/types.ts` | Types partages, DTOs (LibraryInfo, LibrarySourceInfo, LibrarySearchResult, LibrarySourceForMessage, LibraryIndexingProgress) |
+| `src/preload/index.ts` | contextBridge ~150 methodes |
+| `src/preload/types.ts` | Types partages, DTOs (LibraryInfo, ArenaChunk, ArenaMatch, ArenaStat, etc.) |
 
 ## Renderer — Composants cles
 
 | Fichier | Role |
 |---------|------|
-| `src/renderer/src/App.tsx` | Routing ViewMode (12 vues), 11 vues lazy-loaded (React.lazy + Suspense), shortcuts, onboarding |
+| `src/renderer/src/App.tsx` | Routing ViewMode (13 vues), 12 vues lazy-loaded (React.lazy + Suspense), shortcuts, onboarding |
 | `components/chat/ChatView.tsx` | Message list + WorkspacePanel |
 | `components/chat/InputZone.tsx` | Saisie, pills, FileReference, SlashCommandPicker, MentionOverlay, LibraryPicker, PromptOptimizer (Sparkles), Drag & Drop fichiers |
 | `components/chat/LibraryPicker.tsx` | Select simple referentiel sticky — badge actif + dropdown + detachement |
@@ -91,9 +93,9 @@
 | `components/settings/SemanticMemorySection.tsx` | Settings tab memoire semantique — toggle, stats, reindex, purge |
 | `components/memory/MemoryExplorer.tsx` | Vue recherche/exploration memoire semantique |
 | `components/layout/Sidebar.tsx` | Nav, ProjectSelector, ConversationList, handleToggleFavorite |
-| `components/conversations/ConversationItem.tsx` | Item conversation avec icone Star (favoris ambre) |
+| `components/conversations/ConversationItem.tsx` | Item conversation avec icone Star (favoris ambre) + Swords (arena) |
 | `components/conversations/ConversationList.tsx` | Liste avec section Favoris en haut + separateur + groupes par date |
-| `components/layout/UserMenu.tsx` | Menu dropdown navigation — sous-menu Personnalisation (dont Referentiels) |
+| `components/layout/UserMenu.tsx` | Menu dropdown navigation — sous-menu Personnalisation (dont Referentiels), entree Arena (Swords) |
 | `components/mcp/McpView.tsx` | Vue MCP standalone |
 | `components/workspace/WorkspacePanel.tsx` | FileTree + FilePanel + Git tabs |
 | `components/workspace/ChangesPanel.tsx` | Staged/unstaged, commit, AI message |
@@ -102,20 +104,28 @@
 | `components/prompts/PromptsView.tsx` | Grille CRUD + export/import JSON |
 | `components/roles/RolesView.tsx` | Grille CRUD + export/import JSON |
 | `components/common/CommandPalette.tsx` | Cmd+K recherche globale |
+| `components/arena/ArenaView.tsx` | Layout Arena principal (header + colonnes + VS + vote + input) |
+| `components/arena/ArenaColumn.tsx` | Colonne gauche/droite avec model selector + messages scroll + metriques |
+| `components/arena/VsSeparator.tsx` | Separateur VS anime (glow pulse, badge rouge-orange) |
+| `components/arena/VoteBar.tsx` | 3 boutons vote (gauche/egalite/droite) + affichage resultat |
+| `components/arena/ArenaInputZone.tsx` | Zone saisie simplifiee (textarea + send/cancel, pas de pills) |
+| `components/arena/ArenaMetrics.tsx` | Barre metriques comparees (tokens, cout, temps, coloration vert/rouge) |
 
 ## Renderer — Stores & Hooks
 
 | Fichier | Role |
 |---------|------|
-| `stores/conversations.store.ts` | Conversations CRUD + isFavorite |
+| `stores/conversations.store.ts` | Conversations CRUD + isFavorite + isArena |
+| `stores/arena.store.ts` | Store Arena dedie (modeles, messages L/R, rounds, vote, streaming state) |
 | `stores/settings.store.ts` | Persist localStorage (theme, model params, favorites, summary) |
 | `stores/messages.store.ts` | Messages conversation active |
-| `stores/ui.store.ts` | ViewMode (12 vues), isStreaming |
+| `stores/ui.store.ts` | ViewMode (13 vues), isStreaming |
 | `stores/workspace.store.ts` | rootPath, tree, attachedFiles, isPanelOpen |
 | `stores/slash-commands.store.ts` | Slash commands CRUD |
 | `stores/library.store.ts` | Libraries CRUD + indexing progress Map |
 | `stores/semantic-memory.store.ts` | Status memoire semantique (status, stats, lastRecallCount) |
 | `hooks/useStreaming.ts` | Ecoute chat:chunk |
+| `hooks/useArenaStreaming.ts` | Ecoute arena:chunk:left + arena:chunk:right en parallele |
 | `hooks/useFileMention.ts` | Detection @mention, filtrage arbre, keyboard nav |
 | `hooks/useSlashCommands.ts` | Detection slash, resolution variables |
 
