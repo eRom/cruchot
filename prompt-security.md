@@ -119,14 +119,21 @@ npm audit --audit-level=high --omit=dev
 npm audit --json 2>/dev/null || npm audit 2>/dev/null
 ```
 
+## EXECUTION MODE
+
+**FULLY AUTONOMOUS** — Execute the entire audit end-to-end without stopping for user confirmation between phases or tours. Chain Phase 0 → Tour 1 → Tour 2 → Tour 3 → Final Report in a single uninterrupted flow. Apply all P0/P1 fixes automatically. Only stop if a fix would break the build (typecheck failure) and you cannot resolve it.
+
+Save the final consolidated report to `security-audit-{date}.md` at the project root.
+
 ## AUDIT PROCESS
 
 You will conduct a 3-tour iterative security audit. Each tour consists of:
-1. Automated Semgrep scan (SAST baseline)
+1. Automated scans (Semgrep + available tools)
 2. Manual expert analysis (architecture, logic, Electron-specific)
 3. Vulnerability report generation
-4. Fixes for critical issues
+4. Fixes for P0/P1 issues (applied automatically)
 5. Re-scan to validate fixes
+6. **Proceed immediately to next tour** (no user confirmation needed)
 
 ### PHASE 0: Multi-Tool Baseline Scan
 
@@ -566,6 +573,8 @@ After Tour 3, provide:
 Stop the audit when:
 - Tour 3 is complete, OR
 - No P0/P1 vulnerabilities remain AND all fixes successfully applied AND final Semgrep scan is clean (zero ERROR)
+
+**Do NOT stop between tours to ask for confirmation.** The entire audit runs autonomously from start to finish.
 
 ## OUTPUT REQUIREMENTS
 
