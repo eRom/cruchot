@@ -109,6 +109,14 @@ export function toggleFavorite(id: string, isFavorite: boolean) {
   return getConversation(id)
 }
 
+export function setConversationArena(id: string, isArena: boolean) {
+  const db = getDatabase()
+  db.update(conversations)
+    .set({ isArena, updatedAt: new Date() })
+    .where(eq(conversations.id, id))
+    .run()
+}
+
 export function deleteAllConversations() {
   const db = getDatabase()
   db.delete(conversations).run()

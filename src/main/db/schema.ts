@@ -73,6 +73,7 @@ export const conversations = sqliteTable('conversations', {
   roleId: text('role_id').references(() => roles.id),
   activeLibraryId: text('active_library_id'),
   isFavorite: integer('is_favorite', { mode: 'boolean' }).default(false),
+  isArena: integer('is_arena', { mode: 'boolean' }).default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
@@ -406,6 +407,24 @@ export const libraryChunks = sqliteTable('library_chunks', {
   lineStart: integer('line_start'),
   lineEnd: integer('line_end'),
 
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+})
+
+// ---------------------------------------------------------------------------
+// Arena Matches (LLM vs LLM)
+// ---------------------------------------------------------------------------
+export const arenaMatches = sqliteTable('arena_matches', {
+  id: text('id').primaryKey(),
+  conversationId: text('conversation_id').notNull(),
+  userMessageId: text('user_message_id').notNull(),
+  leftMessageId: text('left_message_id'),
+  rightMessageId: text('right_message_id'),
+  leftProviderId: text('left_provider_id').notNull(),
+  leftModelId: text('left_model_id').notNull(),
+  rightProviderId: text('right_provider_id').notNull(),
+  rightModelId: text('right_model_id').notNull(),
+  vote: text('vote'),  // 'left' | 'right' | 'tie' | null
+  votedAt: integer('voted_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 })
 

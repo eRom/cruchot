@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useState, useRef, useEffect } from 'react'
-import { Bot, Sparkles, Brain, Cpu, Globe, Zap, Pencil, Trash2, Check, X, Star } from 'lucide-react'
+import { Bot, Sparkles, Brain, Cpu, Globe, Zap, Pencil, Trash2, Check, X, Star, Swords } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Conversation } from '@/stores/conversations.store'
@@ -43,7 +43,7 @@ function ConversationItemBase({
   onDelete,
   onToggleFavorite
 }: ConversationItemProps): React.JSX.Element {
-  const Icon = getProviderIcon(conversation.modelId)
+  const Icon = conversation.isArena ? Swords : getProviderIcon(conversation.modelId)
   const [isRenaming, setIsRenaming] = useState(false)
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
   const [renameValue, setRenameValue] = useState('')

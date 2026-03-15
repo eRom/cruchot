@@ -68,9 +68,15 @@ export function Sidebar(): React.JSX.Element {
   const handleSelectConversation = useCallback(
     (id: string) => {
       setActiveConversation(id)
-      setCurrentView('chat')
+      // Check if this is an arena conversation
+      const conv = conversations.find((c) => c.id === id)
+      if (conv?.isArena) {
+        setCurrentView('arena')
+      } else {
+        setCurrentView('chat')
+      }
     },
-    [setActiveConversation, setCurrentView]
+    [setActiveConversation, setCurrentView, conversations]
   )
 
   const handleRenameConversation = useCallback(
