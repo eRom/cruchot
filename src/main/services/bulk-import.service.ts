@@ -1,5 +1,5 @@
 import crypto from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { readFileSync, statSync } from 'node:fs'
 import { z } from 'zod'
 import { getDatabase } from '../db'
 import { getAllProjects, createProject } from '../db/queries/projects'
@@ -71,10 +71,17 @@ export function decryptPayload(encrypted: Buffer, token: Buffer): ExportPayload 
 
 // ── Try decrypt with local token ───────────────────────
 
+const MAX_IMPORT_SIZE = 200 * 1024 * 1024 // 200 MB
+
 export function tryDecryptWithLocalToken(filePath: string): {
   success: boolean
   payload?: ExportPayload
 } {
+  const stat = statSync(filePath)
+  if (stat.size > MAX_IMPORT_SIZE) {
+    throw new Error(`Fichier trop volumineux (${(stat.size / 1024 / 1024).toFixed(0)} MB > 200 MB)`)
+  }
+
   const encrypted = readFileSync(filePath)
   const token = getInstanceToken()
 

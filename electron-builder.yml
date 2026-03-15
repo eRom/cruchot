@@ -1,6 +1,7 @@
 appId: com.multiLLM.desktop
 productName: Multi-LLM Desktop
 copyright: Copyright (c) 2026 Romain
+forceCodeSigning: true
 
 directories:
   buildResources: resources

@@ -34,6 +34,7 @@ export default defineConfig({
     ],
     build: {
       outDir: 'out/main',
+      sourcemap: false,
       minify: isProd ? 'terser' : false,
       ...(isProd ? {
         terserOptions: {
@@ -55,6 +56,7 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       outDir: 'out/preload',
+      sourcemap: false,
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'src/preload/index.ts')

@@ -135,9 +135,52 @@ class LibraryService {
 
   // ── Import Sources ────────────────────────────────
 
+  // ── Path confinement for addSources ─────────────────
+  private static readonly BLOCKED_SOURCE_ROOTS = [
+    '/etc', '/usr', '/System', '/Library', '/var', '/bin', '/sbin',
+    '/private', '/opt', '/cores', '/dev', '/proc', '/sys',
+    '/tmp', '/boot', '/root'
+  ]
+
+  private static readonly SENSITIVE_FILE_PATTERNS = [
+    /^\.env$/i, /\.key$/i, /\.pem$/i, /\.p12$/i, /\.pfx$/i,
+    /^id_rsa/, /^id_ed25519/, /^id_ecdsa/, /^authorized_keys$/,
+    /^known_hosts$/, /^credentials$/i, /^\.aws/, /^\.ssh/,
+    /^\.gnupg/, /^\.netrc$/, /^\.npmrc$/
+  ]
+
+  private validateSourcePath(filePath: string): void {
+    let resolved: string
+    try {
+      resolved = fs.realpathSync(filePath)
+    } catch {
+      resolved = path.resolve(filePath)
+    }
+
+    // Block system roots
+    for (const root of LibraryService.BLOCKED_SOURCE_ROOTS) {
+      if (resolved === root || resolved.startsWith(root + path.sep)) {
+        throw new Error(`Chemin systeme refuse : ${resolved}`)
+      }
+    }
+
+    // Block sensitive files
+    const filename = path.basename(resolved)
+    for (const pattern of LibraryService.SENSITIVE_FILE_PATTERNS) {
+      if (pattern.test(filename)) {
+        throw new Error(`Fichier sensible refuse : ${filename}`)
+      }
+    }
+  }
+
   async addSources(libraryId: string, filePaths: string[], win?: BrowserWindow): Promise<void> {
     const library = getLibrary(libraryId)
     if (!library) throw new Error('Library not found')
+
+    // Validate all paths before processing
+    for (const fp of filePaths) {
+      this.validateSourcePath(fp)
+    }
 
     const existingSources = getLibrarySources(libraryId)
     if (existingSources.length + filePaths.length > MAX_SOURCES_PER_LIBRARY) {
