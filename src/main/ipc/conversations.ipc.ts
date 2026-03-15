@@ -8,7 +8,8 @@ import {
   renameConversation,
   getConversationsByProject,
   setConversationProject,
-  updateConversationRole
+  updateConversationRole,
+  toggleFavorite
 } from '../db/queries/conversations'
 import { getMessagesForConversation, deleteMessagesForConversation, deleteAllMessages } from '../db/queries/messages'
 
@@ -64,6 +65,15 @@ export function registerConversationsIpc(): void {
     idSchema.parse(id)
     if (roleId !== null) idSchema.parse(roleId)
     updateConversationRole(id, roleId)
+  })
+
+  ipcMain.handle('conversations:toggleFavorite', async (_event, payload: unknown) => {
+    const schema = z.object({
+      id: idSchema,
+      isFavorite: z.boolean()
+    })
+    const parsed = schema.parse(payload)
+    return toggleFavorite(parsed.id, parsed.isFavorite)
   })
 
   console.log('[IPC] Conversations handlers registered')

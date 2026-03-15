@@ -97,6 +97,18 @@ export function Sidebar(): React.JSX.Element {
     [removeConversation]
   )
 
+  const handleToggleFavorite = useCallback(
+    async (id: string, isFavorite: boolean) => {
+      try {
+        await window.api.toggleConversationFavorite(id, isFavorite)
+        updateConversation(id, { isFavorite })
+      } catch (err) {
+        console.error('Failed to toggle favorite:', err)
+      }
+    },
+    [updateConversation]
+  )
+
   const handleNavClick = useCallback(
     (view: ViewMode) => {
       setCurrentView(view)
@@ -194,6 +206,7 @@ export function Sidebar(): React.JSX.Element {
         onSelectConversation={handleSelectConversation}
         onRenameConversation={handleRenameConversation}
         onDeleteConversation={handleDeleteConversation}
+        onToggleFavorite={handleToggleFavorite}
       />
 
       {/* ── Footer — User Menu ──────────────────────── */}

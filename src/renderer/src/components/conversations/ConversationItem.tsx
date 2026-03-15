@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useState, useRef, useEffect } from 'react'
-import { Bot, Sparkles, Brain, Cpu, Globe, Zap, Pencil, Trash2, Check, X } from 'lucide-react'
+import { Bot, Sparkles, Brain, Cpu, Globe, Zap, Pencil, Trash2, Check, X, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Conversation } from '@/stores/conversations.store'
@@ -31,6 +31,7 @@ interface ConversationItemProps {
   onSelect: (id: string) => void
   onRename?: (id: string, title: string) => void
   onDelete?: (id: string) => void
+  onToggleFavorite?: (id: string, isFavorite: boolean) => void
 }
 
 function ConversationItemBase({
@@ -39,13 +40,15 @@ function ConversationItemBase({
   isCollapsed,
   onSelect,
   onRename,
-  onDelete
+  onDelete,
+  onToggleFavorite
 }: ConversationItemProps): React.JSX.Element {
   const Icon = getProviderIcon(conversation.modelId)
   const [isRenaming, setIsRenaming] = useState(false)
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
   const [renameValue, setRenameValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const isFav = !!conversation.isFavorite
 
   // Focus input quand on passe en mode renommage
   useEffect(() => {
@@ -59,6 +62,11 @@ function ConversationItemBase({
       onSelect(conversation.id)
     }
   }, [onSelect, conversation.id, isRenaming, isConfirmingDelete])
+
+  const handleToggleFavorite = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    onToggleFavorite?.(conversation.id, !isFav)
+  }, [onToggleFavorite, conversation.id, isFav])
 
   const startRename = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -193,7 +201,18 @@ function ConversationItemBase({
             {conversation.title}
           </span>
 
-          {/* Actions au survol — positionnées en absolu pour éviter le débordement Radix ScrollArea */}
+          {/* Favorite star — always visible if fav, hover-only otherwise */}
+          {isFav && (
+            <button
+              onClick={handleToggleFavorite}
+              className="shrink-0 rounded p-0.5 text-amber-500 hover:text-amber-400 transition-colors z-10"
+              title="Retirer des favoris"
+            >
+              <Star className="size-3 fill-amber-500" />
+            </button>
+          )}
+
+          {/* Actions au survol */}
           <div className={cn(
             'absolute right-0 top-0 bottom-0 flex items-center gap-0.5 pr-2 pl-6',
             'opacity-0 group-hover:opacity-100 transition-opacity duration-150',
@@ -201,6 +220,15 @@ function ConversationItemBase({
               ? 'bg-gradient-to-l from-sidebar-accent from-60% to-transparent'
               : 'bg-gradient-to-l from-sidebar from-60% to-transparent group-hover:from-sidebar-accent/50'
           )}>
+            {!isFav && (
+              <button
+                onClick={handleToggleFavorite}
+                className="rounded p-1 text-sidebar-foreground/40 hover:text-amber-500 hover:bg-amber-500/10 transition-colors"
+                title="Ajouter aux favoris"
+              >
+                <Star className="size-3" />
+              </button>
+            )}
             <button
               onClick={startRename}
               className="rounded p-1 text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
@@ -226,6 +254,7 @@ function ConversationItemBase({
       <Tooltip>
         <TooltipTrigger asChild>{item}</TooltipTrigger>
         <TooltipContent side="right" className="text-xs">
+          {isFav && <Star className="mr-1 inline size-3 fill-amber-500 text-amber-500" />}
           {conversation.title}
         </TooltipContent>
       </Tooltip>
