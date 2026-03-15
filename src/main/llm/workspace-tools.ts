@@ -206,9 +206,10 @@ export function buildWorkspaceTools(workspace: WorkspaceService) {
             maxBuffer: 1024 * 1024, // 1MB
             env: {
               PATH: '/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
-              HOME: rootPath,
+              HOME: process.env.HOME ?? tmpdir(),
               TMPDIR: tmpdir(),
               LANG: process.env.LANG ?? 'en_US.UTF-8',
+              GIT_CONFIG_NOSYSTEM: '1',
               FORCE_COLOR: '0',
               NO_COLOR: '1'
             }

@@ -163,7 +163,7 @@ export function registerWorkspaceIpc(): void {
 
     const schema = z.object({
       path: z.string().min(1),
-      content: z.string()
+      content: z.string().max(5_000_000)
     })
     const parsed = schema.safeParse(payload)
     if (!parsed.success) throw new Error('Invalid writeFile payload')

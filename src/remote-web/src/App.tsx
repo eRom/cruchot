@@ -104,6 +104,17 @@ function reducer(state: AppState, action: AppAction): AppState {
   }
 }
 
+function isAllowedWsUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'ws:' && parsed.protocol !== 'wss:') return false
+    // Restrict to local network addresses
+    return /^(localhost|127\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)$/.test(parsed.hostname)
+  } catch {
+    return false
+  }
+}
+
 export function App() {
   const [state, dispatch] = useReducer(reducer, initialState)
   const { send, isConnected } = useWebSocket({ wsUrl: state.wsUrl, dispatch })
@@ -113,7 +124,7 @@ export function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const ws = params.get('ws')
-    if (ws) {
+    if (ws && isAllowedWsUrl(ws)) {
       dispatch({ type: 'SET_WS_URL', url: ws })
     }
   }, [])
@@ -140,6 +151,7 @@ export function App() {
 
   const handlePair = (code: string, wsUrl?: string) => {
     if (wsUrl && wsUrl !== state.wsUrl) {
+      if (!isAllowedWsUrl(wsUrl)) return
       // New URL — set it and queue the pair message for when connection opens
       pendingPairRef.current = code
       dispatch({ type: 'SET_WS_URL', url: wsUrl })

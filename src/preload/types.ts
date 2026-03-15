@@ -689,8 +689,8 @@ export interface ElectronAPI {
 
   // Import
   importConversation: (data: { format: 'json' | 'chatgpt' | 'claude' }) => Promise<ImportResult>
-  importBulk: () => Promise<{ imported: boolean; needsToken?: boolean; filePath?: string; projectsImported?: number; conversationsImported?: number; messagesImported?: number }>
-  importBulkWithToken: (data: { filePath: string; tokenHex: string }) => Promise<{ imported: boolean; projectsImported?: number; conversationsImported?: number; messagesImported?: number }>
+  importBulk: () => Promise<{ imported: boolean; needsToken?: boolean; projectsImported?: number; conversationsImported?: number; messagesImported?: number }>
+  importBulkWithToken: (data: { tokenHex: string }) => Promise<{ imported: boolean; projectsImported?: number; conversationsImported?: number; messagesImported?: number }>
 
   // Instance Token
   getInstanceTokenMasked: () => Promise<string>

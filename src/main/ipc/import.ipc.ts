@@ -8,10 +8,8 @@ const importSchema = z.object({
   format: z.enum(['json', 'chatgpt', 'claude'])
 })
 
-const bulkWithTokenSchema = z.object({
-  filePath: z.string().min(1),
-  tokenHex: z.string().length(64).regex(/^[0-9a-f]+$/i)
-})
+// Store pending import paths server-side, keyed by webContents ID to prevent race conditions
+const pendingImportPaths = new Map<number, string>()
 
 export function registerImportIpc(): void {
   ipcMain.handle('import:conversation', async (event, data: unknown) => {
@@ -82,23 +80,32 @@ export function registerImportIpc(): void {
       }
     }
 
-    // Local token failed → ask user for external token
-    return { imported: false, needsToken: true, filePath }
+    // Local token failed → store path keyed by sender, ask user for external token
+    pendingImportPaths.set(event.sender.id, filePath)
+    return { imported: false, needsToken: true }
   })
 
   // ── Bulk import with external token ──────────────────
-  ipcMain.handle('import:bulk-with-token', async (_event, data: unknown) => {
-    const parsed = bulkWithTokenSchema.safeParse(data)
+  ipcMain.handle('import:bulk-with-token', async (event, data: unknown) => {
+    const tokenSchema = z.object({
+      tokenHex: z.string().length(64).regex(/^[0-9a-f]+$/i)
+    })
+    const parsed = tokenSchema.safeParse(data)
     if (!parsed.success) throw new Error('Donnees invalides : token hex 64 caracteres requis')
 
-    const { filePath, tokenHex } = parsed.data
+    // Use server-side stored path keyed by sender (never trust renderer for file paths)
+    const senderId = event.sender.id
+    const filePath = pendingImportPaths.get(senderId)
+    pendingImportPaths.delete(senderId)
+    if (!filePath) throw new Error('Aucun import en attente — relancez l\'import')
+
     const stats = statSync(filePath)
     if (stats.size > 200 * 1024 * 1024) {
       throw new Error('Fichier trop volumineux (max 200 MB)')
     }
 
     const encrypted = readFileSync(filePath)
-    const token = Buffer.from(tokenHex, 'hex')
+    const token = Buffer.from(parsed.data.tokenHex, 'hex')
     const payload = decryptPayload(encrypted, token)
     const result = importPayload(payload)
 
