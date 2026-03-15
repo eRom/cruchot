@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 export type ViewMode = 'chat' | 'settings' | 'statistics' | 'images' | 'projects' | 'prompts' | 'roles' | 'tasks' | 'mcp' | 'memory' | 'commands' | 'libraries'
 
-export type SettingsTab = 'general' | 'appearance' | 'apikeys' | 'model' | 'audio' | 'keybindings' | 'data' | 'backup' | 'remote' | 'summary'
+export type SettingsTab = 'general' | 'appearance' | 'apikeys' | 'model' | 'audio' | 'keybindings' | 'data' | 'backup' | 'remote' | 'summary' | 'privacy'
 
 interface UiState {
   currentView: ViewMode
