@@ -1,31 +1,30 @@
-import { useEffect } from 'react'
+import { PROVIDER_COLORS } from '@/components/chat/ProviderIcon'
+import { cn } from '@/lib/utils'
+import { useStatsStore, type StatsPeriod } from '@/stores/stats.store'
 import {
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend
-} from 'recharts'
-import {
-  DollarSign,
-  MessageSquare,
-  FolderOpen,
   ArrowDownToLine,
   ArrowUpFromLine,
   Clock,
-  Loader2
+  DollarSign,
+  FolderOpen,
+  Loader2,
+  MessageSquare
 } from 'lucide-react'
-import { useStatsStore, type StatsPeriod } from '@/stores/stats.store'
+import { useEffect } from 'react'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from 'recharts'
 import { StatCard } from './StatCard'
-import { cn } from '@/lib/utils'
 
 const PIE_COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#f59e0b', '#ef4444', '#10b981', '#f97316', '#ec4899']
 
@@ -147,11 +146,11 @@ export function StatsView() {
 
       {/* Charts row — cost evolution + provider pie */}
       <div className="grid grid-cols-2 gap-4">
-        {/* Line chart — cost evolution */}
+        {/* Bar chart — cost evolution */}
         <div className="rounded-xl border border-border/40 bg-card p-4 shadow-sm">
           <h3 className="mb-3 text-sm font-medium text-foreground">Evolution des couts</h3>
           <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={dailyStats}>
+            <BarChart data={dailyStats}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
               <XAxis
                 dataKey="date"
@@ -173,15 +172,12 @@ export function StatsView() {
                 }}
                 formatter={(value) => [`$${Number(value).toFixed(4)}`, 'Cout']}
               />
-              <Line
-                type="monotone"
+              <Bar
                 dataKey="cost"
-                stroke="hsl(var(--primary))"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4 }}
+                fill="#9394b0ff"
+                radius={[4, 4, 0, 0]}
               />
-            </LineChart>
+            </BarChart>
           </ResponsiveContainer>
         </div>
 
@@ -200,8 +196,11 @@ export function StatsView() {
                 nameKey="provider"
                 paddingAngle={3}
               >
-                {providerStats.map((_, index) => (
-                  <Cell key={`provider-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                {providerStats.map((entry, index) => (
+                  <Cell
+                    key={`provider-${index}`}
+                    fill={PROVIDER_COLORS[entry.provider] ?? PIE_COLORS[index % PIE_COLORS.length]}
+                  />
                 ))}
               </Pie>
               <Tooltip
@@ -219,30 +218,30 @@ export function StatsView() {
         </div>
       </div>
 
-      {/* Charts row — project pie + top models bar */}
+      {/* Charts row — project bar + top models bar */}
       <div className="grid grid-cols-2 gap-4">
-        {/* Pie chart — project breakdown */}
+        {/* Bar chart — project breakdown by cost */}
         <div className="rounded-xl border border-border/40 bg-card p-4 shadow-sm">
           <h3 className="mb-3 text-sm font-medium text-foreground">Repartition par projet</h3>
           <ResponsiveContainer width="100%" height={240}>
-            <PieChart>
-              <Pie
-                data={projectStats}
-                cx="50%"
-                cy="50%"
-                innerRadius={50}
-                outerRadius={80}
-                dataKey="cost"
-                nameKey="projectName"
-                paddingAngle={3}
-              >
-                {projectStats.map((p, index) => (
-                  <Cell
-                    key={`project-${index}`}
-                    fill={p.projectColor || PIE_COLORS[index % PIE_COLORS.length]}
-                  />
-                ))}
-              </Pie>
+            <BarChart
+              data={[...projectStats].sort((a, b) => b.cost - a.cost)}
+              layout="vertical"
+            >
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+              <XAxis
+                type="number"
+                tick={{ fontSize: 10 }}
+                className="fill-muted-foreground"
+                tickFormatter={(v: number) => `$${v.toFixed(2)}`}
+              />
+              <YAxis
+                type="category"
+                dataKey="projectName"
+                tick={{ fontSize: 10 }}
+                className="fill-muted-foreground"
+                width={100}
+              />
               <Tooltip
                 contentStyle={{
                   backgroundColor: 'hsl(var(--card))',
@@ -250,18 +249,36 @@ export function StatsView() {
                   borderRadius: '8px',
                   fontSize: '12px'
                 }}
-                formatter={(value) => [`$${Number(value).toFixed(4)}`, 'Cout']}
+                content={({ active, payload }) => {
+                  if (!active || !payload?.[0]) return null
+                  const d = payload[0].payload as typeof projectStats[number]
+                  return (
+                    <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-md">
+                      <p className="mb-1 font-medium text-foreground">{d.projectName}</p>
+                      <p className="text-muted-foreground">Cout : <span className="text-foreground">${d.cost.toFixed(4)}</span></p>
+                      <p className="text-muted-foreground">Messages : <span className="text-foreground">{d.messages}</span></p>
+                      <p className="text-muted-foreground">Conversations : <span className="text-foreground">{d.conversations}</span></p>
+                    </div>
+                  )
+                }}
               />
-              <Legend wrapperStyle={{ fontSize: '11px' }} />
-            </PieChart>
+              <Bar dataKey="cost" radius={[0, 4, 4, 0]}>
+                {[...projectStats].sort((a, b) => b.cost - a.cost).map((p, index) => (
+                  <Cell
+                    key={`project-${index}`}
+                    fill={p.projectColor || PIE_COLORS[index % PIE_COLORS.length]}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Bar chart — top models */}
+        {/* Bar chart — top 5 models */}
         <div className="rounded-xl border border-border/40 bg-card p-4 shadow-sm">
           <h3 className="mb-3 text-sm font-medium text-foreground">Top modeles par utilisation</h3>
           <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={modelStats} layout="vertical">
+            <BarChart data={modelStats.slice(0, 5)} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
               <XAxis
                 type="number"
@@ -283,7 +300,14 @@ export function StatsView() {
                   fontSize: '12px'
                 }}
               />
-              <Bar dataKey="messages" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="messages" radius={[0, 4, 4, 0]}>
+                {modelStats.slice(0, 5).map((entry, index) => (
+                  <Cell
+                    key={`model-${index}`}
+                    fill={PROVIDER_COLORS[entry.provider] ?? 'hsl(var(--primary))'}
+                  />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>

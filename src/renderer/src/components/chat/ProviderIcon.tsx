@@ -1,5 +1,20 @@
 import { cn } from '@/lib/utils'
 
+/** Brand colors per provider — extracted from SVG icon fills */
+export const PROVIDER_COLORS: Record<string, string> = {
+  openai: '#10A37F',
+  anthropic: '#D97757',
+  google: '#4285F4',
+  mistral: '#F2A73B',
+  xai: '#A8B2C1',
+  deepseek: '#4D6BFE',
+  qwen: '#6336E7',
+  openrouter: '#8B5CF6',
+  perplexity: '#22B8CD',
+  ollama: '#94A3B8',
+  lmstudio: '#4F39F6'
+}
+
 interface ProviderIconProps {
   providerId: string
   className?: string
