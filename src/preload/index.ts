@@ -458,6 +458,9 @@ const api: ElectronAPI = {
   // ── Summary ─────────────────────────────────────────
   summarizeConversation: (payload) => ipcRenderer.invoke('summary:generate', payload),
 
+  // ── Prompt Optimizer ──────────────────────────────────
+  optimizePrompt: (payload: { text: string; modelId: string }) => ipcRenderer.invoke('prompt:optimize', payload),
+
   // ── Data (cleanup / factory reset) ─────────────────
   dataCleanup: () => ipcRenderer.invoke('data:cleanup'),
   dataFactoryReset: () => ipcRenderer.invoke('data:factory-reset'),

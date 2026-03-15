@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowUp, FolderOpen, ImageIcon, Loader2, Paperclip, Square } from 'lucide-react'
+import { ArrowUp, FolderOpen, ImageIcon, Loader2, Paperclip, Sparkles, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ModelSelector } from '@/components/chat/ModelSelector'
@@ -94,6 +94,7 @@ export function InputZone({
   const [pendingAttachments, setPendingAttachments] = useState<AttachmentItem[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [dragCounter, setDragCounter] = useState(0)
+  const [isOptimizing, setIsOptimizing] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // ── Stores ───────────────────────────────────────────────
@@ -665,6 +666,23 @@ export function InputZone({
     mentionedFiles
   ])
 
+  // ── Prompt Optimizer ──────────────────────────────────
+  const handleOptimizePrompt = useCallback(async () => {
+    if (!content.trim() || !selectedProviderId || !selectedModelId || isOptimizing) return
+    setIsOptimizing(true)
+    try {
+      const modelId = `${selectedProviderId}::${selectedModelId}`
+      const result = await window.api.optimizePrompt({ text: content.trim(), modelId })
+      if (result.optimizedText) {
+        setContent(result.optimizedText)
+      }
+    } catch (err) {
+      console.error('[InputZone] Prompt optimization failed:', err)
+    } finally {
+      setIsOptimizing(false)
+    }
+  }, [content, selectedProviderId, selectedModelId, isOptimizing])
+
   // ── Dispatch send ──────────────────────────────────────
   const handleSend = useCallback(() => {
     if (isImageMode) {
@@ -1049,6 +1067,31 @@ export function InputZone({
                 onInsert={handlePromptInsert}
                 disabled={isBusy}
               />
+              {!isImageMode && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleOptimizePrompt}
+                      disabled={isBusy || isOptimizing || !content.trim() || !selectedModelId}
+                      className={cn(
+                        'size-7 rounded-lg',
+                        'text-muted-foreground/60 hover:text-muted-foreground',
+                        'transition-colors',
+                        isOptimizing && 'text-primary'
+                      )}
+                    >
+                      {isOptimizing ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="size-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Optimiser le prompt</TooltipContent>
+                </Tooltip>
+              )}
               <VoiceInput
                 onTranscript={(text) => setContent((prev) => prev ? `${prev} ${text}` : text)}
                 disabled={isBusy}
