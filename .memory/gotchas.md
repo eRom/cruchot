@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-15 (S37)
+> Derniere mise a jour : 2026-03-15 (S38)
 
 ## AI SDK v6 — Breaking changes
 
@@ -109,11 +109,22 @@
 - **manualChunks function-based** : les string-array `manualChunks` echouent avec `Could not resolve entry module` pour les packages Radix/Vite → utiliser la forme fonction `manualChunks(id)`
 - **Drizzle `.references()` ne cree PAS d'index** : SQLite n'enforce pas les FK indexes. Toujours ajouter `CREATE INDEX` manuellement dans migrate.ts
 
+## Worktrees et userData Electron (S38)
+
+- **Rename app → userData change** : quand le projet a ete renomme de `multi-llm-desktop` en `cruchot`, `app.getPath('userData')` a change de `~/Library/Application Support/multi-llm-desktop/` vers `~/Library/Application Support/cruchot/`. Les anciennes donnees (DB, images, etc.) sont restees dans l'ancien dossier. Fix : copier `main.db` de l'ancien vers le nouveau dossier.
+- **Worktrees et node_modules** : les git worktrees n'ont PAS de `node_modules` — il faut soit `npm install` (risque sharp build failure) soit symlinker depuis le repo principal : `ln -s /path/to/main/node_modules /path/to/worktree/node_modules`
+- **Worktrees et localStorage** : lancer l'app depuis un worktree partage le meme userData Electron (meme nom d'app) mais peut reinitialiser le localStorage (Zustand persist), donnant l'impression de perte de donnees alors que la DB SQLite est intacte
+- **ALTER TABLE et Drizzle** : si une migration `ALTER TABLE ADD COLUMN` n'a pas eu le temps de s'executer mais que le schema Drizzle reference deja la colonne, les queries plantent silencieusement. Verifier que la migration est passee en DB.
+
 ## Restant a faire
 
-- Search bar sidebar, BranchNavigation, Prompt Optimizer, Export PDF
+- Search bar sidebar, BranchNavigation, Export PDF
 - i18n (configure mais pas utilise)
 - MCP : presets serveurs, import config Claude Desktop, chiffrer headers HTTP
 - Certificat Apple Developer ID (99$/an)
 - Remote Web : branche `feature-remote-web`, a valider visuellement
 - Referentiels RAG : strategie d'embedding custom (spec `feature-custom-rag-embedding-strategy.md`), branche `feature-rag`
+- Conversation branching (fork a partir d'un message)
+- Multi-conversation view (mode Arena — comparer 2+ modeles)
+- Voice mode (STT Whisper + TTS existant)
+- "Cruchot mode" (easter egg system prompt Marechal des Logis-Chef)

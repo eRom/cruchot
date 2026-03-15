@@ -1,9 +1,9 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-15 (S37)
+> Derniere mise a jour : 2026-03-15 (S38)
 
 ## Vue d'ensemble
 
-App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud, statistiques de couts, workspace co-work, integration Git, taches planifiees, integration MCP, memory fragments, memoire semantique (RAG local Qdrant), referentiels RAG custom (documents), Remote Telegram, Remote Web, export/import securise (.mlx), slash commands, @mention fichiers. Zero serveur backend.
+App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud, statistiques de couts, workspace co-work, integration Git, taches planifiees, integration MCP, memory fragments, memoire semantique (RAG local Qdrant), referentiels RAG custom (documents), Remote Telegram, Remote Web, export/import securise (.mlx), slash commands, @mention fichiers, prompt optimizer, drag & drop fichiers, conversations favorites. Zero serveur backend.
 
 ## Stack
 
@@ -16,7 +16,7 @@ Renderer (React UI) → contextBridge IPC → Preload (bridge) → ipcMain → M
 ```
 
 - **Main** : cles API (safeStorage), appels LLM, DB SQLite, services
-- **Preload** : `window.api` via contextBridge (~135 methodes typees)
+- **Preload** : `window.api` via contextBridge (~140 methodes typees)
 - **Renderer** : UI React pure, aucun acces Node.js
 
 ## Arborescence
@@ -73,10 +73,13 @@ InputZone → IPC "chat:send" → Main: streamText() → forward chunks IPC → 
 - **Memoire Semantique** : QdrantMemoryService singleton, Qdrant embedded (binaire v1.17), embeddings all-MiniLM-L6-v2 (384d ONNX via @huggingface/transformers + onnxruntime-node CPU), ingestion fire-and-forget, recall silencieux injecte dans system prompt (`<semantic-memory>` XML), UI MemoryExplorer dans settings, badge discret retire (operation silencieuse)
 - **Referentiels RAG Custom** : LibraryService singleton, import documents (PDF/DOCX/MD/code/CSV), dual embedding local (MiniLM 384d) ou Google (gemini-embedding-2-preview 768d), chunking adapte par type, collection Qdrant par referentiel (`library_{id}`), retrieval sticky par conversation (`activeLibraryId`), contexte injecte en premier (`<library-context>` XML), sources deterministes dans MessageItem, indicateur outil synthetique dans ToolCallBlock
 - **Workspace Context** : `buildWorkspaceContextBlock()` auto-lit CLAUDE.md, README.md etc. → injecte dans system prompt
+- **Prompt Optimizer** : bouton Sparkles dans InputZone, `generateText()` one-shot pour reformuler/ameliorer le prompt avant envoi, handler IPC `prompt:optimize` (Zod)
+- **Drag & Drop Fichiers** : drop depuis le Finder dans InputZone, handler IPC `files:readText` (chemin absolu, whitelist extensions, 500KB max, DANGEROUS_EXTENSIONS), pills FileReference cyan, merge avec @mentions au send
+- **Conversations Favorites** : colonne `is_favorite` sur table `conversations`, toggle via icone etoile ambre dans sidebar, section "Favoris" en haut de ConversationList avec separateur
 
 ## Donnees
 
-- SQLite WAL + FTS5, 22 tables (+ `libraries`, `library_sources`, `library_chunks` S35), **15 index de performance** (S37)
+- SQLite WAL + FTS5, 23 tables (+ `libraries`, `library_sources`, `library_chunks` S35, + colonne `is_favorite` sur conversations S38), **15 index de performance** (S37)
 - Qdrant vector DB embedded (stockage `userData/qdrant-storage/`, config YAML `userData/qdrant-config/`)
 - Collections Qdrant : `conversations_memory` (memoire semantique) + `library_{id}` (referentiels RAG)
 - Cles API chiffrees via safeStorage (Keychain macOS)

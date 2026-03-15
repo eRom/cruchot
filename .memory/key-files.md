@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-15 (S37)
+> Derniere mise a jour : 2026-03-15 (S38)
 
 ## Main process
 
@@ -8,7 +8,7 @@
 | `src/main/index.ts` | Lifecycle, auto-updater, protocol `local-image://` |
 | `src/main/ipc/chat.ipc.ts` | Chat handler + `handleChatMessage()` exportee, streamText, dual-forward, library retrieval + synthetic tool chunks |
 | `src/main/ipc/index.ts` | Registre IPC, `ALLOWED_SETTING_KEYS` whitelist |
-| `src/main/ipc/conversations.ipc.ts` | CRUD conversations (Zod) |
+| `src/main/ipc/conversations.ipc.ts` | CRUD conversations (Zod) + `conversations:toggleFavorite` |
 | `src/main/ipc/workspace.ipc.ts` | 8 handlers workspace + couplage Git |
 | `src/main/ipc/git.ipc.ts` | 8 handlers Git + push `git:changed` |
 | `src/main/ipc/mcp.ipc.ts` | 12 handlers MCP (Zod) |
@@ -18,7 +18,8 @@
 | `src/main/ipc/library.ipc.ts` | 15 handlers referentiels RAG (Zod) — CRUD, sources, search, attach/detach, pick-files, get-attached |
 | `src/main/ipc/summary.ipc.ts` | Summary one-shot generateText |
 | `src/main/ipc/data.ipc.ts` | Cleanup + factory reset, confirmation dialog |
-| `src/main/ipc/files.ipc.ts` | Read/save securises, `isPathAllowed()` |
+| `src/main/ipc/files.ipc.ts` | Read/save securises, `isPathAllowed()`, `files:readText` (drag & drop, chemin absolu, whitelist ext, 500KB max) |
+| `src/main/ipc/prompt-optimizer.ipc.ts` | Handler `prompt:optimize` — generateText one-shot pour ameliorer un prompt (Zod) |
 | `src/main/ipc/statistics.ipc.ts` | 5 handlers stats |
 | `src/main/ipc/images.ipc.ts` | Generation images |
 | `src/main/ipc/roles.ipc.ts` | CRUD roles |
@@ -66,7 +67,7 @@
 
 | Fichier | Role |
 |---------|------|
-| `src/preload/index.ts` | contextBridge ~135 methodes |
+| `src/preload/index.ts` | contextBridge ~140 methodes |
 | `src/preload/types.ts` | Types partages, DTOs (LibraryInfo, LibrarySourceInfo, LibrarySearchResult, LibrarySourceForMessage, LibraryIndexingProgress) |
 
 ## Renderer — Composants cles
@@ -75,7 +76,7 @@
 |---------|------|
 | `src/renderer/src/App.tsx` | Routing ViewMode (12 vues), 11 vues lazy-loaded (React.lazy + Suspense), shortcuts, onboarding |
 | `components/chat/ChatView.tsx` | Message list + WorkspacePanel |
-| `components/chat/InputZone.tsx` | Saisie, pills, FileReference, SlashCommandPicker, MentionOverlay, LibraryPicker |
+| `components/chat/InputZone.tsx` | Saisie, pills, FileReference, SlashCommandPicker, MentionOverlay, LibraryPicker, PromptOptimizer (Sparkles), Drag & Drop fichiers |
 | `components/chat/LibraryPicker.tsx` | Select simple referentiel sticky — badge actif + dropdown + detachement |
 | `components/chat/SourceCitation.tsx` | Section "Sources utilisees" collapsible, deterministe (pas LLM) |
 | `components/chat/MentionOverlay.tsx` | Overlay transparent, @mentions cyan |
@@ -89,7 +90,9 @@
 | `components/libraries/LibraryDetailView.tsx` | Detail referentiel — sources, ajout fichiers, reindex, progress bar |
 | `components/settings/SemanticMemorySection.tsx` | Settings tab memoire semantique — toggle, stats, reindex, purge |
 | `components/memory/MemoryExplorer.tsx` | Vue recherche/exploration memoire semantique |
-| `components/layout/Sidebar.tsx` | Nav, ProjectSelector, ConversationList |
+| `components/layout/Sidebar.tsx` | Nav, ProjectSelector, ConversationList, handleToggleFavorite |
+| `components/conversations/ConversationItem.tsx` | Item conversation avec icone Star (favoris ambre) |
+| `components/conversations/ConversationList.tsx` | Liste avec section Favoris en haut + separateur + groupes par date |
 | `components/layout/UserMenu.tsx` | Menu dropdown navigation — sous-menu Personnalisation (dont Referentiels) |
 | `components/mcp/McpView.tsx` | Vue MCP standalone |
 | `components/workspace/WorkspacePanel.tsx` | FileTree + FilePanel + Git tabs |
@@ -104,6 +107,7 @@
 
 | Fichier | Role |
 |---------|------|
+| `stores/conversations.store.ts` | Conversations CRUD + isFavorite |
 | `stores/settings.store.ts` | Persist localStorage (theme, model params, favorites, summary) |
 | `stores/messages.store.ts` | Messages conversation active |
 | `stores/ui.store.ts` | ViewMode (12 vues), isStreaming |

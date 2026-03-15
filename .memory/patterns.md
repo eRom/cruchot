@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-15 (S37)
+> Derniere mise a jour : 2026-03-15 (S38)
 
 ## Conventions de nommage
 
@@ -46,7 +46,35 @@
 - Regex : paths tries par longueur desc, negative lookahead `(?![\w./-])`
 - mentionedFiles = `Set<string>` local (pas Zustand), cleanup quand @path disparait du texte
 - FileMentionPopover : meme positionnement que SlashCommandPicker
-- Au send : fichiers panel-attaches + @mentionnes merges avec dedup via `loadedPaths` Set
+- Au send : fichiers panel-attaches + @mentionnes + dropped files merges avec dedup via `loadedPaths` Set
+
+## Drag & Drop Fichiers (S38)
+
+- Drop handler sur InputZone : `onDragEnter`/`onDragLeave`/`onDragOver`/`onDrop`
+- `e.dataTransfer.files[i].path` expose le chemin natif (Electron)
+- Fichiers texte/code lus via IPC `files:readText` (chemin absolu, whitelist extensions, 500KB max, DANGEROUS_EXTENSIONS bloquees, realpathSync)
+- `droppedFileContexts` : `Map<path, {content, language, name}>` state local dans InputZone
+- Affiches comme pills `FileReference` cyan (meme rendu que fichiers workspace)
+- Images/binaires redirigees vers le flux `addBrowserFiles` existant
+- State nettoye apres send
+
+## Prompt Optimizer (S38)
+
+- Bouton Sparkles (lucide-react) dans la zone pills de InputZone, entre PromptPicker et VoiceInput
+- Actif seulement quand `inputValue.trim().length > 0` et pas en streaming/image mode
+- `generateText()` one-shot avec system prompt d'expert prompt engineering
+- Le texte optimise remplace directement le contenu du textarea
+- Spinner Loader2 pendant l'optimisation
+- Handler IPC `prompt:optimize` dans `prompt-optimizer.ipc.ts` (Zod)
+
+## Conversations Favorites (S38)
+
+- Colonne `is_favorite` (INTEGER DEFAULT 0, mode boolean) sur table `conversations`
+- Migration idempotente `ALTER TABLE ... ADD COLUMN` (try/catch)
+- Query `toggleFavorite(id, isFavorite)` via Drizzle
+- IPC `conversations:toggleFavorite` (Zod: `{ id: string, isFavorite: boolean }`)
+- Icone Star (lucide-react) : pleine ambre si favori (toujours visible), outline au hover sinon
+- ConversationList split : section "Favoris" (header + separateur) en haut, puis groupes par date
 
 ## Slash Commands
 
