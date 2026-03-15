@@ -103,7 +103,7 @@ InputZone → IPC "chat:send" → Main: streamText() → forward chunks IPC → 
 ## Distribution
 
 - electron-builder v26.8.1, targets macOS DMG + ZIP (universal)
-- Auto-updater electron-updater, publish GitHub Releases (`eRom/app-desktop-llmx`)
+- Auto-updater electron-updater, publish GitHub Releases (`eRom/cruchot`)
 - CI/CD : `release.yml` (tag v*), `ci.yml` (typecheck renderer+main + audit + lint + build)
 - Build : esbuild (main) + esbuild (renderer, defaut Vite), manualChunks vendor splitting (S37)
 - `forceCodeSigning: true` — builds echouent sans certificat
@@ -111,4 +111,4 @@ InputZone → IPC "chat:send" → Main: streamText() → forward chunks IPC → 
 
 ## GitHub
 
-Repo prive `eRom/app-desktop-llmx` — HTTPS (pas SSH)
+Repo public `eRom/cruchot` — HTTPS (pas SSH)

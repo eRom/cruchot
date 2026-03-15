@@ -57,7 +57,7 @@ electron-updater       # L'app detecte la nouvelle version → telecharge → in
 | **Apple Developer Account** (99$/an) | Signature + notarisation macOS | [developer.apple.com/programs](https://developer.apple.com/programs/) |
 | **Certificat "Developer ID Application"** | Signer le .app pour distribution hors App Store | Xcode > Settings > Accounts > Manage Certificates |
 | **App-specific password** Apple | Notarisation (API Apple) | [appleid.apple.com](https://appleid.apple.com/) > Securite > Mots de passe d'apps |
-| **GitHub repo** (deja fait) | Heberger les releases + auto-update | `eRom/app-desktop-llmx` |
+| **GitHub repo** (deja fait) | Heberger les releases + auto-update | `eRom/cruchot` |
 | **GitHub Personal Access Token** | CI publie les releases | Settings > Developer settings > Tokens > `repo` scope |
 
 ### Certificat Windows (optionnel pour commencer)
@@ -296,7 +296,7 @@ dmg:
 publish:
   provider: github
   owner: eRom
-  repo: app-desktop-llmx
+  repo: cruchot
 
 # --- Fichiers supplementaires ---
 extraResources:

@@ -675,13 +675,13 @@ Phase texte (text-delta) :
 
 ```
 Option A (recommandee) : Monorepo
-  app-desktop-llmx/
+  cruchot/
     src/          ← Desktop Electron
     mobile/       ← App React Native
     shared/       ← Types protocole partages (symlink ou package)
 
 Option B : Repo separe
-  app-desktop-llmx/        ← Desktop
+  cruchot/        ← Desktop
   app-mobile-llmx-remote/  ← Mobile
   → Partage types via npm package prive ou copie manuelle
 ```
