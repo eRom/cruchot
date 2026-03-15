@@ -19,7 +19,8 @@ import {
   vectorSyncState,
   libraryChunks,
   librarySources,
-  libraries
+  libraries,
+  arenaMatches
 } from '../schema'
 
 /**
@@ -36,6 +37,7 @@ export function deleteConversationsProjectsImages(): { imagePaths: string[] } {
   // Ordre FK : enfants d'abord
   db.delete(attachments).run()
   db.delete(images).run()
+  db.delete(arenaMatches).run()
   db.delete(remoteSessions).run()
   db.delete(vectorSyncState).run()
   db.delete(messages).run()
@@ -66,6 +68,7 @@ export function factoryResetDatabase(): { imagePaths: string[] } {
   // Ordre FK strict : enfants → parents → standalone
   db.delete(attachments).run()
   db.delete(images).run()
+  db.delete(arenaMatches).run()
   db.delete(remoteSessions).run()
   db.delete(vectorSyncState).run()
   db.delete(messages).run()

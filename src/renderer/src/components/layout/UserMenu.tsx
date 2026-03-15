@@ -27,6 +27,7 @@ import {
   Image,
   Network,
   Settings,
+  Swords,
   UserCircle,
   UserPen
 } from 'lucide-react'
@@ -186,6 +187,12 @@ export function UserMenu({ isCollapsed, currentView, onNavigate, enabledTasksCou
             label="Images"
             isActive={currentView === 'images'}
             onSelect={() => onNavigate('images')}
+          />
+          <MenuItem
+            icon={Swords}
+            label="Arena"
+            isActive={currentView === 'arena'}
+            onSelect={() => onNavigate('arena')}
           />
           <MenuItem
             icon={BarChart3}

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MessageSquarePlus, Moon, Settings, Sun, FolderOpen, Cpu, UserCircle, Clock } from 'lucide-react'
+import { MessageSquarePlus, Moon, Settings, Sun, FolderOpen, Cpu, UserCircle, Clock, Swords } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useConversationsStore, type Conversation } from '@/stores/conversations.store'
 import { useProjectsStore, type Project } from '@/stores/projects.store'
@@ -118,6 +118,16 @@ function CommandPalette({
         icon: <Clock className="size-4" />,
         onSelect: () => {
           setCurrentView('tasks')
+          onClose()
+        },
+      },
+      {
+        id: 'action:arena',
+        label: 'Arena — Comparer deux modeles',
+        group: 'Actions',
+        icon: <Swords className="size-4" />,
+        onSelect: () => {
+          setCurrentView('arena')
           onClose()
         },
       },

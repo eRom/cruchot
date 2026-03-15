@@ -22,6 +22,7 @@ const McpView = React.lazy(() => import('@/components/mcp/McpView').then(m => ({
 const MemoryView = React.lazy(() => import('@/components/memory/MemoryView').then(m => ({ default: m.MemoryView })))
 const CommandsView = React.lazy(() => import('@/components/commands/CommandsView').then(m => ({ default: m.CommandsView })))
 const LibrariesView = React.lazy(() => import('@/components/libraries/LibrariesView').then(m => ({ default: m.LibrariesView })))
+const ArenaView = React.lazy(() => import('@/components/arena/ArenaView').then(m => ({ default: m.ArenaView })))
 import { useUiStore } from '@/stores/ui.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
@@ -144,6 +145,7 @@ function App(): React.JSX.Element {
               {currentView === 'memory' && <MemoryView />}
               {currentView === 'commands' && <CommandsView />}
               {currentView === 'libraries' && <LibrariesView />}
+              {currentView === 'arena' && <ArenaView />}
             </Suspense>
           </AppLayout>
 
