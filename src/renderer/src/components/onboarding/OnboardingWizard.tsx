@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, EyeOff, Check, Sun, Moon, Monitor, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
+import { Eye, EyeOff, Check, AlertCircle, Sun, Moon, Monitor, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useSettingsStore, type ThemeMode } from '@/stores/settings.store'
 import { OnboardingStep } from './OnboardingStep'
@@ -118,6 +118,7 @@ function ApiKeysStep({
 }) {
   const [keys, setKeys] = useState<Record<string, string>>({})
   const [visibility, setVisibility] = useState<Record<string, boolean>>({})
+  const [saveStatus, setSaveStatus] = useState<Record<string, 'saved' | 'error'>>({})
   const [saving, setSaving] = useState(false)
 
   const toggleVisibility = (providerId: string) => {
@@ -126,19 +127,32 @@ function ApiKeysStep({
 
   const updateKey = (providerId: string, value: string) => {
     setKeys((prev) => ({ ...prev, [providerId]: value }))
+    setSaveStatus((prev) => {
+      const next = { ...prev }
+      delete next[providerId]
+      return next
+    })
   }
 
   const handleNext = async () => {
     setSaving(true)
-    try {
-      const entries = Object.entries(keys).filter(([, v]) => v.trim())
-      for (const [providerId, apiKey] of entries) {
+    const entries = Object.entries(keys).filter(([, v]) => v.trim())
+    const statuses: Record<string, 'saved' | 'error'> = {}
+
+    for (const [providerId, apiKey] of entries) {
+      try {
         await window.api.setApiKey(providerId, apiKey.trim())
+        statuses[providerId] = 'saved'
+      } catch {
+        statuses[providerId] = 'error'
       }
-    } catch {
-      // Continue even if save fails
-    } finally {
-      setSaving(false)
+    }
+
+    setSaveStatus(statuses)
+    setSaving(false)
+
+    const hasErrors = Object.values(statuses).some((s) => s === 'error')
+    if (!hasErrors) {
       onNext()
     }
   }
@@ -152,33 +166,55 @@ function ApiKeysStep({
     >
       <div className="flex flex-col gap-4">
         <div className="space-y-3">
-          {API_KEY_FIELDS.map((field) => (
-            <div key={field.providerId} className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                {field.label}
-              </label>
-              <div className="relative">
-                <input
-                  type={visibility[field.providerId] ? 'text' : 'password'}
-                  value={keys[field.providerId] || ''}
-                  onChange={(e) => updateKey(field.providerId, e.target.value)}
-                  placeholder={field.placeholder}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => toggleVisibility(field.providerId)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {visibility[field.providerId] ? (
-                    <EyeOff className="size-4" />
-                  ) : (
-                    <Eye className="size-4" />
-                  )}
-                </button>
+          {API_KEY_FIELDS.map((field) => {
+            const status = saveStatus[field.providerId]
+            return (
+              <div key={field.providerId} className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {field.label}
+                </label>
+                <div className="relative">
+                  <input
+                    type={visibility[field.providerId] ? 'text' : 'password'}
+                    value={keys[field.providerId] || ''}
+                    onChange={(e) => updateKey(field.providerId, e.target.value)}
+                    placeholder={field.placeholder}
+                    className={`w-full rounded-lg border bg-background px-3 py-2 pr-16 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none ${
+                      status === 'error'
+                        ? 'border-red-500 focus:border-red-500'
+                        : status === 'saved'
+                          ? 'border-green-500 focus:border-green-500'
+                          : 'border-border focus:border-primary'
+                    }`}
+                  />
+                  <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+                    {status === 'saved' && (
+                      <Check className="size-4 text-green-500" />
+                    )}
+                    {status === 'error' && (
+                      <AlertCircle className="size-4 text-red-500" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => toggleVisibility(field.providerId)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      {visibility[field.providerId] ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+                {status === 'error' && (
+                  <p className="text-xs text-red-500">
+                    Erreur lors de la sauvegarde — verifiez que l'application est prete
+                  </p>
+                )}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         <div className="flex gap-2">
@@ -187,7 +223,7 @@ function ApiKeysStep({
             Precedent
           </Button>
           <Button onClick={handleNext} disabled={saving} className="flex-1">
-            Suivant
+            {Object.values(saveStatus).some((s) => s === 'error') ? 'Reessayer' : 'Suivant'}
             <ChevronRight className="size-4" />
           </Button>
         </div>

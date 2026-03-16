@@ -6,8 +6,7 @@ We take security seriously. If you discover a vulnerability, please report it re
 
 ### How to Report
 
-1. **Preferred**: Use [GitHub Security Advisories](https://github.com/eRom/cruchot/security/advisories/new) to privately report the issue.
-2. **Alternative**: Email **security@cruchot.app** with a detailed description.
+Use [GitHub Security Advisories](https://github.com/eRom/cruchot/security/advisories/new) to privately report the issue.
 
 ### What to Include
 
