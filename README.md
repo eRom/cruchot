@@ -6,6 +6,10 @@
 
 App desktop locale de chat multi-LLM construite avec Electron. 11 providers, generation d'images, RAG custom, memoire semantique, workspace co-work, integration Git, controle a distance, et bien plus. Zero serveur backend, donnees 100% locales.
 
+<p align="center">
+  <img src="resources/infographie.png" alt="Infographie Cruchot" width="800" />
+</p>
+
 ## Update (15/03/2026)
 
 - **Conversations favorites** : pin/star pour garder les conversations importantes en haut de la sidebar
