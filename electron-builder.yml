@@ -1,7 +1,7 @@
 appId: com.cruchot.app
 productName: Cruchot
 copyright: Copyright (c) 2026 Romain
-forceCodeSigning: true
+forceCodeSigning: false
 
 directories:
   buildResources: resources
@@ -19,11 +19,7 @@ files:
   - "node_modules/file-uri-to-path/**/*"
   - "node_modules/chokidar/**/*"
   - "node_modules/@ai-sdk/mcp/**/*"
-  - "node_modules/electron-updater/**/*"
-  - "node_modules/builder-util-runtime/**/*"
   - "node_modules/trash/**/*"
-  - "node_modules/ws/**/*"
-  - "node_modules/qrcode/**/*"
   - "node_modules/@perplexity-ai/**/*"
   - "node_modules/@huggingface/**/*"
   - "node_modules/@qdrant/**/*"
@@ -37,12 +33,12 @@ mac:
   icon: resources/icon.icns
   target:
     - target: dmg
-      arch: [universal]
+      arch: [arm64]
     - target: zip
-      arch: [universal]
-  hardenedRuntime: true
+      arch: [arm64]
+  hardenedRuntime: false
   gatekeeperAssess: false
-  notarize: true
+  notarize: false
   entitlements: resources/entitlements.mac.plist
   entitlementsInherit: resources/entitlements.mac.plist
 
