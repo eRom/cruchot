@@ -3,11 +3,9 @@ import { cn } from '@/lib/utils'
 
 interface VsSeparatorProps {
   isStreaming: boolean
-  bothFinished: boolean
-  hasVoted: boolean
 }
 
-export function VsSeparator({ isStreaming, bothFinished, hasVoted }: VsSeparatorProps): React.JSX.Element {
+export function VsSeparator({ isStreaming }: VsSeparatorProps): React.JSX.Element {
   return (
     <div className="relative flex w-16 shrink-0 flex-col items-center justify-center">
       {/* Top gradient line */}
@@ -39,14 +37,6 @@ export function VsSeparator({ isStreaming, bothFinished, hasVoted }: VsSeparator
           </span>
         </div>
 
-        {/* Vote prompt */}
-        {bothFinished && !hasVoted && (
-          <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap">
-            <span className="animate-bounce text-[10px] font-bold text-red-400/80 uppercase tracking-wider">
-              Vote!
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Bottom gradient line */}
