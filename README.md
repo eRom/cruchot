@@ -10,11 +10,16 @@ App desktop locale de chat multi-LLM construite avec Electron. 11 providers, gen
   <img src="resources/infographie.png" alt="Infographie Cruchot" width="800" />
 </p>
 
-## Update (15/03/2026)
+## Updates
 
-- **Conversations favorites** : pin/star pour garder les conversations importantes en haut de la sidebar
-- **Prompt Optimizer** : amelioration automatique du prompt via LLM avant envoi (one-shot)
-- **Arena** : mode comparatif cote a cote pour evaluer 2 LLMs sur le meme prompt (streaming parallele, vote, metriques comparees, design VS Street Fighter)
+- 20/03/2026
+  - **Fork conversations** : dupliquer une conversation (historique et contexte)
+  - **UI fixes** : Arena mode, etc.
+
+- 15/03/2026
+  - **Conversations favorites** : pin/star pour garder les conversations importantes en haut de la sidebar
+  - **Prompt Optimizer** : amelioration automatique du prompt via LLM avant envoi (one-shot)
+  - **Arena** : mode comparatif cote a cote pour evaluer 2 LLMs sur le meme prompt (streaming parallele, vote, metriques comparees, design VS Street Fighter)
 
 ## Stack
 
