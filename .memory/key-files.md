@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-15 (S39)
+> Derniere mise a jour : 2026-03-20 (S40)
 
 ## Main process
 

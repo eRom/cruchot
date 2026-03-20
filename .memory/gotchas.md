@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-15 (S39)
+> Derniere mise a jour : 2026-03-20 (S40)
 
 ## AI SDK v6 — Breaking changes
 
@@ -60,12 +60,20 @@
 - **drop_console terser** : si applique sans condition `isProd`, supprime TOUS les console.* meme en dev → conditionner sur `isProd`
 - **esbuild drop console** : `esbuild: { drop: ['console'] }` va au top-level de la section main (pas sous `build`), conditionne sur `isProd`
 
-## Distribution
+## Distribution (S40 — packaging enfin fonctionnel)
 
 - `externalizeDepsPlugin()` sans args externalise TOUT → crash. Utiliser `exclude` liste
-- Build universal + ad-hoc : `codesign --force --deep --sign -` apres copie /Applications
-- Gatekeeper bloque silencieusement → `xattr -cr` en dev
-- Certificat Apple Developer ID requis pour distribution publique
+- **`@openrouter/ai-sdk-provider` manquait dans `exclude`** : externalise par defaut mais absent de l'asar → `Cannot find module` au runtime. Fix : ajouter a `exclude` dans electron.vite.config.ts
+- **`qrcode` → `dijkstrajs` manquant** : qrcode externalise mais ses deps transitives absentes de l'asar. Fix : bundler qrcode (ajouter a `exclude`) au lieu de l'externaliser
+- **`ws` deps optionnelles** : `bufferutil` et `utf-8-validate` sont des deps natives optionnelles de ws. Quand ws est bundle, le bundler tente de resoudre ces deps et echoue. Fix : ajouter `bufferutil` et `utf-8-validate` a `rollupOptions.external`
+- **Strategie d'externalisation** : ne garder external que les vrais modules natifs/ESM (better-sqlite3, chokidar, @ai-sdk/mcp, trash, @huggingface/transformers, onnxruntime-*). Tout le reste (qrcode, ws, electron-updater, builder-util-runtime, tous les @ai-sdk/*) doit etre bundle via `exclude`
+- **Build universal macOS** : `@electron/universal` plante sur `test_extension.node` de better-sqlite3 (identique x64/arm64). Fix : builder pour l'arch native seulement (`arch: [arm64]`)
+- **`forceCodeSigning: true`** → le build refuse de produire un binaire sans certificat. Fix : `false` pour dev local (fallback ad-hoc automatique)
+- **`notarize: true`** sans Apple Developer ID → echec. Fix : `false` pour dev local
+- **`hardenedRuntime: true`** exige une vraie signature → `false` pour dev local
+- **Gatekeeper macOS Tahoe** : `xattr -cr /Applications/Cruchot.app` apres copie. Clic droit > Ouvrir ne suffit pas toujours
+- **Installation propre** : `pkill -f "Cruchot.app"; trash /Applications/Cruchot.app; cp -R dist/mac-arm64/Cruchot.app /Applications/; xattr -cr /Applications/Cruchot.app`
+- Certificat Apple Developer ID requis pour distribution publique (99$/an)
 
 ## Preferences UI de Romain
 
@@ -93,7 +101,7 @@
 - **`removeAllListeners(channel)`** : trop large, risque en multi-fenetre
 - **Settings localStorage** : persist Zustand duplique les settings SQLite — pas de secrets, UI prefs seulement (risque accepte)
 - **`legacy-peer-deps=true`** dans `.npmrc` : desactive detection conflits peer deps — isole a @perplexity-ai/ai-sdk
-- **`forceCodeSigning: true`** : les builds echouent sans certificat — voulu, mais attention en dev local (ad-hoc signing necessaire)
+- **`forceCodeSigning`** : desactive (false) depuis S40 — ad-hoc signing automatique en dev local
 - **Semgrep faux positif** : `react-insecure-request` sur `qdrant-process.ts:106` (HTTP vers localhost Qdrant) — toujours present, ignorer
 - **Typecheck main process** : erreurs pre-existantes dans chat.ipc.ts, git.ipc.ts, mcp.ipc.ts (types AI SDK v6) — `continue-on-error: true` en CI
 

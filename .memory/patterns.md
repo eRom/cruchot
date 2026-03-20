@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-15 (S39)
+> Derniere mise a jour : 2026-03-20 (S40)
 
 ## Conventions de nommage
 
@@ -156,13 +156,14 @@
 - **esbuild** : remplace Terser pour le main process (build 57% plus rapide)
 - **15 index SQLite** : `CREATE INDEX IF NOT EXISTS` dans migrate.ts sur toutes les FK frequemment requetees
 
-## Distribution
+## Distribution (S40)
 
-- externalizeDepsPlugin : `exclude` liste les deps JS pures a bundler
-- Modules natifs/ESM restent external : better-sqlite3, chokidar, @ai-sdk/mcp, electron-updater, trash, @huggingface/transformers, onnxruntime-node, onnxruntime-web, onnxruntime-common
-- Build universal macOS, auto-updater check 4h, `app.isPackaged` guard
-- `forceCodeSigning: true` — builds echouent sans certificat (pas de binaires non signes)
+- **externalizeDepsPlugin `exclude`** : bundler TOUT sauf les vrais modules natifs/ESM. Liste actuelle des bundled : ai, tous @ai-sdk/*, @openrouter/ai-sdk-provider, drizzle-orm, nanoid, sonner, zod, mammoth, pdf-parse, qrcode, ws, electron-updater, builder-util-runtime
+- **Modules restant external** (natifs ou ESM) : better-sqlite3, chokidar, @ai-sdk/mcp, trash, @huggingface/transformers, onnxruntime-*, fsevents, sharp, @perplexity-ai/ai-sdk, bufferutil, utf-8-validate
+- Build arm64 macOS (pas universal — evite conflit test_extension.node), auto-updater check 4h, `app.isPackaged` guard
+- `forceCodeSigning: false` — ad-hoc signing automatique, `notarize: false`, `hardenedRuntime: false`
 - `sourcemap: false` partout (main, preload, renderer, remote-web, tsconfig)
+- **Commande de test packaging** : `npm run dist:mac` puis `pkill -f "Cruchot.app"; trash /Applications/Cruchot.app; cp -R dist/mac-arm64/Cruchot.app /Applications/; xattr -cr /Applications/Cruchot.app; open /Applications/Cruchot.app`
 
 ## Securite — Patterns (S36)
 
