@@ -20,7 +20,8 @@ import {
   libraryChunks,
   librarySources,
   libraries,
-  arenaMatches
+  arenaMatches,
+  bardas
 } from '../schema'
 
 /**
@@ -41,6 +42,7 @@ export function deleteConversationsProjectsImages(): { imagePaths: string[] } {
   db.delete(remoteSessions).run()
   db.delete(vectorSyncState).run()
   db.delete(messages).run()
+  db.delete(bardas).run()
   db.delete(scheduledTasks).run()
   db.delete(mcpServers).run()
   db.delete(slashCommands).run()
@@ -73,6 +75,7 @@ export function factoryResetDatabase(): { imagePaths: string[] } {
   db.delete(vectorSyncState).run()
   db.delete(messages).run()
   db.delete(conversations).run()
+  db.delete(bardas).run()
   db.delete(scheduledTasks).run()
   db.delete(mcpServers).run()
   db.delete(slashCommands).run()

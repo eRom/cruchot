@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { useBardaStore } from '@/stores/barda.store'
 
 type SortMode = 'activity' | 'name' | 'created'
 type SubView = 'grid' | 'create' | 'edit'
@@ -62,6 +63,7 @@ function uniqueName(name: string, existing: Set<string>): string {
 
 export function RolesView() {
   const { roles, setRoles, addRole, updateRole, removeRole } = useRolesStore()
+  const disabledNamespaces = useBardaStore((s) => s.disabledNamespaces)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -88,7 +90,7 @@ export function RolesView() {
 
   // ── Filtered + sorted ──────────────────────────────────────
   const filteredRoles = useMemo(() => {
-    let list = roles
+    let list = roles.filter((r) => !r.namespace || !disabledNamespaces.has(r.namespace))
 
     if (filterCategory !== 'all') {
       list = list.filter((r) => r.category === filterCategory)

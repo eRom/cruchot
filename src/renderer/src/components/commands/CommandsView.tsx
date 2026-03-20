@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { useBardaStore } from '@/stores/barda.store'
 
 type SortMode = 'activity' | 'name' | 'created'
 type SubView = 'grid' | 'create' | 'edit'
@@ -60,6 +61,7 @@ function uniqueName(name: string, existing: Set<string>): string {
 export function CommandsView() {
   const { commands, setCommands, addCommand, updateCommand, removeCommand } = useSlashCommandsStore()
   const activeProjectId = useProjectsStore((s) => s.activeProjectId)
+  const disabledNamespaces = useBardaStore((s) => s.disabledNamespaces)
   const projects = useProjectsStore((s) => s.projects)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -78,7 +80,7 @@ export function CommandsView() {
 
   // ── Filtered + sorted ──────────────────────────────────────
   const filteredCommands = useMemo(() => {
-    let list = commands
+    let list = commands.filter((c) => !c.namespace || !disabledNamespaces.has(c.namespace))
 
     if (filterScope === 'builtin') {
       list = list.filter((c) => c.isBuiltin)

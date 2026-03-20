@@ -20,6 +20,7 @@ import {
   Brain,
   ChevronsDownUp,
   Library,
+  Shield,
   TerminalSquare,
   ChevronsUpDown,
   Clock,
@@ -123,7 +124,7 @@ export function UserMenu({ isCollapsed, currentView, onNavigate, enabledTasksCou
             <DropdownMenuSubTrigger
               className={cn(
                 'gap-2',
-                (currentView === 'prompts' || currentView === 'roles' || currentView === 'mcp' || currentView === 'memory' || currentView === 'commands' || currentView === 'libraries')
+                (currentView === 'prompts' || currentView === 'roles' || currentView === 'mcp' || currentView === 'memory' || currentView === 'commands' || currentView === 'libraries' || currentView === 'brigade')
                   && 'font-semibold text-accent-foreground'
               )}
             >
@@ -166,6 +167,12 @@ export function UserMenu({ isCollapsed, currentView, onNavigate, enabledTasksCou
                 label="Referentiels"
                 isActive={currentView === 'libraries'}
                 onSelect={() => onNavigate('libraries')}
+              />
+              <MenuItem
+                icon={Shield}
+                label="Brigade"
+                isActive={currentView === 'brigade'}
+                onSelect={() => onNavigate('brigade')}
               />
             </DropdownMenuSubContent>
           </DropdownMenuSub>

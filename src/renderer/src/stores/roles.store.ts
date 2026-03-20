@@ -15,6 +15,7 @@ export interface Role {
   category?: string | null
   tags?: string[] | null
   variables?: RoleVariable[] | null
+  namespace?: string | null
   createdAt: Date
   updatedAt: Date
 }
