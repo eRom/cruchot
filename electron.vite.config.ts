@@ -21,6 +21,7 @@ export default defineConfig({
           '@ai-sdk/mistral',
           '@ai-sdk/xai',
           '@ai-sdk/deepseek',
+          '@openrouter/ai-sdk-provider',
           '@ai-sdk/provider',
           '@ai-sdk/provider-utils',
           'drizzle-orm',
@@ -28,7 +29,11 @@ export default defineConfig({
           'sonner',
           'zod',
           'mammoth',
-          'pdf-parse'
+          'pdf-parse',
+          'qrcode',
+          'ws',
+          'electron-updater',
+          'builder-util-runtime'
         ]
       })
     ],
@@ -41,7 +46,7 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'src/main/index.ts')
         },
-        external: ['fsevents', 'chokidar', '@ai-sdk/mcp', '@ai-sdk/mcp/mcp-stdio', 'ws', '@perplexity-ai/ai-sdk', '@huggingface/transformers', 'onnxruntime-node', 'onnxruntime-web', 'onnxruntime-common', 'sharp']
+        external: ['fsevents', 'chokidar', '@ai-sdk/mcp', '@ai-sdk/mcp/mcp-stdio', '@perplexity-ai/ai-sdk', '@huggingface/transformers', 'onnxruntime-node', 'onnxruntime-web', 'onnxruntime-common', 'sharp']
       }
     }
   },
