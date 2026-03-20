@@ -1,7 +1,7 @@
-import { eq, desc, isNull } from 'drizzle-orm'
+import { eq, desc, isNull, asc } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { getDatabase } from '../index'
-import { conversations } from '../schema'
+import { conversations, messages } from '../schema'
 
 export function getAllConversations() {
   const db = getDatabase()
@@ -120,4 +120,69 @@ export function setConversationArena(id: string, isArena: boolean) {
 export function deleteAllConversations() {
   const db = getDatabase()
   db.delete(conversations).run()
+}
+
+export function forkConversation(sourceId: string) {
+  const db = getDatabase()
+  const source = db.select().from(conversations).where(eq(conversations.id, sourceId)).get()
+  if (!source) throw new Error('Conversation not found')
+
+  const newId = nanoid()
+  const now = new Date()
+
+  // Use a transaction for atomicity
+  const result = db.transaction(() => {
+    // 1. Create the forked conversation
+    db.insert(conversations)
+      .values({
+        id: newId,
+        title: `${source.title} (fork)`,
+        projectId: source.projectId,
+        modelId: source.modelId,
+        roleId: source.roleId,
+        activeLibraryId: source.activeLibraryId,
+        isFavorite: false,
+        isArena: false,
+        createdAt: now,
+        updatedAt: now
+      })
+      .run()
+
+    // 2. Copy all messages with remapped IDs
+    const sourceMessages = db
+      .select()
+      .from(messages)
+      .where(eq(messages.conversationId, sourceId))
+      .orderBy(asc(messages.createdAt))
+      .all()
+
+    const idMap = new Map<string, string>()
+
+    for (const msg of sourceMessages) {
+      const newMsgId = nanoid()
+      idMap.set(msg.id, newMsgId)
+
+      db.insert(messages)
+        .values({
+          id: newMsgId,
+          conversationId: newId,
+          parentMessageId: msg.parentMessageId ? (idMap.get(msg.parentMessageId) ?? null) : null,
+          role: msg.role,
+          content: msg.content,
+          contentData: msg.contentData,
+          modelId: msg.modelId,
+          providerId: msg.providerId,
+          tokensIn: msg.tokensIn,
+          tokensOut: msg.tokensOut,
+          cost: msg.cost,
+          responseTimeMs: msg.responseTimeMs,
+          createdAt: msg.createdAt
+        })
+        .run()
+    }
+
+    return db.select().from(conversations).where(eq(conversations.id, newId)).get()!
+  })
+
+  return result
 }
