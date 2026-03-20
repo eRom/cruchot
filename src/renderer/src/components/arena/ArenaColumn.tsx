@@ -195,7 +195,7 @@ export function ArenaColumn({ side }: ArenaColumnProps): React.JSX.Element {
 
   return (
     <div className={cn(
-      'flex flex-1 flex-col min-w-0 rounded-lg border',
+      'flex flex-1 flex-col min-w-0 min-h-0 rounded-lg border',
       'border-border/40 bg-background/50',
       vote === side && 'ring-2 ring-amber-400/60',
       side === 'left' ? 'border-l-blue-500/30' : 'border-r-green-500/30'

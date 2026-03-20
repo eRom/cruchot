@@ -115,22 +115,6 @@ export function Sidebar(): React.JSX.Element {
     [updateConversation]
   )
 
-  const handleForkConversation = useCallback(
-    async (id: string) => {
-      try {
-        const forked = await window.api.forkConversation(id)
-        if (forked) {
-          addConversation(forked)
-          setActiveConversation(forked.id)
-          setCurrentView('chat')
-        }
-      } catch (err) {
-        console.error('Failed to fork conversation:', err)
-      }
-    },
-    [addConversation, setActiveConversation, setCurrentView]
-  )
-
   const handleNavClick = useCallback(
     (view: ViewMode) => {
       setCurrentView(view)
@@ -229,7 +213,6 @@ export function Sidebar(): React.JSX.Element {
         onRenameConversation={handleRenameConversation}
         onDeleteConversation={handleDeleteConversation}
         onToggleFavorite={handleToggleFavorite}
-        onForkConversation={handleForkConversation}
       />
 
       {/* ── Footer — User Menu ──────────────────────── */}

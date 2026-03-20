@@ -57,7 +57,6 @@ interface ConversationListProps {
   onRenameConversation?: (id: string, title: string) => void
   onDeleteConversation?: (id: string) => void
   onToggleFavorite?: (id: string, isFavorite: boolean) => void
-  onForkConversation?: (id: string) => void
 }
 
 export function ConversationList({
@@ -67,8 +66,7 @@ export function ConversationList({
   onSelectConversation,
   onRenameConversation,
   onDeleteConversation,
-  onToggleFavorite,
-  onForkConversation
+  onToggleFavorite
 }: ConversationListProps): React.JSX.Element {
   // Split favorites and non-favorites
   const { favorites, others } = useMemo(() => {
@@ -125,7 +123,6 @@ export function ConversationList({
                   onRename={onRenameConversation}
                   onDelete={onDeleteConversation}
                   onToggleFavorite={onToggleFavorite}
-                  onFork={onForkConversation}
                 />
               ))}
             </div>
@@ -157,7 +154,6 @@ export function ConversationList({
                   onRename={onRenameConversation}
                   onDelete={onDeleteConversation}
                   onToggleFavorite={onToggleFavorite}
-                  onFork={onForkConversation}
                 />
               ))}
             </div>

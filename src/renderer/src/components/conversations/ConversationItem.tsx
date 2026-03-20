@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useState, useRef, useEffect } from 'react'
-import { Bot, Sparkles, Brain, Cpu, Globe, Zap, Pencil, Trash2, Check, X, Star, Swords, GitFork } from 'lucide-react'
+import { Bot, Sparkles, Brain, Cpu, Globe, Zap, Pencil, Trash2, Check, X, Star, Swords } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Conversation } from '@/stores/conversations.store'
@@ -32,7 +32,6 @@ interface ConversationItemProps {
   onRename?: (id: string, title: string) => void
   onDelete?: (id: string) => void
   onToggleFavorite?: (id: string, isFavorite: boolean) => void
-  onFork?: (id: string) => void
 }
 
 function ConversationItemBase({
@@ -42,8 +41,7 @@ function ConversationItemBase({
   onSelect,
   onRename,
   onDelete,
-  onToggleFavorite,
-  onFork
+  onToggleFavorite
 }: ConversationItemProps): React.JSX.Element {
   const Icon = conversation.isArena ? Swords : getProviderIcon(conversation.modelId)
   const [isRenaming, setIsRenaming] = useState(false)
@@ -69,11 +67,6 @@ function ConversationItemBase({
     e.stopPropagation()
     onToggleFavorite?.(conversation.id, !isFav)
   }, [onToggleFavorite, conversation.id, isFav])
-
-  const handleFork = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    onFork?.(conversation.id)
-  }, [onFork, conversation.id])
 
   const startRename = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -236,13 +229,6 @@ function ConversationItemBase({
                 <Star className="size-3" />
               </button>
             )}
-            <button
-              onClick={handleFork}
-              className="rounded p-1 text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
-              title="Forker la discussion"
-            >
-              <GitFork className="size-3" />
-            </button>
             <button
               onClick={startRename}
               className="rounded p-1 text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowUp, FolderOpen, ImageIcon, Loader2, Paperclip, Sparkles, Square } from 'lucide-react'
+import { ArrowUp, FolderOpen, GitFork, ImageIcon, Loader2, Paperclip, Sparkles, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ModelSelector } from '@/components/chat/ModelSelector'
@@ -1192,6 +1192,32 @@ export function InputZone({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top">Optimiser le prompt</TooltipContent>
+                </Tooltip>
+              )}
+              {activeConversationId && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 text-muted-foreground hover:text-foreground"
+                      disabled={isBusy}
+                      onClick={async () => {
+                        try {
+                          const forked = await window.api.forkConversation(activeConversationId)
+                          if (forked) {
+                            addConversation(forked)
+                            setActiveConversation(forked.id)
+                          }
+                        } catch (err) {
+                          console.error('Failed to fork conversation:', err)
+                        }
+                      }}
+                    >
+                      <GitFork className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Forker la discussion</TooltipContent>
                 </Tooltip>
               )}
               <VoiceInput

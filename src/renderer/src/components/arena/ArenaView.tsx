@@ -13,15 +13,8 @@ export function ArenaView(): React.JSX.Element {
   useArenaStreaming()
 
   const isStreaming = useArenaStore((s) => s.isStreaming)
-  const leftMessage = useArenaStore((s) => s.leftMessage)
-  const rightMessage = useArenaStore((s) => s.rightMessage)
-  const vote = useArenaStore((s) => s.vote)
   const rounds = useArenaStore((s) => s.rounds)
   const reset = useArenaStore((s) => s.reset)
-
-  const bothFinished = leftMessage != null && rightMessage != null
-    && !leftMessage.isStreaming && !rightMessage.isStreaming
-  const hasVoted = vote != null
 
   const handleNewMatch = useCallback(() => {
     reset()
@@ -53,11 +46,7 @@ export function ArenaView(): React.JSX.Element {
       {/* Main area — two columns + VS separator */}
       <div className="flex flex-1 min-h-0 gap-0 p-3">
         <ArenaColumn side="left" />
-        <VsSeparator
-          isStreaming={isStreaming}
-          bothFinished={bothFinished}
-          hasVoted={hasVoted}
-        />
+        <VsSeparator isStreaming={isStreaming} />
         <ArenaColumn side="right" />
       </div>
 
