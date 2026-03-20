@@ -66,5 +66,5 @@ $ARGS`,
 
 /** Reserved names that cannot be used for custom commands */
 export const RESERVED_COMMAND_NAMES = new Set([
-  'help', 'clear', 'settings', 'quit', 'exit'
+  'help', 'clear', 'settings', 'quit', 'exit', 'fork'
 ])

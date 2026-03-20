@@ -7,6 +7,7 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 interface SlashCommandMatch {
   command: SlashCommand
   isProjectScoped: boolean
+  isAction?: boolean
 }
 
 interface UseSlashCommandsResult {
@@ -15,7 +16,7 @@ interface UseSlashCommandsResult {
   /** Matching commands for the current input */
   matches: SlashCommandMatch[]
   /** Resolve a slash command input to the substituted prompt, or null if not a command */
-  resolve: (content: string) => { prompt: string; commandName: string } | null
+  resolve: (content: string) => { prompt: string; commandName: string; isAction?: boolean } | null
 }
 
 /**
@@ -30,6 +31,15 @@ export function useSlashCommands(content: string): UseSlashCommandsResult {
     return m?.name ?? ''
   })
   const workspaceRootPath = useWorkspaceStore((s) => s.rootPath)
+
+  // Action commands (client-side, not sent to LLM)
+  const ACTION_COMMANDS: SlashCommandMatch[] = useMemo(() => [
+    {
+      command: { id: '__action_fork', name: 'fork', description: 'Forker cette discussion', prompt: '', isBuiltin: true, sortOrder: 0, createdAt: new Date(), updatedAt: new Date() } as SlashCommand,
+      isProjectScoped: false,
+      isAction: true
+    }
+  ], [])
 
   // Build deduplicated command list with project priority
   const availableCommands = useMemo(() => {
@@ -54,8 +64,16 @@ export function useSlashCommands(content: string): UseSlashCommandsResult {
       }
     }
 
+    // Action commands (skip if name already taken)
+    for (const action of ACTION_COMMANDS) {
+      if (!seen.has(action.command.name)) {
+        result.push(action)
+        seen.add(action.command.name)
+      }
+    }
+
     return result
-  }, [commands, activeProjectId])
+  }, [commands, activeProjectId, ACTION_COMMANDS])
 
   // Check if content starts with /
   const isActive = content.startsWith('/') && !content.startsWith('/ ')
@@ -109,7 +127,7 @@ export function useSlashCommands(content: string): UseSlashCommandsResult {
       // Clean remaining positional variables
       prompt = prompt.replace(/\$\d+/g, '')
 
-      return { prompt: prompt.trim(), commandName: match.command.name }
+      return { prompt: prompt.trim(), commandName: match.command.name, isAction: match.isAction }
     }
   }, [availableCommands, selectedModel, activeProject?.name, workspaceRootPath])
 

@@ -9,7 +9,8 @@ import {
   getConversationsByProject,
   setConversationProject,
   updateConversationRole,
-  toggleFavorite
+  toggleFavorite,
+  forkConversation
 } from '../db/queries/conversations'
 import { getMessagesForConversation, deleteMessagesForConversation, deleteAllMessages } from '../db/queries/messages'
 
@@ -74,6 +75,11 @@ export function registerConversationsIpc(): void {
     })
     const parsed = schema.parse(payload)
     return toggleFavorite(parsed.id, parsed.isFavorite)
+  })
+
+  ipcMain.handle('conversations:fork', async (_event, id: string) => {
+    idSchema.parse(id)
+    return forkConversation(id)
   })
 
   console.log('[IPC] Conversations handlers registered')

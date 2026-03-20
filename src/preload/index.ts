@@ -40,6 +40,9 @@ const api: ElectronAPI = {
   toggleConversationFavorite: (id: string, isFavorite: boolean) =>
     ipcRenderer.invoke('conversations:toggleFavorite', { id, isFavorite }),
 
+  forkConversation: (id: string) =>
+    ipcRenderer.invoke('conversations:fork', id),
+
   getMessages: (conversationId: string): Promise<ReturnType<ElectronAPI['getMessages']>> =>
     ipcRenderer.invoke('conversations:messages', conversationId),
 

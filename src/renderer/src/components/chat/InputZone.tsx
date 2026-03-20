@@ -580,6 +580,22 @@ export function InputZone({
     if (trimmed.startsWith('/')) {
       const resolved = resolveSlashCommand(trimmed)
       if (resolved) {
+        // Action commands (e.g. /fork) — execute client-side, don't send to LLM
+        if (resolved.isAction && resolved.commandName === 'fork') {
+          if (activeConversationId) {
+            try {
+              const forked = await window.api.forkConversation(activeConversationId)
+              if (forked) {
+                addConversation(forked)
+                setActiveConversation(forked.id)
+              }
+            } catch (err) {
+              console.error('Failed to fork conversation:', err)
+            }
+          }
+          setContent('')
+          return
+        }
         resolvedContent = resolved.prompt
         slashCommandName = resolved.commandName
       }
