@@ -97,7 +97,7 @@ export function useSlashCommands(content: string): UseSlashCommandsResult {
 
   // Resolve function
   const resolve = useMemo(() => {
-    return (rawContent: string): { prompt: string; commandName: string } | null => {
+    return (rawContent: string): { prompt: string; commandName: string; isAction?: boolean } | null => {
       if (!rawContent.startsWith('/')) return null
 
       const firstLine = rawContent.split('\n')[0]
