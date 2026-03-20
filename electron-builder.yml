@@ -55,6 +55,7 @@ linux:
     - deb
   category: Development
   icon: resources
+  maintainer: Romain <cruchot@erom.dev>
 
 # --- Installeur Windows ---
 nsis:
