@@ -58,6 +58,7 @@ export const roles = sqliteTable('roles', {
   category: text('category'),
   tags: text('tags', { mode: 'json' }).$type<string[]>(),
   variables: text('variables', { mode: 'json' }).$type<Array<{ name: string; description?: string }>>(),
+  namespace: text('namespace'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
@@ -125,6 +126,7 @@ export const prompts = sqliteTable('prompts', {
   tags: text('tags', { mode: 'json' }).$type<string[]>(),
   type: text('type', { enum: ['complet', 'complement', 'system'] }).notNull(),
   variables: text('variables', { mode: 'json' }).$type<Array<{ name: string; description?: string }>>(),
+  namespace: text('namespace'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
@@ -238,6 +240,9 @@ export const mcpServers = sqliteTable('mcp_servers', {
   toolTimeout: integer('tool_timeout').default(30000),
   autoConfirm: integer('auto_confirm', { mode: 'boolean' }).notNull().default(true),
 
+  // Barda namespace
+  namespace: text('namespace'),
+
   // Timestamps
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
@@ -251,6 +256,7 @@ export const memoryFragments = sqliteTable('memory_fragments', {
   content: text('content').notNull(),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   sortOrder: integer('sort_order').notNull(),
+  namespace: text('namespace'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
@@ -291,6 +297,7 @@ export const slashCommands = sqliteTable('slash_commands', {
   projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }),
   isBuiltin: integer('is_builtin', { mode: 'boolean' }).notNull().default(false),
   sortOrder: integer('sort_order').default(0),
+  namespace: text('namespace'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
@@ -333,6 +340,7 @@ export const libraries = sqliteTable('libraries', {
   color: text('color'),
   icon: text('icon'),
   projectId: text('project_id').references(() => projects.id),
+  namespace: text('namespace'),
 
   // Embedding config (immutable apres creation)
   embeddingModel: text('embedding_model', {
@@ -426,6 +434,27 @@ export const arenaMatches = sqliteTable('arena_matches', {
   vote: text('vote'),  // 'left' | 'right' | 'tie' | null
   votedAt: integer('voted_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+})
+
+// ---------------------------------------------------------------------------
+// Bardas (Brigade Packs)
+// ---------------------------------------------------------------------------
+export const bardas = sqliteTable('bardas', {
+  id: text('id').primaryKey(),
+  namespace: text('namespace').notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  version: text('version'),
+  author: text('author'),
+  isEnabled: integer('is_enabled', { mode: 'boolean' }).default(true),
+  rolesCount: integer('roles_count').default(0),
+  commandsCount: integer('commands_count').default(0),
+  promptsCount: integer('prompts_count').default(0),
+  fragmentsCount: integer('fragments_count').default(0),
+  librariesCount: integer('libraries_count').default(0),
+  mcpServersCount: integer('mcp_servers_count').default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
 
 // ---------------------------------------------------------------------------

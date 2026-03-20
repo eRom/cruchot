@@ -13,6 +13,7 @@ export interface Prompt {
   tags?: string[] | null
   type: 'complet' | 'complement' | 'system'
   variables?: PromptVariable[] | null
+  namespace?: string | null
   createdAt: Date
   updatedAt: Date
 }

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { useBardaStore } from '@/stores/barda.store'
 import { LibraryDetailView } from './LibraryDetailView'
 
 type SortMode = 'activity' | 'name' | 'created'
@@ -33,6 +34,7 @@ const LIBRARY_COLORS = [
 export function LibrariesView() {
   const { libraries, setLibraries, addLibrary, updateLibrary, removeLibrary, loading } = useLibraryStore()
   const activeProjectId = useProjectsStore((s) => s.activeProjectId)
+  const disabledNamespaces = useBardaStore((s) => s.disabledNamespaces)
 
   const [search, setSearch] = useState('')
   const [sortMode, setSortMode] = useState<SortMode>('activity')
@@ -48,7 +50,7 @@ export function LibrariesView() {
 
   // ── Filtered + sorted ──────────────────────────────────────
   const filteredLibraries = useMemo(() => {
-    let list = libraries
+    let list = libraries.filter((l) => !l.namespace || !disabledNamespaces.has(l.namespace))
 
     if (search.trim()) {
       const q = search.toLowerCase()

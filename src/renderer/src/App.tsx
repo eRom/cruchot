@@ -23,6 +23,7 @@ const MemoryView = React.lazy(() => import('@/components/memory/MemoryView').the
 const CommandsView = React.lazy(() => import('@/components/commands/CommandsView').then(m => ({ default: m.CommandsView })))
 const LibrariesView = React.lazy(() => import('@/components/libraries/LibrariesView').then(m => ({ default: m.LibrariesView })))
 const ArenaView = React.lazy(() => import('@/components/arena/ArenaView').then(m => ({ default: m.ArenaView })))
+const BrigadeView = React.lazy(() => import('@/components/brigade/BrigadeView').then(m => ({ default: m.BrigadeView })))
 import { useUiStore } from '@/stores/ui.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
@@ -146,6 +147,7 @@ function App(): React.JSX.Element {
               {currentView === 'commands' && <CommandsView />}
               {currentView === 'libraries' && <LibrariesView />}
               {currentView === 'arena' && <ArenaView />}
+              {currentView === 'brigade' && <BrigadeView />}
             </Suspense>
           </AppLayout>
 

@@ -1,7 +1,8 @@
-import React, { useCallback, useRef, useState } from 'react'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, Brain, Plus, Check, X } from 'lucide-react'
 import { useUiStore } from '@/stores/ui.store'
 import { useMemoryStore } from '@/stores/memory.store'
+import { useBardaStore } from '@/stores/barda.store'
 import { MemoryFragmentCard } from './MemoryFragmentCard'
 import { MemoryPreview } from './MemoryPreview'
 import { SemanticMemorySection } from './SemanticMemorySection'
@@ -15,6 +16,12 @@ export function MemoryView() {
   const deleteFragment = useMemoryStore((s) => s.deleteFragment)
   const toggleFragment = useMemoryStore((s) => s.toggleFragment)
   const reorderFragments = useMemoryStore((s) => s.reorderFragments)
+
+  const disabledNamespaces = useBardaStore((s) => s.disabledNamespaces)
+  const filteredFragments = useMemo(
+    () => fragments.filter((f) => !f.namespace || !disabledNamespaces.has(f.namespace)),
+    [fragments, disabledNamespaces]
+  )
 
   const [isAdding, setIsAdding] = useState(false)
   const [newContent, setNewContent] = useState('')
@@ -116,9 +123,9 @@ export function MemoryView() {
           {/* Subheader */}
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              {fragments.length === 0
+              {filteredFragments.length === 0
                 ? 'Fragments de contexte personnel injectes dans toutes les conversations'
-                : `${fragments.filter(f => f.isActive).length} actif${fragments.filter(f => f.isActive).length > 1 ? 's' : ''} sur ${fragments.length}`
+                : `${filteredFragments.filter(f => f.isActive).length} actif${filteredFragments.filter(f => f.isActive).length > 1 ? 's' : ''} sur ${filteredFragments.length}`
               }
             </p>
             <button
@@ -131,7 +138,7 @@ export function MemoryView() {
           </div>
 
           {/* Empty state */}
-          {fragments.length === 0 && !isAdding && (
+          {filteredFragments.length === 0 && !isAdding && (
             <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/60 py-12">
               <Brain className="size-10 text-muted-foreground/40" />
               <div className="text-center">
@@ -189,9 +196,9 @@ export function MemoryView() {
           )}
 
           {/* Fragment list */}
-          {fragments.length > 0 && (
+          {filteredFragments.length > 0 && (
             <div className="space-y-2">
-              {fragments.map((fragment, index) => (
+              {filteredFragments.map((fragment, index) => (
                 <div
                   key={fragment.id}
                   draggable
@@ -213,7 +220,7 @@ export function MemoryView() {
           )}
 
           {/* Preview */}
-          {fragments.length > 0 && (
+          {filteredFragments.length > 0 && (
             <div className="border-t border-border/40 pt-6">
               <MemoryPreview fragments={fragments} />
             </div>
