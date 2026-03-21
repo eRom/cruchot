@@ -569,11 +569,7 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
       maxTokens,
       topP,
       providerOptions,
-      ...(hasTools ? {
-        tools,
-        maxSteps: isYolo ? 50 : 50,
-        stopWhen: stepCountIs(isYolo ? 50 : 50)
-      } : {}),
+      ...(hasTools ? { tools, maxSteps: 50, stopWhen: stepCountIs(50) } : {}),
       onChunk({ chunk }) {
         if (chunk.type === 'text-delta') {
           // Prepend any buffered partial tag content

@@ -1050,11 +1050,11 @@ export interface ElectronAPI {
 
   // Sandbox (YOLO mode)
   sandboxActivate: (conversationId: string, workspacePath?: string) => Promise<{ sessionId: string; sandboxPath: string }>
-  sandboxDeactivate: (sessionId: string) => Promise<void>
+  sandboxDeactivate: (sessionId: string, conversationId: string) => Promise<void>
   sandboxStop: (sessionId: string) => Promise<void>
   sandboxGetStatus: (conversationId: string) => Promise<SandboxInfo>
   sandboxGetProcesses: (sessionId: string) => Promise<SandboxProcessInfo[]>
-  sandboxOpenPreview: (target: string) => Promise<void>
+  sandboxOpenPreview: (target: string, sessionId: string) => Promise<void>
 
   // Settings
   getSetting: (key: string) => Promise<string | null>
