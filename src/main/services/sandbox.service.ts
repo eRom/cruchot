@@ -85,6 +85,10 @@ const SEATBELT_PROFILE = `(version 1)
 (allow file-read* (subpath "\${HOME}/.pyenv"))
 (allow file-read* (subpath "\${HOME}/.local"))
 
+;; SSL certificates (needed for HTTPS)
+(allow file-read* (subpath "/etc/ssl"))
+(allow file-read* (subpath "/private/etc/ssl"))
+
 ;; Sandbox dir — read + write
 (allow file-read* (subpath "\${SANDBOX_DIR}"))
 (allow file-write* (subpath "\${SANDBOX_DIR}"))
@@ -100,10 +104,8 @@ const SEATBELT_PROFILE = `(version 1)
 (allow process-fork)
 (allow signal)
 
-;; Network — loopback only
-(allow network* (local ip "localhost:*"))
-(allow network* (remote ip "localhost:*"))
-(deny network* (remote ip "*"))
+;; Network — full access (YOLO mode: user accepted risks)
+(allow network*)
 
 ;; Deny everything else
 (deny file-write* (subpath "/"))
