@@ -1,6 +1,7 @@
-import { exec, type ExecOptions, type ExecException } from 'child_process'
+import { exec, type ExecOptions } from 'child_process'
 import { promisify } from 'util'
-import { existsSync } from 'fs'
+import { existsSync, writeFileSync, unlinkSync, readdirSync } from 'fs'
+import { join } from 'path'
 import { sandboxService } from './sandbox.service'
 
 const execAsync = promisify(exec)
@@ -44,13 +45,22 @@ export async function execSandboxed(
     NO_COLOR: '1'
   }
 
-  // Add NVM/pyenv paths if they exist
+  // Add NVM node path if available (resolve in Node.js, not shell)
   const homePath = process.env.HOME
   if (homePath) {
     const nvmDir = `${homePath}/.nvm`
-    if (existsSync(nvmDir)) {
-      env.NVM_DIR = nvmDir
-      env.PATH = `${nvmDir}/versions/node/$(ls ${nvmDir}/versions/node/ 2>/dev/null | tail -1)/bin:${env.PATH}`
+    const nvmVersionsDir = join(nvmDir, 'versions', 'node')
+    if (existsSync(nvmVersionsDir)) {
+      try {
+        const versions = readdirSync(nvmVersionsDir).sort()
+        const latest = versions[versions.length - 1]
+        if (latest) {
+          env.NVM_DIR = nvmDir
+          env.PATH = `${join(nvmVersionsDir, latest, 'bin')}:${env.PATH}`
+        }
+      } catch {
+        // NVM dir not readable — skip
+      }
     }
   }
 
@@ -65,10 +75,13 @@ export async function execSandboxed(
 
   if (isSeatbeltAvailable()) {
     const profile = sandboxService.generateSeatbeltProfile(sandboxDir)
-    // sandbox-exec -p "profile" /bin/bash -c "command"
-    const fullCommand = `${SANDBOX_EXEC_PATH} -p '${profile.replace(/'/g, "'\\''")}' /bin/bash -c '${command.replace(/'/g, "'\\''")}'`
+    // Write profile to temp file to avoid shell injection via inline -p
+    const profilePath = join('/tmp', `cruchot-sb-${crypto.randomUUID()}.sb`)
+    writeFileSync(profilePath, profile, 'utf-8')
 
     try {
+      // sandbox-exec -f profile_file /bin/bash -c "command"
+      const fullCommand = `${SANDBOX_EXEC_PATH} -f '${profilePath}' /bin/bash -c '${command.replace(/'/g, "'\\''")}'`
       const result = await execAsync(fullCommand, execOptions)
       return { stdout: String(result.stdout), stderr: String(result.stderr), exitCode: 0 }
     } catch (error: unknown) {
@@ -78,6 +91,8 @@ export async function execSandboxed(
         stderr: err.stderr ?? '',
         exitCode: err.code ?? 1
       }
+    } finally {
+      try { unlinkSync(profilePath) } catch { /* cleanup best-effort */ }
     }
   } else {
     // Fallback: exec without Seatbelt (Windows, Linux, macOS without sandbox-exec)

@@ -63,8 +63,8 @@ export default function ChatView() {
 
   // Load messages + restore model + restore role when switching conversations
   useEffect(() => {
-    // Reset sandbox when switching conversations
-    useSandboxStore.getState().reset()
+    // Kill processes and reset sandbox when switching conversations
+    useSandboxStore.getState().deactivate().catch(() => {})
 
     if (!activeConversationId) {
       setMessages([])

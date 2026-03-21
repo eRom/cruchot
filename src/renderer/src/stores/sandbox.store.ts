@@ -5,6 +5,7 @@ interface SandboxState {
   isActive: boolean
   sessionId: string | null
   sandboxPath: string | null
+  conversationId: string | null
   processes: SandboxProcessInfo[]
 }
 
@@ -21,6 +22,7 @@ export const useSandboxStore = create<SandboxState & SandboxActions>((set, get) 
   isActive: false,
   sessionId: null,
   sandboxPath: null,
+  conversationId: null,
   processes: [],
 
   // Actions
@@ -31,6 +33,7 @@ export const useSandboxStore = create<SandboxState & SandboxActions>((set, get) 
         isActive: true,
         sessionId: result.sessionId,
         sandboxPath: result.sandboxPath,
+        conversationId,
         processes: []
       })
     } catch (err) {
@@ -40,14 +43,17 @@ export const useSandboxStore = create<SandboxState & SandboxActions>((set, get) 
   },
 
   deactivate: async () => {
-    const { sessionId } = get()
-    if (!sessionId) return
+    const { sessionId, conversationId } = get()
+    if (!sessionId || !conversationId) {
+      set({ isActive: false, sessionId: null, sandboxPath: null, conversationId: null, processes: [] })
+      return
+    }
     try {
-      await window.api.sandboxDeactivate(sessionId)
+      await window.api.sandboxDeactivate(sessionId, conversationId)
     } catch (err) {
       console.error('[Sandbox] Deactivate failed:', err)
     }
-    set({ isActive: false, sessionId: null, sandboxPath: null, processes: [] })
+    set({ isActive: false, sessionId: null, sandboxPath: null, conversationId: null, processes: [] })
   },
 
   stop: async () => {
@@ -73,6 +79,6 @@ export const useSandboxStore = create<SandboxState & SandboxActions>((set, get) 
   },
 
   reset: () => {
-    set({ isActive: false, sessionId: null, sandboxPath: null, processes: [] })
+    set({ isActive: false, sessionId: null, sandboxPath: null, conversationId: null, processes: [] })
   }
 }))

@@ -10,7 +10,8 @@ const activateSchema = z.object({
 })
 
 const deactivateSchema = z.object({
-  sessionId: z.string().min(1)
+  sessionId: z.string().min(1),
+  conversationId: z.string().min(1)
 })
 
 const stopSchema = z.object({
@@ -26,7 +27,8 @@ const getProcessesSchema = z.object({
 })
 
 const openPreviewSchema = z.object({
-  target: z.string().min(1).max(1000)
+  target: z.string().min(1).max(1000),
+  sessionId: z.string().min(1)
 })
 
 export function registerSandboxIpc(): void {
@@ -52,9 +54,11 @@ export function registerSandboxIpc(): void {
     const parsed = deactivateSchema.safeParse(payload)
     if (!parsed.success) throw new Error(`Invalid payload: ${parsed.error.message}`)
 
-    const { sessionId } = parsed.data
+    const { sessionId, conversationId } = parsed.data
     await processManagerService.killAll(sessionId)
     await sandboxService.destroySession(sessionId)
+    // Reset DB state
+    setConversationYolo(conversationId, false, null)
   })
 
   // Stop all processes (but keep the sandbox dir)
@@ -83,23 +87,36 @@ export function registerSandboxIpc(): void {
     return processManagerService.getProcesses(parsed.data.sessionId)
   })
 
-  // Open file or URL in default app
+  // Open file or URL in default app (confined to sandbox)
   ipcMain.handle('sandbox:openPreview', async (_event, payload) => {
     const parsed = openPreviewSchema.safeParse(payload)
     if (!parsed.success) throw new Error(`Invalid payload: ${parsed.error.message}`)
 
-    const { target } = parsed.data
+    const { target, sessionId } = parsed.data
 
-    // Validate: only localhost URLs or file:// paths
     if (target.startsWith('http://') || target.startsWith('https://')) {
+      // Only localhost URLs allowed
       const url = new URL(target)
       if (url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
         throw new Error('Only localhost URLs allowed for preview')
       }
       await shell.openExternal(target)
     } else {
-      // Assume it's a file path — open via OS
-      await shell.openExternal(`file://${target}`)
+      // File path — must be inside the sandbox directory
+      const sandboxDir = sandboxService.getSandboxDir(sessionId)
+      if (!sandboxDir) throw new Error('No active sandbox session')
+
+      const resolved = require('path').resolve(sandboxDir, target)
+      let real: string
+      try {
+        real = require('fs').realpathSync(resolved)
+      } catch {
+        throw new Error('File not found')
+      }
+      if (!real.startsWith(sandboxDir + require('path').sep) && real !== sandboxDir) {
+        throw new Error('Path escapes sandbox')
+      }
+      await shell.openExternal(`file://${real}`)
     }
   })
 

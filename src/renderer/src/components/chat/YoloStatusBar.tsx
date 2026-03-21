@@ -2,7 +2,7 @@ import { FolderOpen, Square, Terminal } from 'lucide-react'
 import { useSandboxStore } from '../../stores/sandbox.store'
 
 export function YoloStatusBar() {
-  const { isActive, sandboxPath, processes, stop } = useSandboxStore()
+  const { isActive, sandboxPath, sessionId, processes, stop } = useSandboxStore()
 
   if (!isActive) return null
 
@@ -13,8 +13,8 @@ export function YoloStatusBar() {
     : ''
 
   const handleOpenFolder = () => {
-    if (sandboxPath) {
-      window.api.sandboxOpenPreview(sandboxPath)
+    if (sandboxPath && sessionId) {
+      window.api.sandboxOpenPreview(sandboxPath, sessionId)
     }
   }
 

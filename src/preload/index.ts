@@ -531,8 +531,8 @@ const api: ElectronAPI = {
   sandboxActivate: (conversationId: string, workspacePath?: string) =>
     ipcRenderer.invoke('sandbox:activate', { conversationId, workspacePath }),
 
-  sandboxDeactivate: (sessionId: string) =>
-    ipcRenderer.invoke('sandbox:deactivate', { sessionId }),
+  sandboxDeactivate: (sessionId: string, conversationId: string) =>
+    ipcRenderer.invoke('sandbox:deactivate', { sessionId, conversationId }),
 
   sandboxStop: (sessionId: string) =>
     ipcRenderer.invoke('sandbox:stop', { sessionId }),
@@ -543,8 +543,8 @@ const api: ElectronAPI = {
   sandboxGetProcesses: (sessionId: string) =>
     ipcRenderer.invoke('sandbox:getProcesses', { sessionId }),
 
-  sandboxOpenPreview: (target: string) =>
-    ipcRenderer.invoke('sandbox:openPreview', { target }),
+  sandboxOpenPreview: (target: string, sessionId: string) =>
+    ipcRenderer.invoke('sandbox:openPreview', { target, sessionId }),
 
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>
