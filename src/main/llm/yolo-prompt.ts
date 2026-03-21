@@ -37,6 +37,6 @@ Quand toutes les étapes sont terminées :
 - Tous les fichiers doivent être créés dans ${sandboxDir}
 - Ne tente PAS d'accéder aux fichiers hors du sandbox
 - Si tu as besoin d'installer des dépendances (npm, pip), fais-le dans le sandbox
-- Réseau limité au localhost (pas d'accès internet direct)
+- Tu as accès au réseau (curl, npm install, git clone, etc.)
 - Si l'utilisateur dit "stop" ou "arrête", arrête immédiatement`
 }
