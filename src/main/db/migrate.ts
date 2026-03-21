@@ -297,6 +297,24 @@ export function runMigrations(): void {
       created_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS bardas (
+      id TEXT PRIMARY KEY,
+      namespace TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      version TEXT,
+      author TEXT,
+      is_enabled INTEGER DEFAULT 1,
+      roles_count INTEGER DEFAULT 0,
+      commands_count INTEGER DEFAULT 0,
+      prompts_count INTEGER DEFAULT 0,
+      fragments_count INTEGER DEFAULT 0,
+      libraries_count INTEGER DEFAULT 0,
+      mcp_servers_count INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS library_chunks (
       id TEXT PRIMARY KEY,
       library_id TEXT NOT NULL REFERENCES libraries(id) ON DELETE CASCADE,
@@ -401,4 +419,32 @@ export function runMigrations(): void {
   } catch {
     // Column already exists — ignore
   }
+
+  // Add namespace column to tables managed by Barda packs
+  const namespaceMigrations = [
+    'ALTER TABLE roles ADD COLUMN namespace TEXT',
+    'ALTER TABLE slash_commands ADD COLUMN namespace TEXT',
+    'ALTER TABLE prompts ADD COLUMN namespace TEXT',
+    'ALTER TABLE memory_fragments ADD COLUMN namespace TEXT',
+    'ALTER TABLE libraries ADD COLUMN namespace TEXT',
+    'ALTER TABLE mcp_servers ADD COLUMN namespace TEXT'
+  ]
+  for (const sql of namespaceMigrations) {
+    try {
+      sqlite.exec(sql)
+    } catch {
+      // Column already exists — ignore
+    }
+  }
+
+  // Barda indexes
+  sqlite.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_bardas_namespace ON bardas(namespace);
+    CREATE INDEX IF NOT EXISTS idx_roles_namespace ON roles(namespace);
+    CREATE INDEX IF NOT EXISTS idx_slash_commands_namespace ON slash_commands(namespace);
+    CREATE INDEX IF NOT EXISTS idx_prompts_namespace ON prompts(namespace);
+    CREATE INDEX IF NOT EXISTS idx_memory_fragments_namespace ON memory_fragments(namespace);
+    CREATE INDEX IF NOT EXISTS idx_libraries_namespace ON libraries(namespace);
+    CREATE INDEX IF NOT EXISTS idx_mcp_servers_namespace ON mcp_servers(namespace);
+  `)
 }

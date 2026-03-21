@@ -370,6 +370,7 @@ export interface MemoryFragment {
   content: string
   isActive: boolean
   sortOrder: number
+  namespace?: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -384,6 +385,7 @@ export interface SlashCommandInfo {
   projectId?: string | null
   isBuiltin: boolean
   sortOrder: number
+  namespace?: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -430,6 +432,7 @@ export interface LibraryInfo {
   totalSizeBytes: number
   status: 'empty' | 'indexing' | 'ready' | 'error'
   lastIndexedAt?: Date | null
+  namespace?: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -509,6 +512,7 @@ export interface McpServerInfo {
   status: McpServerStatus
   error?: string
   toolCount: number
+  namespace?: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -1036,7 +1040,75 @@ export interface ElectronAPI {
   onArenaMatchCreated: (callback: (data: { matchId: string }) => void) => void
   offArenaMatchCreated: () => void
 
+  // Barda (Gestion de Brigade)
+  bardaList: () => Promise<BardaInfo[]>
+  bardaImport: (filePath: string) => Promise<BardaImportReport>
+  bardaPreview: (filePath: string) => Promise<{ success: true; data: ParsedBarda } | { success: false; error: BardaParseError }>
+  bardaToggle: (id: string, isEnabled: boolean) => Promise<void>
+  bardaUninstall: (id: string) => Promise<void>
+
   // Settings
   getSetting: (key: string) => Promise<string | null>
   setSetting: (key: string, value: string) => Promise<void>
+}
+
+// ---------------------------------------------------------------------------
+// Barda (Gestion de Brigade)
+// ---------------------------------------------------------------------------
+
+export interface BardaInfo {
+  id: string
+  namespace: string
+  name: string
+  description?: string
+  version?: string
+  author?: string
+  isEnabled: boolean
+  rolesCount: number
+  commandsCount: number
+  promptsCount: number
+  fragmentsCount: number
+  librariesCount: number
+  mcpServersCount: number
+  createdAt: number
+}
+
+export interface ParsedResource {
+  name: string
+  content: string
+  mcpConfig?: {
+    transportType: string
+    command?: string
+    args?: string[]
+    url?: string
+    headers?: Record<string, string>
+  }
+}
+
+export interface ParsedBarda {
+  metadata: {
+    name: string
+    namespace: string
+    version?: string
+    description?: string
+    author?: string
+  }
+  roles: ParsedResource[]
+  commands: ParsedResource[]
+  prompts: ParsedResource[]
+  fragments: ParsedResource[]
+  libraries: ParsedResource[]
+  mcp: ParsedResource[]
+}
+
+export interface BardaImportReport {
+  bardaId: string
+  succes: string[]
+  skips: Array<{ type: string; name: string; reason: string }>
+  warnings: string[]
+}
+
+export interface BardaParseError {
+  line: number
+  message: string
 }

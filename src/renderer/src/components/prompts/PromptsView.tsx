@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { useBardaStore } from '@/stores/barda.store'
 
 type SortMode = 'activity' | 'name' | 'created'
 type SubView = 'grid' | 'create' | 'edit'
@@ -69,6 +70,7 @@ function uniqueTitle(title: string, existing: Set<string>): string {
 
 export function PromptsView() {
   const { prompts, setPrompts, addPrompt, updatePrompt, removePrompt } = usePromptsStore()
+  const disabledNamespaces = useBardaStore((s) => s.disabledNamespaces)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -86,7 +88,7 @@ export function PromptsView() {
 
   // ── Filtered + sorted ──────────────────────────────────────
   const filteredPrompts = useMemo(() => {
-    let list = prompts
+    let list = prompts.filter((p) => !p.namespace || !disabledNamespaces.has(p.namespace))
 
     if (filterType !== 'all') {
       list = list.filter((p) => p.type === filterType)
