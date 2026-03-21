@@ -117,6 +117,27 @@ export function setConversationArena(id: string, isArena: boolean) {
     .run()
 }
 
+export function setConversationYolo(id: string, isYolo: boolean, sandboxPath?: string | null) {
+  const db = getDatabase()
+  db.update(conversations)
+    .set({
+      isYolo,
+      sandboxPath: sandboxPath ?? null,
+      updatedAt: new Date()
+    })
+    .where(eq(conversations.id, id))
+    .run()
+}
+
+export function getYoloConversations() {
+  const db = getDatabase()
+  return db
+    .select()
+    .from(conversations)
+    .where(eq(conversations.isYolo, true))
+    .all()
+}
+
 export function deleteAllConversations() {
   const db = getDatabase()
   db.delete(conversations).run()
@@ -143,6 +164,8 @@ export function forkConversation(sourceId: string) {
         activeLibraryId: source.activeLibraryId,
         isFavorite: false,
         isArena: false,
+        isYolo: false,
+        sandboxPath: null,
         createdAt: now,
         updatedAt: now
       })
