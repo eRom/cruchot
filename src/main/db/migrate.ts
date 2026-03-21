@@ -437,6 +437,23 @@ export function runMigrations(): void {
     }
   }
 
+  // Add YOLO mode columns to conversations table
+  try {
+    sqlite.exec('ALTER TABLE conversations ADD COLUMN is_yolo INTEGER DEFAULT 0')
+  } catch {
+    // Column already exists — ignore
+  }
+  try {
+    sqlite.exec('ALTER TABLE conversations ADD COLUMN sandbox_path TEXT')
+  } catch {
+    // Column already exists — ignore
+  }
+
+  // YOLO index
+  sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS idx_conversations_is_yolo ON conversations(is_yolo);
+  `)
+
   // Barda indexes
   sqlite.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_bardas_namespace ON bardas(namespace);
