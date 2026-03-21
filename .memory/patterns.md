@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-20 (S41)
+> Derniere mise a jour : 2026-03-21 (S41)
 
 ## Conventions de nommage
 

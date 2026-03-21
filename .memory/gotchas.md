@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-20 (S41)
+> Derniere mise a jour : 2026-03-21 (S41)
 
 ## AI SDK v6 — Breaking changes
 
@@ -147,7 +147,9 @@
 - **lastIndexOf pour split sections** : NE PAS utiliser `body.lastIndexOf('\n## ', nextPos)` pour couper les sections Markdown — fragile. Utiliser `matchStart` du regex directement
 - **MCP servers non namespaces** : by design, les serveurs MCP importes ne sont PAS prefixes par le namespace (globaux). La collision entre bardas est attendue (skip)
 - **Filtre namespace renderer** : utiliser `disabledNamespaces` Set du barda store, filtrer avec `.filter(r => !r.namespace || !disabledNamespaces.has(r.namespace))` dans les useMemo/JSX des 6 vues
-- **Branche feature-barda** : non commitee/mergee. Tous les fichiers sont en place, typecheck passe, code review faite et corrections appliquees
+- **bardaPreview return type** : le handler IPC retourne `{ success, data/error }` (pas directement `ParsedBarda | BardaParseError`). Le type dans ElectronAPI doit etre `{ success: true; data: ParsedBarda } | { success: false; error: BardaParseError }` — sinon cast `as` rejete par strict typecheck CI
+- **db.transaction() Drizzle** : `db.transaction(fn)` execute directement. Ne PAS ecrire `db.transaction(fn)()` (double appel = crash `not a function`)
+- **Ressources pas visibles apres import** : les vues chargent au mount (useEffect). Apres import d'un barda, les vues deja montees n'ont pas les nouvelles ressources → toast "Redemarrez l'application"
 
 ## Restant a faire
 
