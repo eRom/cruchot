@@ -175,6 +175,10 @@ export function BardaImportReportDisplay({ report, onClose }: BardaImportReportD
         </div>
       )}
 
+      <p className="text-[11px] text-muted-foreground/60 italic">
+        Redemarrez l'application pour que les nouvelles ressources soient disponibles dans toutes les vues.
+      </p>
+
       <Button variant="ghost" size="sm" onClick={onClose}>
         Fermer
       </Button>

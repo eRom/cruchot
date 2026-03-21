@@ -33,12 +33,14 @@ export function BrigadeView(): React.JSX.Element {
         return
       }
 
-      // Preview first
-      const result = await window.api.bardaPreview(mdFile.path)
-      if ('line' in result && 'message' in result) {
-        setImportState({ step: 'error', error: result as BardaParseError })
+      // Preview first — handler returns { success, data } or { success, error }
+      const result = await window.api.bardaPreview(mdFile.path) as
+        | { success: true; data: ParsedBarda }
+        | { success: false; error: BardaParseError }
+      if (!result.success) {
+        setImportState({ step: 'error', error: result.error })
       } else {
-        setImportState({ step: 'preview', filePath: mdFile.path, parsed: result as ParsedBarda })
+        setImportState({ step: 'preview', filePath: mdFile.path, parsed: result.data })
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erreur lors de la lecture"
@@ -53,6 +55,7 @@ export function BrigadeView(): React.JSX.Element {
     try {
       const report = await importBarda(filePath)
       setImportState({ step: 'report', report })
+      toast.info('Redemarrez l\'application pour appliquer les changements', { duration: 8000 })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erreur lors de l'import"
       toast.error(message)
@@ -136,7 +139,7 @@ export function BrigadeView(): React.JSX.Element {
               </Button>
             </div>
           ) : bardas.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3">
               {bardas.map((barda) => (
                 <BardaCard key={barda.id} barda={barda} />
               ))}

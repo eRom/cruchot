@@ -131,7 +131,7 @@ export function registerBardaHandlers(): void {
     db.transaction(() => {
       deleteResourcesByNamespace(barda.namespace)
       deleteBarda(parsed.data.id)
-    })()
+    })
   })
 
   console.log('[IPC] Barda handlers registered')
