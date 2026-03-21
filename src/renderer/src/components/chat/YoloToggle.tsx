@@ -82,7 +82,7 @@ export function YoloToggle({ conversationId, modelSupportsYolo, workspacePath, d
                 </p>
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                   <li>Les fichiers sont confines au dossier sandbox</li>
-                  <li>Le reseau est limite au localhost</li>
+                  <li>Acces reseau complet (curl, npm, git...)</li>
                   <li>Vous pouvez arreter a tout moment avec le bouton Stop</li>
                   <li>Aucune garantie sur le resultat produit</li>
                 </ul>
