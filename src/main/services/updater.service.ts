@@ -58,8 +58,8 @@ export function initAutoUpdater(): void {
   })
 
   autoUpdater.on('error', (err: Error) => {
+    // Log silently — don't broadcast raw errors to the renderer
     console.error('[Updater] Error:', err.message)
-    broadcast('updater:error', { message: err.message })
   })
 
   // Initial check after a short delay (let the app settle)
