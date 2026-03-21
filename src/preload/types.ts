@@ -1043,7 +1043,7 @@ export interface ElectronAPI {
   // Barda (Gestion de Brigade)
   bardaList: () => Promise<BardaInfo[]>
   bardaImport: (filePath: string) => Promise<BardaImportReport>
-  bardaPreview: (filePath: string) => Promise<ParsedBarda | BardaParseError>
+  bardaPreview: (filePath: string) => Promise<{ success: true; data: ParsedBarda } | { success: false; error: BardaParseError }>
   bardaToggle: (id: string, isEnabled: boolean) => Promise<void>
   bardaUninstall: (id: string) => Promise<void>
 
