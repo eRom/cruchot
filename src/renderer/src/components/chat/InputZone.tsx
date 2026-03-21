@@ -27,6 +27,7 @@ import { FileMentionPopover } from '@/components/chat/FileMentionPopover'
 import { MentionOverlay } from '@/components/chat/MentionOverlay'
 import { useSlashCommands } from '@/hooks/useSlashCommands'
 import { useFileMention } from '@/hooks/useFileMention'
+import { YoloToggle } from '@/components/chat/YoloToggle'
 import type { AttachmentRef } from '../../../../preload/types'
 
 // ── Types pour futures integrations (ModelParams) ──
@@ -1163,6 +1164,14 @@ export function InputZone({
                 <LibraryPicker
                   disabled={isBusy}
                   onLibraryChange={setActiveLibraryId}
+                />
+              )}
+              {!isImageMode && activeConversationId && (
+                <YoloToggle
+                  conversationId={activeConversationId}
+                  modelSupportsYolo={selectedModel?.supportsYolo ?? false}
+                  workspacePath={workspaceRootPath ?? undefined}
+                  disabled={isBusy}
                 />
               )}
               <PromptPicker
