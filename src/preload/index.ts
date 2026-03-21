@@ -520,6 +520,13 @@ const api: ElectronAPI = {
   onArenaMatchCreated: (cb) => { ipcRenderer.on('arena:match-created', (_, data) => cb(data)) },
   offArenaMatchCreated: () => { ipcRenderer.removeAllListeners('arena:match-created') },
 
+  // ── Barda (Brigade Packs) ──────────────────────────────
+  bardaImport: (filePath: string) => ipcRenderer.invoke('barda:import', { filePath }),
+  bardaPreview: (filePath: string) => ipcRenderer.invoke('barda:preview', { filePath }),
+  bardaList: () => ipcRenderer.invoke('barda:list'),
+  bardaToggle: (id: string, isEnabled: boolean) => ipcRenderer.invoke('barda:toggle', { id, isEnabled }),
+  bardaUninstall: (id: string) => ipcRenderer.invoke('barda:uninstall', { id }),
+
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>
     ipcRenderer.invoke('settings:get', key),

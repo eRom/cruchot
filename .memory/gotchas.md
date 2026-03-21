@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-20 (S40)
+> Derniere mise a jour : 2026-03-20 (S41)
 
 ## AI SDK v6 — Breaking changes
 
@@ -74,6 +74,12 @@
 - **Gatekeeper macOS Tahoe** : `xattr -cr /Applications/Cruchot.app` apres copie. Clic droit > Ouvrir ne suffit pas toujours
 - **Installation propre** : `pkill -f "Cruchot.app"; trash /Applications/Cruchot.app; cp -R dist/mac-arm64/Cruchot.app /Applications/; xattr -cr /Applications/Cruchot.app`
 - Certificat Apple Developer ID requis pour distribution publique (99$/an)
+- **CI Release multi-plateforme** : `release.yml` build Mac + Win + Linux en parallele (`fail-fast: false`)
+- **macOS CI** : `arch: [arm64, x64]` pour couvrir les 2 types de runners GitHub Actions (pas universal — plante sur better-sqlite3)
+- **Linux .deb `maintainer`** : electron-builder exige un champ `maintainer` dans le bloc `linux:` du YAML (ou `author` avec email dans package.json). Sans ça : `It is required to set Linux .deb package maintainer`
+- **TypeScript CI** : erreurs pre-existantes dans le renderer bloquent le release. Le typecheck main a `continue-on-error: true` mais pas le renderer
+- **Re-tag release** : quand on fix et re-tag, les anciens assets restent sur la release GitHub (doublons). Nettoyer via `gh release delete-asset`
+- **Blockmaps** : fichiers `.blockmap` generes par electron-builder pour l'auto-updater delta. Polluent la page release — supprimer pour la lisibilite
 
 ## Preferences UI de Romain
 
@@ -131,6 +137,17 @@
 - **providerOptions type** : `buildThinkingProviderOptions()` retourne `Record<string, Record<string, unknown>>` qui n'est pas assignable a `SharedV3ProviderOptions`. Fix : cast via `as Parameters<typeof streamText>[0]['providerOptions']` ou `any`
 - **Import path hooks → preload** : depuis `src/renderer/src/hooks/`, le chemin relatif vers preload est `../../../preload/types` (3 niveaux), PAS `../../../../preload/types` (4 niveaux comme depuis components/chat)
 - **Keychain/safeStorage apres rebuild** : un rebuild complet de l'app peut invalider l'acces Keychain aux cles API chiffrees. Symptome : "API key not configured" pour tous les providers. Fix : re-saisir les cles dans Settings > API Keys. Ce n'est PAS un probleme de code, c'est un probleme de signature app qui change entre builds
+
+## Bardas — Gestion de Brigade (S41)
+
+- **TOCTOU namespace** : les checks `getBardaByNamespace()` + `countActiveFragments()` DOIVENT etre DANS la transaction SQLite (pas avant). Sinon 2 imports concurrents du meme namespace passent les checks
+- **Desinstallation non-atomique** : les 8 DELETE de `deleteResourcesByNamespace()` + `deleteBarda()` DOIVENT etre dans une seule `db.transaction()`. Sinon crash mid-way = DB inconstante
+- **nanoid interdit** : utiliser `crypto.randomUUID()` partout (convention projet post-S33, compatibilite Qdrant)
+- **Path validation** : `validateBardaPath()` dans barda.ipc.ts — realpathSync, ext .md, BLOCKED_ROOTS. Sans ca = lecture fichier arbitraire
+- **lastIndexOf pour split sections** : NE PAS utiliser `body.lastIndexOf('\n## ', nextPos)` pour couper les sections Markdown — fragile. Utiliser `matchStart` du regex directement
+- **MCP servers non namespaces** : by design, les serveurs MCP importes ne sont PAS prefixes par le namespace (globaux). La collision entre bardas est attendue (skip)
+- **Filtre namespace renderer** : utiliser `disabledNamespaces` Set du barda store, filtrer avec `.filter(r => !r.namespace || !disabledNamespaces.has(r.namespace))` dans les useMemo/JSX des 6 vues
+- **Branche feature-barda** : non commitee/mergee. Tous les fichiers sont en place, typecheck passe, code review faite et corrections appliquees
 
 ## Restant a faire
 

@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-20 (S40)
+> Derniere mise a jour : 2026-03-20 (S41)
 
 ## Main process
 
@@ -21,6 +21,7 @@
 | `src/main/ipc/files.ipc.ts` | Read/save securises, `isPathAllowed()`, `files:readText` (drag & drop, chemin absolu, whitelist ext, 500KB max) |
 | `src/main/ipc/prompt-optimizer.ipc.ts` | Handler `prompt:optimize` — generateText one-shot pour ameliorer un prompt (Zod) |
 | `src/main/ipc/arena.ipc.ts` | 5 handlers Arena (send, cancel, vote, getMatches, getStats) + dual streaming parallele |
+| `src/main/ipc/barda.ipc.ts` | 5 handlers Barda (import, preview, list, toggle, uninstall) + path validation securisee |
 | `src/main/ipc/statistics.ipc.ts` | 5 handlers stats |
 | `src/main/ipc/images.ipc.ts` | Generation images |
 | `src/main/ipc/roles.ipc.ts` | CRUD roles |
@@ -35,8 +36,9 @@
 | `src/main/llm/errors.ts` | Classification erreurs |
 | `src/main/llm/cost-calculator.ts` | Table PRICING + calcul cout |
 | `src/main/llm/image.ts` | Generation images multi-provider |
-| `src/main/db/schema.ts` | 24 tables Drizzle |
-| `src/main/db/queries/cleanup.ts` | Bulk delete, ordre FK strict (dont arena_matches, library_chunks → library_sources → libraries) |
+| `src/main/db/schema.ts` | 25 tables Drizzle (+ bardas S41) |
+| `src/main/db/queries/cleanup.ts` | Bulk delete, ordre FK strict (dont bardas, arena_matches, library_chunks → library_sources → libraries) |
+| `src/main/db/queries/bardas.ts` | CRUD bardas + deleteResourcesByNamespace (8 DELETE FK-strict) + countActiveFragments |
 | `src/main/db/queries/arena.ts` | CRUD arena_matches + stats agregees win/loss/tie par modele |
 | `src/main/db/queries/libraries.ts` | CRUD libraries + sources + chunks + sticky attach/detach |
 | `src/main/db/queries/slash-commands.ts` | CRUD + seed builtins |
@@ -64,6 +66,8 @@
 | `src/main/services/instance-token.service.ts` | Token instance 32 bytes safeStorage pour export/import .mlx |
 | `src/main/services/bulk-export.service.ts` | Export bulk AES-256-GCM → fichier .mlx |
 | `src/main/services/bulk-import.service.ts` | Import .mlx, decrypt, Zod validation, size check 200MB |
+| `src/main/services/barda-parser.service.ts` | Parseur Markdown barda — frontmatter YAML + sections ## + ressources ### + MCP YAML fenced, validation stricte |
+| `src/main/services/barda-import.service.ts` | Import atomique barda — transaction SQLite, namespace propagation, MCP skip, rapport |
 
 ## Preload
 
@@ -76,7 +80,7 @@
 
 | Fichier | Role |
 |---------|------|
-| `src/renderer/src/App.tsx` | Routing ViewMode (13 vues), 12 vues lazy-loaded (React.lazy + Suspense), shortcuts, onboarding |
+| `src/renderer/src/App.tsx` | Routing ViewMode (14 vues), 13 vues lazy-loaded (React.lazy + Suspense), shortcuts, onboarding |
 | `components/chat/ChatView.tsx` | Message list + WorkspacePanel |
 | `components/chat/InputZone.tsx` | Saisie, pills, FileReference, SlashCommandPicker, MentionOverlay, LibraryPicker, PromptOptimizer (Sparkles), Drag & Drop fichiers |
 | `components/chat/LibraryPicker.tsx` | Select simple referentiel sticky — badge actif + dropdown + detachement |
@@ -110,6 +114,9 @@
 | `components/arena/VoteBar.tsx` | 3 boutons vote (gauche/egalite/droite) + affichage resultat |
 | `components/arena/ArenaInputZone.tsx` | Zone saisie simplifiee (textarea + send/cancel, pas de pills) |
 | `components/arena/ArenaMetrics.tsx` | Barre metriques comparees (tokens, cout, temps, coloration vert/rouge) |
+| `components/brigade/BrigadeView.tsx` | Vue principale Gestion de Brigade — grille BardaCards, import avec preview, rapport post-import |
+| `components/brigade/BardaCard.tsx` | Card barda — namespace badge, compteurs, toggle ON/OFF, desinstaller |
+| `components/brigade/BardaPreview.tsx` | Preview avant import + rapport post-import + affichage erreur parsing |
 
 ## Renderer — Stores & Hooks
 
@@ -119,7 +126,8 @@
 | `stores/arena.store.ts` | Store Arena dedie (modeles, messages L/R, rounds, vote, streaming state) |
 | `stores/settings.store.ts` | Persist localStorage (theme, model params, favorites, summary) |
 | `stores/messages.store.ts` | Messages conversation active |
-| `stores/ui.store.ts` | ViewMode (13 vues), isStreaming |
+| `stores/ui.store.ts` | ViewMode (14 vues dont brigade), isStreaming |
+| `stores/barda.store.ts` | Store Zustand bardas — CRUD, disabledNamespaces (Set computed pour filtrage) |
 | `stores/workspace.store.ts` | rootPath, tree, attachedFiles, isPanelOpen |
 | `stores/slash-commands.store.ts` | Slash commands CRUD |
 | `stores/library.store.ts` | Libraries CRUD + indexing progress Map |

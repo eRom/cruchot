@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-20 (S40)
+> Derniere mise a jour : 2026-03-20 (S41)
 
 ## Conventions de nommage
 
@@ -131,9 +131,9 @@
 
 ## Data Cleanup / Factory Reset
 
-- Zone orange : nettoyage partiel (conversations, projets, images, taches, MCP). Zone rouge : factory reset complet (24 tables + `localStorage.clear()`)
+- Zone orange : nettoyage partiel (conversations, projets, images, taches, MCP). Zone rouge : factory reset complet (25 tables + `localStorage.clear()`)
 - Backend : ordre FK strict, stop services avant delete, trash fichiers, confirmation dialog natif main
-- Cleanup : `arena_matches` avant `messages`, `library_chunks` → `library_sources` → `libraries` (ordre FK) + drop collections Qdrant `library_*`
+- Cleanup : `bardas` avant les tables namespacees, `arena_matches` avant `messages`, `library_chunks` → `library_sources` → `libraries` (ordre FK) + drop collections Qdrant `library_*`
 - Singletons : `export const fooService = new FooService()` (pas getInstance())
 
 ## Conventions UI
@@ -144,9 +144,24 @@
 - ConversationList : `overflow-y-auto` (PAS Radix ScrollArea)
 - Title bar macOS : `hiddenInset`, traffic lights `{x:15, y:10}`, drag zones 38px
 
+## Bardas — Gestion de Brigade (S41)
+
+- **Format fichier** : Markdown (.md) avec frontmatter YAML (`name`, `namespace` requis, `version`/`description`/`author` optionnels)
+- **Sections** : `## Roles`, `## Commands`, `## Prompts`, `## Memory Fragments`, `## Libraries`, `## MCP` — toutes optionnelles, ordre libre
+- **Ressources** : `### Nom` suivi du body texte. Section MCP : body contient un bloc fenced YAML
+- **Namespace** : propage automatiquement sur 6 tables via colonne `namespace` TEXT nullable. Regex `/^[a-z][a-z0-9-]*$/`
+- **Import atomique** : transaction SQLite, checks namespace unique + capacite fragments DANS la transaction (anti-TOCTOU)
+- **MCP skip** : les serveurs MCP existants ne sont pas ecrases — skip silencieux + rapport
+- **Desinstallation** : transaction atomique `deleteResourcesByNamespace()` + `deleteBarda()` — 9 DELETE dans l'ordre FK
+- **Toggle ON/OFF** : `isEnabled` sur table `bardas`, renderer filtre via `disabledNamespaces` Set (6 vues existantes)
+- **Securite IPC** : `validateBardaPath()` — realpathSync + ext .md + BLOCKED_ROOTS, taille max 1 MB
+- **IDs** : `crypto.randomUUID()` (PAS nanoid — convention Qdrant-compatible)
+- **Parseur** : maison (~220 lignes, pas de lib Markdown), split par `matchStart` (pas lastIndexOf)
+- **Exemples** : 3 fichiers dans `examples/` (barda-ecrivain.md, barda-dev-react.md, barda-philosophe.md)
+
 ## Performance (S37)
 
-- **React.lazy + Suspense** : 12 vues non-chat lazy-loaded dans App.tsx (seul ChatView est eager)
+- **React.lazy + Suspense** : 13 vues non-chat lazy-loaded dans App.tsx (seul ChatView est eager)
 - **React.memo** : MessageItem wrappe pour eviter re-renders pendant streaming
 - **useMemo** : `conversationMessages` dans ChatView (evite .filter() sur chaque token)
 - **manualChunks** : vendor splitting par fonction (id) dans electron.vite.config.ts — chunks react, icons, charts, markdown, radix
@@ -164,6 +179,10 @@
 - `forceCodeSigning: false` — ad-hoc signing automatique, `notarize: false`, `hardenedRuntime: false`
 - `sourcemap: false` partout (main, preload, renderer, remote-web, tsconfig)
 - **Commande de test packaging** : `npm run dist:mac` puis `pkill -f "Cruchot.app"; trash /Applications/Cruchot.app; cp -R dist/mac-arm64/Cruchot.app /Applications/; xattr -cr /Applications/Cruchot.app; open /Applications/Cruchot.app`
+- **CI Release** : `release.yml` declenche sur tag `v*`, 3 jobs paralleles (macos-latest, windows-latest, ubuntu-latest), `fail-fast: false`, publie sur GitHub Releases via `--publish always`
+- **Targets CI** : macOS (DMG arm64 + x64), Windows (NSIS exe), Linux (AppImage + deb)
+- **Nettoyage release** : supprimer `.blockmap` et `latest*.yml` via `gh release delete-asset` apres publication
+- **Version bump** : mettre a jour `package.json` version AVANT de creer le tag (electron-builder utilise cette version pour nommer les artifacts)
 
 ## Securite — Patterns (S36)
 

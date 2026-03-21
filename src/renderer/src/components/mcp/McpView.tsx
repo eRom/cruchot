@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, Plus, Network } from 'lucide-react'
 import { useUiStore } from '@/stores/ui.store'
 import { useMcpStore } from '@/stores/mcp.store'
 import { McpServerCard } from './McpServerCard'
 import { McpServerForm } from './McpServerForm'
 import { toast } from 'sonner'
+import { useBardaStore } from '@/stores/barda.store'
 
 type SubView = 'grid' | 'create' | 'edit'
 
@@ -19,6 +20,13 @@ export function McpView() {
   const stopServer = useMcpStore((s) => s.stopServer)
   const restartServer = useMcpStore((s) => s.restartServer)
   const handleStatusChange = useMcpStore((s) => s.handleStatusChange)
+
+  const disabledNamespaces = useBardaStore((s) => s.disabledNamespaces)
+
+  const filteredServers = useMemo(
+    () => servers.filter((s) => !s.namespace || !disabledNamespaces.has(s.namespace)),
+    [servers, disabledNamespaces]
+  )
 
   const [subView, setSubView] = useState<SubView>('grid')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -115,7 +123,7 @@ export function McpView() {
   }
 
   // Grid view
-  const connectedCount = servers.filter((s) => s.status === 'connected').length
+  const connectedCount = filteredServers.filter((s) => s.status === 'connected').length
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -136,9 +144,9 @@ export function McpView() {
           {/* Subheader */}
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              {servers.length === 0
+              {filteredServers.length === 0
                 ? 'Connectez des serveurs MCP pour etendre les capacites du LLM'
-                : `${connectedCount} connecte${connectedCount > 1 ? 's' : ''} sur ${servers.length}`
+                : `${connectedCount} connecte${connectedCount > 1 ? 's' : ''} sur ${filteredServers.length}`
               }
             </p>
             <button
@@ -151,7 +159,7 @@ export function McpView() {
           </div>
 
           {/* Empty state */}
-          {servers.length === 0 && !loading && (
+          {filteredServers.length === 0 && !loading && (
             <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/60 py-12">
               <Network className="size-10 text-muted-foreground/40" />
               <div className="text-center">
@@ -171,9 +179,9 @@ export function McpView() {
           )}
 
           {/* Server grid */}
-          {servers.length > 0 && (
+          {filteredServers.length > 0 && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {servers.map((server) => (
+              {filteredServers.map((server) => (
                 <McpServerCard
                   key={server.id}
                   server={server}

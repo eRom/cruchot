@@ -37,6 +37,7 @@ Flux principaux à montrer :
 - Mémoire sémantique : Qdrant binaire local 127.0.0.1 uniquement (pas d'accès réseau), embeddings ONNX CPU locaux (zéro cloud), contenu des recalls sanitisé avant injection XML dans le system prompt, données vectorielles stockées dans userData (même protection que SQLite)
 - Référentiels RAG Custom : fichiers copiés dans userData (pas de lecture directe depuis le filesystem utilisateur après import), contenu des chunks sanitisé avant injection XML `<library-context>` dans le system prompt (mêmes gardes anti-injection que semantic-memory et workspace files), collections Qdrant par référentiel (isolation des données), IPC handlers validés Zod (taille fichier max 20MB, max 100 sources/référentiel, extensions whitelist), cleanup intégré au factory reset (FK cascade + drop collections Qdrant), embedding Google via clé API chiffrée safeStorage (jamais exposée au renderer)
 - Export/import .mlx : token d'instance chiffré safeStorage (hors whitelist renderer), AES-256-GCM avec IV unique par export + authTag intégrité, Zod validation du payload déchiffré (version + structure), token externe validé regex hex strict (64 chars), taille fichier max 200 MB, import transactionnel SQLite
+- Bardas (Gestion de Brigade) : validateBardaPath() avec fs.realpathSync() + BLOCKED_ROOTS (8 chemins système) + extension .md obligatoire, taille fichier max 1 MB (statSync avant lecture), namespace validé regex strict `/^[a-z][a-z0-9-]*$/`, contenus texte sanitisés XML/HTML (escape `<>&`), import transactionnel SQLite (checks TOCTOU-safe dans la transaction), désinstallation atomique (transaction unique pour les 9 DELETE), MCP importés sans secrets (pas d'envEncrypted dans un barda partageable)
 
 Style : technique et épuré, fond sombre, couleurs : rouge pour les barrières de sécurité hard block, vert pour les flux validés, jaune/orange pour les zones à risque contrôlé (bash tool, MCP subprocess, SENSITIVE_ROOTS avec dialog approbation), bleu pour les protections anti-timing/anti-DoS.
 
@@ -103,6 +104,11 @@ Tables et relations :
 **arena_matches** (id PK, conversationId, userMessageId, leftMessageId?, rightMessageId?, leftProviderId, leftModelId, rightProviderId, rightModelId, vote [left|right|tie]?, votedAt?, createdAt)
   — Référence conversations via conversationId, messages via userMessageId/leftMessageId/rightMessageId
 
+**bardas** (id PK, namespace UNIQUE, name, description?, version?, author?, isEnabled BOOL DEFAULT true, rolesCount, commandsCount, promptsCount, fragmentsCount, librariesCount, mcpServersCount, createdAt, updatedAt)
+  — Lien logique via colonne `namespace` sur 6 tables : roles, slash_commands, prompts, memory_fragments, libraries, mcp_servers (pas de FK, filtre par namespace)
+
+Note : les tables roles, slash_commands, prompts, memory_fragments, libraries, mcp_servers ont une colonne `namespace TEXT` nullable. NULL = ressource custom, non-NULL = ressource d'un barda.
+
 Relations FK à montrer avec des flèches :
 - models → providers
 - conversations → projects, roles
@@ -120,8 +126,9 @@ Relations FK à montrer avec des flèches :
 - library_chunks → libraries (CASCADE), library_sources (CASCADE)
 - conversations → libraries (via activeLibraryId)
 - arena_matches → conversations (via conversationId), messages (via userMessageId, leftMessageId, rightMessageId)
+- bardas → (lien logique namespace) roles, slash_commands, prompts, memory_fragments, libraries, mcp_servers
 
-Style : ERD classique, fond sombre, groupes logiques par couleur : bleu pour le coeur chat (conversations, messages, attachments), violet pour la config (providers, models, settings, custom_models), vert pour les features (prompts, roles, projects, slash_commands), orange pour les extensions (scheduled_tasks, mcp_servers, memory_fragments, remote_sessions, remote_server_sessions), rouge pour le tracking (statistics, tts_usage, images), cyan pour la mémoire sémantique (vector_sync_state), indigo pour les référentiels RAG (libraries, library_sources, library_chunks).
+Style : ERD classique, fond sombre, groupes logiques par couleur : bleu pour le coeur chat (conversations, messages, attachments), violet pour la config (providers, models, settings, custom_models), vert pour les features (prompts, roles, projects, slash_commands), orange pour les extensions (scheduled_tasks, mcp_servers, memory_fragments, remote_sessions, remote_server_sessions), rouge pour le tracking (statistics, tts_usage, images), cyan pour la mémoire sémantique (vector_sync_state), indigo pour les référentiels RAG (libraries, library_sources, library_chunks), rose pour les bardas (bardas + namespace sur 6 tables).
 
 ---
 
@@ -295,6 +302,18 @@ Catégories et fonctionnalités :
 - Prompt directif qui priorise la recherche web sur les outils workspace
 - Visible uniquement si la clé API Perplexity est configurée
 - Persistance des sources dans la base de données (contentData.searchSources)
+
+**Bardas — Gestion de Brigade** (icône : sac à dos militaire/shield)
+- Packs thématiques au format Markdown (.md) : un fichier = un ensemble complet de ressources (rôles, commandes, prompts, fragments mémoire, définitions de référentiels, serveurs MCP)
+- Format ouvert : frontmatter YAML (name, namespace, version, description, author) + sections `## Roles`, `## Commands`, `## Prompts`, `## Memory Fragments`, `## Libraries`, `## MCP` avec sous-sections `### Nom`
+- Namespace unique par barda — propagé automatiquement sur toutes les ressources importées (ex: `ecrivain:resume-chapitre`)
+- Import en un clic : preview du contenu avant import (sections, compteurs, noms des ressources), import atomique en transaction SQLite, rapport post-import détaillé (succès, MCP skippés, warnings)
+- Toggle ON/OFF global : désactive/réactive toutes les ressources d'un namespace sans les supprimer (filtrage dans 6 vues existantes)
+- Désinstallation propre : suppression atomique de toutes les ressources du namespace en une transaction (9 DELETE FK-strict), conversations intactes
+- Serveurs MCP : skip silencieux si un serveur du même nom existe déjà (pas d'écrasement)
+- Sécurité : validation chemin (realpathSync + BLOCKED_ROOTS + extension .md), taille max 1 MB, namespace regex strict, sanitization XML/HTML des contenus
+- 3 bardas exemples inclus : barda-écrivain (4 rôles, 7 commandes, 3 prompts, 2 fragments, 1 référentiel), barda-dev-react (3 rôles, 5 commandes, 2 prompts, 1 MCP), barda-philosophe (3 rôles, 4 commandes, 3 prompts, 2 fragments)
+- Éditable dans n'importe quel éditeur texte, versionnable dans Git, partageable par email/Discord
 
 **Gestion des données** (icône : bouclier/corbeille)
 - Export/import sécurisé (.mlx) : toutes les conversations et projets exportés dans un fichier binaire chiffré AES-256-GCM, token d'instance 32 bytes stocké via safeStorage, import cross-machine avec saisie du token externe (hex 64 chars), déduplication des noms de projets (suffixe -1, -2), import transactionnel SQLite

@@ -12,6 +12,9 @@ App desktop locale de chat multi-LLM construite avec Electron. 11 providers, gen
 
 ## Updates
 
+- 21/03/2026
+  - **Bardas (Gestion de Brigade)** : systeme de packs thematiques importables au format Markdown (.md) — roles, commandes, prompts, fragments, referentiels, MCP regroupes sous un namespace unique
+
 - 20/03/2026
   - **Fork conversations** : dupliquer une conversation (historique et contexte)
   - **UI fixes** : Arena mode, etc.
@@ -94,7 +97,7 @@ src/
   main/           # Electron main process
     ipc/          #   Handlers IPC par domaine (Zod validation)
     llm/          #   Routeur AI SDK, cost-calculator, tools, prompts
-    db/           #   Schema Drizzle (24 tables), queries
+    db/           #   Schema Drizzle (25 tables), queries
     services/     #   Singletons metier (library, qdrant, git, mcp, remote...)
   preload/        # Bridge IPC securise (contextBridge)
   renderer/src/   # React app
@@ -180,6 +183,15 @@ src/
 - Token d'instance 32 bytes (safeStorage), import cross-machine
 - Import transactionnel SQLite avec deduplication
 
+### Bardas (Gestion de Brigade)
+- Packs thematiques au format Markdown (.md) contenant roles, commandes, prompts, fragments memoire, referentiels et serveurs MCP
+- Import en un clic avec preview du contenu et rapport detaille (succes, skips MCP, warnings)
+- Namespace unique par barda — les ressources importees ne collisionnent jamais avec les ressources custom
+- Toggle ON/OFF global : desactive toutes les ressources d'un barda sans les supprimer
+- Desinstallation propre : suppression atomique de toutes les ressources du namespace
+- 3 bardas exemples inclus (ecrivain, dev-react, philosophe) dans `examples/`
+- Format ouvert : editable dans n'importe quel editeur texte, versionnable dans Git
+
 ### Autres fonctionnalites
 - **Projets** : organisation avec modele par defaut, workspace lie, system prompt
 - **Roles** : builtin et custom, variables dynamiques `{{varName}}`
@@ -218,7 +230,7 @@ L'architecture de securite repose sur l'isolation stricte des 3 couches Electron
 - **Export .mlx** : AES-256-GCM, IV unique par export, token hors whitelist renderer
 
 ### Donnees
-- SQLite WAL + 24 tables Drizzle, donnees 100% locales
+- SQLite WAL + 25 tables Drizzle, donnees 100% locales
 - Qdrant vector DB embedded (127.0.0.1 uniquement)
 - Zero telemetrie, zero serveur backend
 

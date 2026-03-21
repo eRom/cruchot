@@ -34,6 +34,7 @@ import { registerCustomModelsIpc } from './custom-models.ipc'
 import { registerLibraryIpc } from './library.ipc'
 import { registerPromptOptimizerIpc } from './prompt-optimizer.ipc'
 import { registerArenaIpc } from './arena.ipc'
+import { registerBardaHandlers } from './barda.ipc'
 
 /**
  * Registre central des IPC handlers.
@@ -135,6 +136,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Arena (LLM vs LLM) ──────────────────────────
   registerArenaIpc()
+
+  // ── Barda (Brigade Packs) ──────────────────────
+  registerBardaHandlers()
 
   // ── Settings ────────────────────────────────────────
   const ALLOWED_SETTING_KEYS = new Set([
