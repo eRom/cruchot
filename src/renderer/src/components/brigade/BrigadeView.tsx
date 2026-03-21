@@ -34,9 +34,7 @@ export function BrigadeView(): React.JSX.Element {
       }
 
       // Preview first — handler returns { success, data } or { success, error }
-      const result = await window.api.bardaPreview(mdFile.path) as
-        | { success: true; data: ParsedBarda }
-        | { success: false; error: BardaParseError }
+      const result = await window.api.bardaPreview(mdFile.path)
       if (!result.success) {
         setImportState({ step: 'error', error: result.error })
       } else {
