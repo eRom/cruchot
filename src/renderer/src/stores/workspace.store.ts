@@ -5,7 +5,6 @@ interface WorkspaceState {
   rootPath: string | null
   tree: FileNode | null
   selectedFilePath: string | null
-  filePreview: FileContent | null
   isPanelOpen: boolean
   isLoading: boolean
   attachedFiles: string[] // relative paths of files attached to current message
@@ -13,8 +12,7 @@ interface WorkspaceState {
   openWorkspace: (rootPath: string, projectId?: string) => Promise<void>
   closeWorkspace: () => Promise<void>
   refreshTree: () => Promise<void>
-  selectFile: (path: string) => Promise<void>
-  clearFilePreview: () => void
+  selectFile: (path: string) => void
   togglePanel: () => void
   setIsPanelOpen: (open: boolean) => void
   attachFile: (path: string) => void
@@ -27,7 +25,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   rootPath: null,
   tree: null,
   selectedFilePath: null,
-  filePreview: null,
   isPanelOpen: false,
   isLoading: false,
   attachedFiles: [],
@@ -52,7 +49,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       rootPath: null,
       tree: null,
       selectedFilePath: null,
-      filePreview: null,
       isPanelOpen: false,
       attachedFiles: []
     })
@@ -68,19 +64,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }
   },
 
-  selectFile: async (path) => {
+  selectFile: (path) => {
     set({ selectedFilePath: path })
-    try {
-      const fileContent = await window.api.workspaceReadFile(path)
-      set({ filePreview: fileContent })
-    } catch (error) {
-      console.error('[Workspace] Failed to read file:', error)
-      set({ filePreview: null })
-    }
-  },
-
-  clearFilePreview: () => {
-    set({ selectedFilePath: null, filePreview: null })
   },
 
   togglePanel: () => {
