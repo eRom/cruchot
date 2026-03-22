@@ -59,6 +59,8 @@ export function Sidebar(): React.JSX.Element {
         addConversation(conv)
         setActiveConversation(conv.id)
         setCurrentView('chat')
+        // Auto-open right panel for new conversations
+        useUiStore.getState().setOpenPanel('right')
       }
     } catch (error) {
       console.error('Failed to create conversation:', error)

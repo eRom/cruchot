@@ -6,7 +6,7 @@ interface WorkspaceState {
   rootPath: string | null
   tree: FileNode | null
   selectedFilePath: string | null
-  isPanelOpen: boolean
+  isPanelOpen: boolean // internal expand/collapse state (w-60 vs w-10)
   isLoading: boolean
   attachedFiles: string[] // relative paths of files attached to current message
 
@@ -15,7 +15,6 @@ interface WorkspaceState {
   refreshTree: () => Promise<void>
   selectFile: (path: string) => void
   togglePanel: () => void
-  setIsPanelOpen: (open: boolean) => void
   attachFile: (path: string) => void
   detachFile: (path: string) => void
   clearAttachedFiles: () => void
@@ -26,7 +25,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   rootPath: null,
   tree: null,
   selectedFilePath: null,
-  isPanelOpen: false,
+  isPanelOpen: true,
   isLoading: false,
   attachedFiles: [],
 
@@ -53,7 +52,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       rootPath: null,
       tree: null,
       selectedFilePath: null,
-      isPanelOpen: false,
+      isPanelOpen: true,
       attachedFiles: []
     })
   },
@@ -73,14 +72,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   togglePanel: () => {
-    const current = useUiStore.getState().openPanel
-    useUiStore.getState().setOpenPanel(current === 'workspace' ? null : 'workspace')
-    set({ isPanelOpen: current !== 'workspace' })
-  },
-
-  setIsPanelOpen: (open) => {
-    useUiStore.getState().setOpenPanel(open ? 'workspace' : null)
-    set({ isPanelOpen: open })
+    set((s) => ({ isPanelOpen: !s.isPanelOpen }))
   },
 
   attachFile: (path) => {
