@@ -159,10 +159,12 @@ export function PromptPicker({ onInsert, disabled }: PromptPickerProps) {
       </Tooltip>
 
       <PopoverContent
-        side="top"
-        align="start"
+        side="left"
+        align="end"
         sideOffset={8}
-        className="w-80 p-0"
+        avoidCollisions
+        collisionPadding={16}
+        className="w-80 max-h-[70vh] overflow-hidden p-0"
       >
         {view === 'list' ? (
           // ── Vue liste ──────────────────────────────────
@@ -182,7 +184,7 @@ export function PromptPicker({ onInsert, disabled }: PromptPickerProps) {
             </div>
 
             {/* Liste des prompts */}
-            <ScrollArea className="max-h-64">
+            <ScrollArea className="max-h-[50vh]">
               <div className="p-1.5">
                 {filtered.length === 0 ? (
                   <div className="flex items-center justify-center py-8 text-sm text-muted-foreground/50">
