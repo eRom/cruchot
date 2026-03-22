@@ -40,14 +40,7 @@ export function OptionsSection() {
   useEffect(() => {
     if (libraries.length === 0) loadLibraries()
   }, [libraries.length, loadLibraries])
-
-  // Load sticky library for current conversation
-  useEffect(() => {
-    if (!activeConversationId) { setActiveLibraryId(null); return }
-    window.api.libraryGetAttached({ conversationId: activeConversationId })
-      .then((id) => setActiveLibraryId(id ?? null))
-      .catch(() => setActiveLibraryId(null))
-  }, [activeConversationId, setActiveLibraryId])
+  // Note: activeLibraryId sync is handled in ChatView (always mounted, race-safe)
 
   const readyLibraries = useMemo(
     () => libraries.filter((l) => l.status === 'ready' || l.sourcesCount > 0),

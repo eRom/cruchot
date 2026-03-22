@@ -12,6 +12,7 @@ import { InputZone } from './InputZone'
 import { YoloStatusBar } from './YoloStatusBar'
 import { WorkspacePanel } from '@/components/workspace/WorkspacePanel'
 import { useSandboxStore } from '@/stores/sandbox.store'
+import { useLibraryStore } from '@/stores/library.store'
 import { MessageSquare, Sparkles } from 'lucide-react'
 
 const RightPanel = React.lazy(() => import('./right-panel/RightPanel').then(m => ({ default: m.RightPanel })))
@@ -64,6 +65,19 @@ export default function ChatView() {
       window.api.offWorkspaceFileChanged()
     }
   }, [])
+
+  // Sync active library from DB when conversation changes (always mounted, race-safe)
+  useEffect(() => {
+    let cancelled = false
+    if (!activeConversationId) {
+      useLibraryStore.getState().setActiveLibraryId(null)
+      return
+    }
+    window.api.libraryGetAttached({ conversationId: activeConversationId })
+      .then((id) => { if (!cancelled) useLibraryStore.getState().setActiveLibraryId(id ?? null) })
+      .catch(() => { if (!cancelled) useLibraryStore.getState().setActiveLibraryId(null) })
+    return () => { cancelled = true }
+  }, [activeConversationId])
 
   // Load messages + restore model + restore role when switching conversations
   useEffect(() => {
