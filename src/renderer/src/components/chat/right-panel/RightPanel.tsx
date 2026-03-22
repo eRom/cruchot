@@ -11,7 +11,7 @@ interface RightPanelProps {
 
 export function RightPanel({ onPromptInsert, onOptimizedPrompt }: RightPanelProps) {
   return (
-    <div className="flex h-full w-[260px] shrink-0 flex-col gap-3 border-l border-border/40 bg-background overflow-y-auto p-3">
+    <div className="flex h-full w-[300px] shrink-0 flex-col gap-3 border-l border-border/40 bg-background overflow-y-auto p-3">
       <ParamsSection />
       <OptionsSection />
       <McpSection />
