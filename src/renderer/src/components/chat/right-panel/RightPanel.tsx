@@ -15,8 +15,8 @@ export function RightPanel({ onPromptInsert, onOptimizedPrompt }: RightPanelProp
       <ParamsSection />
       <OptionsSection />
       <McpSection />
-      <RemoteSection />
       <ToolsSection onOptimizedPrompt={onOptimizedPrompt} onPromptInsert={onPromptInsert} />
+      <RemoteSection />
     </div>
   )
 }
