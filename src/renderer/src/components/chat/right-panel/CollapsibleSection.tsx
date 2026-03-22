@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { ChevronDown, ChevronRight, type LucideIcon } from 'lucide-react'
+import { ChevronDown, type LucideIcon } from 'lucide-react'
 
 interface CollapsibleSectionProps {
   title: string
@@ -12,21 +12,21 @@ export function CollapsibleSection({ title, icon: Icon, defaultOpen = true, chil
   const [isOpen, setIsOpen] = useState(defaultOpen)
 
   return (
-    <div className="border-b border-border/40">
+    <div className="rounded-xl border border-border/40 bg-card/50">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center gap-2 p-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        className="flex w-full items-center gap-2 px-3.5 py-2.5 text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
       >
-        <Icon className="size-4 shrink-0" />
+        <Icon className="size-4 shrink-0 text-muted-foreground" />
         <span className="flex-1 text-left">{title}</span>
-        {isOpen ? (
-          <ChevronDown className="size-3.5 shrink-0" />
-        ) : (
-          <ChevronRight className="size-3.5 shrink-0" />
-        )}
+        <ChevronDown
+          className={`size-3.5 shrink-0 text-muted-foreground/60 transition-transform duration-200 ${
+            isOpen ? '' : '-rotate-90'
+          }`}
+        />
       </button>
       {isOpen && (
-        <div className="px-3 pb-3">
+        <div className="px-3.5 pb-3">
           {children}
         </div>
       )}
