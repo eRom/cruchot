@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Wrench, FileText, Sparkles, GitFork } from 'lucide-react'
+import { Wrench, BookOpen, FileText, Sparkles, GitFork } from 'lucide-react'
 import { CollapsibleSection } from './CollapsibleSection'
 import { PromptPicker } from '@/components/chat/PromptPicker'
 import { Button } from '@/components/ui/button'
@@ -90,62 +90,62 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
 
   return (
     <CollapsibleSection title="Outils" icon={Wrench} defaultOpen>
-      <div className="flex flex-col gap-2.5">
-        {/* Prompt picker */}
-        <div className="[&_button]:w-full [&_button]:max-w-none [&_button]:h-auto [&_button]:rounded-lg [&_button]:py-1.5 [&_button]:px-3 [&_button]:text-sm [&_button]:justify-start [&_button]:gap-2">
+      <div className="grid grid-cols-2 gap-2">
+        {/* Prompts — wraps PromptPicker, override trigger to grid button style */}
+        <div className="[&_button]:h-10 [&_button]:w-full [&_button]:rounded-lg [&_button]:border [&_button]:border-border/40 [&_button]:gap-2 [&_button]:px-2 [&_button]:text-xs [&_button]:font-normal [&_button]:justify-center">
           <PromptPicker onInsert={onPromptInsert} disabled={isBusy} />
         </div>
 
-        {/* Action buttons */}
-        <div className="grid grid-cols-3 gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-10 w-full border border-border/40 gap-1.5 px-2"
-                disabled={!hasMessages || isBusy}
-                onClick={handleResume}
-              >
-                <FileText className="size-4" />
-                <span className="text-xs">Resume</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">Generer un resume</TooltipContent>
-          </Tooltip>
+        {/* Resume */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-10 w-full border border-border/40 gap-2"
+              disabled={!hasMessages || isBusy}
+              onClick={handleResume}
+            >
+              <FileText className="size-4" />
+              <span className="text-xs">Resume</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Generer un resume</TooltipContent>
+        </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-10 w-full border border-border/40 gap-1.5 px-2"
-                disabled={draftContent.trim() === '' || isBusy}
-                onClick={handleOptimize}
-              >
-                <Sparkles className="size-4" />
-                <span className="text-xs">Optimiser</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">Optimiser le prompt</TooltipContent>
-          </Tooltip>
+        {/* Ameliorer */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-10 w-full border border-border/40 gap-2"
+              disabled={draftContent.trim() === '' || isBusy}
+              onClick={handleOptimize}
+            >
+              <Sparkles className="size-4" />
+              <span className="text-xs">Ameliorer</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Ameliorer le prompt</TooltipContent>
+        </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-10 w-full border border-border/40 gap-1.5 px-2"
-                disabled={!activeConversationId}
-                onClick={handleFork}
-              >
-                <GitFork className="size-4" />
-                <span className="text-xs">Fork</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">Dupliquer la conversation</TooltipContent>
-          </Tooltip>
-        </div>
+        {/* Fork */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-10 w-full border border-border/40 gap-2"
+              disabled={!activeConversationId}
+              onClick={handleFork}
+            >
+              <GitFork className="size-4" />
+              <span className="text-xs">Fork</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Dupliquer la conversation</TooltipContent>
+        </Tooltip>
       </div>
     </CollapsibleSection>
   )
