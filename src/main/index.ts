@@ -1,4 +1,4 @@
-import { app, BrowserWindow, net, protocol } from 'electron'
+import { app, BrowserWindow, net, protocol, session } from 'electron'
 import * as fs from 'fs'
 import { createMainWindow } from './window'
 import { registerAllIpcHandlers } from './ipc'
@@ -52,6 +52,12 @@ app.whenReady().then(() => {
 
     return net.fetch(pathToFileURL(resolved).href)
   })
+  // Deny all permission requests from the renderer (camera, mic, geolocation, etc.)
+  // This app is a local desktop tool — no web permissions are needed
+  session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
+    callback(false)
+  })
+
   // Initialize database before anything else
   initDatabase(getDbPath())
   runMigrations()
