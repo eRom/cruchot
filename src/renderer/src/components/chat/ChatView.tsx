@@ -74,6 +74,10 @@ export default function ChatView() {
       setMessages([])
       useRolesStore.getState().setActiveRole(null)
       useRolesStore.getState().setActiveSystemPrompt(null)
+      // Close right panel when no conversation
+      if (useUiStore.getState().openPanel === 'right') {
+        useUiStore.getState().setOpenPanel(null)
+      }
       return
     }
 
@@ -97,6 +101,13 @@ export default function ChatView() {
           toolCalls: (m.contentData?.toolCalls as Message['toolCalls']) || undefined
         }))
         setMessages(loadedMessages)
+
+        // Auto-open right panel for new conversations, close for existing ones
+        if (loadedMessages.length === 0) {
+          useUiStore.getState().setOpenPanel('right')
+        } else if (useUiStore.getState().openPanel === 'right') {
+          useUiStore.getState().setOpenPanel(null)
+        }
 
         // Restore role from conversation
         const roleId = conv?.roleId
