@@ -118,6 +118,7 @@ export interface ModelInfo {
   supportsImages: boolean
   supportsStreaming: boolean
   supportsThinking: boolean
+  supportsYolo?: boolean
 }
 
 export interface ConversationInfo {
@@ -1047,6 +1048,14 @@ export interface ElectronAPI {
   bardaToggle: (id: string, isEnabled: boolean) => Promise<void>
   bardaUninstall: (id: string) => Promise<void>
 
+  // Sandbox (YOLO mode)
+  sandboxActivate: (conversationId: string, workspacePath?: string) => Promise<{ sessionId: string; sandboxPath: string }>
+  sandboxDeactivate: (sessionId: string, conversationId: string) => Promise<void>
+  sandboxStop: (sessionId: string) => Promise<void>
+  sandboxGetStatus: (conversationId: string) => Promise<SandboxInfo>
+  sandboxGetProcesses: (sessionId: string) => Promise<SandboxProcessInfo[]>
+  sandboxOpenPreview: (target: string, sessionId: string) => Promise<void>
+
   // Settings
   getSetting: (key: string) => Promise<string | null>
   setSetting: (key: string, value: string) => Promise<void>
@@ -1111,4 +1120,19 @@ export interface BardaImportReport {
 export interface BardaParseError {
   line: number
   message: string
+}
+
+// ── Sandbox (YOLO mode) ─────────────────────────────────────────
+export interface SandboxInfo {
+  sessionId: string
+  sandboxPath: string
+  isActive: boolean
+}
+
+export interface SandboxProcessInfo {
+  pid: number
+  command: string
+  type: 'script' | 'server' | 'install'
+  startedAt: string  // ISO string (serialise via IPC)
+  port?: number
 }
