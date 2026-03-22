@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { FileNode, WorkspaceInfo, FileContent, WorkspaceFileContext } from '../../../preload/types'
+import { useUiStore } from './ui.store'
 
 interface WorkspaceState {
   rootPath: string | null
@@ -45,6 +46,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     try {
       await window.api.workspaceClose()
     } catch { /* ignore */ }
+    if (useUiStore.getState().openPanel === 'workspace') {
+      useUiStore.getState().setOpenPanel(null)
+    }
     set({
       rootPath: null,
       tree: null,
@@ -69,10 +73,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   togglePanel: () => {
-    set((s) => ({ isPanelOpen: !s.isPanelOpen }))
+    const current = useUiStore.getState().openPanel
+    useUiStore.getState().setOpenPanel(current === 'workspace' ? null : 'workspace')
+    set({ isPanelOpen: current !== 'workspace' })
   },
 
   setIsPanelOpen: (open) => {
+    useUiStore.getState().setOpenPanel(open ? 'workspace' : null)
     set({ isPanelOpen: open })
   },
 

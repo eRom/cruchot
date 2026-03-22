@@ -85,6 +85,10 @@ function App(): React.JSX.Element {
     useWorkspaceStore.getState().togglePanel()
   }, [])
 
+  const handleToggleRightPanel = useCallback(() => {
+    useUiStore.getState().toggleRightPanel()
+  }, [])
+
   const handleEscape = useCallback(async () => {
     if (commandPaletteOpen) {
       setCommandPaletteOpen(false)
@@ -101,6 +105,7 @@ function App(): React.JSX.Element {
     onSettings: handleSettings,
     onModelList: handleModelList,
     onToggleWorkspace: handleToggleWorkspace,
+    onToggleRightPanel: handleToggleRightPanel,
     onEscape: handleEscape,
   })
 
