@@ -7,7 +7,11 @@ export function McpSection() {
   const [servers, setServers] = useState<McpServerInfo[]>([])
 
   useEffect(() => {
-    window.api.mcpList().then(setServers).catch(() => {})
+    let cancelled = false
+    window.api.mcpList()
+      .then((list) => { if (!cancelled) setServers(list) })
+      .catch(() => {})
+    return () => { cancelled = true }
   }, [])
 
   const handleToggle = async (id: string) => {

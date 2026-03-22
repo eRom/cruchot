@@ -116,10 +116,8 @@ export default function ChatView() {
         }))
         setMessages(loadedMessages)
 
-        // Auto-open right panel for new conversations, close for existing ones
-        if (loadedMessages.length === 0) {
-          useUiStore.getState().setOpenPanel('right')
-        } else if (useUiStore.getState().openPanel === 'right') {
+        // Close right panel when switching to an existing conversation
+        if (loadedMessages.length > 0 && useUiStore.getState().openPanel === 'right') {
           useUiStore.getState().setOpenPanel(null)
         }
 

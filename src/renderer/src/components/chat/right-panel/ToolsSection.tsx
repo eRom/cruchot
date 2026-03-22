@@ -59,8 +59,12 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
         text: draftContent,
         modelId
       })
-      onOptimizedPrompt(result.optimizedText)
-      toast.success('Prompt optimise')
+      if (result.optimizedText) {
+        onOptimizedPrompt(result.optimizedText)
+        toast.success('Prompt optimise')
+      } else {
+        toast.error('Aucun resultat')
+      }
     } catch {
       toast.error('Erreur optimisation')
     }
@@ -119,7 +123,7 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
               variant="ghost"
               size="sm"
               className="h-10 w-full border border-border/40 gap-2"
-              disabled={draftContent.trim() === '' || isBusy}
+              disabled={draftContent.trim() === '' || !selectedModelId || !selectedProviderId || isBusy}
               onClick={handleOptimize}
             >
               <Sparkles className="size-4" />
