@@ -1,13 +1,15 @@
-import { useMemo } from 'react'
-import { Settings } from 'lucide-react'
+import { useMemo, useState, useRef, useEffect } from 'react'
+import { Settings, Brain, Search } from 'lucide-react'
 import { ModelSelector } from '@/components/chat/ModelSelector'
-import { ChatOptionsMenu } from '@/components/chat/ChatOptionsMenu'
 import { RoleSelector } from '@/components/roles/RoleSelector'
+import { Switch } from '@/components/ui/switch'
 import { useContextWindow } from '@/hooks/useContextWindow'
 import { useMessagesStore } from '@/stores/messages.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProvidersStore } from '@/stores/providers.store'
+import { useSettingsStore, type ThinkingEffort } from '@/stores/settings.store'
 import { useUiStore } from '@/stores/ui.store'
+import { cn } from '@/lib/utils'
 
 function formatTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
@@ -15,11 +17,25 @@ function formatTokens(n: number): string {
   return `${n}`
 }
 
+const THINKING_LEVELS: { value: ThinkingEffort; label: string; opacity: string }[] = [
+  { value: 'off', label: 'Off', opacity: 'opacity-20' },
+  { value: 'low', label: 'Faible', opacity: 'opacity-40' },
+  { value: 'medium', label: 'Moyen', opacity: 'opacity-70' },
+  { value: 'high', label: 'Eleve', opacity: 'opacity-100' },
+]
+
 export function ParamsSection() {
   const messages = useMessagesStore((s) => s.messages)
   const activeConversationId = useConversationsStore((s) => s.activeConversationId)
   const { selectedModelId, selectedProviderId, models } = useProvidersStore()
   const isStreaming = useUiStore((s) => s.isStreaming)
+  const thinkingEffort = useSettingsStore((s) => s.thinkingEffort)
+  const setThinkingEffort = useSettingsStore((s) => s.setThinkingEffort)
+  const searchEnabled = useSettingsStore((s) => s.searchEnabled) ?? false
+  const setSearchEnabled = useSettingsStore((s) => s.setSearchEnabled)
+
+  const [thinkingOpen, setThinkingOpen] = useState(false)
+  const thinkingRef = useRef<HTMLDivElement>(null)
 
   const conversationMessages = useMemo(
     () => messages.filter((m) => m.conversationId === activeConversationId),
@@ -33,6 +49,7 @@ export function ParamsSection() {
 
   const isRoleLocked = conversationMessages.length > 0
   const isBusy = isStreaming
+  const supportsThinking = selectedModel?.supportsThinking ?? false
 
   const { currentTokens, maxTokens } = useContextWindow(
     conversationMessages,
@@ -45,6 +62,20 @@ export function ParamsSection() {
     [conversationMessages]
   )
 
+  const currentLevel = THINKING_LEVELS.find((l) => l.value === thinkingEffort) ?? THINKING_LEVELS[0]
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!thinkingOpen) return
+    function handleClick(e: MouseEvent) {
+      if (thinkingRef.current && !thinkingRef.current.contains(e.target as Node)) {
+        setThinkingOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [thinkingOpen])
+
   return (
     <div className="rounded-xl border border-border/40 bg-card/50">
       {/* Header */}
@@ -56,11 +87,60 @@ export function ParamsSection() {
       {/* Controls */}
       <div className="flex flex-col gap-2.5 px-3.5 pb-3">
         <ModelSelector disabled={isBusy} />
-        <ChatOptionsMenu
-          disabled={isBusy}
-          supportsThinking={selectedModel?.supportsThinking}
-        />
+
+        {/* Thinking effort selector */}
+        {supportsThinking && (
+          <div className="relative" ref={thinkingRef}>
+            <button
+              onClick={() => !isBusy && setThinkingOpen(!thinkingOpen)}
+              disabled={isBusy}
+              className={cn(
+                'flex w-full items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-1.5',
+                'text-sm transition-colors hover:bg-accent/50',
+                isBusy && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              <Brain className={cn('size-4 text-purple-500', currentLevel.opacity)} />
+              <span className="flex-1 text-left text-muted-foreground">{currentLevel.label}</span>
+            </button>
+
+            {thinkingOpen && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-border/60 bg-popover py-1 shadow-md">
+                {THINKING_LEVELS.map((level) => (
+                  <button
+                    key={level.value}
+                    onClick={() => {
+                      setThinkingEffort(level.value)
+                      setThinkingOpen(false)
+                    }}
+                    className={cn(
+                      'flex w-full items-center gap-2 px-3 py-1.5 text-sm transition-colors hover:bg-accent/50',
+                      thinkingEffort === level.value && 'bg-accent/30'
+                    )}
+                  >
+                    <Brain className={cn('size-4 text-purple-500', level.opacity)} />
+                    <span>{level.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <RoleSelector disabled={isBusy || isRoleLocked} />
+
+        {/* Web Search toggle */}
+        <div className="flex items-center justify-between gap-2 px-1">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Search className="size-4" />
+            Recherche web
+          </label>
+          <Switch
+            checked={searchEnabled}
+            onCheckedChange={setSearchEnabled}
+            disabled={isBusy}
+          />
+        </div>
 
         {/* Token count & cost */}
         {maxTokens > 0 && (
