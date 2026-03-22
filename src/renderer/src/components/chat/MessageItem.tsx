@@ -257,7 +257,17 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
   const isUser = message.role === 'user'
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(message.content)
+    navigator.clipboard.writeText(message.content).catch(() => {
+      // Fallback for Electron sandbox — textarea execCommand
+      const ta = document.createElement('textarea')
+      ta.value = message.content
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    })
     setCopied(true)
     setTimeout(() => setCopied(false), 1800)
   }, [message.content])

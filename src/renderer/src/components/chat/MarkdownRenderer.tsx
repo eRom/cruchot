@@ -56,7 +56,16 @@ function CopyCodeButton({ code }: { code: string }) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(code)
+    navigator.clipboard.writeText(code).catch(() => {
+      const ta = document.createElement('textarea')
+      ta.value = code
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    })
     setCopied(true)
     setTimeout(() => setCopied(false), 1800)
   }, [code])
