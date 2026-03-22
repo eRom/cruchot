@@ -1,676 +1,1736 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cruchot — Code Map</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #0f1117; color: #e1e4ea; height: 100vh; overflow: hidden; }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Cruchot — Code Map</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+                    sans-serif;
+                background: #0f1117;
+                color: #e1e4ea;
+                height: 100vh;
+                overflow: hidden;
+            }
 
-  .layout { display: grid; grid-template-columns: 280px 1fr; grid-template-rows: 1fr auto; height: 100vh; }
+            .layout {
+                display: grid;
+                grid-template-columns: 280px 1fr;
+                grid-template-rows: 1fr auto;
+                height: 100vh;
+            }
 
-  /* Sidebar */
-  .sidebar { grid-row: 1 / 3; background: #16181f; border-right: 1px solid #2a2d37; overflow-y: auto; padding: 16px; }
-  .sidebar h1 { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px; letter-spacing: -0.3px; }
-  .sidebar .subtitle { font-size: 11px; color: #6b7280; margin-bottom: 20px; }
+            /* Sidebar */
+            .sidebar {
+                grid-row: 1 / 3;
+                background: #16181f;
+                border-right: 1px solid #2a2d37;
+                overflow-y: auto;
+                padding: 16px;
+            }
+            .sidebar h1 {
+                font-size: 15px;
+                font-weight: 700;
+                color: #fff;
+                margin-bottom: 4px;
+                letter-spacing: -0.3px;
+            }
+            .sidebar .subtitle {
+                font-size: 11px;
+                color: #6b7280;
+                margin-bottom: 20px;
+            }
 
-  .section-title { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin: 16px 0 8px; }
+            .section-title {
+                font-size: 10px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                color: #6b7280;
+                margin: 16px 0 8px;
+            }
 
-  /* Presets */
-  .presets { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
-  .preset-btn { background: #1e2028; border: 1px solid #2a2d37; color: #9ca3af; font-size: 11px; padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: all 0.15s; }
-  .preset-btn:hover { border-color: #4f46e5; color: #c7d2fe; }
-  .preset-btn.active { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+            /* Presets */
+            .presets {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                margin-bottom: 8px;
+            }
+            .preset-btn {
+                background: #1e2028;
+                border: 1px solid #2a2d37;
+                color: #9ca3af;
+                font-size: 11px;
+                padding: 5px 10px;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .preset-btn:hover {
+                border-color: #4f46e5;
+                color: #c7d2fe;
+            }
+            .preset-btn.active {
+                background: #4f46e5;
+                border-color: #4f46e5;
+                color: #fff;
+            }
 
-  /* Checkboxes */
-  .check-group { display: flex; flex-direction: column; gap: 3px; }
-  .check-item { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background 0.1s; }
-  .check-item:hover { background: #1e2028; }
-  .check-item input { display: none; }
-  .check-box { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid #4b5563; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
-  .check-item input:checked + .check-box { border-color: transparent; }
-  .check-box svg { width: 10px; height: 10px; opacity: 0; transition: opacity 0.1s; }
-  .check-item input:checked + .check-box svg { opacity: 1; }
-  .color-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+            /* Checkboxes */
+            .check-group {
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+            }
+            .check-item {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 4px 8px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+                transition: background 0.1s;
+            }
+            .check-item:hover {
+                background: #1e2028;
+            }
+            .check-item input {
+                display: none;
+            }
+            .check-box {
+                width: 14px;
+                height: 14px;
+                border-radius: 3px;
+                border: 1.5px solid #4b5563;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.15s;
+                flex-shrink: 0;
+            }
+            .check-item input:checked + .check-box {
+                border-color: transparent;
+            }
+            .check-box svg {
+                width: 10px;
+                height: 10px;
+                opacity: 0;
+                transition: opacity 0.1s;
+            }
+            .check-item input:checked + .check-box svg {
+                opacity: 1;
+            }
+            .color-dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                flex-shrink: 0;
+            }
 
-  /* Connection legend */
-  .conn-item { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-  .conn-item:hover { background: #1e2028; }
-  .conn-line { width: 20px; height: 2px; flex-shrink: 0; }
-  .conn-line.dashed { background: repeating-linear-gradient(90deg, var(--c) 0 6px, transparent 6px 10px); height: 2px; }
-  .conn-line.dotted { background: repeating-linear-gradient(90deg, var(--c) 0 3px, transparent 3px 6px); height: 2px; }
-  .conn-line.solid { height: 2px; }
+            /* Connection legend */
+            .conn-item {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 4px 8px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+            }
+            .conn-item:hover {
+                background: #1e2028;
+            }
+            .conn-line {
+                width: 20px;
+                height: 2px;
+                flex-shrink: 0;
+            }
+            .conn-line.dashed {
+                background: repeating-linear-gradient(
+                    90deg,
+                    var(--c) 0 6px,
+                    transparent 6px 10px
+                );
+                height: 2px;
+            }
+            .conn-line.dotted {
+                background: repeating-linear-gradient(
+                    90deg,
+                    var(--c) 0 3px,
+                    transparent 3px 6px
+                );
+                height: 2px;
+            }
+            .conn-line.solid {
+                height: 2px;
+            }
 
-  /* Comments */
-  .comments-list { display: flex; flex-direction: column; gap: 6px; }
-  .comment-card { background: #1e2028; border: 1px solid #2a2d37; border-radius: 6px; padding: 8px 10px; font-size: 11px; position: relative; }
-  .comment-card .target { color: #818cf8; font-weight: 600; font-size: 11px; }
-  .comment-card .file { color: #6b7280; font-size: 10px; font-family: 'SF Mono', 'Fira Code', monospace; }
-  .comment-card .text { color: #d1d5db; margin-top: 4px; line-height: 1.4; }
-  .comment-card .delete-btn { position: absolute; top: 6px; right: 6px; background: none; border: none; color: #6b7280; cursor: pointer; font-size: 14px; line-height: 1; padding: 2px; }
-  .comment-card .delete-btn:hover { color: #ef4444; }
-  .no-comments { font-size: 11px; color: #4b5563; font-style: italic; padding: 8px; }
+            /* Comments */
+            .comments-list {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .comment-card {
+                background: #1e2028;
+                border: 1px solid #2a2d37;
+                border-radius: 6px;
+                padding: 8px 10px;
+                font-size: 11px;
+                position: relative;
+            }
+            .comment-card .target {
+                color: #818cf8;
+                font-weight: 600;
+                font-size: 11px;
+            }
+            .comment-card .file {
+                color: #6b7280;
+                font-size: 10px;
+                font-family: "SF Mono", "Fira Code", monospace;
+            }
+            .comment-card .text {
+                color: #d1d5db;
+                margin-top: 4px;
+                line-height: 1.4;
+            }
+            .comment-card .delete-btn {
+                position: absolute;
+                top: 6px;
+                right: 6px;
+                background: none;
+                border: none;
+                color: #6b7280;
+                cursor: pointer;
+                font-size: 14px;
+                line-height: 1;
+                padding: 2px;
+            }
+            .comment-card .delete-btn:hover {
+                color: #ef4444;
+            }
+            .no-comments {
+                font-size: 11px;
+                color: #4b5563;
+                font-style: italic;
+                padding: 8px;
+            }
 
-  /* Canvas */
-  .canvas-area { position: relative; overflow: hidden; background: #0f1117; }
-  svg.map { width: 100%; height: 100%; }
+            /* Canvas */
+            .canvas-area {
+                position: relative;
+                overflow: hidden;
+                background: #0f1117;
+            }
+            svg.map {
+                width: 100%;
+                height: 100%;
+            }
 
-  /* Zoom controls */
-  .zoom-controls { position: absolute; bottom: 16px; right: 16px; display: flex; gap: 4px; z-index: 10; }
-  .zoom-btn { width: 32px; height: 32px; background: #1e2028; border: 1px solid #2a2d37; color: #9ca3af; border-radius: 6px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
-  .zoom-btn:hover { border-color: #4f46e5; color: #fff; }
+            /* Zoom controls */
+            .zoom-controls {
+                position: absolute;
+                bottom: 16px;
+                right: 16px;
+                display: flex;
+                gap: 4px;
+                z-index: 10;
+            }
+            .zoom-btn {
+                width: 32px;
+                height: 32px;
+                background: #1e2028;
+                border: 1px solid #2a2d37;
+                color: #9ca3af;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .zoom-btn:hover {
+                border-color: #4f46e5;
+                color: #fff;
+            }
 
-  /* Legend */
-  .legend { position: absolute; bottom: 16px; left: 16px; background: #16181fdd; border: 1px solid #2a2d37; border-radius: 8px; padding: 10px 14px; font-size: 10px; z-index: 10; backdrop-filter: blur(8px); }
-  .legend-title { font-weight: 600; color: #9ca3af; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .legend-items { display: flex; flex-wrap: wrap; gap: 8px 16px; }
-  .legend-item { display: flex; align-items: center; gap: 5px; color: #9ca3af; }
-  .legend-swatch { width: 12px; height: 12px; border-radius: 3px; }
+            /* Legend */
+            .legend {
+                position: absolute;
+                bottom: 16px;
+                left: 16px;
+                background: #16181fdd;
+                border: 1px solid #2a2d37;
+                border-radius: 8px;
+                padding: 10px 14px;
+                font-size: 10px;
+                z-index: 10;
+                backdrop-filter: blur(8px);
+            }
+            .legend-title {
+                font-weight: 600;
+                color: #9ca3af;
+                margin-bottom: 6px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .legend-items {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px 16px;
+            }
+            .legend-item {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                color: #9ca3af;
+            }
+            .legend-swatch {
+                width: 12px;
+                height: 12px;
+                border-radius: 3px;
+            }
 
-  /* Prompt output */
-  .prompt-area { background: #16181f; border-top: 1px solid #2a2d37; padding: 12px 16px; max-height: 200px; overflow-y: auto; }
-  .prompt-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .prompt-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; }
-  .copy-btn { background: #4f46e5; border: none; color: #fff; font-size: 11px; padding: 4px 12px; border-radius: 4px; cursor: pointer; transition: all 0.15s; }
-  .copy-btn:hover { background: #6366f1; }
-  .copy-btn.copied { background: #10b981; }
-  .prompt-text { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; color: #d1d5db; line-height: 1.6; white-space: pre-wrap; min-height: 32px; }
+            /* Prompt output */
+            .prompt-area {
+                background: #16181f;
+                border-top: 1px solid #2a2d37;
+                padding: 12px 16px;
+                max-height: 200px;
+                overflow-y: auto;
+            }
+            .prompt-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 8px;
+            }
+            .prompt-label {
+                font-size: 10px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                color: #6b7280;
+            }
+            .copy-btn {
+                background: #4f46e5;
+                border: none;
+                color: #fff;
+                font-size: 11px;
+                padding: 4px 12px;
+                border-radius: 4px;
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .copy-btn:hover {
+                background: #6366f1;
+            }
+            .copy-btn.copied {
+                background: #10b981;
+            }
+            .prompt-text {
+                font-family: "SF Mono", "Fira Code", monospace;
+                font-size: 11px;
+                color: #d1d5db;
+                line-height: 1.6;
+                white-space: pre-wrap;
+                min-height: 32px;
+            }
 
-  /* Modal */
-  .modal-overlay { position: fixed; inset: 0; background: #000000aa; z-index: 100; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-  .modal-overlay.visible { display: flex; }
-  .modal { background: #1e2028; border: 1px solid #2a2d37; border-radius: 12px; padding: 20px; width: 400px; max-width: 90vw; }
-  .modal h3 { font-size: 14px; color: #fff; margin-bottom: 2px; }
-  .modal .modal-file { font-size: 11px; color: #6b7280; font-family: 'SF Mono', 'Fira Code', monospace; margin-bottom: 12px; }
-  .modal textarea { width: 100%; height: 80px; background: #0f1117; border: 1px solid #2a2d37; border-radius: 6px; color: #e1e4ea; font-size: 12px; padding: 10px; resize: vertical; font-family: inherit; }
-  .modal textarea:focus { outline: none; border-color: #4f46e5; }
-  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
-  .modal-actions button { padding: 6px 16px; border-radius: 6px; font-size: 12px; cursor: pointer; border: none; }
-  .btn-cancel { background: #2a2d37; color: #9ca3af; }
-  .btn-cancel:hover { background: #374151; }
-  .btn-save { background: #4f46e5; color: #fff; }
-  .btn-save:hover { background: #6366f1; }
+            /* Modal */
+            .modal-overlay {
+                position: fixed;
+                inset: 0;
+                background: #000000aa;
+                z-index: 100;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                backdrop-filter: blur(4px);
+            }
+            .modal-overlay.visible {
+                display: flex;
+            }
+            .modal {
+                background: #1e2028;
+                border: 1px solid #2a2d37;
+                border-radius: 12px;
+                padding: 20px;
+                width: 400px;
+                max-width: 90vw;
+            }
+            .modal h3 {
+                font-size: 14px;
+                color: #fff;
+                margin-bottom: 2px;
+            }
+            .modal .modal-file {
+                font-size: 11px;
+                color: #6b7280;
+                font-family: "SF Mono", "Fira Code", monospace;
+                margin-bottom: 12px;
+            }
+            .modal textarea {
+                width: 100%;
+                height: 80px;
+                background: #0f1117;
+                border: 1px solid #2a2d37;
+                border-radius: 6px;
+                color: #e1e4ea;
+                font-size: 12px;
+                padding: 10px;
+                resize: vertical;
+                font-family: inherit;
+            }
+            .modal textarea:focus {
+                outline: none;
+                border-color: #4f46e5;
+            }
+            .modal-actions {
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+                margin-top: 12px;
+            }
+            .modal-actions button {
+                padding: 6px 16px;
+                border-radius: 6px;
+                font-size: 12px;
+                cursor: pointer;
+                border: none;
+            }
+            .btn-cancel {
+                background: #2a2d37;
+                color: #9ca3af;
+            }
+            .btn-cancel:hover {
+                background: #374151;
+            }
+            .btn-save {
+                background: #4f46e5;
+                color: #fff;
+            }
+            .btn-save:hover {
+                background: #6366f1;
+            }
 
-  /* Node tooltip */
-  .node-tooltip { position: absolute; background: #1e2028; border: 1px solid #2a2d37; border-radius: 6px; padding: 8px 12px; font-size: 11px; pointer-events: none; z-index: 50; max-width: 250px; opacity: 0; transition: opacity 0.15s; }
-  .node-tooltip.visible { opacity: 1; }
-  .node-tooltip .tt-label { color: #fff; font-weight: 600; }
-  .node-tooltip .tt-file { color: #6b7280; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 10px; }
-  .node-tooltip .tt-desc { color: #9ca3af; margin-top: 4px; }
-</style>
-</head>
-<body>
+            /* Node tooltip */
+            .node-tooltip {
+                position: absolute;
+                background: #1e2028;
+                border: 1px solid #2a2d37;
+                border-radius: 6px;
+                padding: 8px 12px;
+                font-size: 11px;
+                pointer-events: none;
+                z-index: 50;
+                max-width: 250px;
+                opacity: 0;
+                transition: opacity 0.15s;
+            }
+            .node-tooltip.visible {
+                opacity: 1;
+            }
+            .node-tooltip .tt-label {
+                color: #fff;
+                font-weight: 600;
+            }
+            .node-tooltip .tt-file {
+                color: #6b7280;
+                font-family: "SF Mono", "Fira Code", monospace;
+                font-size: 10px;
+            }
+            .node-tooltip .tt-desc {
+                color: #9ca3af;
+                margin-top: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="layout">
+            <div class="sidebar">
+                <h1>Cruchot</h1>
+                <div class="subtitle">Architecture Code Map</div>
 
-<div class="layout">
-  <div class="sidebar">
-    <h1>Cruchot</h1>
-    <div class="subtitle">Architecture Code Map</div>
+                <div class="section-title">Vues</div>
+                <div class="presets" id="presets"></div>
 
-    <div class="section-title">Vues</div>
-    <div class="presets" id="presets"></div>
+                <div class="section-title">Couches</div>
+                <div class="check-group" id="layers"></div>
 
-    <div class="section-title">Couches</div>
-    <div class="check-group" id="layers"></div>
+                <div class="section-title">Connexions</div>
+                <div class="check-group" id="connections"></div>
 
-    <div class="section-title">Connexions</div>
-    <div class="check-group" id="connections"></div>
+                <div class="section-title">
+                    Commentaires <span id="comment-count"></span>
+                </div>
+                <div class="comments-list" id="comments-list">
+                    <div class="no-comments">
+                        Cliquer sur un composant pour commenter
+                    </div>
+                </div>
+            </div>
 
-    <div class="section-title">Commentaires <span id="comment-count"></span></div>
-    <div class="comments-list" id="comments-list">
-      <div class="no-comments">Cliquer sur un composant pour commenter</div>
-    </div>
-  </div>
+            <div class="canvas-area" id="canvas-area">
+                <svg class="map" id="map"></svg>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomIn()">+</button>
+                    <button class="zoom-btn" onclick="zoomOut()">
+                        &minus;
+                    </button>
+                    <button
+                        class="zoom-btn"
+                        onclick="zoomReset()"
+                        style="font-size: 11px"
+                    >
+                        1:1
+                    </button>
+                </div>
+                <div class="legend">
+                    <div class="legend-title">Couches</div>
+                    <div class="legend-items" id="legend-items"></div>
+                </div>
+                <div class="node-tooltip" id="tooltip"></div>
+            </div>
 
-  <div class="canvas-area" id="canvas-area">
-    <svg class="map" id="map"></svg>
-    <div class="zoom-controls">
-      <button class="zoom-btn" onclick="zoomIn()">+</button>
-      <button class="zoom-btn" onclick="zoomOut()">&minus;</button>
-      <button class="zoom-btn" onclick="zoomReset()" style="font-size:11px">1:1</button>
-    </div>
-    <div class="legend">
-      <div class="legend-title">Couches</div>
-      <div class="legend-items" id="legend-items"></div>
-    </div>
-    <div class="node-tooltip" id="tooltip"></div>
-  </div>
+            <div class="prompt-area">
+                <div class="prompt-header">
+                    <span class="prompt-label">Prompt</span>
+                    <button
+                        class="copy-btn"
+                        id="copy-btn"
+                        onclick="copyPrompt()"
+                    >
+                        Copier
+                    </button>
+                </div>
+                <div class="prompt-text" id="prompt-text"></div>
+            </div>
+        </div>
 
-  <div class="prompt-area">
-    <div class="prompt-header">
-      <span class="prompt-label">Prompt</span>
-      <button class="copy-btn" id="copy-btn" onclick="copyPrompt()">Copier</button>
-    </div>
-    <div class="prompt-text" id="prompt-text"></div>
-  </div>
-</div>
+        <div class="modal-overlay" id="modal">
+            <div class="modal">
+                <h3 id="modal-title"></h3>
+                <div class="modal-file" id="modal-file"></div>
+                <textarea
+                    id="modal-textarea"
+                    placeholder="Votre commentaire sur ce composant..."
+                ></textarea>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closeModal()">
+                        Annuler
+                    </button>
+                    <button class="btn-save" onclick="saveComment()">
+                        Ajouter
+                    </button>
+                </div>
+            </div>
+        </div>
 
-<div class="modal-overlay" id="modal">
-  <div class="modal">
-    <h3 id="modal-title"></h3>
-    <div class="modal-file" id="modal-file"></div>
-    <textarea id="modal-textarea" placeholder="Votre commentaire sur ce composant..."></textarea>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal()">Annuler</button>
-      <button class="btn-save" onclick="saveComment()">Ajouter</button>
-    </div>
-  </div>
-</div>
+        <script>
+            // ═══════════════════════════════════════════
+            // STATE
+            // ═══════════════════════════════════════════
+            const LAYERS = {
+                renderer: {
+                    label: "Renderer (React)",
+                    color: "#3b82f6",
+                    fill: "#1e3a5f",
+                },
+                preload: {
+                    label: "Preload (Bridge)",
+                    color: "#a855f7",
+                    fill: "#3b1f5e",
+                },
+                ipc: {
+                    label: "IPC Handlers",
+                    color: "#f59e0b",
+                    fill: "#4a3510",
+                },
+                llm: { label: "LLM Layer", color: "#10b981", fill: "#0f3d2e" },
+                services: {
+                    label: "Services",
+                    color: "#ec4899",
+                    fill: "#4a1535",
+                },
+                data: {
+                    label: "Data (SQLite/Qdrant)",
+                    color: "#06b6d4",
+                    fill: "#0e3640",
+                },
+                external: {
+                    label: "External",
+                    color: "#6b7280",
+                    fill: "#1f2937",
+                },
+            };
 
-<script>
-// ═══════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════
-const LAYERS = {
-  renderer:  { label: 'Renderer (React)',   color: '#3b82f6', fill: '#1e3a5f' },
-  preload:   { label: 'Preload (Bridge)',   color: '#a855f7', fill: '#3b1f5e' },
-  ipc:       { label: 'IPC Handlers',       color: '#f59e0b', fill: '#4a3510' },
-  llm:       { label: 'LLM Layer',          color: '#10b981', fill: '#0f3d2e' },
-  services:  { label: 'Services',           color: '#ec4899', fill: '#4a1535' },
-  data:      { label: 'Data (SQLite/Qdrant)', color: '#06b6d4', fill: '#0e3640' },
-  external:  { label: 'External',           color: '#6b7280', fill: '#1f2937' },
-};
+            const CONN_TYPES = {
+                "data-flow": {
+                    label: "Data Flow",
+                    color: "#3b82f6",
+                    style: "solid",
+                },
+                ipc: { label: "IPC Bridge", color: "#a855f7", style: "dashed" },
+                "tool-call": {
+                    label: "Tool / Service",
+                    color: "#10b981",
+                    style: "dashed",
+                },
+                event: {
+                    label: "Event / Stream",
+                    color: "#ef4444",
+                    style: "dotted",
+                },
+                dependency: {
+                    label: "Dependency",
+                    color: "#4b5563",
+                    style: "dotted",
+                },
+            };
 
-const CONN_TYPES = {
-  'data-flow':  { label: 'Data Flow',      color: '#3b82f6', style: 'solid' },
-  'ipc':        { label: 'IPC Bridge',      color: '#a855f7', style: 'dashed' },
-  'tool-call':  { label: 'Tool / Service',  color: '#10b981', style: 'dashed' },
-  'event':      { label: 'Event / Stream',  color: '#ef4444', style: 'dotted' },
-  'dependency': { label: 'Dependency',      color: '#4b5563', style: 'dotted' },
-};
+            const state = {
+                layers: Object.fromEntries(
+                    Object.keys(LAYERS).map((k) => [k, true]),
+                ),
+                connections: Object.fromEntries(
+                    Object.keys(CONN_TYPES).map((k) => [k, true]),
+                ),
+                preset: "full",
+                zoom: 1,
+                panX: 0,
+                panY: 0,
+                comments: [],
+                modalNode: null,
+            };
 
-const state = {
-  layers: Object.fromEntries(Object.keys(LAYERS).map(k => [k, true])),
-  connections: Object.fromEntries(Object.keys(CONN_TYPES).map(k => [k, true])),
-  preset: 'full',
-  zoom: 1,
-  panX: 0, panY: 0,
-  comments: [],
-  modalNode: null,
-};
+            // ═══════════════════════════════════════════
+            // NODES — 30 key components
+            // ═══════════════════════════════════════════
+            const NODES = [
+                // Renderer — y: 30-120
+                {
+                    id: "app",
+                    label: "App.tsx",
+                    subtitle: "renderer/src/App.tsx",
+                    x: 480,
+                    y: 30,
+                    w: 120,
+                    h: 44,
+                    layer: "renderer",
+                    desc: "Routing ViewMode, 11 vues lazy-loaded",
+                },
+                {
+                    id: "chatview",
+                    label: "ChatView",
+                    subtitle: "components/chat/ChatView.tsx",
+                    x: 140,
+                    y: 90,
+                    w: 120,
+                    h: 44,
+                    layer: "renderer",
+                    desc: "Message list + WorkspacePanel",
+                },
+                {
+                    id: "inputzone",
+                    label: "InputZone",
+                    subtitle: "components/chat/InputZone.tsx",
+                    x: 290,
+                    y: 90,
+                    w: 120,
+                    h: 44,
+                    layer: "renderer",
+                    desc: "Saisie, pills, @mention, slash, library picker",
+                },
+                {
+                    id: "messageitem",
+                    label: "MessageItem",
+                    subtitle: "components/chat/MessageItem.tsx",
+                    x: 10,
+                    y: 90,
+                    w: 120,
+                    h: 44,
+                    layer: "renderer",
+                    desc: "Markdown, tools, reasoning, React.memo",
+                },
+                {
+                    id: "sidebar",
+                    label: "Sidebar",
+                    subtitle: "components/layout/Sidebar.tsx",
+                    x: 340,
+                    y: 30,
+                    w: 120,
+                    h: 44,
+                    layer: "renderer",
+                    desc: "Nav, ProjectSelector, ConversationList",
+                },
+                {
+                    id: "stores",
+                    label: "Zustand Stores",
+                    subtitle: "stores/ (20 stores)",
+                    x: 620,
+                    y: 60,
+                    w: 130,
+                    h: 44,
+                    layer: "renderer",
+                    desc: "ui, messages, settings, workspace, providers, etc.",
+                },
+                {
+                    id: "hooks",
+                    label: "Hooks",
+                    subtitle: "hooks/ (9 hooks)",
+                    x: 480,
+                    y: 90,
+                    w: 120,
+                    h: 44,
+                    layer: "renderer",
+                    desc: "useStreaming, useFileMention, useSlashCommands",
+                },
+                {
+                    id: "workspace-ui",
+                    label: "WorkspacePanel",
+                    subtitle: "components/workspace/",
+                    x: 770,
+                    y: 60,
+                    w: 130,
+                    h: 44,
+                    layer: "renderer",
+                    desc: "FileTree + Git tabs + DiffView",
+                },
+                {
+                    id: "settings-ui",
+                    label: "SettingsView",
+                    subtitle: "components/settings/",
+                    x: 770,
+                    y: 30,
+                    w: 130,
+                    h: 44,
+                    layer: "renderer",
+                    desc: "10 tabs de configuration",
+                },
 
-// ═══════════════════════════════════════════
-// NODES — 30 key components
-// ═══════════════════════════════════════════
-const NODES = [
-  // Renderer — y: 30-120
-  { id: 'app',          label: 'App.tsx',              subtitle: 'renderer/src/App.tsx',              x: 480, y: 30,  w: 120, h: 44, layer: 'renderer', desc: 'Routing ViewMode, 11 vues lazy-loaded' },
-  { id: 'chatview',     label: 'ChatView',             subtitle: 'components/chat/ChatView.tsx',      x: 140, y: 90,  w: 120, h: 44, layer: 'renderer', desc: 'Message list + WorkspacePanel' },
-  { id: 'inputzone',    label: 'InputZone',            subtitle: 'components/chat/InputZone.tsx',     x: 290, y: 90,  w: 120, h: 44, layer: 'renderer', desc: 'Saisie, pills, @mention, slash, library picker' },
-  { id: 'messageitem',  label: 'MessageItem',          subtitle: 'components/chat/MessageItem.tsx',   x: 10,  y: 90,  w: 120, h: 44, layer: 'renderer', desc: 'Markdown, tools, reasoning, React.memo' },
-  { id: 'sidebar',      label: 'Sidebar',              subtitle: 'components/layout/Sidebar.tsx',     x: 340, y: 30,  w: 120, h: 44, layer: 'renderer', desc: 'Nav, ProjectSelector, ConversationList' },
-  { id: 'stores',       label: 'Zustand Stores',       subtitle: 'stores/ (20 stores)',               x: 620, y: 60,  w: 130, h: 44, layer: 'renderer', desc: 'ui, messages, settings, workspace, providers, etc.' },
-  { id: 'hooks',        label: 'Hooks',                subtitle: 'hooks/ (9 hooks)',                  x: 480, y: 90,  w: 120, h: 44, layer: 'renderer', desc: 'useStreaming, useFileMention, useSlashCommands' },
-  { id: 'workspace-ui', label: 'WorkspacePanel',       subtitle: 'components/workspace/',             x: 770, y: 60,  w: 130, h: 44, layer: 'renderer', desc: 'FileTree + Git tabs + DiffView' },
-  { id: 'settings-ui',  label: 'SettingsView',         subtitle: 'components/settings/',              x: 770, y: 30,  w: 130, h: 44, layer: 'renderer', desc: '10 tabs de configuration' },
+                // Preload — y: 180
+                {
+                    id: "preload",
+                    label: "contextBridge",
+                    subtitle: "preload/index.ts",
+                    x: 400,
+                    y: 175,
+                    w: 180,
+                    h: 44,
+                    layer: "preload",
+                    desc: "~180 methodes IPC wrappees via window.api",
+                },
 
-  // Preload — y: 180
-  { id: 'preload',      label: 'contextBridge',        subtitle: 'preload/index.ts',                  x: 400, y: 175, w: 180, h: 44, layer: 'preload', desc: '~180 methodes IPC wrappees via window.api' },
+                // IPC Handlers — y: 260-330
+                {
+                    id: "chat-ipc",
+                    label: "chat.ipc",
+                    subtitle: "ipc/chat.ipc.ts",
+                    x: 80,
+                    y: 260,
+                    w: 120,
+                    h: 44,
+                    layer: "ipc",
+                    desc: "streamText, dual-forward, library retrieval",
+                },
+                {
+                    id: "conv-ipc",
+                    label: "conversations.ipc",
+                    subtitle: "ipc/conversations.ipc.ts",
+                    x: 220,
+                    y: 260,
+                    w: 140,
+                    h: 44,
+                    layer: "ipc",
+                    desc: "CRUD conversations + messages",
+                },
+                {
+                    id: "workspace-ipc",
+                    label: "workspace.ipc",
+                    subtitle: "ipc/workspace.ipc.ts",
+                    x: 380,
+                    y: 260,
+                    w: 130,
+                    h: 44,
+                    layer: "ipc",
+                    desc: "8 handlers workspace + Git couplage",
+                },
+                {
+                    id: "mcp-ipc",
+                    label: "mcp.ipc",
+                    subtitle: "ipc/mcp.ipc.ts",
+                    x: 530,
+                    y: 260,
+                    w: 110,
+                    h: 44,
+                    layer: "ipc",
+                    desc: "12 handlers MCP (Zod)",
+                },
+                {
+                    id: "git-ipc",
+                    label: "git.ipc",
+                    subtitle: "ipc/git.ipc.ts",
+                    x: 660,
+                    y: 260,
+                    w: 110,
+                    h: 44,
+                    layer: "ipc",
+                    desc: "8 handlers Git + push git:changed",
+                },
+                {
+                    id: "library-ipc",
+                    label: "library.ipc",
+                    subtitle: "ipc/library.ipc.ts",
+                    x: 790,
+                    y: 260,
+                    w: 120,
+                    h: 44,
+                    layer: "ipc",
+                    desc: "15 handlers referentiels RAG",
+                },
+                {
+                    id: "remote-ipc",
+                    label: "remote.ipc",
+                    subtitle: "ipc/remote*.ipc.ts",
+                    x: 170,
+                    y: 320,
+                    w: 120,
+                    h: 44,
+                    layer: "ipc",
+                    desc: "Telegram + WebSocket handlers",
+                },
+                {
+                    id: "other-ipc",
+                    label: "Other IPC",
+                    subtitle: "ipc/ (files, images, tts...)",
+                    x: 530,
+                    y: 320,
+                    w: 130,
+                    h: 44,
+                    layer: "ipc",
+                    desc: "files, images, prompts, roles, stats, data, slash-commands",
+                },
 
-  // IPC Handlers — y: 260-330
-  { id: 'chat-ipc',     label: 'chat.ipc',             subtitle: 'ipc/chat.ipc.ts',                   x: 80,  y: 260, w: 120, h: 44, layer: 'ipc', desc: 'streamText, dual-forward, library retrieval' },
-  { id: 'conv-ipc',     label: 'conversations.ipc',    subtitle: 'ipc/conversations.ipc.ts',          x: 220, y: 260, w: 140, h: 44, layer: 'ipc', desc: 'CRUD conversations + messages' },
-  { id: 'workspace-ipc',label: 'workspace.ipc',        subtitle: 'ipc/workspace.ipc.ts',              x: 380, y: 260, w: 130, h: 44, layer: 'ipc', desc: '8 handlers workspace + Git couplage' },
-  { id: 'mcp-ipc',      label: 'mcp.ipc',              subtitle: 'ipc/mcp.ipc.ts',                    x: 530, y: 260, w: 110, h: 44, layer: 'ipc', desc: '12 handlers MCP (Zod)' },
-  { id: 'git-ipc',      label: 'git.ipc',              subtitle: 'ipc/git.ipc.ts',                    x: 660, y: 260, w: 110, h: 44, layer: 'ipc', desc: '8 handlers Git + push git:changed' },
-  { id: 'library-ipc',  label: 'library.ipc',          subtitle: 'ipc/library.ipc.ts',                x: 790, y: 260, w: 120, h: 44, layer: 'ipc', desc: '15 handlers referentiels RAG' },
-  { id: 'remote-ipc',   label: 'remote.ipc',           subtitle: 'ipc/remote*.ipc.ts',                x: 170, y: 320, w: 120, h: 44, layer: 'ipc', desc: 'Telegram + WebSocket handlers' },
-  { id: 'other-ipc',    label: 'Other IPC',            subtitle: 'ipc/ (files, images, tts...)',       x: 530, y: 320, w: 130, h: 44, layer: 'ipc', desc: 'files, images, prompts, roles, stats, data, slash-commands' },
+                // LLM Layer — y: 410
+                {
+                    id: "router",
+                    label: "LLM Router",
+                    subtitle: "llm/router.ts",
+                    x: 80,
+                    y: 400,
+                    w: 120,
+                    h: 44,
+                    layer: "llm",
+                    desc: "getModel() → 11 providers AI SDK v6",
+                },
+                {
+                    id: "cost-calc",
+                    label: "Cost Calculator",
+                    subtitle: "llm/cost-calculator.ts",
+                    x: 220,
+                    y: 400,
+                    w: 130,
+                    h: 44,
+                    layer: "llm",
+                    desc: "Table PRICING + calcul cout par token",
+                },
+                {
+                    id: "ws-tools",
+                    label: "Workspace Tools",
+                    subtitle: "llm/workspace-tools.ts",
+                    x: 370,
+                    y: 400,
+                    w: 140,
+                    h: 44,
+                    layer: "llm",
+                    desc: "bash, readFile, writeFile, listFiles",
+                },
+                {
+                    id: "thinking",
+                    label: "Thinking",
+                    subtitle: "llm/thinking.ts",
+                    x: 80,
+                    y: 455,
+                    w: 120,
+                    h: 44,
+                    layer: "llm",
+                    desc: "providerOptions par provider (thinking/reasoning)",
+                },
+                {
+                    id: "lib-prompt",
+                    label: "Prompt Builders",
+                    subtitle: "llm/memory-prompt + library-prompt",
+                    x: 370,
+                    y: 455,
+                    w: 160,
+                    h: 44,
+                    layer: "llm",
+                    desc: "Injection XML: <semantic-memory> + <library-context>",
+                },
 
-  // LLM Layer — y: 410
-  { id: 'router',       label: 'LLM Router',           subtitle: 'llm/router.ts',                     x: 80,  y: 400, w: 120, h: 44, layer: 'llm', desc: 'getModel() → 11 providers AI SDK v6' },
-  { id: 'cost-calc',    label: 'Cost Calculator',      subtitle: 'llm/cost-calculator.ts',            x: 220, y: 400, w: 130, h: 44, layer: 'llm', desc: 'Table PRICING + calcul cout par token' },
-  { id: 'ws-tools',     label: 'Workspace Tools',      subtitle: 'llm/workspace-tools.ts',            x: 370, y: 400, w: 140, h: 44, layer: 'llm', desc: 'bash, readFile, writeFile, listFiles' },
-  { id: 'thinking',     label: 'Thinking',             subtitle: 'llm/thinking.ts',                   x: 80,  y: 455, w: 120, h: 44, layer: 'llm', desc: 'providerOptions par provider (thinking/reasoning)' },
-  { id: 'lib-prompt',   label: 'Prompt Builders',      subtitle: 'llm/memory-prompt + library-prompt',x: 370, y: 455, w: 160, h: 44, layer: 'llm', desc: 'Injection XML: <semantic-memory> + <library-context>' },
+                // Services — y: 540-600
+                {
+                    id: "mcp-svc",
+                    label: "McpManager",
+                    subtitle: "services/mcp-manager.service.ts",
+                    x: 530,
+                    y: 400,
+                    w: 130,
+                    h: 44,
+                    layer: "services",
+                    desc: "Spawn MCP servers, tool registry, stdio/http/sse",
+                },
+                {
+                    id: "qdrant-svc",
+                    label: "QdrantMemory",
+                    subtitle: "services/qdrant-memory.service.ts",
+                    x: 530,
+                    y: 455,
+                    w: 130,
+                    h: 44,
+                    layer: "services",
+                    desc: "Ingestion, recall, search, forget, reindex",
+                },
+                {
+                    id: "workspace-svc",
+                    label: "WorkspaceService",
+                    subtitle: "services/workspace.service.ts",
+                    x: 690,
+                    y: 400,
+                    w: 140,
+                    h: 44,
+                    layer: "services",
+                    desc: "Scan, read/write/delete, .coworkignore",
+                },
+                {
+                    id: "git-svc",
+                    label: "GitService",
+                    subtitle: "services/git.service.ts",
+                    x: 690,
+                    y: 455,
+                    w: 130,
+                    h: 44,
+                    layer: "services",
+                    desc: "execFile securise, diff, stage, commit",
+                },
+                {
+                    id: "telegram-svc",
+                    label: "TelegramBot",
+                    subtitle: "services/telegram-bot.service.ts",
+                    x: 850,
+                    y: 400,
+                    w: 130,
+                    h: 44,
+                    layer: "services",
+                    desc: "Remote Telegram, pairing, dual-forward",
+                },
+                {
+                    id: "library-svc",
+                    label: "LibraryService",
+                    subtitle: "services/library.service.ts",
+                    x: 850,
+                    y: 455,
+                    w: 130,
+                    h: 44,
+                    layer: "services",
+                    desc: "Import docs, chunk, embed, Qdrant upsert",
+                },
+                {
+                    id: "credential-svc",
+                    label: "CredentialService",
+                    subtitle: "services/credential.service.ts",
+                    x: 220,
+                    y: 455,
+                    w: 140,
+                    h: 44,
+                    layer: "services",
+                    desc: "safeStorage wrapper (Keychain macOS)",
+                },
 
-  // Services — y: 540-600
-  { id: 'mcp-svc',      label: 'McpManager',           subtitle: 'services/mcp-manager.service.ts',   x: 530, y: 400, w: 130, h: 44, layer: 'services', desc: 'Spawn MCP servers, tool registry, stdio/http/sse' },
-  { id: 'qdrant-svc',   label: 'QdrantMemory',         subtitle: 'services/qdrant-memory.service.ts', x: 530, y: 455, w: 130, h: 44, layer: 'services', desc: 'Ingestion, recall, search, forget, reindex' },
-  { id: 'workspace-svc',label: 'WorkspaceService',     subtitle: 'services/workspace.service.ts',     x: 690, y: 400, w: 140, h: 44, layer: 'services', desc: 'Scan, read/write/delete, .coworkignore' },
-  { id: 'git-svc',      label: 'GitService',           subtitle: 'services/git.service.ts',           x: 690, y: 455, w: 130, h: 44, layer: 'services', desc: 'execFile securise, diff, stage, commit' },
-  { id: 'telegram-svc', label: 'TelegramBot',          subtitle: 'services/telegram-bot.service.ts',  x: 850, y: 400, w: 130, h: 44, layer: 'services', desc: 'Remote Telegram, pairing, dual-forward' },
-  { id: 'library-svc',  label: 'LibraryService',       subtitle: 'services/library.service.ts',       x: 850, y: 455, w: 130, h: 44, layer: 'services', desc: 'Import docs, chunk, embed, Qdrant upsert' },
-  { id: 'credential-svc',label: 'CredentialService',   subtitle: 'services/credential.service.ts',    x: 220, y: 455, w: 140, h: 44, layer: 'services', desc: 'safeStorage wrapper (Keychain macOS)' },
+                // Data — y: 550
+                {
+                    id: "sqlite",
+                    label: "SQLite + Drizzle",
+                    subtitle: "db/schema.ts (22 tables)",
+                    x: 300,
+                    y: 545,
+                    w: 150,
+                    h: 44,
+                    layer: "data",
+                    desc: "WAL, FTS5, 15 indexes, JSON columns",
+                },
+                {
+                    id: "qdrant-db",
+                    label: "Qdrant Vector DB",
+                    subtitle: "qdrant-storage/ (embedded)",
+                    x: 530,
+                    y: 545,
+                    w: 150,
+                    h: 44,
+                    layer: "data",
+                    desc: "Collections: conversations_memory + library_{id}",
+                },
+                {
+                    id: "filesystem",
+                    label: "Filesystem",
+                    subtitle: "userData/, local-image://",
+                    x: 730,
+                    y: 545,
+                    w: 130,
+                    h: 44,
+                    layer: "data",
+                    desc: "Images, attachments, config YAML",
+                },
 
-  // Data — y: 550
-  { id: 'sqlite',       label: 'SQLite + Drizzle',     subtitle: 'db/schema.ts (22 tables)',          x: 300, y: 545, w: 150, h: 44, layer: 'data', desc: 'WAL, FTS5, 15 indexes, JSON columns' },
-  { id: 'qdrant-db',    label: 'Qdrant Vector DB',     subtitle: 'qdrant-storage/ (embedded)',        x: 530, y: 545, w: 150, h: 44, layer: 'data', desc: 'Collections: conversations_memory + library_{id}' },
-  { id: 'filesystem',   label: 'Filesystem',           subtitle: 'userData/, local-image://',          x: 730, y: 545, w: 130, h: 44, layer: 'data', desc: 'Images, attachments, config YAML' },
+                // External — y: 640
+                {
+                    id: "ai-providers",
+                    label: "AI Providers",
+                    subtitle: "OpenAI, Anthropic, Google...",
+                    x: 80,
+                    y: 630,
+                    w: 140,
+                    h: 44,
+                    layer: "external",
+                    desc: "11 providers: 8 cloud + 2 locaux + OpenRouter",
+                },
+                {
+                    id: "mcp-servers",
+                    label: "MCP Servers",
+                    subtitle: "stdio / http / sse",
+                    x: 380,
+                    y: 630,
+                    w: 130,
+                    h: 44,
+                    layer: "external",
+                    desc: "Serveurs MCP externes (outils)",
+                },
+                {
+                    id: "telegram-api",
+                    label: "Telegram API",
+                    subtitle: "api.telegram.org",
+                    x: 600,
+                    y: 630,
+                    w: 130,
+                    h: 44,
+                    layer: "external",
+                    desc: "Bot API, long polling, fetch() natif",
+                },
+                {
+                    id: "qdrant-bin",
+                    label: "Qdrant Binary",
+                    subtitle: "vendor/qdrant/",
+                    x: 750,
+                    y: 630,
+                    w: 130,
+                    h: 44,
+                    layer: "external",
+                    desc: "Binaire v1.17, spawn/kill, healthcheck",
+                },
+            ];
 
-  // External — y: 640
-  { id: 'ai-providers', label: 'AI Providers',         subtitle: 'OpenAI, Anthropic, Google...',       x: 80,  y: 630, w: 140, h: 44, layer: 'external', desc: '11 providers: 8 cloud + 2 locaux + OpenRouter' },
-  { id: 'mcp-servers',  label: 'MCP Servers',          subtitle: 'stdio / http / sse',                x: 380, y: 630, w: 130, h: 44, layer: 'external', desc: 'Serveurs MCP externes (outils)' },
-  { id: 'telegram-api', label: 'Telegram API',         subtitle: 'api.telegram.org',                  x: 600, y: 630, w: 130, h: 44, layer: 'external', desc: 'Bot API, long polling, fetch() natif' },
-  { id: 'qdrant-bin',   label: 'Qdrant Binary',        subtitle: 'vendor/qdrant/',                    x: 750, y: 630, w: 130, h: 44, layer: 'external', desc: 'Binaire v1.17, spawn/kill, healthcheck' },
-];
+            const CONNECTIONS = [
+                // Renderer → Preload
+                {
+                    from: "chatview",
+                    to: "preload",
+                    type: "ipc",
+                    label: "window.api.*",
+                },
+                {
+                    from: "inputzone",
+                    to: "preload",
+                    type: "ipc",
+                    label: "sendMessage",
+                },
+                { from: "sidebar", to: "preload", type: "ipc" },
+                { from: "workspace-ui", to: "preload", type: "ipc" },
+                { from: "settings-ui", to: "preload", type: "ipc" },
 
-const CONNECTIONS = [
-  // Renderer → Preload
-  { from: 'chatview',     to: 'preload',      type: 'ipc',       label: 'window.api.*' },
-  { from: 'inputzone',    to: 'preload',      type: 'ipc',       label: 'sendMessage' },
-  { from: 'sidebar',      to: 'preload',      type: 'ipc' },
-  { from: 'workspace-ui', to: 'preload',      type: 'ipc' },
-  { from: 'settings-ui',  to: 'preload',      type: 'ipc' },
+                // Renderer internal
+                {
+                    from: "app",
+                    to: "chatview",
+                    type: "dependency",
+                    label: "route",
+                },
+                { from: "app", to: "sidebar", type: "dependency" },
+                { from: "chatview", to: "messageitem", type: "dependency" },
+                { from: "chatview", to: "inputzone", type: "dependency" },
+                { from: "chatview", to: "workspace-ui", type: "dependency" },
+                {
+                    from: "hooks",
+                    to: "stores",
+                    type: "data-flow",
+                    label: "Zustand",
+                },
+                { from: "stores", to: "chatview", type: "data-flow" },
 
-  // Renderer internal
-  { from: 'app',          to: 'chatview',      type: 'dependency', label: 'route' },
-  { from: 'app',          to: 'sidebar',       type: 'dependency' },
-  { from: 'chatview',     to: 'messageitem',   type: 'dependency' },
-  { from: 'chatview',     to: 'inputzone',     type: 'dependency' },
-  { from: 'chatview',     to: 'workspace-ui',  type: 'dependency' },
-  { from: 'hooks',        to: 'stores',        type: 'data-flow',  label: 'Zustand' },
-  { from: 'stores',       to: 'chatview',      type: 'data-flow' },
+                // Preload → IPC
+                {
+                    from: "preload",
+                    to: "chat-ipc",
+                    type: "ipc",
+                    label: "chat:send",
+                },
+                { from: "preload", to: "conv-ipc", type: "ipc" },
+                { from: "preload", to: "workspace-ipc", type: "ipc" },
+                { from: "preload", to: "mcp-ipc", type: "ipc" },
+                { from: "preload", to: "git-ipc", type: "ipc" },
+                { from: "preload", to: "library-ipc", type: "ipc" },
+                { from: "preload", to: "remote-ipc", type: "ipc" },
+                { from: "preload", to: "other-ipc", type: "ipc" },
 
-  // Preload → IPC
-  { from: 'preload',      to: 'chat-ipc',      type: 'ipc',       label: 'chat:send' },
-  { from: 'preload',      to: 'conv-ipc',      type: 'ipc' },
-  { from: 'preload',      to: 'workspace-ipc', type: 'ipc' },
-  { from: 'preload',      to: 'mcp-ipc',       type: 'ipc' },
-  { from: 'preload',      to: 'git-ipc',       type: 'ipc' },
-  { from: 'preload',      to: 'library-ipc',   type: 'ipc' },
-  { from: 'preload',      to: 'remote-ipc',    type: 'ipc' },
-  { from: 'preload',      to: 'other-ipc',     type: 'ipc' },
+                // IPC → Preload (streaming events)
+                {
+                    from: "chat-ipc",
+                    to: "preload",
+                    type: "event",
+                    label: "chat:chunk",
+                },
 
-  // IPC → Preload (streaming events)
-  { from: 'chat-ipc',     to: 'preload',       type: 'event',     label: 'chat:chunk' },
+                // IPC → LLM
+                {
+                    from: "chat-ipc",
+                    to: "router",
+                    type: "tool-call",
+                    label: "streamText()",
+                },
+                { from: "chat-ipc", to: "cost-calc", type: "tool-call" },
+                {
+                    from: "chat-ipc",
+                    to: "lib-prompt",
+                    type: "tool-call",
+                    label: "system prompt",
+                },
+                { from: "router", to: "thinking", type: "dependency" },
+                {
+                    from: "router",
+                    to: "credential-svc",
+                    type: "tool-call",
+                    label: "getApiKey",
+                },
 
-  // IPC → LLM
-  { from: 'chat-ipc',     to: 'router',        type: 'tool-call', label: 'streamText()' },
-  { from: 'chat-ipc',     to: 'cost-calc',     type: 'tool-call' },
-  { from: 'chat-ipc',     to: 'lib-prompt',    type: 'tool-call', label: 'system prompt' },
-  { from: 'router',       to: 'thinking',      type: 'dependency' },
-  { from: 'router',       to: 'credential-svc',type: 'tool-call', label: 'getApiKey' },
+                // IPC → Services
+                {
+                    from: "workspace-ipc",
+                    to: "workspace-svc",
+                    type: "tool-call",
+                },
+                { from: "git-ipc", to: "git-svc", type: "tool-call" },
+                { from: "mcp-ipc", to: "mcp-svc", type: "tool-call" },
+                { from: "library-ipc", to: "library-svc", type: "tool-call" },
+                { from: "remote-ipc", to: "telegram-svc", type: "tool-call" },
 
-  // IPC → Services
-  { from: 'workspace-ipc',to: 'workspace-svc', type: 'tool-call' },
-  { from: 'git-ipc',      to: 'git-svc',       type: 'tool-call' },
-  { from: 'mcp-ipc',      to: 'mcp-svc',       type: 'tool-call' },
-  { from: 'library-ipc',  to: 'library-svc',   type: 'tool-call' },
-  { from: 'remote-ipc',   to: 'telegram-svc',  type: 'tool-call' },
+                // LLM → Services
+                {
+                    from: "ws-tools",
+                    to: "workspace-svc",
+                    type: "tool-call",
+                    label: "bash/read/write",
+                },
+                {
+                    from: "chat-ipc",
+                    to: "qdrant-svc",
+                    type: "tool-call",
+                    label: "recall + ingest",
+                },
 
-  // LLM → Services
-  { from: 'ws-tools',     to: 'workspace-svc', type: 'tool-call', label: 'bash/read/write' },
-  { from: 'chat-ipc',     to: 'qdrant-svc',    type: 'tool-call', label: 'recall + ingest' },
+                // Services → Data
+                {
+                    from: "chat-ipc",
+                    to: "sqlite",
+                    type: "data-flow",
+                    label: "save msg + cost",
+                },
+                { from: "conv-ipc", to: "sqlite", type: "data-flow" },
+                {
+                    from: "qdrant-svc",
+                    to: "qdrant-db",
+                    type: "data-flow",
+                    label: "upsert/search",
+                },
+                {
+                    from: "library-svc",
+                    to: "qdrant-db",
+                    type: "data-flow",
+                    label: "library_{id}",
+                },
+                { from: "library-svc", to: "sqlite", type: "data-flow" },
+                { from: "workspace-svc", to: "filesystem", type: "data-flow" },
+                {
+                    from: "git-svc",
+                    to: "filesystem",
+                    type: "data-flow",
+                    label: "execFile git",
+                },
+                { from: "other-ipc", to: "sqlite", type: "data-flow" },
 
-  // Services → Data
-  { from: 'chat-ipc',     to: 'sqlite',        type: 'data-flow', label: 'save msg + cost' },
-  { from: 'conv-ipc',     to: 'sqlite',        type: 'data-flow' },
-  { from: 'qdrant-svc',   to: 'qdrant-db',     type: 'data-flow', label: 'upsert/search' },
-  { from: 'library-svc',  to: 'qdrant-db',     type: 'data-flow', label: 'library_{id}' },
-  { from: 'library-svc',  to: 'sqlite',        type: 'data-flow' },
-  { from: 'workspace-svc',to: 'filesystem',    type: 'data-flow' },
-  { from: 'git-svc',      to: 'filesystem',    type: 'data-flow', label: 'execFile git' },
-  { from: 'other-ipc',    to: 'sqlite',        type: 'data-flow' },
+                // Services → External
+                {
+                    from: "router",
+                    to: "ai-providers",
+                    type: "data-flow",
+                    label: "API calls",
+                },
+                {
+                    from: "mcp-svc",
+                    to: "mcp-servers",
+                    type: "tool-call",
+                    label: "spawn/call",
+                },
+                {
+                    from: "telegram-svc",
+                    to: "telegram-api",
+                    type: "data-flow",
+                    label: "fetch()",
+                },
+                {
+                    from: "qdrant-svc",
+                    to: "qdrant-bin",
+                    type: "data-flow",
+                    label: "REST 6333",
+                },
+            ];
 
-  // Services → External
-  { from: 'router',       to: 'ai-providers',  type: 'data-flow', label: 'API calls' },
-  { from: 'mcp-svc',      to: 'mcp-servers',   type: 'tool-call', label: 'spawn/call' },
-  { from: 'telegram-svc', to: 'telegram-api',  type: 'data-flow', label: 'fetch()' },
-  { from: 'qdrant-svc',   to: 'qdrant-bin',    type: 'data-flow', label: 'REST 6333' },
-];
+            const PRESETS = {
+                full: {
+                    label: "Systeme complet",
+                    layers: [
+                        "renderer",
+                        "preload",
+                        "ipc",
+                        "llm",
+                        "services",
+                        "data",
+                        "external",
+                    ],
+                    conns: [
+                        "data-flow",
+                        "ipc",
+                        "tool-call",
+                        "event",
+                        "dependency",
+                    ],
+                },
+                chat: {
+                    label: "Chat Flow",
+                    layers: [
+                        "renderer",
+                        "preload",
+                        "ipc",
+                        "llm",
+                        "services",
+                        "data",
+                        "external",
+                    ],
+                    conns: ["data-flow", "ipc", "event"],
+                    highlight: [
+                        "inputzone",
+                        "preload",
+                        "chat-ipc",
+                        "router",
+                        "sqlite",
+                        "ai-providers",
+                        "hooks",
+                        "stores",
+                        "messageitem",
+                        "chatview",
+                    ],
+                },
+                workspace: {
+                    label: "Workspace",
+                    layers: ["renderer", "preload", "ipc", "services", "data"],
+                    conns: ["data-flow", "ipc", "tool-call"],
+                    highlight: [
+                        "workspace-ui",
+                        "preload",
+                        "workspace-ipc",
+                        "git-ipc",
+                        "workspace-svc",
+                        "git-svc",
+                        "filesystem",
+                    ],
+                },
+                rag: {
+                    label: "RAG / Memory",
+                    layers: [
+                        "renderer",
+                        "preload",
+                        "ipc",
+                        "llm",
+                        "services",
+                        "data",
+                        "external",
+                    ],
+                    conns: ["data-flow", "tool-call"],
+                    highlight: [
+                        "chat-ipc",
+                        "qdrant-svc",
+                        "library-svc",
+                        "lib-prompt",
+                        "qdrant-db",
+                        "qdrant-bin",
+                        "library-ipc",
+                        "sqlite",
+                    ],
+                },
+                security: {
+                    label: "Securite",
+                    layers: ["renderer", "preload", "ipc", "services"],
+                    conns: ["ipc", "tool-call"],
+                    highlight: [
+                        "preload",
+                        "chat-ipc",
+                        "workspace-ipc",
+                        "credential-svc",
+                        "workspace-svc",
+                    ],
+                },
+            };
 
-const PRESETS = {
-  full:     { label: 'Systeme complet', layers: ['renderer','preload','ipc','llm','services','data','external'], conns: ['data-flow','ipc','tool-call','event','dependency'] },
-  chat:     { label: 'Chat Flow',       layers: ['renderer','preload','ipc','llm','services','data','external'], conns: ['data-flow','ipc','event'], highlight: ['inputzone','preload','chat-ipc','router','sqlite','ai-providers','hooks','stores','messageitem','chatview'] },
-  workspace:{ label: 'Workspace',       layers: ['renderer','preload','ipc','services','data'], conns: ['data-flow','ipc','tool-call'], highlight: ['workspace-ui','preload','workspace-ipc','git-ipc','workspace-svc','git-svc','filesystem'] },
-  rag:      { label: 'RAG / Memory',    layers: ['renderer','preload','ipc','llm','services','data','external'], conns: ['data-flow','tool-call'], highlight: ['chat-ipc','qdrant-svc','library-svc','lib-prompt','qdrant-db','qdrant-bin','library-ipc','sqlite'] },
-  security: { label: 'Securite',        layers: ['renderer','preload','ipc','services'], conns: ['ipc','tool-call'], highlight: ['preload','chat-ipc','workspace-ipc','credential-svc','workspace-svc'] },
-};
+            // ═══════════════════════════════════════════
+            // RENDERING
+            // ═══════════════════════════════════════════
+            const svg = document.getElementById("map");
+            const tooltip = document.getElementById("tooltip");
+            let dragging = false,
+                dragStart = { x: 0, y: 0 },
+                panStart = { x: 0, y: 0 };
 
-// ═══════════════════════════════════════════
-// RENDERING
-// ═══════════════════════════════════════════
-const svg = document.getElementById('map');
-const tooltip = document.getElementById('tooltip');
-let dragging = false, dragStart = {x:0,y:0}, panStart = {x:0,y:0};
+            function buildSidebar() {
+                // Presets
+                const presetsEl = document.getElementById("presets");
+                presetsEl.innerHTML = "";
+                for (const [key, p] of Object.entries(PRESETS)) {
+                    const btn = document.createElement("button");
+                    btn.className =
+                        "preset-btn" + (state.preset === key ? " active" : "");
+                    btn.textContent = p.label;
+                    btn.onclick = () => applyPreset(key);
+                    presetsEl.appendChild(btn);
+                }
 
-function buildSidebar() {
-  // Presets
-  const presetsEl = document.getElementById('presets');
-  presetsEl.innerHTML = '';
-  for (const [key, p] of Object.entries(PRESETS)) {
-    const btn = document.createElement('button');
-    btn.className = 'preset-btn' + (state.preset === key ? ' active' : '');
-    btn.textContent = p.label;
-    btn.onclick = () => applyPreset(key);
-    presetsEl.appendChild(btn);
-  }
-
-  // Layers
-  const layersEl = document.getElementById('layers');
-  layersEl.innerHTML = '';
-  for (const [key, l] of Object.entries(LAYERS)) {
-    const label = document.createElement('label');
-    label.className = 'check-item';
-    label.innerHTML = `<input type="checkbox" ${state.layers[key] ? 'checked' : ''} data-layer="${key}">
-      <span class="check-box" style="background:${state.layers[key] ? l.color : 'transparent'}">
+                // Layers
+                const layersEl = document.getElementById("layers");
+                layersEl.innerHTML = "";
+                for (const [key, l] of Object.entries(LAYERS)) {
+                    const label = document.createElement("label");
+                    label.className = "check-item";
+                    label.innerHTML = `<input type="checkbox" ${state.layers[key] ? "checked" : ""} data-layer="${key}">
+      <span class="check-box" style="background:${state.layers[key] ? l.color : "transparent"}">
         <svg viewBox="0 0 12 12"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="#fff" stroke-width="1.5" fill="none"/></svg>
       </span>
       <span class="color-dot" style="background:${l.color}"></span>
       ${l.label}`;
-    label.querySelector('input').onchange = (e) => {
-      state.layers[key] = e.target.checked;
-      state.preset = '';
-      renderAll();
-    };
-    layersEl.appendChild(label);
-  }
+                    label.querySelector("input").onchange = (e) => {
+                        state.layers[key] = e.target.checked;
+                        state.preset = "";
+                        renderAll();
+                    };
+                    layersEl.appendChild(label);
+                }
 
-  // Connections
-  const connsEl = document.getElementById('connections');
-  connsEl.innerHTML = '';
-  for (const [key, c] of Object.entries(CONN_TYPES)) {
-    const label = document.createElement('label');
-    label.className = 'check-item';
-    const lineStyle = c.style === 'dashed' ? `background:repeating-linear-gradient(90deg,${c.color} 0 6px,transparent 6px 10px)` :
-                      c.style === 'dotted' ? `background:repeating-linear-gradient(90deg,${c.color} 0 3px,transparent 3px 6px)` :
-                      `background:${c.color}`;
-    label.innerHTML = `<input type="checkbox" ${state.connections[key] ? 'checked' : ''}>
-      <span class="check-box" style="background:${state.connections[key] ? c.color : 'transparent'}">
+                // Connections
+                const connsEl = document.getElementById("connections");
+                connsEl.innerHTML = "";
+                for (const [key, c] of Object.entries(CONN_TYPES)) {
+                    const label = document.createElement("label");
+                    label.className = "check-item";
+                    const lineStyle =
+                        c.style === "dashed"
+                            ? `background:repeating-linear-gradient(90deg,${c.color} 0 6px,transparent 6px 10px)`
+                            : c.style === "dotted"
+                              ? `background:repeating-linear-gradient(90deg,${c.color} 0 3px,transparent 3px 6px)`
+                              : `background:${c.color}`;
+                    label.innerHTML = `<input type="checkbox" ${state.connections[key] ? "checked" : ""}>
+      <span class="check-box" style="background:${state.connections[key] ? c.color : "transparent"}">
         <svg viewBox="0 0 12 12"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="#fff" stroke-width="1.5" fill="none"/></svg>
       </span>
       <span style="width:20px;height:2px;flex-shrink:0;${lineStyle}"></span>
       ${c.label}`;
-    label.querySelector('input').onchange = (e) => {
-      state.connections[key] = e.target.checked;
-      state.preset = '';
-      renderAll();
-    };
-    connsEl.appendChild(label);
-  }
+                    label.querySelector("input").onchange = (e) => {
+                        state.connections[key] = e.target.checked;
+                        state.preset = "";
+                        renderAll();
+                    };
+                    connsEl.appendChild(label);
+                }
 
-  // Legend
-  const legendEl = document.getElementById('legend-items');
-  legendEl.innerHTML = '';
-  for (const [, l] of Object.entries(LAYERS)) {
-    const item = document.createElement('div');
-    item.className = 'legend-item';
-    item.innerHTML = `<span class="legend-swatch" style="background:${l.color}40;border:1px solid ${l.color}"></span>${l.label}`;
-    legendEl.appendChild(item);
-  }
-}
+                // Legend
+                const legendEl = document.getElementById("legend-items");
+                legendEl.innerHTML = "";
+                for (const [, l] of Object.entries(LAYERS)) {
+                    const item = document.createElement("div");
+                    item.className = "legend-item";
+                    item.innerHTML = `<span class="legend-swatch" style="background:${l.color}40;border:1px solid ${l.color}"></span>${l.label}`;
+                    legendEl.appendChild(item);
+                }
+            }
 
-function renderDiagram() {
-  const activePreset = PRESETS[state.preset];
-  const highlight = activePreset?.highlight || [];
-  const hasHighlight = highlight.length > 0;
+            function renderDiagram() {
+                const activePreset = PRESETS[state.preset];
+                const highlight = activePreset?.highlight || [];
+                const hasHighlight = highlight.length > 0;
 
-  const visibleNodes = NODES.filter(n => state.layers[n.layer]);
-  const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
-  const visibleConns = CONNECTIONS.filter(c =>
-    state.connections[c.type] && visibleNodeIds.has(c.from) && visibleNodeIds.has(c.to)
-  );
+                const visibleNodes = NODES.filter((n) => state.layers[n.layer]);
+                const visibleNodeIds = new Set(visibleNodes.map((n) => n.id));
+                const visibleConns = CONNECTIONS.filter(
+                    (c) =>
+                        state.connections[c.type] &&
+                        visibleNodeIds.has(c.from) &&
+                        visibleNodeIds.has(c.to),
+                );
 
-  const nodeMap = Object.fromEntries(NODES.map(n => [n.id, n]));
-  const commentedIds = new Set(state.comments.map(c => c.target));
+                const nodeMap = Object.fromEntries(NODES.map((n) => [n.id, n]));
+                const commentedIds = new Set(
+                    state.comments.map((c) => c.target),
+                );
 
-  // SVG markers
-  let svgContent = '<defs>';
-  for (const [key, c] of Object.entries(CONN_TYPES)) {
-    svgContent += `<marker id="arrow-${key}" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                // SVG markers
+                let svgContent = "<defs>";
+                for (const [key, c] of Object.entries(CONN_TYPES)) {
+                    svgContent += `<marker id="arrow-${key}" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
       <polygon points="0 0, 8 3, 0 6" fill="${c.color}"/>
     </marker>`;
-  }
-  // Glow filter
-  svgContent += `<filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
-  svgContent += '</defs>';
+                }
+                // Glow filter
+                svgContent += `<filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+                svgContent += "</defs>";
 
-  // Layer bands
-  const bands = [
-    { y: 15, h: 130, label: 'RENDERER', layer: 'renderer' },
-    { y: 160, h: 65,  label: 'PRELOAD',  layer: 'preload' },
-    { y: 240, h: 135, label: 'MAIN — IPC', layer: 'ipc' },
-    { y: 385, h: 130, label: 'MAIN — LLM & SERVICES', layer: 'llm' },
-    { y: 525, h: 80,  label: 'DATA', layer: 'data' },
-    { y: 615, h: 70,  label: 'EXTERNAL', layer: 'external' },
-  ];
+                // Layer bands
+                const bands = [
+                    { y: 15, h: 130, label: "RENDERER", layer: "renderer" },
+                    { y: 160, h: 65, label: "PRELOAD", layer: "preload" },
+                    { y: 240, h: 135, label: "MAIN — IPC", layer: "ipc" },
+                    {
+                        y: 385,
+                        h: 130,
+                        label: "MAIN — LLM & SERVICES",
+                        layer: "llm",
+                    },
+                    { y: 525, h: 80, label: "DATA", layer: "data" },
+                    { y: 615, h: 70, label: "EXTERNAL", layer: "external" },
+                ];
 
-  for (const band of bands) {
-    if (!state.layers[band.layer] && band.layer !== 'llm') continue;
-    if (band.layer === 'llm' && !state.layers.llm && !state.layers.services) continue;
-    const col = LAYERS[band.layer]?.color || '#4b5563';
-    svgContent += `<rect x="5" y="${band.y}" width="985" height="${band.h}" rx="8" fill="${col}08" stroke="${col}20" stroke-width="1"/>`;
-    svgContent += `<text x="15" y="${band.y + 16}" font-size="9" fill="${col}60" font-weight="600" letter-spacing="1">${band.label}</text>`;
-  }
+                for (const band of bands) {
+                    if (!state.layers[band.layer] && band.layer !== "llm")
+                        continue;
+                    if (
+                        band.layer === "llm" &&
+                        !state.layers.llm &&
+                        !state.layers.services
+                    )
+                        continue;
+                    const col = LAYERS[band.layer]?.color || "#4b5563";
+                    svgContent += `<rect x="5" y="${band.y}" width="985" height="${band.h}" rx="8" fill="${col}08" stroke="${col}20" stroke-width="1"/>`;
+                    svgContent += `<text x="15" y="${band.y + 16}" font-size="9" fill="${col}60" font-weight="600" letter-spacing="1">${band.label}</text>`;
+                }
 
-  // Connections
-  for (const conn of visibleConns) {
-    const from = nodeMap[conn.from];
-    const to = nodeMap[conn.to];
-    if (!from || !to) continue;
+                // Connections
+                for (const conn of visibleConns) {
+                    const from = nodeMap[conn.from];
+                    const to = nodeMap[conn.to];
+                    if (!from || !to) continue;
 
-    const ct = CONN_TYPES[conn.type];
-    const dimmed = hasHighlight && (!highlight.includes(conn.from) || !highlight.includes(conn.to));
-    const opacity = dimmed ? 0.12 : 0.6;
+                    const ct = CONN_TYPES[conn.type];
+                    const dimmed =
+                        hasHighlight &&
+                        (!highlight.includes(conn.from) ||
+                            !highlight.includes(conn.to));
+                    const opacity = dimmed ? 0.12 : 0.6;
 
-    const x1 = from.x + from.w / 2;
-    const y1 = from.y + from.h;
-    const x2 = to.x + to.w / 2;
-    const y2 = to.y;
+                    const x1 = from.x + from.w / 2;
+                    const y1 = from.y + from.h;
+                    const x2 = to.x + to.w / 2;
+                    const y2 = to.y;
 
-    // Smart path: if going up, connect from top
-    let sx, sy, ex, ey;
-    if (y2 > y1 - 10) {
-      sx = x1; sy = y1; ex = x2; ey = y2;
-    } else {
-      sx = x1; sy = from.y; ex = x2; ey = to.y + to.h;
-    }
+                    // Smart path: if going up, connect from top
+                    let sx, sy, ex, ey;
+                    if (y2 > y1 - 10) {
+                        sx = x1;
+                        sy = y1;
+                        ex = x2;
+                        ey = y2;
+                    } else {
+                        sx = x1;
+                        sy = from.y;
+                        ex = x2;
+                        ey = to.y + to.h;
+                    }
 
-    const midY = (sy + ey) / 2;
-    const dasharray = ct.style === 'dashed' ? '6,3' : ct.style === 'dotted' ? '3,3' : 'none';
+                    const midY = (sy + ey) / 2;
+                    const dasharray =
+                        ct.style === "dashed"
+                            ? "6,3"
+                            : ct.style === "dotted"
+                              ? "3,3"
+                              : "none";
 
-    svgContent += `<path d="M${sx},${sy} C${sx},${midY} ${ex},${midY} ${ex},${ey}"
+                    svgContent += `<path d="M${sx},${sy} C${sx},${midY} ${ex},${midY} ${ex},${ey}"
       fill="none" stroke="${ct.color}" stroke-width="1.5" stroke-opacity="${opacity}"
-      ${dasharray !== 'none' ? `stroke-dasharray="${dasharray}"` : ''}
+      ${dasharray !== "none" ? `stroke-dasharray="${dasharray}"` : ""}
       marker-end="url(#arrow-${conn.type})"/>`;
 
-    if (conn.label && !dimmed) {
-      const lx = (sx + ex) / 2;
-      const ly = midY - 4;
-      svgContent += `<text x="${lx}" y="${ly}" font-size="8" fill="${ct.color}" opacity="0.7" text-anchor="middle" font-family="'SF Mono',monospace">${conn.label}</text>`;
-    }
-  }
+                    if (conn.label && !dimmed) {
+                        const lx = (sx + ex) / 2;
+                        const ly = midY - 4;
+                        svgContent += `<text x="${lx}" y="${ly}" font-size="8" fill="${ct.color}" opacity="0.7" text-anchor="middle" font-family="'SF Mono',monospace">${conn.label}</text>`;
+                    }
+                }
 
-  // Nodes
-  for (const node of visibleNodes) {
-    const layer = LAYERS[node.layer];
-    const dimmed = hasHighlight && !highlight.includes(node.id);
-    const opacity = dimmed ? 0.2 : 1;
-    const commented = commentedIds.has(node.id);
+                // Nodes
+                for (const node of visibleNodes) {
+                    const layer = LAYERS[node.layer];
+                    const dimmed = hasHighlight && !highlight.includes(node.id);
+                    const opacity = dimmed ? 0.2 : 1;
+                    const commented = commentedIds.has(node.id);
 
-    const strokeColor = commented ? '#f59e0b' : layer.color;
-    const strokeWidth = commented ? 2 : 1;
+                    const strokeColor = commented ? "#f59e0b" : layer.color;
+                    const strokeWidth = commented ? 2 : 1;
 
-    svgContent += `<g class="node" data-id="${node.id}" style="cursor:pointer;opacity:${opacity}"
+                    svgContent += `<g class="node" data-id="${node.id}" style="cursor:pointer;opacity:${opacity}"
       onmouseenter="showTooltip(event,'${node.id}')" onmouseleave="hideTooltip()"
       onclick="openModal('${node.id}')">`;
-    svgContent += `<rect x="${node.x}" y="${node.y}" width="${node.w}" height="${node.h}" rx="8"
+                    svgContent += `<rect x="${node.x}" y="${node.y}" width="${node.w}" height="${node.h}" rx="8"
       fill="${layer.fill}" stroke="${strokeColor}" stroke-width="${strokeWidth}"
-      ${commented ? 'filter="url(#glow)"' : ''}/>`;
-    svgContent += `<text x="${node.x + node.w/2}" y="${node.y + 18}" text-anchor="middle"
+      ${commented ? 'filter="url(#glow)"' : ""}/>`;
+                    svgContent += `<text x="${node.x + node.w / 2}" y="${node.y + 18}" text-anchor="middle"
       font-size="11" font-weight="600" fill="${layer.color}">${node.label}</text>`;
 
-    // Subtitle (truncated)
-    const sub = node.subtitle.length > 24 ? node.subtitle.slice(-22) : node.subtitle;
-    svgContent += `<text x="${node.x + node.w/2}" y="${node.y + 33}" text-anchor="middle"
+                    // Subtitle (truncated)
+                    const sub =
+                        node.subtitle.length > 24
+                            ? node.subtitle.slice(-22)
+                            : node.subtitle;
+                    svgContent += `<text x="${node.x + node.w / 2}" y="${node.y + 33}" text-anchor="middle"
       font-size="8" fill="#6b7280" font-family="'SF Mono',monospace">${sub}</text>`;
 
-    if (commented) {
-      svgContent += `<circle cx="${node.x + node.w - 6}" cy="${node.y + 6}" r="5" fill="#f59e0b"/>`;
-      svgContent += `<text x="${node.x + node.w - 6}" y="${node.y + 9.5}" text-anchor="middle" font-size="7" fill="#000" font-weight="700">${state.comments.filter(c=>c.target===node.id).length}</text>`;
-    }
-    svgContent += '</g>';
-  }
+                    if (commented) {
+                        svgContent += `<circle cx="${node.x + node.w - 6}" cy="${node.y + 6}" r="5" fill="#f59e0b"/>`;
+                        svgContent += `<text x="${node.x + node.w - 6}" y="${node.y + 9.5}" text-anchor="middle" font-size="7" fill="#000" font-weight="700">${state.comments.filter((c) => c.target === node.id).length}</text>`;
+                    }
+                    svgContent += "</g>";
+                }
 
-  svg.innerHTML = svgContent;
-  svg.setAttribute('viewBox', `${-state.panX/state.zoom} ${-state.panY/state.zoom} ${1000/state.zoom} ${720/state.zoom}`);
-}
+                svg.innerHTML = svgContent;
+                svg.setAttribute(
+                    "viewBox",
+                    `${-state.panX / state.zoom} ${-state.panY / state.zoom} ${1000 / state.zoom} ${720 / state.zoom}`,
+                );
+            }
 
-function renderComments() {
-  const list = document.getElementById('comments-list');
-  const countEl = document.getElementById('comment-count');
+            function renderComments() {
+                const list = document.getElementById("comments-list");
+                const countEl = document.getElementById("comment-count");
 
-  if (state.comments.length === 0) {
-    list.innerHTML = '<div class="no-comments">Cliquer sur un composant pour commenter</div>';
-    countEl.textContent = '';
-    return;
-  }
+                if (state.comments.length === 0) {
+                    list.innerHTML =
+                        '<div class="no-comments">Cliquer sur un composant pour commenter</div>';
+                    countEl.textContent = "";
+                    return;
+                }
 
-  countEl.textContent = `(${state.comments.length})`;
-  list.innerHTML = '';
-  for (const comment of state.comments) {
-    const card = document.createElement('div');
-    card.className = 'comment-card';
-    card.innerHTML = `
+                countEl.textContent = `(${state.comments.length})`;
+                list.innerHTML = "";
+                for (const comment of state.comments) {
+                    const card = document.createElement("div");
+                    card.className = "comment-card";
+                    card.innerHTML = `
       <div class="target">${comment.targetLabel}</div>
       <div class="file">${comment.targetFile}</div>
       <div class="text">${comment.text}</div>
       <button class="delete-btn" onclick="deleteComment(${comment.id})">&times;</button>`;
-    list.appendChild(card);
-  }
-}
+                    list.appendChild(card);
+                }
+            }
 
-function updatePrompt() {
-  const el = document.getElementById('prompt-text');
-  const visibleLayers = Object.entries(state.layers).filter(([,v]) => v).map(([k]) => LAYERS[k].label);
-  const presetLabel = PRESETS[state.preset]?.label || 'Vue personnalisee';
+            function updatePrompt() {
+                const el = document.getElementById("prompt-text");
+                const visibleLayers = Object.entries(state.layers)
+                    .filter(([, v]) => v)
+                    .map(([k]) => LAYERS[k].label);
+                const presetLabel =
+                    PRESETS[state.preset]?.label || "Vue personnalisee";
 
-  let text = `Architecture Cruchot (Electron multi-LLM desktop app), vue "${presetLabel}".`;
+                let text = `Architecture Cruchot (Electron multi-LLM desktop app), vue "${presetLabel}".`;
 
-  if (visibleLayers.length < Object.keys(LAYERS).length) {
-    text += `\nCouches visibles : ${visibleLayers.join(', ')}.`;
-  }
+                if (visibleLayers.length < Object.keys(LAYERS).length) {
+                    text += `\nCouches visibles : ${visibleLayers.join(", ")}.`;
+                }
 
-  if (state.comments.length > 0) {
-    text += '\n\nCommentaires sur des composants specifiques :\n';
-    for (const c of state.comments) {
-      text += `\n**${c.targetLabel}** (${c.targetFile}) :\n${c.text}\n`;
-    }
-  } else {
-    text += '\n\nAucun commentaire. Cliquer sur un composant du diagramme pour ajouter du feedback.';
-  }
+                if (state.comments.length > 0) {
+                    text +=
+                        "\n\nCommentaires sur des composants specifiques :\n";
+                    for (const c of state.comments) {
+                        text += `\n**${c.targetLabel}** (${c.targetFile}) :\n${c.text}\n`;
+                    }
+                } else {
+                    text +=
+                        "\n\nAucun commentaire. Cliquer sur un composant du diagramme pour ajouter du feedback.";
+                }
 
-  el.textContent = text;
-}
+                el.textContent = text;
+            }
 
-function renderAll() {
-  buildSidebar();
-  renderDiagram();
-  renderComments();
-  updatePrompt();
-}
+            function renderAll() {
+                buildSidebar();
+                renderDiagram();
+                renderComments();
+                updatePrompt();
+            }
 
-// ═══════════════════════════════════════════
-// INTERACTIONS
-// ═══════════════════════════════════════════
-function applyPreset(key) {
-  const p = PRESETS[key];
-  state.preset = key;
-  for (const k of Object.keys(state.layers)) state.layers[k] = p.layers.includes(k);
-  for (const k of Object.keys(state.connections)) state.connections[k] = p.conns.includes(k);
-  state.zoom = 1; state.panX = 0; state.panY = 0;
-  renderAll();
-}
+            // ═══════════════════════════════════════════
+            // INTERACTIONS
+            // ═══════════════════════════════════════════
+            function applyPreset(key) {
+                const p = PRESETS[key];
+                state.preset = key;
+                for (const k of Object.keys(state.layers))
+                    state.layers[k] = p.layers.includes(k);
+                for (const k of Object.keys(state.connections))
+                    state.connections[k] = p.conns.includes(k);
+                state.zoom = 1;
+                state.panX = 0;
+                state.panY = 0;
+                renderAll();
+            }
 
-function showTooltip(event, nodeId) {
-  const node = NODES.find(n => n.id === nodeId);
-  if (!node) return;
-  const rect = document.getElementById('canvas-area').getBoundingClientRect();
-  tooltip.innerHTML = `<div class="tt-label">${node.label}</div><div class="tt-file">${node.subtitle}</div><div class="tt-desc">${node.desc}</div>`;
-  tooltip.style.left = (event.clientX - rect.left + 12) + 'px';
-  tooltip.style.top = (event.clientY - rect.top - 10) + 'px';
-  tooltip.classList.add('visible');
-}
+            function showTooltip(event, nodeId) {
+                const node = NODES.find((n) => n.id === nodeId);
+                if (!node) return;
+                const rect = document
+                    .getElementById("canvas-area")
+                    .getBoundingClientRect();
+                tooltip.innerHTML = `<div class="tt-label">${node.label}</div><div class="tt-file">${node.subtitle}</div><div class="tt-desc">${node.desc}</div>`;
+                tooltip.style.left = event.clientX - rect.left + 12 + "px";
+                tooltip.style.top = event.clientY - rect.top - 10 + "px";
+                tooltip.classList.add("visible");
+            }
 
-function hideTooltip() {
-  tooltip.classList.remove('visible');
-}
+            function hideTooltip() {
+                tooltip.classList.remove("visible");
+            }
 
-function openModal(nodeId) {
-  const node = NODES.find(n => n.id === nodeId);
-  if (!node) return;
-  state.modalNode = node;
-  document.getElementById('modal-title').textContent = node.label;
-  document.getElementById('modal-file').textContent = node.subtitle;
-  document.getElementById('modal-textarea').value = '';
-  document.getElementById('modal').classList.add('visible');
-  setTimeout(() => document.getElementById('modal-textarea').focus(), 50);
-}
+            function openModal(nodeId) {
+                const node = NODES.find((n) => n.id === nodeId);
+                if (!node) return;
+                state.modalNode = node;
+                document.getElementById("modal-title").textContent = node.label;
+                document.getElementById("modal-file").textContent =
+                    node.subtitle;
+                document.getElementById("modal-textarea").value = "";
+                document.getElementById("modal").classList.add("visible");
+                setTimeout(
+                    () => document.getElementById("modal-textarea").focus(),
+                    50,
+                );
+            }
 
-function closeModal() {
-  document.getElementById('modal').classList.remove('visible');
-  state.modalNode = null;
-}
+            function closeModal() {
+                document.getElementById("modal").classList.remove("visible");
+                state.modalNode = null;
+            }
 
-function saveComment() {
-  const text = document.getElementById('modal-textarea').value.trim();
-  if (!text || !state.modalNode) return;
-  state.comments.push({
-    id: Date.now(),
-    target: state.modalNode.id,
-    targetLabel: state.modalNode.label,
-    targetFile: state.modalNode.subtitle,
-    text,
-  });
-  closeModal();
-  renderAll();
-}
+            function saveComment() {
+                const text = document
+                    .getElementById("modal-textarea")
+                    .value.trim();
+                if (!text || !state.modalNode) return;
+                state.comments.push({
+                    id: Date.now(),
+                    target: state.modalNode.id,
+                    targetLabel: state.modalNode.label,
+                    targetFile: state.modalNode.subtitle,
+                    text,
+                });
+                closeModal();
+                renderAll();
+            }
 
-function deleteComment(id) {
-  state.comments = state.comments.filter(c => c.id !== id);
-  renderAll();
-}
+            function deleteComment(id) {
+                state.comments = state.comments.filter((c) => c.id !== id);
+                renderAll();
+            }
 
-function zoomIn()    { state.zoom = Math.min(state.zoom * 1.25, 3); renderDiagram(); }
-function zoomOut()   { state.zoom = Math.max(state.zoom / 1.25, 0.4); renderDiagram(); }
-function zoomReset() { state.zoom = 1; state.panX = 0; state.panY = 0; renderDiagram(); }
+            function zoomIn() {
+                state.zoom = Math.min(state.zoom * 1.25, 3);
+                renderDiagram();
+            }
+            function zoomOut() {
+                state.zoom = Math.max(state.zoom / 1.25, 0.4);
+                renderDiagram();
+            }
+            function zoomReset() {
+                state.zoom = 1;
+                state.panX = 0;
+                state.panY = 0;
+                renderDiagram();
+            }
 
-function copyPrompt() {
-  const text = document.getElementById('prompt-text').textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById('copy-btn');
-    btn.textContent = 'Copie !';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = 'Copier'; btn.classList.remove('copied'); }, 1500);
-  });
-}
+            function copyPrompt() {
+                const text = document.getElementById("prompt-text").textContent;
+                navigator.clipboard.writeText(text).then(() => {
+                    const btn = document.getElementById("copy-btn");
+                    btn.textContent = "Copie !";
+                    btn.classList.add("copied");
+                    setTimeout(() => {
+                        btn.textContent = "Copier";
+                        btn.classList.remove("copied");
+                    }, 1500);
+                });
+            }
 
-// Pan
-const canvas = document.getElementById('canvas-area');
-canvas.addEventListener('mousedown', (e) => {
-  if (e.target.closest('.node')) return;
-  dragging = true;
-  dragStart = { x: e.clientX, y: e.clientY };
-  panStart = { x: state.panX, y: state.panY };
-  canvas.style.cursor = 'grabbing';
-});
-document.addEventListener('mousemove', (e) => {
-  if (!dragging) return;
-  state.panX = panStart.x + (e.clientX - dragStart.x);
-  state.panY = panStart.y + (e.clientY - dragStart.y);
-  renderDiagram();
-});
-document.addEventListener('mouseup', () => {
-  dragging = false;
-  canvas.style.cursor = '';
-});
+            // Pan
+            const canvas = document.getElementById("canvas-area");
+            canvas.addEventListener("mousedown", (e) => {
+                if (e.target.closest(".node")) return;
+                dragging = true;
+                dragStart = { x: e.clientX, y: e.clientY };
+                panStart = { x: state.panX, y: state.panY };
+                canvas.style.cursor = "grabbing";
+            });
+            document.addEventListener("mousemove", (e) => {
+                if (!dragging) return;
+                state.panX = panStart.x + (e.clientX - dragStart.x);
+                state.panY = panStart.y + (e.clientY - dragStart.y);
+                renderDiagram();
+            });
+            document.addEventListener("mouseup", () => {
+                dragging = false;
+                canvas.style.cursor = "";
+            });
 
-// Wheel zoom
-canvas.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  if (e.deltaY < 0) zoomIn(); else zoomOut();
-}, { passive: false });
+            // Wheel zoom
+            canvas.addEventListener(
+                "wheel",
+                (e) => {
+                    e.preventDefault();
+                    if (e.deltaY < 0) zoomIn();
+                    else zoomOut();
+                },
+                { passive: false },
+            );
 
-// Keyboard
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeModal();
-});
+            // Keyboard
+            document.addEventListener("keydown", (e) => {
+                if (e.key === "Escape") closeModal();
+            });
 
-// ═══════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════
-renderAll();
-</script>
-</body>
+            // ═══════════════════════════════════════════
+            // INIT
+            // ═══════════════════════════════════════════
+            renderAll();
+        </script>
+    </body>
 </html>
