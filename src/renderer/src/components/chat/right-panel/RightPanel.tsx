@@ -1,6 +1,7 @@
 import { ParamsSection } from './ParamsSection'
 import { OptionsSection } from './OptionsSection'
 import { McpSection } from './McpSection'
+import { RemoteSection } from './RemoteSection'
 import { ToolsSection } from './ToolsSection'
 
 interface RightPanelProps {
@@ -14,6 +15,7 @@ export function RightPanel({ onPromptInsert, onOptimizedPrompt }: RightPanelProp
       <ParamsSection />
       <OptionsSection />
       <McpSection />
+      <RemoteSection />
       <ToolsSection onOptimizedPrompt={onOptimizedPrompt} onPromptInsert={onPromptInsert} />
     </div>
   )
