@@ -10,8 +10,8 @@ export interface KeyboardShortcutCallbacks {
   onSettings?: () => void
   /** Cmd+M — open model list */
   onModelList?: () => void
-  /** Cmd+B — toggle workspace panel */
-  onToggleWorkspace?: () => void
+  /** Cmd+B — toggle sidebar (conversations list) */
+  onToggleSidebar?: () => void
   /** Opt+Cmd+B — toggle right panel */
   onToggleRightPanel?: () => void
   /** Escape — stop streaming */
@@ -71,7 +71,7 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
     // Cmd+B and Opt+Cmd+B — native listener
     // hotkeys-js with 'command+b' can conflict with Opt+Cmd+B, and macOS
     // remaps Opt+key to special chars (∫ for Opt+B), so we use keyCode/code instead
-    const workspaceHandler = callbacks.onToggleWorkspace
+    const sidebarHandler = callbacks.onToggleSidebar
     const rightPanelHandler = callbacks.onToggleRightPanel
     function handleBKey(e: KeyboardEvent) {
       // Must be 'b' key (use e.code to ignore macOS alt remapping)
@@ -83,12 +83,12 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
         e.preventDefault()
         rightPanelHandler?.()
       } else {
-        // Cmd+B → workspace
+        // Cmd+B → sidebar
         e.preventDefault()
-        workspaceHandler?.()
+        sidebarHandler?.()
       }
     }
-    if (workspaceHandler || rightPanelHandler) {
+    if (sidebarHandler || rightPanelHandler) {
       document.addEventListener('keydown', handleBKey, true)
     }
 
@@ -104,7 +104,7 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
     callbacks.onCommandPalette,
     callbacks.onSettings,
     callbacks.onModelList,
-    callbacks.onToggleWorkspace,
+    callbacks.onToggleSidebar,
     callbacks.onToggleRightPanel,
     callbacks.onEscape,
   ])
