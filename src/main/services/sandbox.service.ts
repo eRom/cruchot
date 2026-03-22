@@ -9,6 +9,17 @@ interface SandboxSession {
   createdAt: Date
 }
 
+// Paths that must never be used as sandbox directory
+const BLOCKED_SANDBOX_ROOTS = [
+  '/', '/bin', '/sbin', '/usr', '/etc', '/var', '/tmp', '/dev', '/proc', '/sys',
+  '/System', '/Library', '/Applications', '/private',
+  '/opt', '/boot', '/root',
+  'C:\\', 'C:\\Windows', 'C:\\Program Files', 'C:\\Program Files (x86)',
+]
+
+// Characters forbidden in sandbox paths (prevent SBPL injection)
+const UNSAFE_PATH_CHARS = /["\n\r\t\0(){};<>|&$`!]/
+
 class SandboxService {
   private sessions = new Map<string, SandboxSession>()
 
@@ -16,8 +27,53 @@ class SandboxService {
     return path.join(app.getPath('home'), 'cruchot', 'sandbox')
   }
 
+  validateWorkspacePath(workspacePath: string): void {
+    // Check for unsafe characters (SBPL injection prevention)
+    if (UNSAFE_PATH_CHARS.test(workspacePath)) {
+      throw new Error('Workspace path contains unsafe characters')
+    }
+
+    // Must be absolute
+    if (!path.isAbsolute(workspacePath)) {
+      throw new Error('Workspace path must be absolute')
+    }
+
+    // Must have at least 2 path segments (prevent "/" or "C:\")
+    const segments = workspacePath.split(path.sep).filter(Boolean)
+    if (segments.length < 2) {
+      throw new Error('Workspace path too shallow — must have at least 2 segments')
+    }
+
+    // Resolve symlinks
+    let resolved: string
+    try {
+      resolved = fs.realpathSync(workspacePath)
+    } catch {
+      // Path doesn't exist yet — use the raw path for prefix check
+      resolved = path.resolve(workspacePath)
+    }
+
+    // Check against blocked roots
+    for (const blocked of BLOCKED_SANDBOX_ROOTS) {
+      if (resolved === blocked || resolved.startsWith(blocked + path.sep)) {
+        // Allow if the path has enough depth (e.g., /usr/local/share/project is OK, but /usr is not)
+        const blockedDepth = blocked.split(path.sep).filter(Boolean).length
+        const resolvedDepth = resolved.split(path.sep).filter(Boolean).length
+        if (resolvedDepth <= blockedDepth + 1) {
+          throw new Error(`Workspace path is inside blocked root: ${blocked}`)
+        }
+      }
+    }
+  }
+
   createSession(workspacePath?: string): SandboxSession {
     const id = crypto.randomUUID()
+
+    // Validate workspace path if provided
+    if (workspacePath) {
+      this.validateWorkspacePath(workspacePath)
+    }
+
     const sandboxDir = workspacePath || path.join(this.baseDir, id)
 
     // Create sandbox dir (recursive)
@@ -58,11 +114,12 @@ class SandboxService {
   }
 
   generateSeatbeltProfile(sandboxDir: string): string {
-    // Substitute SANDBOX_DIR and HOME in the SBPL profile
-    const home = app.getPath('home')
+    // Sanitize paths before SBPL injection — strip characters that could break SBPL expressions
+    const safeSandboxDir = sandboxDir.replace(/["\n\r\t\0()]/g, '')
+    const safeHome = app.getPath('home').replace(/["\n\r\t\0()]/g, '')
     return SEATBELT_PROFILE
-      .replace(/\$\{SANDBOX_DIR\}/g, sandboxDir)
-      .replace(/\$\{HOME\}/g, home)
+      .replace(/\$\{SANDBOX_DIR\}/g, safeSandboxDir)
+      .replace(/\$\{HOME\}/g, safeHome)
   }
 }
 
@@ -107,8 +164,7 @@ const SEATBELT_PROFILE = `(version 1)
 ;; Network — full access (YOLO mode: user accepted risks)
 (allow network*)
 
-;; Deny everything else
-(deny file-write* (subpath "/"))
-(deny file-read* (subpath "\${HOME}") (require-not (subpath "\${SANDBOX_DIR}")))`
+;; Note: (deny default) at the top already blocks everything not explicitly allowed.
+;; No trailing deny rules needed — they are redundant and can cause rule-ordering issues.`
 
 export const sandboxService = new SandboxService()
