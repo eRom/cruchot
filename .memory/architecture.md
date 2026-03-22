@@ -1,9 +1,9 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-22 (S42)
+> Derniere mise a jour : 2026-03-22 (S43)
 
 ## Vue d'ensemble
 
-App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud, statistiques de couts, workspace co-work, integration Git, taches planifiees, integration MCP, memory fragments, memoire semantique (RAG local Qdrant), referentiels RAG custom (documents), Remote Telegram, Remote Web, export/import securise (.mlx), slash commands, @mention fichiers, prompt optimizer, drag & drop fichiers, conversations favorites, mode Arena (LLM vs LLM), **Bardas (Gestion de Brigade)** — packs thematiques importables, **mode YOLO (Sandbox)** — execution autonome sandboxee (Seatbelt macOS). Zero serveur backend.
+App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud, statistiques de couts, workspace co-work, integration Git, taches planifiees, integration MCP, memory fragments, memoire semantique (RAG local Qdrant), referentiels RAG custom (documents), Remote Telegram, Remote Web, export/import securise (.mlx), slash commands, @mention fichiers, prompt optimizer, drag & drop fichiers, conversations favorites, mode Arena (LLM vs LLM), **Bardas (Gestion de Brigade)** — packs thematiques importables, **mode YOLO (Sandbox)** — execution autonome sandboxee (Seatbelt macOS), **Right Panel** — panneau lateral droit avec 5 sections (Parametres, Options, MCP, Outils, Remote). Zero serveur backend.
 
 ## Stack
 
@@ -37,13 +37,13 @@ src/
   renderer/src/
     App.tsx               # Routing par ViewMode
     stores/               # Zustand stores
-    components/           # chat/, layout/, projects/, prompts/, roles/, tasks/, mcp/, memory/, commands/, libraries/, arena/, brigade/, settings/, statistics/, images/, conversations/, workspace/, common/
+    components/           # chat/, chat/right-panel/, layout/, projects/, prompts/, roles/, tasks/, mcp/, memory/, commands/, libraries/, arena/, brigade/, settings/, statistics/, images/, conversations/, workspace/, common/
     hooks/                # useStreaming, useArenaStreaming, useInitApp, useKeyboardShortcuts, useAudioPlayer, useContextWindow, useFileMention, useSlashCommands
 ```
 
 ## Navigation (ViewMode)
 
-`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (10 tabs), images, roles, tasks, mcp, memory, commands, statistics, libraries, arena, brigade. **13 vues non-chat lazy-loaded via React.lazy() + Suspense** (S41)
+`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (10 tabs), images, roles, tasks, mcp, memory, commands, statistics, libraries, arena, brigade. **13 vues non-chat lazy-loaded via React.lazy() + Suspense** (S41). **Right Panel lazy-loaded dans ChatView** (S43)
 
 ## Flux principal — Chat
 

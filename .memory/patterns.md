@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-22 (S42)
+> Derniere mise a jour : 2026-03-22 (S43)
 
 ## Conventions de nommage
 
@@ -139,10 +139,23 @@
 ## Conventions UI
 
 - Vues inline (pas de modal) — `subView` state ('grid'|'create'|'edit')
-- Pills InputZone : shadcn Select (pattern ThinkingSelector)
 - Footer message : actions hover a gauche, info a droite
 - ConversationList : `overflow-y-auto` (PAS Radix ScrollArea)
 - Title bar macOS : `hiddenInset`, traffic lights `{x:15, y:10}`, drag zones 38px
+
+## Right Panel (S43)
+
+- **5 sections** : Parametres, Options, MCP, Outils, Remote — chaque section dans une card `rounded-xl border border-border/40 bg-card/50`
+- **CollapsibleSection** : wrapper generique, titre sans icone, chevron rotate (pas swap), `defaultOpen={true}`
+- **Mutuellement exclusif** avec WorkspacePanel : `openPanel: 'workspace' | 'right' | null` dans `ui.store`
+- **Auto-open** : nouvelle conversation (0 messages) → right panel s'ouvre. Switch vers existante → ferme
+- **Communication RightPanel → InputZone** : `CustomEvent` (`prompt-insert`, `prompt-optimized`)
+- **Communication InputZone → RightPanel** : `ui.store.draftContent` (sync a chaque keystroke)
+- **Library sync** : rehydratation `activeLibraryId` dans ChatView (toujours monte), pas dans OptionsSection. Flag `cancelled` anti-race
+- **Controles full-width** : ModelSelector et RoleSelector wrappes avec CSS overrides `[&_button]:w-full [&_button]:max-w-none [&_button]:rounded-lg` car les composants originaux sont styles en pills compactes pour la toolbar
+- **Library selector** : Radix Select (portail, zero overflow clip), pas de dropdown custom inline
+- **ThinkingSelector** : dropdown custom (pas Radix) car 4 niveaux specifiques avec Brain icon + opacity gradient violet
+- **Raccourcis** : CMD+B = sidebar (toggleSidebar), OPT+CMD+B = right panel (toggleRightPanel). Les deux via native `keydown` listener avec `e.code === 'KeyB'` (pas `e.key` — macOS remappe Alt+B en `∫`). Listener en phase capture (`true`)
 
 ## Bardas — Gestion de Brigade (S41)
 

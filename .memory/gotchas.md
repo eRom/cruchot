@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-22 (S42)
+> Derniere mise a jour : 2026-03-22 (S43)
 
 ## AI SDK v6 — Breaking changes
 
@@ -27,6 +27,9 @@
 - **Import paths** : stores/ = 3 `../` vers preload, components/chat = 4 `../`
 - **ANSI codes** : `FORCE_COLOR=0 NO_COLOR=1` dans env child_process
 - **hotkeys-js** : virgule = separateur → listener natif `keydown` pour Cmd+,
+- **macOS Alt key remapping** : OPT+B produit `∫`, pas `b`. Utiliser `e.code === 'KeyB'` (hardware) au lieu de `e.key === 'b'` pour les raccourcis avec Alt
+- **CMD+B Chromium bold** : Chromium intercepte CMD+B pour le bold text dans les textarea. Utiliser `addEventListener('keydown', handler, true)` (phase capture) pour l'intercepter avant
+- **CMD+B = sidebar** : CMD+B doit toggler la sidebar (conversations list via `settings.store.toggleSidebar()`), PAS le workspace panel (`workspace.store.togglePanel()`)
 
 ## Drizzle / SQLite
 
@@ -162,6 +165,18 @@
 - **`sandbox:getStatus` stub** : retourne toujours `{ isActive: false }`. Le renderer s'appuie sur le store Zustand (ephemere). P1 restant — probleme potentiel apres HMR reload
 - **Reseau sandbox** : initialement restreint a localhost, empeche curl/npm/git. Fix : `(allow network*)` dans le profil SBPL. Le prompt YOLO doit refléter cet acces ("acces reseau complet" et non "limite au localhost")
 - **Gemini hallucine des tool calls en XML** : sans mode YOLO, Gemini Flash/Pro peut emettre `<function_calls>...</function_calls>` comme texte brut quand il veut appeler un tool qui n'existe pas. Probleme pre-existant, pas lie au sandbox
+
+## Right Panel (S43)
+
+- **overflow-y-auto clippe les dropdowns absolus** : le RightPanel a `overflow-y-auto` pour scroller. Les dropdowns en `position: absolute` sont clippes. Solution : utiliser Radix Select (portail) ou rendu inline
+- **LibraryPicker concu pour toolbar** : le composant original (`LibraryPicker.tsx`) rend un petit icon button + dropdown vers le haut. NE PAS l'utiliser dans le right panel — utiliser un Radix Select inline a la place
+- **Controles toolbar (ModelSelector, RoleSelector) pas responsive** : styles en pills compactes (`w-auto max-w-[160px] rounded-full h-7`). Wrapper avec CSS overrides `[&_button]:w-full [&_button]:max-w-none [&_button]:h-auto [&_button]:rounded-lg [&_button]:py-1.5 [&_button]:px-3`
+- **inputContent vide** : ne JAMAIS hardcoder `inputContent=""` comme prop — utiliser `ui.store.draftContent` pour partager le contenu du textarea entre InputZone et les sections du right panel
+- **Library attach sur nouvelle conversation** : `ensureConversation()` dans InputZone doit appeler `libraryAttach` apres creation si `activeLibraryId` est set dans le store (sinon le backend lit `null` en DB)
+- **Library sync dans OptionsSection** : NE PAS mettre le `useEffect` de rehydratation `libraryGetAttached` dans OptionsSection (se demonte quand le panel ferme). Le mettre dans ChatView (toujours monte) avec flag `cancelled` anti-race
+- **PromptPicker Popover** : utiliser `side="left" align="end" avoidCollisions collisionPadding={16} max-h-[70vh]` pour eviter les debordements dans le right panel
+- **ChatView min-h-0** : sans `min-h-0` sur le conteneur flex-col du chat area, l'InputZone peut deborder sous la fenetre quand le right panel prend de la place
+- **Web Search et MCP deja dans ChatOptionsMenu** : NE PAS dupliquer comme sections separees. Web Search = Switch dans Options, MCP = section dediee. Le ChatOptionsMenu est retire de ParamsSection
 
 ## Restant a faire
 
