@@ -72,7 +72,6 @@ export function OptionsSection() {
   return (
     <CollapsibleSection title="Options" defaultOpen>
       <div className="flex flex-col gap-2.5">
-        {/* Web Search toggle */}
         <div className="flex items-center justify-between gap-2 px-1">
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <Search className="size-4" />
@@ -85,7 +84,6 @@ export function OptionsSection() {
           />
         </div>
 
-        {/* Library selector — Radix Select, same pattern as ModelSelector */}
         <Select value={selectValue} onValueChange={handleLibraryChange} disabled={isBusy}>
           <SelectTrigger
             size="sm"
@@ -142,7 +140,6 @@ export function OptionsSection() {
           </SelectContent>
         </Select>
 
-        {/* YOLO toggle */}
         {activeConversationId && (
           <YoloToggle
             conversationId={activeConversationId}

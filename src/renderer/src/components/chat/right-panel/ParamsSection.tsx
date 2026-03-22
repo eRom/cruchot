@@ -8,13 +8,7 @@ import { useConversationsStore } from '@/stores/conversations.store'
 import { useProvidersStore } from '@/stores/providers.store'
 import { useSettingsStore, type ThinkingEffort } from '@/stores/settings.store'
 import { useUiStore } from '@/stores/ui.store'
-import { cn } from '@/lib/utils'
-
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`
-  return `${n}`
-}
+import { cn, formatTokenCount } from '@/lib/utils'
 
 const THINKING_LEVELS: { value: ThinkingEffort; label: string; opacity: string }[] = [
   { value: 'off', label: 'Off', opacity: 'opacity-20' },
@@ -61,7 +55,6 @@ export function ParamsSection() {
 
   const currentLevel = THINKING_LEVELS.find((l) => l.value === thinkingEffort) ?? THINKING_LEVELS[0]
 
-  // Close dropdown on outside click
   useEffect(() => {
     if (!thinkingOpen) return
     function handleClick(e: MouseEvent) {
@@ -75,18 +68,15 @@ export function ParamsSection() {
 
   return (
     <div className="rounded-xl border border-border/40 bg-card/50">
-      {/* Header */}
       <div className="px-3.5 py-2.5 text-sm font-medium text-foreground/80">
         Parametres
       </div>
 
-      {/* Controls */}
       <div className="flex flex-col gap-2.5 px-3.5 pb-3">
         <div className="[&_button]:w-full [&_button]:max-w-none [&_button]:h-auto [&_button]:rounded-lg [&_button]:py-1.5 [&_button]:px-3 [&_button]:text-sm">
           <ModelSelector disabled={isBusy} />
         </div>
 
-        {/* Thinking effort selector — always visible, disabled if model doesn't support it */}
         <div className="relative" ref={thinkingRef}>
           <button
             onClick={() => !isBusy && supportsThinking && setThinkingOpen(!thinkingOpen)}
@@ -129,12 +119,11 @@ export function ParamsSection() {
           <RoleSelector disabled={isBusy || isRoleLocked} />
         </div>
 
-        {/* Token count & cost */}
         {maxTokens > 0 && (
           <>
             <div className="border-t border-border/40" />
             <div className="text-[11px] tabular-nums text-muted-foreground/50 text-right">
-              ~{formatTokens(currentTokens)} / {formatTokens(maxTokens)} tokens
+              ~{formatTokenCount(currentTokens)} / {formatTokenCount(maxTokens)} tokens
               {totalCost > 0 && (
                 <span className="ml-1.5 font-medium text-muted-foreground/70">
                   ${totalCost.toFixed(3)}
