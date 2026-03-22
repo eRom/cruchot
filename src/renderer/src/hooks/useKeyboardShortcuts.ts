@@ -89,7 +89,7 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
       }
     }
     if (workspaceHandler || rightPanelHandler) {
-      document.addEventListener('keydown', handleBKey)
+      document.addEventListener('keydown', handleBKey, true)
     }
 
     return () => {
@@ -97,7 +97,7 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
         hotkeys.unbind(keys)
       }
       document.removeEventListener('keydown', handleSettingsKey)
-      document.removeEventListener('keydown', handleBKey)
+      document.removeEventListener('keydown', handleBKey, true)
     }
   }, [
     callbacks.onNewConversation,
