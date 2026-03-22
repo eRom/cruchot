@@ -9,6 +9,9 @@ import { buildThinkingProviderOptions } from '../llm/thinking'
 import { validateAttachment, processAttachments, buildContentParts, MAX_FILES_PER_MESSAGE, type AttachmentRef } from '../llm/attachments'
 import { parseFileOperations } from '../llm/file-operations'
 import { buildWorkspaceTools, buildWorkspaceContextBlock, WORKSPACE_TOOLS_PROMPT } from '../llm/workspace-tools'
+import { buildYoloTools } from '../llm/yolo-tools'
+import { buildYoloSystemPrompt } from '../llm/yolo-prompt'
+import { sandboxService } from '../services/sandbox.service'
 import { getActiveWorkspace, getActiveWorkspaceRoot } from './workspace.ipc'
 import { mcpManagerService } from '../services/mcp-manager.service'
 import { telegramBotService } from '../services/telegram-bot.service'
@@ -195,6 +198,9 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
 
     // Auto-generate title from first message if title is still default
     const conv = getConversation(conversationId)
+    const isYolo = conv?.isYolo === true
+    const sandboxDir = conv?.sandboxPath ?? null
+
     if (conv && (conv.title === 'Nouvelle conversation' || conv.title.startsWith('[Remote]'))) {
       const shortTitle = (source === 'telegram' ? '[R] ' : '') + content.slice(0, 35) + (content.length > 35 ? '...' : '')
       if (conv.title === 'Nouvelle conversation' || conv.title.startsWith('[Remote] Session')) {
@@ -295,10 +301,19 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       }
     }
 
-    // Build combined system prompt: library-context + semantic memory + memory fragments + role prompt
+    // Build combined system prompt: YOLO + library-context + semantic memory + memory fragments + role prompt
     const memoryBlock = buildMemoryBlock()
     let combinedSystemPrompt = ''
-    if (libraryContextBlock) combinedSystemPrompt += libraryContextBlock
+
+    // YOLO system prompt first (if active)
+    if (isYolo && sandboxDir) {
+      combinedSystemPrompt = buildYoloSystemPrompt(sandboxDir)
+    }
+
+    if (libraryContextBlock) {
+      if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
+      combinedSystemPrompt += libraryContextBlock
+    }
     if (semanticMemoryBlock) {
       if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
       combinedSystemPrompt += semanticMemoryBlock
@@ -364,9 +379,14 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       }
     }
 
-    // Build workspace tools if workspace is active
-    const activeWorkspace = hasWorkspace ? getActiveWorkspace() : null
-    const workspaceTools = activeWorkspace ? buildWorkspaceTools(activeWorkspace) : {}
+    // Build tools: YOLO tools OR workspace tools
+    const activeWorkspace = (!isYolo && hasWorkspace) ? getActiveWorkspace() : null
+    let workspaceTools: Record<string, unknown> = {}
+    if (isYolo && sandboxDir) {
+      workspaceTools = buildYoloTools(conv!.id, sandboxDir)
+    } else if (activeWorkspace) {
+      workspaceTools = buildWorkspaceTools(activeWorkspace)
+    }
 
     // Build MCP tools (from connected MCP servers, scoped to project)
     let mcpTools: Record<string, unknown> = {}
@@ -423,8 +443,8 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
 
     const hasTools = Object.keys(tools).length > 0
 
-    // Inject workspace context + tools system prompt when workspace is active
-    if (activeWorkspace) {
+    // Inject workspace context + tools system prompt when workspace is active (NOT in YOLO mode)
+    if (activeWorkspace && !isYolo) {
       const contextBlock = buildWorkspaceContextBlock(activeWorkspace.rootPath)
       const workspacePrompt = contextBlock
         ? contextBlock + '\n\n' + WORKSPACE_TOOLS_PROMPT

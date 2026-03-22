@@ -5,13 +5,11 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useGitStore } from '@/stores/git.store'
 import { GitBranchBadge } from './GitBranchBadge'
 import { FileTree } from './FileTree'
-import { FilePanel } from './FilePanel'
 import { ChangesPanel } from './ChangesPanel'
 import { cn } from '@/lib/utils'
 
 export function WorkspacePanel() {
   const rootPath = useWorkspaceStore((s) => s.rootPath)
-  const filePreview = useWorkspaceStore((s) => s.filePreview)
   const togglePanel = useWorkspaceStore((s) => s.togglePanel)
   const isPanelOpen = useWorkspaceStore((s) => s.isPanelOpen)
   const refreshTree = useWorkspaceStore((s) => s.refreshTree)
@@ -158,19 +156,9 @@ export function WorkspacePanel() {
       {isPanelOpen && (
         <div className="flex flex-1 flex-col overflow-hidden">
           {activeTab === 'files' ? (
-            <>
-              <div className={cn(
-                'overflow-hidden',
-                filePreview ? 'h-1/2 border-b border-border/30' : 'flex-1'
-              )}>
-                <FileTree />
-              </div>
-              {filePreview && (
-                <div className="h-1/2 overflow-hidden">
-                  <FilePanel />
-                </div>
-              )}
-            </>
+            <div className="flex-1 overflow-hidden">
+              <FileTree />
+            </div>
           ) : (
             <ChangesPanel />
           )}

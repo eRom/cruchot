@@ -8,7 +8,9 @@ import { useSettingsStore } from '@/stores/settings.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import MessageList from './MessageList'
 import { InputZone } from './InputZone'
+import { YoloStatusBar } from './YoloStatusBar'
 import { WorkspacePanel } from '@/components/workspace/WorkspacePanel'
+import { useSandboxStore } from '@/stores/sandbox.store'
 import { MessageSquare, Sparkles } from 'lucide-react'
 
 /**
@@ -61,6 +63,9 @@ export default function ChatView() {
 
   // Load messages + restore model + restore role when switching conversations
   useEffect(() => {
+    // Kill processes and reset sandbox when switching conversations
+    useSandboxStore.getState().deactivate().catch(() => {})
+
     if (!activeConversationId) {
       setMessages([])
       useRolesStore.getState().setActiveRole(null)
@@ -141,6 +146,9 @@ export default function ChatView() {
     <div className="flex h-full">
       {/* Chat area */}
       <div className="flex flex-1 flex-col bg-background min-w-0">
+        {/* YOLO status bar — shown when sandbox is active */}
+        <YoloStatusBar />
+
         {/* Messages area */}
         {activeConversationId && hasMessages ? (
           <MessageList

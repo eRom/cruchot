@@ -527,6 +527,25 @@ const api: ElectronAPI = {
   bardaToggle: (id: string, isEnabled: boolean) => ipcRenderer.invoke('barda:toggle', { id, isEnabled }),
   bardaUninstall: (id: string) => ipcRenderer.invoke('barda:uninstall', { id }),
 
+  // ── Sandbox (YOLO mode) ──────────────────────────────
+  sandboxActivate: (conversationId: string, workspacePath?: string) =>
+    ipcRenderer.invoke('sandbox:activate', { conversationId, workspacePath }),
+
+  sandboxDeactivate: (sessionId: string, conversationId: string) =>
+    ipcRenderer.invoke('sandbox:deactivate', { sessionId, conversationId }),
+
+  sandboxStop: (sessionId: string) =>
+    ipcRenderer.invoke('sandbox:stop', { sessionId }),
+
+  sandboxGetStatus: (conversationId: string) =>
+    ipcRenderer.invoke('sandbox:getStatus', { conversationId }),
+
+  sandboxGetProcesses: (sessionId: string) =>
+    ipcRenderer.invoke('sandbox:getProcesses', { sessionId }),
+
+  sandboxOpenPreview: (target: string, sessionId: string) =>
+    ipcRenderer.invoke('sandbox:openPreview', { target, sessionId }),
+
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>
     ipcRenderer.invoke('settings:get', key),
