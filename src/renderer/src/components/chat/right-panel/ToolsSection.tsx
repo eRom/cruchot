@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Wrench, Send, FileText, Sparkles, GitFork } from 'lucide-react'
+import { Wrench, FileText, Sparkles, GitFork } from 'lucide-react'
 import { CollapsibleSection } from './CollapsibleSection'
 import { PromptPicker } from '@/components/chat/PromptPicker'
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,6 @@ import { useConversationsStore } from '@/stores/conversations.store'
 import { useProvidersStore } from '@/stores/providers.store'
 import { useMessagesStore } from '@/stores/messages.store'
 import { useSettingsStore } from '@/stores/settings.store'
-import { useRemoteStore } from '@/stores/remote.store'
 import { toast } from 'sonner'
 
 interface ToolsSectionProps {
@@ -27,10 +26,6 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
   const messages = useMessagesStore((s) => s.messages)
   const summaryModelId = useSettingsStore((s) => s.summaryModelId)
   const summaryPrompt = useSettingsStore((s) => s.summaryPrompt)
-  const remoteConfig = useRemoteStore((s) => s.config)
-  const remoteStatus = useRemoteStore((s) => s.status)
-  const remoteStart = useRemoteStore((s) => s.start)
-  const remoteStop = useRemoteStore((s) => s.stop)
 
   const isBusy = isStreaming
 
@@ -40,25 +35,7 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
   )
 
   const hasMessages = conversationMessages.length > 0
-  const hasRemoteConfig = !!remoteConfig?.hasToken
-  const isRemoteActive = remoteStatus === 'connected' || remoteStatus === 'pairing'
 
-  // ── Remote toggle ──
-  const handleRemoteToggle = async () => {
-    try {
-      if (isRemoteActive) {
-        await remoteStop()
-        toast.success('Remote deconnecte')
-      } else {
-        const code = await remoteStart(activeConversationId ?? undefined)
-        toast.success(`Remote actif — code: ${code}`)
-      }
-    } catch {
-      toast.error('Erreur remote')
-    }
-  }
-
-  // ── Resume ──
   const handleResume = async () => {
     if (!activeConversationId) return
     const modelId = summaryModelId || `${selectedProviderId}::${selectedModelId}`
@@ -75,7 +52,6 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
     }
   }
 
-  // ── Optimize ──
   const handleOptimize = async () => {
     const modelId = `${selectedProviderId}::${selectedModelId}`
     try {
@@ -90,7 +66,6 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
     }
   }
 
-  // ── Fork ──
   const handleFork = async () => {
     if (!activeConversationId) return
     try {
@@ -116,80 +91,60 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
   return (
     <CollapsibleSection title="Outils" icon={Wrench} defaultOpen>
       <div className="flex flex-col gap-2.5">
-        {/* Prompt picker — full-width */}
+        {/* Prompt picker */}
         <div className="[&_button]:w-full [&_button]:max-w-none [&_button]:h-auto [&_button]:rounded-lg [&_button]:py-1.5 [&_button]:px-3 [&_button]:text-sm [&_button]:justify-start [&_button]:gap-2">
           <PromptPicker onInsert={onPromptInsert} disabled={isBusy} />
         </div>
 
-        {/* Action buttons grid */}
-        <div className="grid grid-cols-2 gap-2">
-        {/* Remote */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`h-10 w-full border border-border/40 gap-2 ${isRemoteActive ? 'text-emerald-500' : ''}`}
-              disabled={!hasRemoteConfig || isBusy}
-              onClick={handleRemoteToggle}
-            >
-              <Send className="size-4" />
-              <span className="text-xs">Remote</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top">Activer/desactiver le remote Telegram</TooltipContent>
-        </Tooltip>
+        {/* Action buttons */}
+        <div className="grid grid-cols-3 gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-10 w-full border border-border/40 gap-1.5 px-2"
+                disabled={!hasMessages || isBusy}
+                onClick={handleResume}
+              >
+                <FileText className="size-4" />
+                <span className="text-xs">Resume</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Generer un resume</TooltipContent>
+          </Tooltip>
 
-        {/* Resume */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-10 w-full border border-border/40 gap-2"
-              disabled={!hasMessages || isBusy}
-              onClick={handleResume}
-            >
-              <FileText className="size-4" />
-              <span className="text-xs">Resume</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top">Generer un resume de la conversation</TooltipContent>
-        </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-10 w-full border border-border/40 gap-1.5 px-2"
+                disabled={draftContent.trim() === '' || isBusy}
+                onClick={handleOptimize}
+              >
+                <Sparkles className="size-4" />
+                <span className="text-xs">Optimiser</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Optimiser le prompt</TooltipContent>
+          </Tooltip>
 
-        {/* Optimiser */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-10 w-full border border-border/40 gap-2"
-              disabled={draftContent.trim() === '' || isBusy}
-              onClick={handleOptimize}
-            >
-              <Sparkles className="size-4" />
-              <span className="text-xs">Optimiser</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top">Optimiser le prompt actuel</TooltipContent>
-        </Tooltip>
-
-        {/* Fork */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-10 w-full border border-border/40 gap-2"
-              disabled={!activeConversationId}
-              onClick={handleFork}
-            >
-              <GitFork className="size-4" />
-              <span className="text-xs">Fork</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top">Dupliquer la conversation</TooltipContent>
-        </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-10 w-full border border-border/40 gap-1.5 px-2"
+                disabled={!activeConversationId}
+                onClick={handleFork}
+              >
+                <GitFork className="size-4" />
+                <span className="text-xs">Fork</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Dupliquer la conversation</TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </CollapsibleSection>
