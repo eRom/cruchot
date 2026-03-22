@@ -14,7 +14,7 @@ import { useUiStore } from '@/stores/ui.store'
 import { useRolesStore } from '@/stores/roles.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useLibraryStore } from '@/stores/library.store'
-import { cn } from '@/lib/utils'
+import { cn, EVENTS } from '@/lib/utils'
 import { FileReference } from '@/components/workspace/FileReference'
 import { SlashCommandPicker } from '@/components/chat/SlashCommandPicker'
 import { FileMentionPopover } from '@/components/chat/FileMentionPopover'
@@ -105,7 +105,7 @@ export function InputZone({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // ── Stores ───────────────────────────────────────────────
-  const { selectedModelId, selectedProviderId, models } = useProvidersStore()
+  const { selectedModelId, selectedProviderId } = useProvidersStore()
   const { activeConversationId, addConversation, setActiveConversation, updateConversation } = useConversationsStore()
   const activeProjectId = useProjectsStore((s) => s.activeProjectId)
   const { messages, addMessage } = useMessagesStore()
@@ -177,10 +177,7 @@ export function InputZone({
     [messages, activeConversationId]
   )
 
-  const selectedModel = useMemo(
-    () => models.find((m) => m.id === selectedModelId && m.providerId === selectedProviderId),
-    [models, selectedModelId, selectedProviderId]
-  )
+  const selectedModel = useProvidersStore((s) => s.getSelectedModel())
 
   const isImageMode = selectedModel?.type === 'image'
 
@@ -834,11 +831,11 @@ export function InputZone({
       if (text) setContent(text)
       requestAnimationFrame(() => textareaRef.current?.focus())
     }
-    window.addEventListener('prompt-insert', handlePromptInsert)
-    window.addEventListener('prompt-optimized', handlePromptOptimized)
+    window.addEventListener(EVENTS.PROMPT_INSERT, handlePromptInsert)
+    window.addEventListener(EVENTS.PROMPT_OPTIMIZED, handlePromptOptimized)
     return () => {
-      window.removeEventListener('prompt-insert', handlePromptInsert)
-      window.removeEventListener('prompt-optimized', handlePromptOptimized)
+      window.removeEventListener(EVENTS.PROMPT_INSERT, handlePromptInsert)
+      window.removeEventListener(EVENTS.PROMPT_OPTIMIZED, handlePromptOptimized)
     }
   }, [])
 
