@@ -12,6 +12,8 @@ export interface KeyboardShortcutCallbacks {
   onModelList?: () => void
   /** Cmd+B — toggle workspace panel */
   onToggleWorkspace?: () => void
+  /** Opt+Cmd+B — toggle right panel */
+  onToggleRightPanel?: () => void
   /** Escape — stop streaming */
   onEscape?: () => void
 }
@@ -71,11 +73,24 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
       document.addEventListener('keydown', handleSettingsKey)
     }
 
+    // Opt+Cmd+B — native listener (hotkeys-js can be flaky with option+command combos)
+    const rightPanelHandler = callbacks.onToggleRightPanel
+    function handleRightPanelKey(e: KeyboardEvent) {
+      if (e.key === 'b' && e.metaKey && e.altKey && !e.ctrlKey) {
+        e.preventDefault()
+        rightPanelHandler?.()
+      }
+    }
+    if (rightPanelHandler) {
+      document.addEventListener('keydown', handleRightPanelKey)
+    }
+
     return () => {
       for (const [keys] of bindings) {
         hotkeys.unbind(keys)
       }
       document.removeEventListener('keydown', handleSettingsKey)
+      document.removeEventListener('keydown', handleRightPanelKey)
     }
   }, [
     callbacks.onNewConversation,
@@ -83,6 +98,7 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
     callbacks.onSettings,
     callbacks.onModelList,
     callbacks.onToggleWorkspace,
+    callbacks.onToggleRightPanel,
     callbacks.onEscape,
   ])
 }
