@@ -96,44 +96,50 @@ export function OptionsSection() {
           />
         </div>
 
-        {/* Library selector — inline, same style as ModelSelector */}
-        <div className="relative" ref={libRef}>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => !isBusy && setLibOpen(!libOpen)}
-              disabled={isBusy}
-              className={cn(
-                'flex flex-1 items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-1.5',
-                'text-sm transition-colors',
-                !isBusy ? 'hover:bg-accent/50 cursor-pointer' : 'opacity-50 cursor-not-allowed',
-                activeLibrary && 'border-primary/30'
-              )}
-            >
-              {activeLibrary ? (
-                <>
-                  <span className="shrink-0">{activeLibrary.icon || '📚'}</span>
-                  <span className="flex-1 text-left truncate text-foreground/80">{activeLibrary.name}</span>
-                </>
-              ) : (
-                <>
-                  <Library className="size-4 shrink-0 text-muted-foreground/50" />
-                  <span className="flex-1 text-left text-muted-foreground/50">Aucun referentiel</span>
-                </>
-              )}
-            </button>
-            {activeLibrary && (
-              <button
-                onClick={handleDetachLib}
-                disabled={isBusy}
-                className="rounded-md p-1 text-muted-foreground/50 hover:text-destructive transition-colors"
-              >
-                <X className="size-3.5" />
-              </button>
+        {/* Library selector — inline dropdown (not absolute, avoids overflow clip) */}
+        <div ref={libRef}>
+          <button
+            onClick={() => !isBusy && setLibOpen(!libOpen)}
+            disabled={isBusy}
+            className={cn(
+              'flex w-full items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-1.5',
+              'text-sm transition-colors',
+              !isBusy ? 'hover:bg-accent/50 cursor-pointer' : 'opacity-50 cursor-not-allowed',
+              activeLibrary && 'border-primary/30'
             )}
-          </div>
+          >
+            {activeLibrary ? (
+              <>
+                <span className="shrink-0">{activeLibrary.icon || '📚'}</span>
+                <span className="flex-1 text-left truncate text-foreground/80">{activeLibrary.name}</span>
+              </>
+            ) : (
+              <>
+                <Library className="size-4 shrink-0 text-muted-foreground/50" />
+                <span className="flex-1 text-left text-muted-foreground/50">Aucun referentiel</span>
+              </>
+            )}
+          </button>
 
-          {libOpen && readyLibraries.length > 0 && (
-            <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-border/60 bg-popover py-1 shadow-md max-h-[200px] overflow-y-auto">
+          {/* Inline dropdown — pushes content down, no clipping */}
+          {libOpen && (
+            <div className="mt-1 rounded-lg border border-border/60 bg-popover py-1 shadow-md max-h-[200px] overflow-y-auto">
+              {/* Reset option */}
+              <button
+                onClick={() => { handleDetachLib(); setLibOpen(false) }}
+                className={cn(
+                  'flex w-full items-center gap-2 px-3 py-1.5 text-sm transition-colors hover:bg-accent/50',
+                  !activeLibraryId && 'bg-accent/30'
+                )}
+              >
+                <Library className="size-4 shrink-0 text-muted-foreground/50" />
+                <span className="text-muted-foreground">Aucun referentiel</span>
+              </button>
+
+              {readyLibraries.length > 0 && (
+                <div className="my-1 border-t border-border/40" />
+              )}
+
               {readyLibraries.map((lib) => (
                 <button
                   key={lib.id}
