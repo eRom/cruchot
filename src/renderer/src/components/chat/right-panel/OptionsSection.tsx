@@ -60,20 +60,18 @@ export function OptionsSection() {
   )
 
   const handleLibraryChange = useCallback(async (value: string) => {
-    if (!activeConversationId) return
-
     if (value === NO_LIBRARY) {
-      try {
-        await window.api.libraryDetach({ conversationId: activeConversationId })
-        setActiveLibraryId(null)
-      } catch { /* silent */ }
+      setActiveLibraryId(null)
+      if (activeConversationId) {
+        try { await window.api.libraryDetach({ conversationId: activeConversationId }) } catch { /* silent */ }
+      }
       return
     }
 
-    try {
-      await window.api.libraryAttach({ conversationId: activeConversationId, libraryId: value })
-      setActiveLibraryId(value)
-    } catch { /* silent */ }
+    setActiveLibraryId(value)
+    if (activeConversationId) {
+      try { await window.api.libraryAttach({ conversationId: activeConversationId, libraryId: value }) } catch { /* silent */ }
+    }
   }, [activeConversationId, setActiveLibraryId])
 
   const selectValue = activeLibraryId ?? NO_LIBRARY
