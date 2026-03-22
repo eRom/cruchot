@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-21 (S41)
+> Derniere mise a jour : 2026-03-22 (S42)
 
 ## Conventions de nommage
 
@@ -158,6 +158,22 @@
 - **IDs** : `crypto.randomUUID()` (PAS nanoid — convention Qdrant-compatible)
 - **Parseur** : maison (~220 lignes, pas de lib Markdown), split par `matchStart` (pas lastIndexOf)
 - **Exemples** : 3 fichiers dans `examples/` (barda-ecrivain.md, barda-dev-react.md, barda-philosophe.md)
+
+## Mode YOLO — Sandbox (S42)
+
+- **SandboxService** singleton : `createSession(workspacePath?)` → `~/cruchot/sandbox/[UUID]` ou workspace path. `destroySession()` via `trash`. `generateSeatbeltProfile()` avec substitution `SANDBOX_DIR`/`HOME`
+- **ProcessManagerService** singleton : `Map<sessionId, Set<TrackedProcess>>`, `track/killOne/killAll/killGlobal`, kill par groupe process (`process.kill(-pid)`), SIGTERM → 3s grace → SIGKILL, max 5 process/session, auto-cleanup sur exit event
+- **Seatbelt macOS** : profil SBPL ecrit dans fichier temp `/tmp/cruchot-sb-[UUID].sb`, `sandbox-exec -f` (PAS `-p` inline — evite injection shell), cleanup `finally { unlinkSync }`. Fallback exec() sans sandbox sur Windows/Linux
+- **5 tools YOLO** : `buildYoloTools(sessionId, sandboxDir)` retourne bash/createFile/readFile/listFiles/openPreview. `inputSchema` Zod (AI SDK v6). `validatePath()` avec `realpathSync + startsWith(sandboxDir + path.sep)`. Bash via `execSandboxed()`, output tronque 100KB, fichier max 10MB
+- **System prompt** : `buildYoloSystemPrompt(sandboxDir)` — 3 phases (plan → execute → finalise), reseau complet autorise, fichiers confines au sandbox
+- **Integration chat.ipc.ts** : `isYolo = conv?.isYolo === true` → `buildYoloTools()` au lieu de `buildWorkspaceTools()`, YOLO prompt injecte EN PREMIER dans system prompt, workspace context skipe en mode YOLO
+- **IPC** : 6 handlers `sandbox:*` (activate, deactivate, stop, getStatus, getProcesses, openPreview), Zod. `deactivate` passe `conversationId` pour reset DB
+- **Frontend** : `sandbox.store.ts` (Zustand, state + conversationId pour deactivate DB), `YoloToggle` (button amber + Dialog warning "J'accepte les risques"), `YoloStatusBar` (barre amber, path tronque, process count, Stop, Open Folder)
+- **DB** : `is_yolo` INTEGER DEFAULT 0 + `sandbox_path` TEXT sur `conversations`, index `idx_conversations_is_yolo`
+- **supportsYolo** : champ boolean sur `ModelDefinition`, true pour modeles tool-use competents, false pour Haiku/DeepSeek/Nano/Perplexity/image
+- **Cleanup startup** : `getYoloConversations()` → reset `is_yolo=0` sur orphelins. `processManagerService.killGlobal()` dans `will-quit` (avant les autres cleanups)
+- **Conversation switch** : `useSandboxStore.getState().deactivate()` (pas juste `reset()`) → kill process + destroy session + reset DB
+- **Reseau** : `(allow network*)` dans profil SBPL (pas de restriction localhost — mode YOLO, user consent)
 
 ## Performance (S37)
 

@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-21 (S41)
+> Derniere mise a jour : 2026-03-22 (S42)
 
 ## Main process
 
@@ -22,6 +22,7 @@
 | `src/main/ipc/prompt-optimizer.ipc.ts` | Handler `prompt:optimize` — generateText one-shot pour ameliorer un prompt (Zod) |
 | `src/main/ipc/arena.ipc.ts` | 5 handlers Arena (send, cancel, vote, getMatches, getStats) + dual streaming parallele |
 | `src/main/ipc/barda.ipc.ts` | 5 handlers Barda (import, preview, list, toggle, uninstall) + path validation securisee |
+| `src/main/ipc/sandbox.ipc.ts` | 6 handlers YOLO sandbox (activate, deactivate, stop, getStatus, getProcesses, openPreview) + Zod + path confinement |
 | `src/main/ipc/statistics.ipc.ts` | 5 handlers stats |
 | `src/main/ipc/images.ipc.ts` | Generation images |
 | `src/main/ipc/roles.ipc.ts` | CRUD roles |
@@ -32,6 +33,8 @@
 | `src/main/llm/registry.ts` | 11 providers, modeles text + image |
 | `src/main/llm/thinking.ts` | providerOptions par provider |
 | `src/main/llm/workspace-tools.ts` | 4 outils AI SDK + `buildWorkspaceContextBlock()` |
+| `src/main/llm/yolo-tools.ts` | 5 tools YOLO AI SDK v6 (bash, createFile, readFile, listFiles, openPreview) + validatePath sandbox |
+| `src/main/llm/yolo-prompt.ts` | System prompt YOLO plan-then-execute (3 phases) |
 | `src/main/llm/library-prompt.ts` | Injection `<library-context>` XML dans system prompt, sanitisation |
 | `src/main/llm/errors.ts` | Classification erreurs |
 | `src/main/llm/cost-calculator.ts` | Table PRICING + calcul cout |
@@ -68,6 +71,9 @@
 | `src/main/services/bulk-import.service.ts` | Import .mlx, decrypt, Zod validation, size check 200MB |
 | `src/main/services/barda-parser.service.ts` | Parseur Markdown barda — frontmatter YAML + sections ## + ressources ### + MCP YAML fenced, validation stricte |
 | `src/main/services/barda-import.service.ts` | Import atomique barda — transaction SQLite, namespace propagation, MCP skip, rapport |
+| `src/main/services/sandbox.service.ts` | Singleton SandboxService — create/destroy sessions, profil Seatbelt SBPL, dossiers ~/cruchot/sandbox/ |
+| `src/main/services/process-manager.service.ts` | Singleton ProcessManagerService — track/kill process enfants, SIGTERM→SIGKILL grace, max 5/session |
+| `src/main/services/seatbelt.ts` | Wrapper sandbox-exec macOS (-f fichier temp) + fallback, env minimal, NVM auto-detect |
 
 ## Preload
 
@@ -117,6 +123,8 @@
 | `components/brigade/BrigadeView.tsx` | Vue principale Gestion de Brigade — grille BardaCards, import avec preview, rapport post-import |
 | `components/brigade/BardaCard.tsx` | Card barda — namespace badge, compteurs, toggle ON/OFF, desinstaller |
 | `components/brigade/BardaPreview.tsx` | Preview avant import + rapport post-import + affichage erreur parsing |
+| `components/chat/YoloToggle.tsx` | Toggle YOLO amber + Dialog warning "J'accepte les risques" |
+| `components/chat/YoloStatusBar.tsx` | Barre status sandbox amber (path, processes, Stop, Open Folder) |
 
 ## Renderer — Stores & Hooks
 
@@ -128,6 +136,7 @@
 | `stores/messages.store.ts` | Messages conversation active |
 | `stores/ui.store.ts` | ViewMode (14 vues dont brigade), isStreaming |
 | `stores/barda.store.ts` | Store Zustand bardas — CRUD, disabledNamespaces (Set computed pour filtrage) |
+| `stores/sandbox.store.ts` | Store YOLO — isActive, sessionId, sandboxPath, conversationId, processes, activate/deactivate/stop |
 | `stores/workspace.store.ts` | rootPath, tree, attachedFiles, isPanelOpen |
 | `stores/slash-commands.store.ts` | Slash commands CRUD |
 | `stores/library.store.ts` | Libraries CRUD + indexing progress Map |
@@ -147,6 +156,7 @@
 | `.github/workflows/release.yml` | CI/CD release (tag v*) |
 | `.github/workflows/ci.yml` | CI typecheck renderer+main + audit + lint + build |
 | `security-audit-s36.md` | Rapport audit secu S36 — 31 vulns, 20 fixes, score 97/100 |
+| `security-audit-s42.md` | Rapport audit secu S42 — sandbox-yolo hardening |
 | `prompt-perf.md` | Prompt audit de performance 6 axes (cold-start, bundle, TTFMP, heap, runtime, build) |
 | `scripts/prepare-models.sh` | Copie modele ONNX dans vendor/models/ pour production bundling |
 

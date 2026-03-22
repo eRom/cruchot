@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-21 (S41)
+> Derniere mise a jour : 2026-03-22 (S42)
 
 ## AI SDK v6 — Breaking changes
 
@@ -150,6 +150,18 @@
 - **bardaPreview return type** : le handler IPC retourne `{ success, data/error }` (pas directement `ParsedBarda | BardaParseError`). Le type dans ElectronAPI doit etre `{ success: true; data: ParsedBarda } | { success: false; error: BardaParseError }` — sinon cast `as` rejete par strict typecheck CI
 - **db.transaction() Drizzle** : `db.transaction(fn)` execute directement. Ne PAS ecrire `db.transaction(fn)()` (double appel = crash `not a function`)
 - **Ressources pas visibles apres import** : les vues chargent au mount (useEffect). Apres import d'un barda, les vues deja montees n'ont pas les nouvelles ressources → toast "Redemarrez l'application"
+
+## Mode YOLO — Sandbox (S42)
+
+- **Seatbelt `-p` injection** : NE PAS passer le profil SBPL inline via `-p '...'` — injection shell possible via sandboxDir contenant des quotes. Fix : ecrire le profil dans un fichier temp et utiliser `-f /tmp/cruchot-sb-UUID.sb`
+- **`sandbox:deactivate` doit reset DB** : si on ne passe pas `conversationId` au deactivate, `is_yolo` reste `true` en DB et le prochain message utilise les YOLO tools sur un sandbox detruit. Fix : schema Zod deactivate inclut `conversationId`, appel `setConversationYolo(id, false, null)`
+- **`sandbox:openPreview` file:// sans confinement** : le handler IPC est appelable depuis le renderer sans validation de path. Fix : passer `sessionId`, recuperer `sandboxDir` via `sandboxService.getSandboxDir()`, valider `realpathSync + startsWith`
+- **NVM path shell expansion** : `$(ls ...)` dans une string env PATH ne s'expanse PAS (pas evalue par un shell). Fix : `readdirSync` pour trouver la derniere version de node
+- **Conversation switch = deactivate, pas reset** : `useSandboxStore.getState().reset()` ne fait que vider le store Zustand sans killer les process ni detruire la session backend. Fix : appeler `.deactivate()` qui fait le cleanup complet
+- **Server processes non trackes** : le tool bash avec `type: 'server'` utilise `execSandboxed()` (qui await la completion) mais ne track pas via ProcessManagerService → process invisibles, Stop ne les kill pas, count = 0. P1 restant
+- **`sandbox:getStatus` stub** : retourne toujours `{ isActive: false }`. Le renderer s'appuie sur le store Zustand (ephemere). P1 restant — probleme potentiel apres HMR reload
+- **Reseau sandbox** : initialement restreint a localhost, empeche curl/npm/git. Fix : `(allow network*)` dans le profil SBPL. Le prompt YOLO doit refléter cet acces ("acces reseau complet" et non "limite au localhost")
+- **Gemini hallucine des tool calls en XML** : sans mode YOLO, Gemini Flash/Pro peut emettre `<function_calls>...</function_calls>` comme texte brut quand il veut appeler un tool qui n'existe pas. Probleme pre-existant, pas lie au sandbox
 
 ## Restant a faire
 

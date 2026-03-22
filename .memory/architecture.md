@@ -1,9 +1,9 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-21 (S41)
+> Derniere mise a jour : 2026-03-22 (S42)
 
 ## Vue d'ensemble
 
-App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud, statistiques de couts, workspace co-work, integration Git, taches planifiees, integration MCP, memory fragments, memoire semantique (RAG local Qdrant), referentiels RAG custom (documents), Remote Telegram, Remote Web, export/import securise (.mlx), slash commands, @mention fichiers, prompt optimizer, drag & drop fichiers, conversations favorites, mode Arena (LLM vs LLM), **Bardas (Gestion de Brigade)** — packs thematiques importables. Zero serveur backend.
+App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud, statistiques de couts, workspace co-work, integration Git, taches planifiees, integration MCP, memory fragments, memoire semantique (RAG local Qdrant), referentiels RAG custom (documents), Remote Telegram, Remote Web, export/import securise (.mlx), slash commands, @mention fichiers, prompt optimizer, drag & drop fichiers, conversations favorites, mode Arena (LLM vs LLM), **Bardas (Gestion de Brigade)** — packs thematiques importables, **mode YOLO (Sandbox)** — execution autonome sandboxee (Seatbelt macOS). Zero serveur backend.
 
 ## Stack
 
@@ -27,10 +27,10 @@ src/
     index.ts              # Lifecycle, auto-updater, protocol local-image://
     ipc/                  # Handlers IPC par domaine
     commands/             # Builtin slash commands definitions
-    llm/                  # Router AI SDK, cost-calculator, image gen, workspace-tools, errors, thinking, library-prompt
-    db/schema.ts          # 25 tables Drizzle
+    llm/                  # Router AI SDK, cost-calculator, image gen, workspace-tools, yolo-tools, errors, thinking, library-prompt
+    db/schema.ts          # 25 tables Drizzle (+is_yolo, +sandbox_path sur conversations S42)
     db/queries/           # Queries par domaine (dont libraries.ts, arena.ts, bardas.ts)
-    services/             # Credential, backup, workspace, file-watcher, tts, scheduler, task-executor, mcp-manager, git, telegram-bot, remote-server, qdrant-memory, qdrant-process, embedding, library, library-embedding, barda-parser, barda-import
+    services/             # Credential, backup, workspace, file-watcher, tts, scheduler, task-executor, mcp-manager, git, telegram-bot, remote-server, qdrant-memory, qdrant-process, embedding, library, library-embedding, barda-parser, barda-import, sandbox, process-manager, seatbelt
   preload/
     index.ts              # contextBridge
     types.ts              # Types partages + DTOs
@@ -54,6 +54,7 @@ InputZone → IPC "chat:send" → Main: streamText() → forward chunks IPC → 
 
 ### Injection system prompt (ordre)
 ```
+0. YOLO system prompt (si mode YOLO actif)
 1. <library-context> (referentiel RAG sticky, si attache)
 2. <semantic-memory> (recall Qdrant conversations)
 3. <user-memory> (memory fragments)
@@ -78,10 +79,11 @@ InputZone → IPC "chat:send" → Main: streamText() → forward chunks IPC → 
 - **Conversations Favorites** : colonne `is_favorite` sur table `conversations`, toggle via icone etoile ambre dans sidebar, section "Favoris" en haut de ConversationList avec separateur
 - **Arena (LLM vs LLM)** : mode comparatif cote a cote, 2 modeles streamant en parallele (2 canaux IPC `arena:chunk:left`/`right`), separateur VS anime, vote persiste en DB (`arena_matches`), metriques comparees (tokens, cout, temps), multi-rounds, conversations marquees `is_arena`, store Zustand dedie, simplifie (pas de tools/MCP/mentions)
 - **Bardas (Gestion de Brigade)** : fichiers Markdown (.md) avec frontmatter YAML contenant roles, slash commands, prompts, memory fragments, definitions libraries, serveurs MCP sous un namespace unique. Import atomique (transaction SQLite), preview avant import, rapport post-import, toggle ON/OFF global, desinstallation complete. Namespace propage sur 6 tables existantes (colonne `namespace`). Filtre namespace dans 6 vues (roles, commands, prompts, memory, libraries, MCP). Vue BrigadeView (grille de BardaCards). 3 bardas exemples (ecrivain, dev-react, philosophe)
+- **Mode YOLO (Sandbox)** : execution autonome sandboxee. SandboxService singleton (dossiers `~/cruchot/sandbox/[UUID]`), ProcessManagerService (track/kill process enfants, SIGTERM→SIGKILL 3s grace, max 5/session), Seatbelt macOS (profil SBPL via `sandbox-exec -f`, fichier temp), 5 tools AI SDK v6 (bash unrestricted, createFile, readFile, listFiles, openPreview), system prompt plan-then-execute, reseau complet autorise, confinement fichiers au sandbox dir, `supportsYolo` sur ModelDefinition, cleanup orphelins au startup, toggle YoloToggle (warning dialog) + YoloStatusBar (amber), `is_yolo`/`sandbox_path` sur conversations, audit secu S42
 
 ## Donnees
 
-- SQLite WAL + FTS5, 25 tables (+ `bardas` S41, + colonne `namespace` sur 6 tables S41), **23 index de performance** (S41 : +7 idx_*_namespace)
+- SQLite WAL + FTS5, 25 tables (+ `bardas` S41, + colonne `namespace` sur 6 tables S41, + `is_yolo`/`sandbox_path` S42), **24 index de performance** (S42 : +idx_conversations_is_yolo)
 - Qdrant vector DB embedded (stockage `userData/qdrant-storage/`, config YAML `userData/qdrant-config/`)
 - Collections Qdrant : `conversations_memory` (memoire semantique) + `library_{id}` (referentiels RAG)
 - Cles API chiffrees via safeStorage (Keychain macOS)
