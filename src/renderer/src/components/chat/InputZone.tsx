@@ -88,7 +88,14 @@ export function InputZone({
   onMessageSent,
   className
 }: InputZoneProps) {
-  const [content, setContent] = useState('')
+  const [content, setContentLocal] = useState('')
+  const setContent = useCallback((v: string | ((prev: string) => string)) => {
+    setContentLocal((prev) => {
+      const next = typeof v === 'function' ? v(prev) : v
+      useUiStore.getState().setDraftContent(next)
+      return next
+    })
+  }, [])
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1')
   const [isGeneratingImage, setIsGeneratingImage] = useState(false)
   const [pendingAttachments, setPendingAttachments] = useState<AttachmentItem[]>([])

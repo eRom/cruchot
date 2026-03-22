@@ -199,7 +199,6 @@ export default function ChatView() {
         <Suspense fallback={null}>
           <RightPanel
             onPromptInsert={(text) => window.dispatchEvent(new CustomEvent('prompt-insert', { detail: text }))}
-            inputContent=""
             onOptimizedPrompt={(text) => window.dispatchEvent(new CustomEvent('prompt-optimized', { detail: text }))}
           />
         </Suspense>
