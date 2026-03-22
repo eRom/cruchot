@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-22 (S42)
+> Derniere mise a jour : 2026-03-22 (S43)
 
 ## Main process
 
@@ -87,8 +87,15 @@
 | Fichier | Role |
 |---------|------|
 | `src/renderer/src/App.tsx` | Routing ViewMode (14 vues), 13 vues lazy-loaded (React.lazy + Suspense), shortcuts, onboarding |
-| `components/chat/ChatView.tsx` | Message list + WorkspacePanel |
-| `components/chat/InputZone.tsx` | Saisie, pills, FileReference, SlashCommandPicker, MentionOverlay, LibraryPicker, PromptOptimizer (Sparkles), Drag & Drop fichiers |
+| `components/chat/ChatView.tsx` | Message list + RightPanel (lazy) + WorkspacePanel, library sync, auto open/close right panel |
+| `components/chat/InputZone.tsx` | Saisie simplifiee (Paperclip, PanelRight toggle, VoiceInput, Send), @mentions, slash commands, drag & drop, draftContent sync vers ui.store |
+| `components/chat/right-panel/RightPanel.tsx` | Assembleur 300px — 5 sections (Params, Options, MCP, Outils, Remote) |
+| `components/chat/right-panel/ParamsSection.tsx` | ModelSelector, ThinkingSelector custom (4 niveaux), RoleSelector, tokens/cout |
+| `components/chat/right-panel/OptionsSection.tsx` | Web Search Switch, Library Radix Select (sticky), YoloToggle |
+| `components/chat/right-panel/McpSection.tsx` | Liste serveurs MCP avec pastille status + Switch toggle |
+| `components/chat/right-panel/ToolsSection.tsx` | Grille 2x2 : PromptPicker, Resume, Ameliorer, Fork |
+| `components/chat/right-panel/RemoteSection.tsx` | Telegram Switch + Web Remote Switch, pastilles status |
+| `components/chat/right-panel/CollapsibleSection.tsx` | Wrapper card collapsable (rounded-xl, chevron rotate) |
 | `components/chat/LibraryPicker.tsx` | Select simple referentiel sticky — badge actif + dropdown + detachement |
 | `components/chat/SourceCitation.tsx` | Section "Sources utilisees" collapsible, deterministe (pas LLM) |
 | `components/chat/MentionOverlay.tsx` | Overlay transparent, @mentions cyan |
@@ -97,6 +104,7 @@
 | `components/chat/MessageItem.tsx` | Markdown, images, reasoning, tools (dont librarySearch), SourceCitation, footer, **React.memo** (S37) |
 | `components/chat/ModelSelector.tsx` | Liste plate, filtre favoris |
 | `components/chat/MarkdownRenderer.tsx` | react-markdown + Shiki + KaTeX + Mermaid |
+| `components/ui/switch.tsx` | Composant Switch custom (pas Radix, zero dep) |
 | `components/chat/ContextWindowIndicator.tsx` | Barre tokens + RemoteBadge + WebServerBadge + SummaryButton |
 | `components/libraries/LibrariesView.tsx` | Vue grille CRUD referentiels (cards colorees, search, tri, formulaire creation/edition) |
 | `components/libraries/LibraryDetailView.tsx` | Detail referentiel — sources, ajout fichiers, reindex, progress bar |
@@ -134,12 +142,12 @@
 | `stores/arena.store.ts` | Store Arena dedie (modeles, messages L/R, rounds, vote, streaming state) |
 | `stores/settings.store.ts` | Persist localStorage (theme, model params, favorites, summary) |
 | `stores/messages.store.ts` | Messages conversation active |
-| `stores/ui.store.ts` | ViewMode (14 vues dont brigade), isStreaming |
+| `stores/ui.store.ts` | ViewMode, isStreaming, openPanel ('workspace'\|'right'\|null), draftContent, toggleRightPanel |
 | `stores/barda.store.ts` | Store Zustand bardas — CRUD, disabledNamespaces (Set computed pour filtrage) |
 | `stores/sandbox.store.ts` | Store YOLO — isActive, sessionId, sandboxPath, conversationId, processes, activate/deactivate/stop |
 | `stores/workspace.store.ts` | rootPath, tree, attachedFiles, isPanelOpen |
 | `stores/slash-commands.store.ts` | Slash commands CRUD |
-| `stores/library.store.ts` | Libraries CRUD + indexing progress Map |
+| `stores/library.store.ts` | Libraries CRUD + indexing progress Map + activeLibraryId (global, sync depuis ChatView) |
 | `stores/semantic-memory.store.ts` | Status memoire semantique (status, stats, lastRecallCount) |
 | `hooks/useStreaming.ts` | Ecoute chat:chunk |
 | `hooks/useArenaStreaming.ts` | Ecoute arena:chunk:left + arena:chunk:right en parallele |

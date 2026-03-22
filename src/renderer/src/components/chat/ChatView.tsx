@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { Suspense, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useMessagesStore, type Message } from '@/stores/messages.store'
 import { useProvidersStore } from '@/stores/providers.store' // used via getState()
@@ -6,12 +6,16 @@ import { useRolesStore } from '@/stores/roles.store'
 import { useProjectsStore } from '@/stores/projects.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
+import { useUiStore } from '@/stores/ui.store'
 import MessageList from './MessageList'
 import { InputZone } from './InputZone'
 import { YoloStatusBar } from './YoloStatusBar'
 import { WorkspacePanel } from '@/components/workspace/WorkspacePanel'
 import { useSandboxStore } from '@/stores/sandbox.store'
+import { useLibraryStore } from '@/stores/library.store'
 import { MessageSquare, Sparkles } from 'lucide-react'
+
+const RightPanel = React.lazy(() => import('./right-panel/RightPanel').then(m => ({ default: m.RightPanel })))
 
 /**
  * Main chat view container — Zone A.
@@ -28,6 +32,7 @@ export default function ChatView() {
   const setMessages = useMessagesStore((s) => s.setMessages)
 
   const workspaceRootPath = useWorkspaceStore((s) => s.rootPath)
+  const openPanel = useUiStore((s) => s.openPanel)
 
   // Auto-open/close workspace when project changes
   useEffect(() => {
@@ -61,6 +66,19 @@ export default function ChatView() {
     }
   }, [])
 
+  // Sync active library from DB when conversation changes (always mounted, race-safe)
+  useEffect(() => {
+    let cancelled = false
+    if (!activeConversationId) {
+      useLibraryStore.getState().setActiveLibraryId(null)
+      return
+    }
+    window.api.libraryGetAttached({ conversationId: activeConversationId })
+      .then((id) => { if (!cancelled) useLibraryStore.getState().setActiveLibraryId(id ?? null) })
+      .catch(() => { if (!cancelled) useLibraryStore.getState().setActiveLibraryId(null) })
+    return () => { cancelled = true }
+  }, [activeConversationId])
+
   // Load messages + restore model + restore role when switching conversations
   useEffect(() => {
     // Kill processes and reset sandbox when switching conversations
@@ -70,6 +88,10 @@ export default function ChatView() {
       setMessages([])
       useRolesStore.getState().setActiveRole(null)
       useRolesStore.getState().setActiveSystemPrompt(null)
+      // Close right panel when no conversation
+      if (useUiStore.getState().openPanel === 'right') {
+        useUiStore.getState().setOpenPanel(null)
+      }
       return
     }
 
@@ -93,6 +115,11 @@ export default function ChatView() {
           toolCalls: (m.contentData?.toolCalls as Message['toolCalls']) || undefined
         }))
         setMessages(loadedMessages)
+
+        // Close right panel when switching to an existing conversation
+        if (loadedMessages.length > 0 && useUiStore.getState().openPanel === 'right') {
+          useUiStore.getState().setOpenPanel(null)
+        }
 
         // Restore role from conversation
         const roleId = conv?.roleId
@@ -145,7 +172,7 @@ export default function ChatView() {
   return (
     <div className="flex h-full">
       {/* Chat area */}
-      <div className="flex flex-1 flex-col bg-background min-w-0">
+      <div className="flex flex-1 flex-col bg-background min-w-0 min-h-0">
         {/* YOLO status bar — shown when sandbox is active */}
         <YoloStatusBar />
 
@@ -165,8 +192,16 @@ export default function ChatView() {
         </div>
       </div>
 
-      {/* Workspace panel — right side (always rendered when workspace is open, can be collapsed) */}
-      {workspaceRootPath && <WorkspacePanel />}
+      {/* Right panel — mutually exclusive with workspace */}
+      {openPanel === 'right' && (
+        <Suspense fallback={null}>
+          <RightPanel
+            onPromptInsert={(text) => window.dispatchEvent(new CustomEvent('prompt-insert', { detail: text }))}
+            onOptimizedPrompt={(text) => window.dispatchEvent(new CustomEvent('prompt-optimized', { detail: text }))}
+          />
+        </Suspense>
+      )}
+      {openPanel === 'workspace' && workspaceRootPath && <WorkspacePanel />}
     </div>
   )
 }

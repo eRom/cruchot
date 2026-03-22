@@ -10,8 +10,10 @@ export interface KeyboardShortcutCallbacks {
   onSettings?: () => void
   /** Cmd+M — open model list */
   onModelList?: () => void
-  /** Cmd+B — toggle workspace panel */
-  onToggleWorkspace?: () => void
+  /** Cmd+B — toggle sidebar (conversations list) */
+  onToggleSidebar?: () => void
+  /** Opt+Cmd+B — toggle right panel */
+  onToggleRightPanel?: () => void
   /** Escape — stop streaming */
   onEscape?: () => void
 }
@@ -42,11 +44,6 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
       bindings.push(['command+m,ctrl+m', handler])
     }
 
-    if (callbacks.onToggleWorkspace) {
-      const handler = callbacks.onToggleWorkspace
-      bindings.push(['command+b,ctrl+b', handler])
-    }
-
     if (callbacks.onEscape) {
       const handler = callbacks.onEscape
       bindings.push(['escape', handler])
@@ -71,18 +68,44 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
       document.addEventListener('keydown', handleSettingsKey)
     }
 
+    // Cmd+B and Opt+Cmd+B — native listener
+    // hotkeys-js with 'command+b' can conflict with Opt+Cmd+B, and macOS
+    // remaps Opt+key to special chars (∫ for Opt+B), so we use keyCode/code instead
+    const sidebarHandler = callbacks.onToggleSidebar
+    const rightPanelHandler = callbacks.onToggleRightPanel
+    function handleBKey(e: KeyboardEvent) {
+      // Must be 'b' key (use e.code to ignore macOS alt remapping)
+      if (e.code !== 'KeyB') return
+      if (!e.metaKey && !e.ctrlKey) return
+
+      if (e.altKey) {
+        // Opt+Cmd+B → right panel
+        e.preventDefault()
+        rightPanelHandler?.()
+      } else {
+        // Cmd+B → sidebar
+        e.preventDefault()
+        sidebarHandler?.()
+      }
+    }
+    if (sidebarHandler || rightPanelHandler) {
+      document.addEventListener('keydown', handleBKey, true)
+    }
+
     return () => {
       for (const [keys] of bindings) {
         hotkeys.unbind(keys)
       }
       document.removeEventListener('keydown', handleSettingsKey)
+      document.removeEventListener('keydown', handleBKey, true)
     }
   }, [
     callbacks.onNewConversation,
     callbacks.onCommandPalette,
     callbacks.onSettings,
     callbacks.onModelList,
-    callbacks.onToggleWorkspace,
+    callbacks.onToggleSidebar,
+    callbacks.onToggleRightPanel,
     callbacks.onEscape,
   ])
 }

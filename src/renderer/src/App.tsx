@@ -29,7 +29,6 @@ import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
 import { useProvidersStore } from '@/stores/providers.store'
 import { useSettingsStore } from '@/stores/settings.store'
-import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useInitApp } from '@/hooks/useInitApp'
 import { useStreaming } from '@/hooks/useStreaming'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -81,8 +80,12 @@ function App(): React.JSX.Element {
     setCurrentView('settings')
   }, [setSettingsTab, setCurrentView])
 
-  const handleToggleWorkspace = useCallback(() => {
-    useWorkspaceStore.getState().togglePanel()
+  const handleToggleSidebar = useCallback(() => {
+    useSettingsStore.getState().toggleSidebar()
+  }, [])
+
+  const handleToggleRightPanel = useCallback(() => {
+    useUiStore.getState().toggleRightPanel()
   }, [])
 
   const handleEscape = useCallback(async () => {
@@ -100,7 +103,8 @@ function App(): React.JSX.Element {
     onCommandPalette: handleCommandPalette,
     onSettings: handleSettings,
     onModelList: handleModelList,
-    onToggleWorkspace: handleToggleWorkspace,
+    onToggleSidebar: handleToggleSidebar,
+    onToggleRightPanel: handleToggleRightPanel,
     onEscape: handleEscape,
   })
 
