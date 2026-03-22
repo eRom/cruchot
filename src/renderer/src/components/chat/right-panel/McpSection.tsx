@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { Plug } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { CollapsibleSection } from './CollapsibleSection'
 import type { McpServerInfo } from '../../../../../preload/types'
@@ -25,7 +24,7 @@ export function McpSection() {
   }
 
   return (
-    <CollapsibleSection title="MCP" icon={Plug} defaultOpen>
+    <CollapsibleSection title="MCP" defaultOpen>
       {servers.length === 0 ? (
         <p className="text-sm text-muted-foreground/60">Aucun serveur MCP</p>
       ) : (

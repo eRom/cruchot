@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useEffect } from 'react'
-import { Settings, Brain } from 'lucide-react'
+import { Brain } from 'lucide-react'
 import { ModelSelector } from '@/components/chat/ModelSelector'
 import { RoleSelector } from '@/components/roles/RoleSelector'
 import { useContextWindow } from '@/hooks/useContextWindow'
@@ -76,8 +76,7 @@ export function ParamsSection() {
   return (
     <div className="rounded-xl border border-border/40 bg-card/50">
       {/* Header */}
-      <div className="flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium text-foreground/80">
-        <Settings className="size-4 text-muted-foreground" />
+      <div className="px-3.5 py-2.5 text-sm font-medium text-foreground/80">
         Parametres
       </div>
 

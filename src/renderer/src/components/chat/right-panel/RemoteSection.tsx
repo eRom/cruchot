@@ -1,4 +1,4 @@
-import { Smartphone, Globe, Radio } from 'lucide-react'
+import { Smartphone, Globe } from 'lucide-react'
 import { CollapsibleSection } from './CollapsibleSection'
 import { Switch } from '@/components/ui/switch'
 import { useRemoteStore } from '@/stores/remote.store'
@@ -62,7 +62,7 @@ export function RemoteSection() {
   }
 
   return (
-    <CollapsibleSection title="Remote" icon={Radio} defaultOpen>
+    <CollapsibleSection title="Remote" defaultOpen>
       <div className="flex flex-col gap-2">
         {/* Telegram */}
         <div className="flex items-center justify-between gap-2 px-1 py-1">

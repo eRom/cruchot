@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo } from 'react'
-import { Sliders, Search, Library } from 'lucide-react'
+import { Search, Library } from 'lucide-react'
 import { CollapsibleSection } from './CollapsibleSection'
 import { YoloToggle } from '@/components/chat/YoloToggle'
 import { Switch } from '@/components/ui/switch'
@@ -70,7 +70,7 @@ export function OptionsSection() {
   const selectValue = activeLibraryId ?? NO_LIBRARY
 
   return (
-    <CollapsibleSection title="Options" icon={Sliders} defaultOpen>
+    <CollapsibleSection title="Options" defaultOpen>
       <div className="flex flex-col gap-2.5">
         {/* Web Search toggle */}
         <div className="flex items-center justify-between gap-2 px-1">
