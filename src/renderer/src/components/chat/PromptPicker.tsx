@@ -159,7 +159,7 @@ export function PromptPicker({ onInsert, disabled }: PromptPickerProps) {
       </Tooltip>
 
       <PopoverContent
-        side="top"
+        side="left"
         align="start"
         sideOffset={8}
         className="w-80 p-0"
