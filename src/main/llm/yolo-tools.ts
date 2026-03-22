@@ -8,6 +8,14 @@ import { execSandboxed } from '../services/seatbelt'
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
 const MAX_OUTPUT_SIZE = 100 * 1024 // 100 KB
 
+// Extensions that must NOT be opened via shell.openExternal (could execute code)
+const DANGEROUS_PREVIEW_EXTENSIONS = new Set([
+  '.app', '.exe', '.msi', '.bat', '.cmd', '.com', '.ps1', '.vbs', '.vbe',
+  '.wsf', '.wsh', '.scr', '.pif', '.jar', '.command', '.sh', '.bash',
+  '.csh', '.ksh', '.zsh', '.action', '.workflow', '.pkg', '.dmg',
+  '.scpt', '.applescript', '.dylib', '.so', '.dll'
+])
+
 function validatePath(filePath: string, sandboxDir: string): string {
   const resolved = path.resolve(sandboxDir, filePath)
   // Resolve symlinks
@@ -19,7 +27,7 @@ function validatePath(filePath: string, sandboxDir: string): string {
     const parent = path.dirname(resolved)
     try {
       const realParent = fs.realpathSync(parent)
-      if (!realParent.startsWith(sandboxDir)) {
+      if (!realParent.startsWith(sandboxDir + path.sep) && realParent !== sandboxDir) {
         throw new Error(`Path escapes sandbox: ${filePath}`)
       }
     } catch {
@@ -192,6 +200,11 @@ export function buildYoloTools(sessionId: string, sandboxDir: string) {
           } else {
             // File path — validate it's in sandbox
             const absPath = validatePath(target, sandboxDir)
+            // Block dangerous executable extensions
+            const ext = path.extname(absPath).toLowerCase()
+            if (DANGEROUS_PREVIEW_EXTENSIONS.has(ext)) {
+              return { error: `Cannot preview executable file type: ${ext}` }
+            }
             url = `file://${absPath}`
           }
 

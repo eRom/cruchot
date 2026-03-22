@@ -1,8 +1,17 @@
 import { ipcMain, shell } from 'electron'
 import { z } from 'zod'
+import * as path from 'path'
 import { sandboxService } from '../services/sandbox.service'
 import { processManagerService } from '../services/process-manager.service'
 import { setConversationYolo } from '../db/queries/conversations'
+
+// Extensions that must NOT be opened via shell.openExternal (could execute code)
+const DANGEROUS_PREVIEW_EXTENSIONS = new Set([
+  '.app', '.exe', '.msi', '.bat', '.cmd', '.com', '.ps1', '.vbs', '.vbe',
+  '.wsf', '.wsh', '.scr', '.pif', '.jar', '.command', '.sh', '.bash',
+  '.csh', '.ksh', '.zsh', '.action', '.workflow', '.pkg', '.dmg',
+  '.scpt', '.applescript', '.dylib', '.so', '.dll'
+])
 
 const activateSchema = z.object({
   conversationId: z.string().min(1),
@@ -115,6 +124,11 @@ export function registerSandboxIpc(): void {
       }
       if (!real.startsWith(sandboxDir + require('path').sep) && real !== sandboxDir) {
         throw new Error('Path escapes sandbox')
+      }
+      // Block dangerous executable extensions
+      const ext = path.extname(real).toLowerCase()
+      if (DANGEROUS_PREVIEW_EXTENSIONS.has(ext)) {
+        throw new Error(`Cannot preview executable file type: ${ext}`)
       }
       await shell.openExternal(`file://${real}`)
     }

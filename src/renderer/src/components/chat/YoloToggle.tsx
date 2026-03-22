@@ -81,11 +81,17 @@ export function YoloToggle({ conversationId, modelSupportsYolo, workspacePath, d
                   inattendus sont possibles.
                 </p>
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                  <li>Les fichiers sont confines au dossier sandbox</li>
+                  <li>Les fichiers sont confines au dossier sandbox (macOS uniquement via Seatbelt)</li>
                   <li>Acces reseau complet (curl, npm, git...)</li>
                   <li>Vous pouvez arreter a tout moment avec le bouton Stop</li>
                   <li>Aucune garantie sur le resultat produit</li>
                 </ul>
+                {navigator.platform && !navigator.platform.startsWith('Mac') && (
+                  <p className="text-red-500 font-medium mt-2">
+                    Votre systeme ne dispose pas de l'isolation sandbox (Seatbelt macOS).
+                    Les commandes s'executeront avec les permissions completes de votre compte utilisateur.
+                  </p>
+                )}
               </div>
             </DialogDescription>
           </DialogHeader>
