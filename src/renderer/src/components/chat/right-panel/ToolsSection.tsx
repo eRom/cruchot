@@ -107,7 +107,6 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
               onClick={handleResume}
             >
               <FileText className="size-4" />
-              <span className="text-xs">Resume</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top">Generer un resume</TooltipContent>
@@ -124,7 +123,6 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
               onClick={handleOptimize}
             >
               <Sparkles className="size-4" />
-              <span className="text-xs">Ameliorer</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top">Ameliorer le prompt</TooltipContent>
@@ -141,7 +139,6 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
               onClick={handleFork}
             >
               <GitFork className="size-4" />
-              <span className="text-xs">Fork</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top">Dupliquer la conversation</TooltipContent>
