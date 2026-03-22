@@ -88,46 +88,46 @@ export function ParamsSection() {
       <div className="flex flex-col gap-2.5 px-3.5 pb-3">
         <ModelSelector disabled={isBusy} />
 
-        {/* Thinking effort selector */}
-        {supportsThinking && (
-          <div className="relative" ref={thinkingRef}>
-            <button
-              onClick={() => !isBusy && setThinkingOpen(!thinkingOpen)}
-              disabled={isBusy}
-              className={cn(
-                'flex w-full items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-1.5',
-                'text-sm transition-colors hover:bg-accent/50',
-                isBusy && 'opacity-50 cursor-not-allowed'
-              )}
-            >
-              <Brain className={cn('size-4 text-purple-500', currentLevel.opacity)} />
-              <span className="flex-1 text-left text-muted-foreground">{currentLevel.label}</span>
-            </button>
-
-            {thinkingOpen && (
-              <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-border/60 bg-popover py-1 shadow-md">
-                {THINKING_LEVELS.map((level) => (
-                  <button
-                    key={level.value}
-                    onClick={() => {
-                      setThinkingEffort(level.value)
-                      setThinkingOpen(false)
-                    }}
-                    className={cn(
-                      'flex w-full items-center gap-2 px-3 py-1.5 text-sm transition-colors hover:bg-accent/50',
-                      thinkingEffort === level.value && 'bg-accent/30'
-                    )}
-                  >
-                    <Brain className={cn('size-4 text-purple-500', level.opacity)} />
-                    <span>{level.label}</span>
-                  </button>
-                ))}
-              </div>
+        {/* Thinking effort selector — always visible, disabled if model doesn't support it */}
+        <div className="relative" ref={thinkingRef}>
+          <button
+            onClick={() => !isBusy && supportsThinking && setThinkingOpen(!thinkingOpen)}
+            disabled={isBusy || !supportsThinking}
+            className={cn(
+              'flex w-full items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-1.5',
+              'text-sm transition-colors',
+              supportsThinking && !isBusy ? 'hover:bg-accent/50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
             )}
-          </div>
-        )}
+          >
+            <Brain className={cn('size-4 text-purple-500', supportsThinking ? currentLevel.opacity : 'opacity-20')} />
+            <span className="flex-1 text-left text-muted-foreground">
+              {supportsThinking ? currentLevel.label : 'Off'}
+            </span>
+          </button>
 
-        <RoleSelector disabled={isBusy || isRoleLocked} />
+          {thinkingOpen && (
+            <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-border/60 bg-popover py-1 shadow-md">
+              {THINKING_LEVELS.map((level) => (
+                <button
+                  key={level.value}
+                  onClick={() => {
+                    setThinkingEffort(level.value)
+                    setThinkingOpen(false)
+                  }}
+                  className={cn(
+                    'flex w-full items-center gap-2 px-3 py-1.5 text-sm transition-colors hover:bg-accent/50',
+                    thinkingEffort === level.value && 'bg-accent/30'
+                  )}
+                >
+                  <Brain className={cn('size-4 text-purple-500', level.opacity)} />
+                  <span>{level.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <RoleSelector disabled={isBusy || isRoleLocked} className="w-full" />
 
         {/* Web Search toggle */}
         <div className="flex items-center justify-between gap-2 px-1">
@@ -144,14 +144,17 @@ export function ParamsSection() {
 
         {/* Token count & cost */}
         {maxTokens > 0 && (
-          <div className="text-[11px] tabular-nums text-muted-foreground/50 pt-1">
-            ~{formatTokens(currentTokens)} / {formatTokens(maxTokens)} tokens
-            {totalCost > 0 && (
-              <span className="ml-1.5 font-medium text-muted-foreground/70">
-                ${totalCost.toFixed(3)}
-              </span>
-            )}
-          </div>
+          <>
+            <div className="border-t border-border/40" />
+            <div className="text-[11px] tabular-nums text-muted-foreground/50 text-right">
+              ~{formatTokens(currentTokens)} / {formatTokens(maxTokens)} tokens
+              {totalCost > 0 && (
+                <span className="ml-1.5 font-medium text-muted-foreground/70">
+                  ${totalCost.toFixed(3)}
+                </span>
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>
