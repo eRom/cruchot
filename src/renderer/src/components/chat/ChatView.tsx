@@ -174,7 +174,7 @@ export default function ChatView() {
   return (
     <div className="flex h-full">
       {/* Chat area */}
-      <div className="flex flex-1 flex-col bg-background min-w-0">
+      <div className="flex flex-1 flex-col bg-background min-w-0 min-h-0">
         {/* YOLO status bar — shown when sandbox is active */}
         <YoloStatusBar />
 

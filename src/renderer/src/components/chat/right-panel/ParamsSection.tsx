@@ -82,7 +82,9 @@ export function ParamsSection() {
 
       {/* Controls */}
       <div className="flex flex-col gap-2.5 px-3.5 pb-3">
-        <ModelSelector disabled={isBusy} />
+        <div className="[&_button]:w-full [&_button]:max-w-none [&_button]:h-auto [&_button]:rounded-lg [&_button]:py-1.5 [&_button]:px-3 [&_button]:text-sm">
+          <ModelSelector disabled={isBusy} />
+        </div>
 
         {/* Thinking effort selector — always visible, disabled if model doesn't support it */}
         <div className="relative" ref={thinkingRef}>
