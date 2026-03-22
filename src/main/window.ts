@@ -19,7 +19,7 @@ const TRUSTED_DOMAINS = new Set([
 export function createMainWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1200,
-    height: 800,
+    height: 950,
     minWidth: 800,
     minHeight: 600,
     show: false,
