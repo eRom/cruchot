@@ -8,19 +8,12 @@ import { useConversationsStore } from '@/stores/conversations.store'
 import { useMessagesStore } from '@/stores/messages.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useUiStore } from '@/stores/ui.store'
-import { cn } from '@/lib/utils'
+import { cn, formatTokenCount } from '@/lib/utils'
 
 interface ContextWindowIndicatorProps {
   currentTokens: number
   maxTokens: number
   totalCost?: number
-}
-
-/** Format token count to a human-readable short form (e.g. 2.4k, 128k) */
-function formatTokenCount(tokens: number): string {
-  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`
-  if (tokens >= 1_000) return `${(tokens / 1_000).toFixed(1)}k`
-  return `${tokens}`
 }
 
 function formatCost(cost: number): string {

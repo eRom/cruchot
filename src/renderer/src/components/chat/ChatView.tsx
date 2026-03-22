@@ -33,10 +33,10 @@ export default function ChatView() {
 
   const workspaceRootPath = useWorkspaceStore((s) => s.rootPath)
   const openPanel = useUiStore((s) => s.openPanel)
+  const activeProjectId = useProjectsStore((s) => s.activeProjectId)
 
   // Auto-open/close workspace when project changes
   useEffect(() => {
-    const activeProjectId = useProjectsStore.getState().activeProjectId
     const project = useProjectsStore.getState().projects.find((p) => p.id === activeProjectId)
 
     if (project?.workspacePath) {
@@ -47,7 +47,7 @@ export default function ChatView() {
         useWorkspaceStore.getState().closeWorkspace()
       }
     }
-  }, [useProjectsStore((s) => s.activeProjectId)])
+  }, [activeProjectId])
 
   // File watcher sync
   useEffect(() => {
@@ -88,7 +88,6 @@ export default function ChatView() {
       setMessages([])
       useRolesStore.getState().setActiveRole(null)
       useRolesStore.getState().setActiveSystemPrompt(null)
-      // Close right panel when no conversation
       if (useUiStore.getState().openPanel === 'right') {
         useUiStore.getState().setOpenPanel(null)
       }
@@ -116,7 +115,6 @@ export default function ChatView() {
         }))
         setMessages(loadedMessages)
 
-        // Close right panel when switching to an existing conversation
         if (loadedMessages.length > 0 && useUiStore.getState().openPanel === 'right') {
           useUiStore.getState().setOpenPanel(null)
         }

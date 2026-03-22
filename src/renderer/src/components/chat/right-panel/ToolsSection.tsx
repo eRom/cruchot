@@ -18,7 +18,7 @@ interface ToolsSectionProps {
 
 export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSectionProps) {
   const isStreaming = useUiStore((s) => s.isStreaming)
-  const draftContent = useUiStore((s) => s.draftContent)
+  const hasDraftContent = useUiStore((s) => s.draftContent.trim().length > 0)
   const activeConversationId = useConversationsStore((s) => s.activeConversationId)
   const addConversation = useConversationsStore((s) => s.addConversation)
   const setActiveConversation = useConversationsStore((s) => s.setActiveConversation)
@@ -56,7 +56,7 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
     const modelId = `${selectedProviderId}::${selectedModelId}`
     try {
       const result = await window.api.optimizePrompt({
-        text: draftContent,
+        text: useUiStore.getState().draftContent,
         modelId
       })
       if (result.optimizedText) {
@@ -74,17 +74,7 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
     if (!activeConversationId) return
     try {
       const forked = await window.api.forkConversation(activeConversationId)
-      addConversation({
-        id: forked.id,
-        title: forked.title,
-        projectId: forked.projectId,
-        modelId: forked.modelId,
-        roleId: forked.roleId,
-        isFavorite: forked.isFavorite,
-        isArena: forked.isArena,
-        createdAt: new Date(forked.createdAt),
-        updatedAt: new Date(forked.updatedAt)
-      })
+      addConversation(forked)
       setActiveConversation(forked.id)
       toast.success('Conversation dupliquee')
     } catch {
@@ -95,12 +85,10 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
   return (
     <CollapsibleSection title="Outils" defaultOpen>
       <div className="grid grid-cols-2 gap-2">
-        {/* Prompts — wraps PromptPicker, override trigger to grid button style */}
         <div className="[&_button]:h-10 [&_button]:w-full [&_button]:rounded-lg [&_button]:border [&_button]:border-border/40 [&_button]:gap-2 [&_button]:px-2 [&_button]:text-xs [&_button]:font-normal [&_button]:justify-center">
           <PromptPicker onInsert={onPromptInsert} disabled={isBusy} />
         </div>
 
-        {/* Resume */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -116,14 +104,13 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
           <TooltipContent side="top">Generer un resume</TooltipContent>
         </Tooltip>
 
-        {/* Ameliorer */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
               className="h-10 w-full border border-border/40 gap-2"
-              disabled={draftContent.trim() === '' || !selectedModelId || !selectedProviderId || isBusy}
+              disabled={!hasDraftContent || !selectedModelId || !selectedProviderId || isBusy}
               onClick={handleOptimize}
             >
               <Sparkles className="size-4" />
@@ -132,7 +119,6 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
           <TooltipContent side="top">Ameliorer le prompt</TooltipContent>
         </Tooltip>
 
-        {/* Fork */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
