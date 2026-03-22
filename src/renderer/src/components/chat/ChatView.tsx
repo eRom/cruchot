@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { Suspense, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useMessagesStore, type Message } from '@/stores/messages.store'
 import { useProvidersStore } from '@/stores/providers.store' // used via getState()
@@ -6,12 +6,15 @@ import { useRolesStore } from '@/stores/roles.store'
 import { useProjectsStore } from '@/stores/projects.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
+import { useUiStore } from '@/stores/ui.store'
 import MessageList from './MessageList'
 import { InputZone } from './InputZone'
 import { YoloStatusBar } from './YoloStatusBar'
 import { WorkspacePanel } from '@/components/workspace/WorkspacePanel'
 import { useSandboxStore } from '@/stores/sandbox.store'
 import { MessageSquare, Sparkles } from 'lucide-react'
+
+const RightPanel = React.lazy(() => import('./right-panel/RightPanel').then(m => ({ default: m.RightPanel })))
 
 /**
  * Main chat view container — Zone A.
@@ -28,6 +31,7 @@ export default function ChatView() {
   const setMessages = useMessagesStore((s) => s.setMessages)
 
   const workspaceRootPath = useWorkspaceStore((s) => s.rootPath)
+  const openPanel = useUiStore((s) => s.openPanel)
 
   // Auto-open/close workspace when project changes
   useEffect(() => {
@@ -165,8 +169,17 @@ export default function ChatView() {
         </div>
       </div>
 
-      {/* Workspace panel — right side (always rendered when workspace is open, can be collapsed) */}
-      {workspaceRootPath && <WorkspacePanel />}
+      {/* Right panel — mutually exclusive with workspace */}
+      {openPanel === 'right' && (
+        <Suspense fallback={null}>
+          <RightPanel
+            onPromptInsert={(text) => window.dispatchEvent(new CustomEvent('prompt-insert', { detail: text }))}
+            inputContent=""
+            onOptimizedPrompt={(text) => window.dispatchEvent(new CustomEvent('prompt-optimized', { detail: text }))}
+          />
+        </Suspense>
+      )}
+      {openPanel === 'workspace' && workspaceRootPath && <WorkspacePanel />}
     </div>
   )
 }

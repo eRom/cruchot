@@ -1,15 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowUp, FolderOpen, GitFork, ImageIcon, Loader2, Paperclip, Sparkles, Square } from 'lucide-react'
+import { ArrowUp, ImageIcon, Loader2, PanelRight, Paperclip, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { ModelSelector } from '@/components/chat/ModelSelector'
-import { ContextWindowIndicator } from '@/components/chat/ContextWindowIndicator'
 import { VoiceInput } from '@/components/chat/VoiceInput'
-import { PromptPicker } from '@/components/chat/PromptPicker'
 import { AspectRatioSelector, type AspectRatio } from '@/components/chat/AspectRatioSelector'
 import { AttachmentPreview, type AttachmentItem } from '@/components/chat/AttachmentPreview'
-import { RoleSelector } from '@/components/roles/RoleSelector'
-import { ChatOptionsMenu } from '@/components/chat/ChatOptionsMenu'
 import { useProvidersStore } from '@/stores/providers.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
@@ -18,16 +13,14 @@ import { useSettingsStore } from '@/stores/settings.store'
 import { useUiStore } from '@/stores/ui.store'
 import { useRolesStore } from '@/stores/roles.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
-import { useContextWindow } from '@/hooks/useContextWindow'
+import { useLibraryStore } from '@/stores/library.store'
 import { cn } from '@/lib/utils'
 import { FileReference } from '@/components/workspace/FileReference'
-import { LibraryPicker } from '@/components/chat/LibraryPicker'
 import { SlashCommandPicker } from '@/components/chat/SlashCommandPicker'
 import { FileMentionPopover } from '@/components/chat/FileMentionPopover'
 import { MentionOverlay } from '@/components/chat/MentionOverlay'
 import { useSlashCommands } from '@/hooks/useSlashCommands'
 import { useFileMention } from '@/hooks/useFileMention'
-import { YoloToggle } from '@/components/chat/YoloToggle'
 import type { AttachmentRef } from '../../../../preload/types'
 
 // ── Types pour futures integrations (ModelParams) ──
@@ -101,7 +94,6 @@ export function InputZone({
   const [pendingAttachments, setPendingAttachments] = useState<AttachmentItem[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [dragCounter, setDragCounter] = useState(0)
-  const [isOptimizing, setIsOptimizing] = useState(false)
   const [droppedFileContexts, setDroppedFileContexts] = useState<Map<string, { content: string; language: string; name: string }>>(new Map())
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -110,7 +102,8 @@ export function InputZone({
   const { activeConversationId, addConversation, setActiveConversation, updateConversation } = useConversationsStore()
   const activeProjectId = useProjectsStore((s) => s.activeProjectId)
   const { messages, addMessage } = useMessagesStore()
-  const { isStreaming } = useUiStore()
+  const isStreaming = useUiStore((s) => s.isStreaming)
+  const openPanel = useUiStore((s) => s.openPanel)
   const temperature = useSettingsStore((s) => s.temperature)
   const settingsMaxTokens = useSettingsStore((s) => s.maxTokens)
   const topP = useSettingsStore((s) => s.topP)
@@ -121,11 +114,8 @@ export function InputZone({
   const workspaceTree = useWorkspaceStore((s) => s.tree)
   const workspaceAttachedFiles = useWorkspaceStore((s) => s.attachedFiles)
   const detachWorkspaceFile = useWorkspaceStore((s) => s.detachFile)
-  const toggleWorkspacePanel = useWorkspaceStore((s) => s.togglePanel)
   const searchEnabled = useSettingsStore((s) => s.searchEnabled) ?? false
-
-  // ── Active library (sticky per conversation) ────────────────
-  const [activeLibraryId, setActiveLibraryId] = useState<string | null>(null)
+  const activeLibraryId = useLibraryStore((s) => s.activeLibraryId)
 
   // ── Cursor position for @ mention ──────────────────────────
   const [cursorPos, setCursorPos] = useState(0)
@@ -187,23 +177,11 @@ export function InputZone({
 
   const isImageMode = selectedModel?.type === 'image'
 
-  const { currentTokens, maxTokens } = useContextWindow(
-    conversationMessages,
-    content,
-    selectedModel?.contextWindow ?? 0
-  )
-
-  const totalCost = useMemo(
-    () => conversationMessages.reduce((sum, m) => sum + (m.cost ?? 0), 0),
-    [conversationMessages]
-  )
-
   // ── Derived state ────────────────────────────────────────
   const isBusy = isStreaming || isGeneratingImage
   const hasAttachments = pendingAttachments.length > 0
   const hasDroppedFiles = droppedFileContexts.size > 0
   const canSend = (content.trim().length > 0 || hasAttachments || hasDroppedFiles) && !isBusy && !!selectedModelId && !!selectedProviderId
-  const isRoleLocked = conversationMessages.length > 0
 
   // ── Auto-grow textarea ───────────────────────────────────
   const adjustHeight = useCallback(() => {
@@ -756,23 +734,6 @@ export function InputZone({
     droppedFileContexts
   ])
 
-  // ── Prompt Optimizer ──────────────────────────────────
-  const handleOptimizePrompt = useCallback(async () => {
-    if (!content.trim() || !selectedProviderId || !selectedModelId || isOptimizing) return
-    setIsOptimizing(true)
-    try {
-      const modelId = `${selectedProviderId}::${selectedModelId}`
-      const result = await window.api.optimizePrompt({ text: content.trim(), modelId })
-      if (result.optimizedText) {
-        setContent(result.optimizedText)
-      }
-    } catch (err) {
-      console.error('[InputZone] Prompt optimization failed:', err)
-    } finally {
-      setIsOptimizing(false)
-    }
-  }, [content, selectedProviderId, selectedModelId, isOptimizing])
-
   // ── Dispatch send ──────────────────────────────────────
   const handleSend = useCallback(() => {
     if (isImageMode) {
@@ -847,18 +808,25 @@ export function InputZone({
     []
   )
 
-  // ── Insertion depuis PromptPicker ─────────────────────────
-  const handlePromptInsert = useCallback(
-    (text: string, mode: 'replace' | 'append') => {
-      if (mode === 'replace') {
-        setContent(text)
-      } else {
-        setContent((prev) => (prev ? `${prev}\n\n${text}` : text))
-      }
+  // ── Listen for prompt insert/optimize events from RightPanel ──
+  useEffect(() => {
+    function handlePromptInsert(e: Event) {
+      const text = (e as CustomEvent).detail as string
+      if (text) setContent((prev) => prev ? `${prev}\n\n${text}` : text)
       requestAnimationFrame(() => textareaRef.current?.focus())
-    },
-    []
-  )
+    }
+    function handlePromptOptimized(e: Event) {
+      const text = (e as CustomEvent).detail as string
+      if (text) setContent(text)
+      requestAnimationFrame(() => textareaRef.current?.focus())
+    }
+    window.addEventListener('prompt-insert', handlePromptInsert)
+    window.addEventListener('prompt-optimized', handlePromptOptimized)
+    return () => {
+      window.removeEventListener('prompt-insert', handlePromptInsert)
+      window.removeEventListener('prompt-optimized', handlePromptOptimized)
+    }
+  }, [])
 
   // ── Cancel stream ────────────────────────────────────────
   const handleCancel = useCallback(async () => {
@@ -1104,30 +1072,8 @@ export function InputZone({
 
           {/* Barre d'outils en bas du textarea */}
           <div className="flex items-center justify-between gap-2 px-2 pb-2 pt-1">
-            {/* Cote gauche — Paperclip + ModelSelector + pills */}
+            {/* Cote gauche — Paperclip + PanelRight + VoiceInput */}
             <div className="flex items-center gap-1.5">
-              {/* Workspace toggle — visible only if workspace active */}
-              {!isImageMode && workspaceRootPath && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={toggleWorkspacePanel}
-                      disabled={isBusy}
-                      className={cn(
-                        'size-7 rounded-lg',
-                        'text-muted-foreground/60 hover:text-muted-foreground',
-                        'transition-colors',
-                        workspaceAttachedFiles.length > 0 && 'text-cyan-600 dark:text-cyan-400'
-                      )}
-                    >
-                      <FolderOpen className="size-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Workspace (Cmd+B)</TooltipContent>
-                </Tooltip>
-              )}
               {/* Paperclip — attach files (hidden in image mode) */}
               {!isImageMode && (
                 <Tooltip>
@@ -1150,83 +1096,25 @@ export function InputZone({
                   <TooltipContent side="top">Joindre des fichiers</TooltipContent>
                 </Tooltip>
               )}
-              <ModelSelector disabled={isBusy} />
-              {!isImageMode && (
-                <ChatOptionsMenu
-                  disabled={isBusy}
-                  supportsThinking={selectedModel?.supportsThinking}
-                />
-              )}
-              {!isImageMode && (
-                <RoleSelector disabled={isBusy || isRoleLocked} />
-              )}
-              {!isImageMode && (
-                <LibraryPicker
-                  disabled={isBusy}
-                  onLibraryChange={setActiveLibraryId}
-                />
-              )}
-              {!isImageMode && activeConversationId && (
-                <YoloToggle
-                  conversationId={activeConversationId}
-                  modelSupportsYolo={selectedModel?.supportsYolo ?? false}
-                  workspacePath={workspaceRootPath ?? undefined}
-                  disabled={isBusy}
-                />
-              )}
-              <PromptPicker
-                onInsert={handlePromptInsert}
-                disabled={isBusy}
-              />
+              {/* Right panel toggle */}
               {!isImageMode && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={handleOptimizePrompt}
-                      disabled={isBusy || isOptimizing || !content.trim() || !selectedModelId}
+                      onClick={() => useUiStore.getState().toggleRightPanel()}
                       className={cn(
                         'size-7 rounded-lg',
                         'text-muted-foreground/60 hover:text-muted-foreground',
                         'transition-colors',
-                        isOptimizing && 'text-primary'
+                        openPanel === 'right' && 'text-primary'
                       )}
                     >
-                      {isOptimizing ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="size-4" />
-                      )}
+                      <PanelRight className="size-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="top">Optimiser le prompt</TooltipContent>
-                </Tooltip>
-              )}
-              {activeConversationId && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 text-muted-foreground hover:text-foreground"
-                      disabled={isBusy}
-                      onClick={async () => {
-                        try {
-                          const forked = await window.api.forkConversation(activeConversationId)
-                          if (forked) {
-                            addConversation(forked)
-                            setActiveConversation(forked.id)
-                          }
-                        } catch (err) {
-                          console.error('Failed to fork conversation:', err)
-                        }
-                      }}
-                    >
-                      <GitFork className="size-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Forker la discussion</TooltipContent>
+                  <TooltipContent side="top">Panneau lateral (Opt+Cmd+B)</TooltipContent>
                 </Tooltip>
               )}
               <VoiceInput
@@ -1313,22 +1201,8 @@ export function InputZone({
           </div>
         </div>
 
-        {/* Context window indicator — mode texte uniquement */}
-        {!isImageMode && selectedModel && maxTokens > 0 && (
-          <ContextWindowIndicator currentTokens={currentTokens} maxTokens={maxTokens} totalCost={totalCost} />
-        )}
-
         {/* Bottom slot */}
         {bottomSlot}
-
-        {/* Hint clavier — tres discret */}
-        <div className="flex justify-center">
-          <span className="text-[10px] text-muted-foreground/30 select-none">
-            {isImageMode
-              ? 'Enter pour generer · Shift+Enter pour un saut de ligne'
-              : 'Enter pour envoyer · Shift+Enter pour un saut de ligne'}
-          </span>
-        </div>
       </div>
     </div>
   )
