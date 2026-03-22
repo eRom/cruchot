@@ -127,7 +127,9 @@ export function ParamsSection() {
           )}
         </div>
 
-        <RoleSelector disabled={isBusy || isRoleLocked} className="w-full" />
+        <div className="[&_button]:w-full [&_button]:max-w-none [&_button]:h-auto [&_button]:rounded-lg [&_button]:py-1.5 [&_button]:px-3 [&_button]:text-sm [&_button_svg:first-child]:size-4">
+          <RoleSelector disabled={isBusy || isRoleLocked} />
+        </div>
 
         {/* Web Search toggle */}
         <div className="flex items-center justify-between gap-2 px-1">
