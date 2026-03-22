@@ -44,11 +44,6 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
       bindings.push(['command+m,ctrl+m', handler])
     }
 
-    if (callbacks.onToggleWorkspace) {
-      const handler = callbacks.onToggleWorkspace
-      bindings.push(['command+b,ctrl+b', handler])
-    }
-
     if (callbacks.onEscape) {
       const handler = callbacks.onEscape
       bindings.push(['escape', handler])
@@ -73,16 +68,28 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
       document.addEventListener('keydown', handleSettingsKey)
     }
 
-    // Opt+Cmd+B — native listener (hotkeys-js can be flaky with option+command combos)
+    // Cmd+B and Opt+Cmd+B — native listener
+    // hotkeys-js with 'command+b' can conflict with Opt+Cmd+B, and macOS
+    // remaps Opt+key to special chars (∫ for Opt+B), so we use keyCode/code instead
+    const workspaceHandler = callbacks.onToggleWorkspace
     const rightPanelHandler = callbacks.onToggleRightPanel
-    function handleRightPanelKey(e: KeyboardEvent) {
-      if (e.key === 'b' && e.metaKey && e.altKey && !e.ctrlKey) {
+    function handleBKey(e: KeyboardEvent) {
+      // Must be 'b' key (use e.code to ignore macOS alt remapping)
+      if (e.code !== 'KeyB') return
+      if (!e.metaKey && !e.ctrlKey) return
+
+      if (e.altKey) {
+        // Opt+Cmd+B → right panel
         e.preventDefault()
         rightPanelHandler?.()
+      } else {
+        // Cmd+B → workspace
+        e.preventDefault()
+        workspaceHandler?.()
       }
     }
-    if (rightPanelHandler) {
-      document.addEventListener('keydown', handleRightPanelKey)
+    if (workspaceHandler || rightPanelHandler) {
+      document.addEventListener('keydown', handleBKey)
     }
 
     return () => {
@@ -90,7 +97,7 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
         hotkeys.unbind(keys)
       }
       document.removeEventListener('keydown', handleSettingsKey)
-      document.removeEventListener('keydown', handleRightPanelKey)
+      document.removeEventListener('keydown', handleBKey)
     }
   }, [
     callbacks.onNewConversation,
