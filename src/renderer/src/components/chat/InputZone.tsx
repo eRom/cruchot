@@ -453,6 +453,13 @@ export function InputZone({
       const conv = await window.api.createConversation(undefined, activeProjectId ?? undefined)
       addConversation(conv)
       setActiveConversation(conv.id)
+
+      // Attach pending library selection to the newly created conversation
+      const pendingLibId = useLibraryStore.getState().activeLibraryId
+      if (pendingLibId) {
+        window.api.libraryAttach({ conversationId: conv.id, libraryId: pendingLibId }).catch(() => {})
+      }
+
       return conv.id
     } catch {
       return null
