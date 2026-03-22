@@ -45,9 +45,10 @@ interface MessagesState {
   removeMessage: (id: string) => void
   clearMessages: () => void
   setStreamingMessageId: (id: string | null) => void
+  getConversationMessages: (conversationId: string | null) => Message[]
 }
 
-export const useMessagesStore = create<MessagesState>((set) => ({
+export const useMessagesStore = create<MessagesState>((set, get) => ({
   messages: [],
   streamingMessageId: null,
 
@@ -109,5 +110,8 @@ export const useMessagesStore = create<MessagesState>((set) => ({
 
   clearMessages: () => set({ messages: [], streamingMessageId: null }),
 
-  setStreamingMessageId: (id) => set({ streamingMessageId: id })
+  setStreamingMessageId: (id) => set({ streamingMessageId: id }),
+
+  getConversationMessages: (conversationId) =>
+    conversationId ? get().messages.filter((m) => m.conversationId === conversationId) : []
 }))

@@ -39,9 +39,11 @@ interface ProvidersState {
   updateProviderStatus: (providerId: string, isConfigured: boolean) => void
   setProviderOnline: (providerId: string, online: boolean) => void
   setLocalModels: (providerId: string, models: Model[]) => void
+  getSelectedModel: () => Model | undefined
+  getSelectedModelId: () => string | null
 }
 
-export const useProvidersStore = create<ProvidersState>((set) => ({
+export const useProvidersStore = create<ProvidersState>((set, get) => ({
   providers: [],
   models: [],
   selectedModelId: null,
@@ -73,5 +75,15 @@ export const useProvidersStore = create<ProvidersState>((set) => ({
         ...state.models.filter((m) => m.providerId !== providerId),
         ...models
       ]
-    }))
+    })),
+
+  getSelectedModel: () => {
+    const { models, selectedModelId, selectedProviderId } = get()
+    return models.find((m) => m.id === selectedModelId && m.providerId === selectedProviderId)
+  },
+
+  getSelectedModelId: () => {
+    const { selectedProviderId, selectedModelId } = get()
+    return selectedProviderId && selectedModelId ? `${selectedProviderId}::${selectedModelId}` : null
+  }
 }))

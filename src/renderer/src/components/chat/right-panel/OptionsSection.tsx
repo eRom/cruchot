@@ -24,7 +24,7 @@ const NO_LIBRARY = '__none__'
 export function OptionsSection() {
   const isStreaming = useUiStore((s) => s.isStreaming)
   const activeConversationId = useConversationsStore((s) => s.activeConversationId)
-  const { selectedModelId, selectedProviderId, models } = useProvidersStore()
+  const { selectedModelId, selectedProviderId } = useProvidersStore()
   const workspaceRootPath = useWorkspaceStore((s) => s.rootPath)
   const searchEnabled = useSettingsStore((s) => s.searchEnabled) ?? false
   const setSearchEnabled = useSettingsStore((s) => s.setSearchEnabled)
@@ -32,10 +32,7 @@ export function OptionsSection() {
 
   const isBusy = isStreaming
 
-  const selectedModel = useMemo(
-    () => models.find((m) => m.id === selectedModelId && m.providerId === selectedProviderId),
-    [models, selectedModelId, selectedProviderId]
-  )
+  const selectedModel = useProvidersStore((s) => s.getSelectedModel())
 
   useEffect(() => {
     if (libraries.length === 0) loadLibraries()

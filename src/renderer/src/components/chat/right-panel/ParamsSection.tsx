@@ -20,7 +20,7 @@ const THINKING_LEVELS: { value: ThinkingEffort; label: string; opacity: string }
 export function ParamsSection() {
   const messages = useMessagesStore((s) => s.messages)
   const activeConversationId = useConversationsStore((s) => s.activeConversationId)
-  const { selectedModelId, selectedProviderId, models } = useProvidersStore()
+  const { selectedModelId, selectedProviderId } = useProvidersStore()
   const isStreaming = useUiStore((s) => s.isStreaming)
   const thinkingEffort = useSettingsStore((s) => s.thinkingEffort)
   const setThinkingEffort = useSettingsStore((s) => s.setThinkingEffort)
@@ -33,10 +33,7 @@ export function ParamsSection() {
     [messages, activeConversationId]
   )
 
-  const selectedModel = useMemo(
-    () => models.find((m) => m.id === selectedModelId && m.providerId === selectedProviderId),
-    [models, selectedModelId, selectedProviderId]
-  )
+  const selectedModel = useProvidersStore((s) => s.getSelectedModel())
 
   const isRoleLocked = conversationMessages.length > 0
   const isBusy = isStreaming

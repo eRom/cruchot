@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { FileText, Sparkles, GitFork } from 'lucide-react'
 import { CollapsibleSection } from './CollapsibleSection'
 import { PromptPicker } from '@/components/chat/PromptPicker'
@@ -23,18 +22,11 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
   const addConversation = useConversationsStore((s) => s.addConversation)
   const setActiveConversation = useConversationsStore((s) => s.setActiveConversation)
   const { selectedModelId, selectedProviderId } = useProvidersStore()
-  const messages = useMessagesStore((s) => s.messages)
   const summaryModelId = useSettingsStore((s) => s.summaryModelId)
   const summaryPrompt = useSettingsStore((s) => s.summaryPrompt)
 
   const isBusy = isStreaming
-
-  const conversationMessages = useMemo(
-    () => messages.filter((m) => m.conversationId === activeConversationId),
-    [messages, activeConversationId]
-  )
-
-  const hasMessages = conversationMessages.length > 0
+  const hasMessages = useMessagesStore((s) => s.getConversationMessages(activeConversationId).length > 0)
 
   const handleResume = async () => {
     if (!activeConversationId) return

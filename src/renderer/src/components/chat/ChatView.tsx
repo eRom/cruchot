@@ -14,6 +14,7 @@ import { WorkspacePanel } from '@/components/workspace/WorkspacePanel'
 import { useSandboxStore } from '@/stores/sandbox.store'
 import { useLibraryStore } from '@/stores/library.store'
 import { MessageSquare, Sparkles } from 'lucide-react'
+import { EVENTS } from '@/lib/utils'
 
 const RightPanel = React.lazy(() => import('./right-panel/RightPanel').then(m => ({ default: m.RightPanel })))
 
@@ -194,8 +195,8 @@ export default function ChatView() {
       {openPanel === 'right' && (
         <Suspense fallback={null}>
           <RightPanel
-            onPromptInsert={(text) => window.dispatchEvent(new CustomEvent('prompt-insert', { detail: text }))}
-            onOptimizedPrompt={(text) => window.dispatchEvent(new CustomEvent('prompt-optimized', { detail: text }))}
+            onPromptInsert={(text) => window.dispatchEvent(new CustomEvent(EVENTS.PROMPT_INSERT, { detail: text }))}
+            onOptimizedPrompt={(text) => window.dispatchEvent(new CustomEvent(EVENTS.PROMPT_OPTIMIZED, { detail: text }))}
           />
         </Suspense>
       )}
