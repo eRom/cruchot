@@ -5,17 +5,16 @@ import { ToolsSection } from './ToolsSection'
 
 interface RightPanelProps {
   onPromptInsert: (text: string) => void
-  inputContent: string
   onOptimizedPrompt: (text: string) => void
 }
 
-export function RightPanel({ onPromptInsert, inputContent, onOptimizedPrompt }: RightPanelProps) {
+export function RightPanel({ onPromptInsert, onOptimizedPrompt }: RightPanelProps) {
   return (
     <div className="flex h-full w-[260px] shrink-0 flex-col gap-3 border-l border-border/40 bg-background overflow-y-auto p-3">
       <ParamsSection />
       <OptionsSection />
       <McpSection />
-      <ToolsSection inputContent={inputContent} onOptimizedPrompt={onOptimizedPrompt} onPromptInsert={onPromptInsert} />
+      <ToolsSection onOptimizedPrompt={onOptimizedPrompt} onPromptInsert={onPromptInsert} />
     </div>
   )
 }

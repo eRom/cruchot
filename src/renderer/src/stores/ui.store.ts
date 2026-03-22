@@ -13,6 +13,7 @@ interface UiState {
   searchOpen: boolean
   settingsTab: SettingsTab | null
   openPanel: OpenPanel
+  draftContent: string
 
   setCurrentView: (view: ViewMode) => void
   setIsStreaming: (streaming: boolean) => void
@@ -21,6 +22,7 @@ interface UiState {
   setSettingsTab: (tab: SettingsTab | null) => void
   setOpenPanel: (panel: OpenPanel) => void
   toggleRightPanel: () => void
+  setDraftContent: (content: string) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -30,6 +32,7 @@ export const useUiStore = create<UiState>((set) => ({
   searchOpen: false,
   settingsTab: null,
   openPanel: null,
+  draftContent: '',
 
   setCurrentView: (view) => set({ currentView: view }),
   setIsStreaming: (streaming) => set({ isStreaming: streaming }),
@@ -37,5 +40,6 @@ export const useUiStore = create<UiState>((set) => ({
   setSearchOpen: (open) => set({ searchOpen: open }),
   setSettingsTab: (tab) => set({ settingsTab: tab }),
   setOpenPanel: (panel) => set({ openPanel: panel }),
-  toggleRightPanel: () => set((s) => ({ openPanel: s.openPanel === 'right' ? null : 'right' }))
+  toggleRightPanel: () => set((s) => ({ openPanel: s.openPanel === 'right' ? null : 'right' })),
+  setDraftContent: (content) => set({ draftContent: content })
 }))

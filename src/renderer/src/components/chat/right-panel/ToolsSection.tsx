@@ -13,13 +13,13 @@ import { useRemoteStore } from '@/stores/remote.store'
 import { toast } from 'sonner'
 
 interface ToolsSectionProps {
-  inputContent: string
   onOptimizedPrompt: (text: string) => void
   onPromptInsert: (text: string) => void
 }
 
-export function ToolsSection({ inputContent, onOptimizedPrompt, onPromptInsert }: ToolsSectionProps) {
+export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSectionProps) {
   const isStreaming = useUiStore((s) => s.isStreaming)
+  const draftContent = useUiStore((s) => s.draftContent)
   const activeConversationId = useConversationsStore((s) => s.activeConversationId)
   const addConversation = useConversationsStore((s) => s.addConversation)
   const setActiveConversation = useConversationsStore((s) => s.setActiveConversation)
@@ -80,7 +80,7 @@ export function ToolsSection({ inputContent, onOptimizedPrompt, onPromptInsert }
     const modelId = `${selectedProviderId}::${selectedModelId}`
     try {
       const result = await window.api.optimizePrompt({
-        text: inputContent,
+        text: draftContent,
         modelId
       })
       onOptimizedPrompt(result.optimizedText)
@@ -164,7 +164,7 @@ export function ToolsSection({ inputContent, onOptimizedPrompt, onPromptInsert }
               variant="ghost"
               size="sm"
               className="h-10 w-full border border-border/40 gap-2"
-              disabled={inputContent.trim() === '' || isBusy}
+              disabled={draftContent.trim() === '' || isBusy}
               onClick={handleOptimize}
             >
               <Sparkles className="size-4" />
