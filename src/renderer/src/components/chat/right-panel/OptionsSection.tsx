@@ -1,8 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Sliders, Search, Library, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo } from 'react'
+import { Sliders, Search, Library } from 'lucide-react'
 import { CollapsibleSection } from './CollapsibleSection'
 import { YoloToggle } from '@/components/chat/YoloToggle'
 import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
 import { useUiStore } from '@/stores/ui.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProvidersStore } from '@/stores/providers.store'
@@ -10,7 +18,8 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useLibraryStore } from '@/stores/library.store'
 import { cn } from '@/lib/utils'
-import type { LibraryInfo } from '../../../../../preload/types'
+
+const NO_LIBRARY = '__none__'
 
 export function OptionsSection() {
   const isStreaming = useUiStore((s) => s.isStreaming)
@@ -19,7 +28,7 @@ export function OptionsSection() {
   const workspaceRootPath = useWorkspaceStore((s) => s.rootPath)
   const searchEnabled = useSettingsStore((s) => s.searchEnabled) ?? false
   const setSearchEnabled = useSettingsStore((s) => s.setSearchEnabled)
-  const { libraries, loadLibraries } = useLibraryStore()
+  const { libraries, loadLibraries, activeLibraryId, setActiveLibraryId } = useLibraryStore()
 
   const isBusy = isStreaming
 
@@ -28,30 +37,17 @@ export function OptionsSection() {
     [models, selectedModelId, selectedProviderId]
   )
 
-  // ── Library picker state ──
-  const [activeLibraryId, setActiveLibraryId] = useState<string | null>(null)
-  const [libOpen, setLibOpen] = useState(false)
-  const libRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     if (libraries.length === 0) loadLibraries()
   }, [libraries.length, loadLibraries])
 
+  // Load sticky library for current conversation
   useEffect(() => {
     if (!activeConversationId) { setActiveLibraryId(null); return }
     window.api.libraryGetAttached({ conversationId: activeConversationId })
       .then((id) => setActiveLibraryId(id ?? null))
       .catch(() => setActiveLibraryId(null))
-  }, [activeConversationId])
-
-  useEffect(() => {
-    if (!libOpen) return
-    const handler = (e: MouseEvent) => {
-      if (libRef.current && !libRef.current.contains(e.target as Node)) setLibOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [libOpen])
+  }, [activeConversationId, setActiveLibraryId])
 
   const readyLibraries = useMemo(
     () => libraries.filter((l) => l.status === 'ready' || l.sourcesCount > 0),
@@ -63,22 +59,24 @@ export function OptionsSection() {
     [libraries, activeLibraryId]
   )
 
-  const handleSelectLib = useCallback(async (lib: LibraryInfo) => {
+  const handleLibraryChange = useCallback(async (value: string) => {
     if (!activeConversationId) return
-    try {
-      await window.api.libraryAttach({ conversationId: activeConversationId, libraryId: lib.id })
-      setActiveLibraryId(lib.id)
-    } catch { /* silent */ }
-    setLibOpen(false)
-  }, [activeConversationId])
 
-  const handleDetachLib = useCallback(async () => {
-    if (!activeConversationId) return
+    if (value === NO_LIBRARY) {
+      try {
+        await window.api.libraryDetach({ conversationId: activeConversationId })
+        setActiveLibraryId(null)
+      } catch { /* silent */ }
+      return
+    }
+
     try {
-      await window.api.libraryDetach({ conversationId: activeConversationId })
-      setActiveLibraryId(null)
+      await window.api.libraryAttach({ conversationId: activeConversationId, libraryId: value })
+      setActiveLibraryId(value)
     } catch { /* silent */ }
-  }, [activeConversationId])
+  }, [activeConversationId, setActiveLibraryId])
+
+  const selectValue = activeLibraryId ?? NO_LIBRARY
 
   return (
     <CollapsibleSection title="Options" icon={Sliders} defaultOpen>
@@ -96,67 +94,62 @@ export function OptionsSection() {
           />
         </div>
 
-        {/* Library selector — inline dropdown (not absolute, avoids overflow clip) */}
-        <div ref={libRef}>
-          <button
-            onClick={() => !isBusy && setLibOpen(!libOpen)}
-            disabled={isBusy}
+        {/* Library selector — Radix Select, same pattern as ModelSelector */}
+        <Select value={selectValue} onValueChange={handleLibraryChange} disabled={isBusy}>
+          <SelectTrigger
+            size="sm"
             className={cn(
-              'flex w-full items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-1.5',
+              'h-auto w-full gap-2 rounded-lg border border-border/60 bg-card px-3 py-1.5',
               'text-sm transition-colors',
-              !isBusy ? 'hover:bg-accent/50 cursor-pointer' : 'opacity-50 cursor-not-allowed',
+              'hover:bg-accent/50',
+              'focus-visible:ring-1 focus-visible:ring-ring/30',
+              'shadow-none',
               activeLibrary && 'border-primary/30'
             )}
           >
             {activeLibrary ? (
-              <>
-                <span className="shrink-0">{activeLibrary.icon || '📚'}</span>
-                <span className="flex-1 text-left truncate text-foreground/80">{activeLibrary.name}</span>
-              </>
+              <span className="shrink-0">{activeLibrary.icon || '📚'}</span>
             ) : (
-              <>
-                <Library className="size-4 shrink-0 text-muted-foreground/50" />
-                <span className="flex-1 text-left text-muted-foreground/50">Aucun referentiel</span>
-              </>
+              <Library className="size-4 shrink-0 text-muted-foreground/50" />
             )}
-          </button>
+            <SelectValue>
+              <span className={cn('truncate text-sm', activeLibrary ? 'text-foreground/80' : 'text-muted-foreground/50')}>
+                {activeLibrary ? activeLibrary.name : 'Aucun referentiel'}
+              </span>
+            </SelectValue>
+          </SelectTrigger>
 
-          {/* Inline dropdown — pushes content down, no clipping */}
-          {libOpen && (
-            <div className="mt-1 rounded-lg border border-border/60 bg-popover py-1 shadow-md max-h-[200px] overflow-y-auto">
-              {/* Reset option */}
-              <button
-                onClick={() => { handleDetachLib(); setLibOpen(false) }}
-                className={cn(
-                  'flex w-full items-center gap-2 px-3 py-1.5 text-sm transition-colors hover:bg-accent/50',
-                  !activeLibraryId && 'bg-accent/30'
-                )}
-              >
-                <Library className="size-4 shrink-0 text-muted-foreground/50" />
+          <SelectContent
+            position="popper"
+            side="bottom"
+            align="start"
+            sideOffset={4}
+            className={cn(
+              'min-w-[200px] max-w-[280px]',
+              'border-border/50 bg-popover/95 backdrop-blur-xl',
+              'shadow-lg shadow-black/10 dark:shadow-black/30'
+            )}
+          >
+            <SelectItem value={NO_LIBRARY}>
+              <span className="flex items-center gap-2">
+                <Library className="size-4 text-muted-foreground/50" />
                 <span className="text-muted-foreground">Aucun referentiel</span>
-              </button>
+              </span>
+            </SelectItem>
 
-              {readyLibraries.length > 0 && (
-                <div className="my-1 border-t border-border/40" />
-              )}
+            {readyLibraries.length > 0 && <SelectSeparator />}
 
-              {readyLibraries.map((lib) => (
-                <button
-                  key={lib.id}
-                  onClick={() => handleSelectLib(lib)}
-                  className={cn(
-                    'flex w-full items-center gap-2 px-3 py-1.5 text-sm transition-colors hover:bg-accent/50',
-                    activeLibraryId === lib.id && 'bg-accent/30'
-                  )}
-                >
+            {readyLibraries.map((lib) => (
+              <SelectItem key={lib.id} value={lib.id}>
+                <span className="flex items-center gap-2">
                   <span className="shrink-0">{lib.icon || '📚'}</span>
-                  <span className="flex-1 truncate text-left">{lib.name}</span>
+                  <span className="truncate">{lib.name}</span>
                   <span className="text-[10px] text-muted-foreground/40">{lib.sourcesCount} src</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {/* YOLO toggle */}
         {activeConversationId && (
