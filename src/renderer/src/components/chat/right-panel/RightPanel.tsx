@@ -13,9 +13,9 @@ export function RightPanel({ onPromptInsert, inputContent, onOptimizedPrompt }: 
   return (
     <div className="flex h-full w-[260px] shrink-0 flex-col gap-3 border-l border-border/40 bg-background overflow-y-auto p-3">
       <ParamsSection />
-      <OptionsSection onPromptInsert={onPromptInsert} />
+      <OptionsSection />
       <McpSection />
-      <ToolsSection inputContent={inputContent} onOptimizedPrompt={onOptimizedPrompt} />
+      <ToolsSection inputContent={inputContent} onOptimizedPrompt={onOptimizedPrompt} onPromptInsert={onPromptInsert} />
     </div>
   )
 }

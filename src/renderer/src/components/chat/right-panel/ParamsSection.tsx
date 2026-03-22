@@ -1,8 +1,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react'
-import { Settings, Brain, Search } from 'lucide-react'
+import { Settings, Brain } from 'lucide-react'
 import { ModelSelector } from '@/components/chat/ModelSelector'
 import { RoleSelector } from '@/components/roles/RoleSelector'
-import { Switch } from '@/components/ui/switch'
 import { useContextWindow } from '@/hooks/useContextWindow'
 import { useMessagesStore } from '@/stores/messages.store'
 import { useConversationsStore } from '@/stores/conversations.store'
@@ -31,8 +30,6 @@ export function ParamsSection() {
   const isStreaming = useUiStore((s) => s.isStreaming)
   const thinkingEffort = useSettingsStore((s) => s.thinkingEffort)
   const setThinkingEffort = useSettingsStore((s) => s.setThinkingEffort)
-  const searchEnabled = useSettingsStore((s) => s.searchEnabled) ?? false
-  const setSearchEnabled = useSettingsStore((s) => s.setSearchEnabled)
 
   const [thinkingOpen, setThinkingOpen] = useState(false)
   const thinkingRef = useRef<HTMLDivElement>(null)
@@ -129,19 +126,6 @@ export function ParamsSection() {
 
         <div className="[&_button]:w-full [&_button]:max-w-none [&_button]:h-auto [&_button]:rounded-lg [&_button]:py-1.5 [&_button]:px-3 [&_button]:text-sm [&_button_svg:first-child]:size-4">
           <RoleSelector disabled={isBusy || isRoleLocked} />
-        </div>
-
-        {/* Web Search toggle */}
-        <div className="flex items-center justify-between gap-2 px-1">
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Search className="size-4" />
-            Recherche web
-          </label>
-          <Switch
-            checked={searchEnabled}
-            onCheckedChange={setSearchEnabled}
-            disabled={isBusy}
-          />
         </div>
 
         {/* Token count & cost */}

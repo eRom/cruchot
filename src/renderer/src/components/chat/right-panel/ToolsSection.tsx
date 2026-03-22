@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Wrench, Send, FileText, Sparkles, GitFork } from 'lucide-react'
 import { CollapsibleSection } from './CollapsibleSection'
+import { PromptPicker } from '@/components/chat/PromptPicker'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useUiStore } from '@/stores/ui.store'
@@ -14,9 +15,10 @@ import { toast } from 'sonner'
 interface ToolsSectionProps {
   inputContent: string
   onOptimizedPrompt: (text: string) => void
+  onPromptInsert: (text: string) => void
 }
 
-export function ToolsSection({ inputContent, onOptimizedPrompt }: ToolsSectionProps) {
+export function ToolsSection({ inputContent, onOptimizedPrompt, onPromptInsert }: ToolsSectionProps) {
   const isStreaming = useUiStore((s) => s.isStreaming)
   const activeConversationId = useConversationsStore((s) => s.activeConversationId)
   const addConversation = useConversationsStore((s) => s.addConversation)
@@ -113,7 +115,14 @@ export function ToolsSection({ inputContent, onOptimizedPrompt }: ToolsSectionPr
 
   return (
     <CollapsibleSection title="Outils" icon={Wrench} defaultOpen>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="flex flex-col gap-2.5">
+        {/* Prompt picker — full-width */}
+        <div className="[&_button]:w-full [&_button]:max-w-none [&_button]:h-auto [&_button]:rounded-lg [&_button]:py-1.5 [&_button]:px-3 [&_button]:text-sm [&_button]:justify-start [&_button]:gap-2">
+          <PromptPicker onInsert={onPromptInsert} disabled={isBusy} />
+        </div>
+
+        {/* Action buttons grid */}
+        <div className="grid grid-cols-2 gap-2">
         {/* Remote */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -181,6 +190,7 @@ export function ToolsSection({ inputContent, onOptimizedPrompt }: ToolsSectionPr
           </TooltipTrigger>
           <TooltipContent side="top">Dupliquer la conversation</TooltipContent>
         </Tooltip>
+        </div>
       </div>
     </CollapsibleSection>
   )
