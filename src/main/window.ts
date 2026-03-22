@@ -47,7 +47,9 @@ export function createMainWindow(): BrowserWindow {
       }
 
       if (TRUSTED_DOMAINS.has(parsed.hostname)) {
-        shell.openExternal(url)
+        // Reconstruct URL from parsed components to prevent URL manipulation
+        const safeUrl = `${parsed.protocol}//${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}`
+        shell.openExternal(safeUrl)
       } else {
         // Ask confirmation for untrusted domains
         dialog.showMessageBox(win, {
