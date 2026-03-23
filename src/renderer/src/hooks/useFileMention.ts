@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import type { FileNode } from '../../../preload/types'
 
-// ── Blocked patterns (mirror workspace-tools.ts) ─────────────
+// ── Blocked patterns (mirror conversation-tools.ts) ─────────────
 const BLOCKED_SEGMENTS = new Set([
   'node_modules', '.git', 'dist', 'build', '.next', '__pycache__',
   '.cache', '.venv', 'venv', '.tox', '.mypy_cache', '.pytest_cache',

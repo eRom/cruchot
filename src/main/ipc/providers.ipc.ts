@@ -83,7 +83,7 @@ export function registerProvidersIpc(): void {
         supportsImages: false,
         supportsStreaming: true,
         supportsThinking: false,
-        supportsYolo: false
+
       }))
       allModels = [...allModels, ...mapped]
     }
@@ -104,7 +104,7 @@ export function registerProvidersIpc(): void {
           supportsImages: false,
           supportsStreaming: true,
           supportsThinking: false,
-        supportsYolo: false
+
         }))
         allModels = [...allModels, ...dynamicModels]
       } catch {
@@ -128,7 +128,7 @@ export function registerProvidersIpc(): void {
           supportsImages: false,
           supportsStreaming: true,
           supportsThinking: false,
-        supportsYolo: false
+
         }))
         allModels = [...allModels, ...dynamicModels]
       } catch {
@@ -223,7 +223,7 @@ export function registerProvidersIpc(): void {
         supportsImages: false,
         supportsStreaming: true,
         supportsThinking: false,
-        supportsYolo: false
+
       }))
     }
 
@@ -241,7 +241,7 @@ export function registerProvidersIpc(): void {
         supportsImages: false,
         supportsStreaming: true,
         supportsThinking: false,
-        supportsYolo: false
+
       }))
     }
 
@@ -294,7 +294,7 @@ export function registerProvidersIpc(): void {
             supportsImages: false,
             supportsStreaming: true,
             supportsThinking: false,
-        supportsYolo: false
+
           }))
         }
       } catch {
@@ -321,7 +321,7 @@ export function registerProvidersIpc(): void {
             supportsImages: false,
             supportsStreaming: true,
             supportsThinking: false,
-        supportsYolo: false
+
           }))
         }
       } catch {

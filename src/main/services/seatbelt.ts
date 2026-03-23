@@ -1,48 +1,59 @@
-import { exec, spawn, type ExecOptions } from 'child_process'
-import { promisify } from 'util'
+import { spawn, type ExecOptions } from 'child_process'
 import { existsSync, writeFileSync, unlinkSync, readdirSync } from 'fs'
 import { join } from 'path'
-import { sandboxService } from './sandbox.service'
-
-const execAsync = promisify(exec)
 
 const SANDBOX_EXEC_PATH = '/usr/bin/sandbox-exec'
 
-// Minimal blocklist for YOLO bash — blocks host-escape and injection patterns
-// Less restrictive than workspace-tools (YOLO is opt-in), but blocks critical vectors
-const YOLO_BLOCKED_PATTERNS: RegExp[] = [
-  /[\r\n]/,                        // Newline injection (multi-command via newline)
-  /`[^`]*`/,                       // Backtick command substitution
-  /\$\([^)]*\)/,                   // $() command substitution
-  /<<[\s]*[A-Za-z_]/,              // Heredoc injection
-  /;\s*alias\s/,                   // Alias injection
-  /;\s*source\s/,                  // Source injection
-  /\bsudo\b/,                      // Privilege escalation
-  /\bsu\s+-?\s/,                   // su escalation
-  /\bchmod\s+[0-7]*[sS]/,         // setuid/setgid
-  /\b(pkill|killall)\s.*cruchot/i, // Kill the app itself
-  />\s*\/dev\/sd[a-z]/,            // Write to block devices
-  /\|\s*dd\b/,                     // Pipe to dd (disk write)
-]
-
-export function isYoloCommandAllowed(command: string): { allowed: boolean; reason?: string } {
-  for (const pattern of YOLO_BLOCKED_PATTERNS) {
-    if (pattern.test(command)) {
-      return { allowed: false, reason: `Blocked pattern: ${pattern.source}` }
-    }
-  }
-  return { allowed: true }
-}
-
 export function isSeatbeltAvailable(): boolean {
   return process.platform === 'darwin' && existsSync(SANDBOX_EXEC_PATH)
+}
+
+function generateSeatbeltProfile(sandboxDir: string): string {
+  const home = process.env.HOME || '/Users/unknown'
+  return `(version 1)
+(deny default)
+(allow process*)
+(allow signal)
+(allow sysctl*)
+(allow mach*)
+(allow ipc*)
+(allow network*)
+(allow system*)
+
+;; Allow read/write in sandbox directory
+(allow file-read* file-write* (subpath "${sandboxDir}"))
+
+;; Allow read/write in temp
+(allow file-read* file-write* (subpath "/tmp"))
+(allow file-read* file-write* (subpath "/private/tmp"))
+
+;; Allow read system-wide
+(allow file-read* (subpath "/usr"))
+(allow file-read* (subpath "/bin"))
+(allow file-read* (subpath "/sbin"))
+(allow file-read* (subpath "/opt"))
+(allow file-read* (subpath "/Library"))
+(allow file-read* (subpath "/System"))
+(allow file-read* (subpath "/dev"))
+(allow file-read* (subpath "/private/var"))
+(allow file-read* (subpath "/private/etc"))
+(allow file-read* (subpath "/etc"))
+(allow file-read* (subpath "/var"))
+
+;; Allow read home (for configs, nvm, etc.)
+(allow file-read* (subpath "${home}"))
+
+;; Allow write to home .npm, .cache, .nvm
+(allow file-write* (subpath "${home}/.npm"))
+(allow file-write* (subpath "${home}/.cache"))
+(allow file-write* (subpath "${home}/.nvm"))
+`
 }
 
 export interface ExecSandboxedOptions {
   timeout?: number   // ms, 0 = no timeout (for servers)
   maxBuffer?: number // bytes, default 100KB
   cwd?: string
-  sessionId: string
 }
 
 export interface ExecSandboxedResult {
@@ -55,7 +66,7 @@ export interface ExecSandboxedResult {
 export async function execSandboxed(
   command: string,
   sandboxDir: string,
-  opts: ExecSandboxedOptions
+  opts: ExecSandboxedOptions = {}
 ): Promise<ExecSandboxedResult> {
   const timeout = opts.timeout ?? 30_000
   const maxBuffer = opts.maxBuffer ?? 100 * 1024 // 100KB
@@ -99,32 +110,23 @@ export async function execSandboxed(
     encoding: 'utf-8'
   }
 
-  // Validate command against blocklist (applies to all platforms)
-  const check = isYoloCommandAllowed(command)
-  if (!check.allowed) {
-    return { stdout: '', stderr: `Command blocked: ${check.reason}`, exitCode: 1 }
-  }
-
   if (isSeatbeltAvailable()) {
-    const profile = sandboxService.generateSeatbeltProfile(sandboxDir)
+    const profile = generateSeatbeltProfile(sandboxDir)
     // Write profile to temp file to avoid shell injection via inline -p
     const profilePath = join('/tmp', `cruchot-sb-${crypto.randomUUID()}.sb`)
     writeFileSync(profilePath, profile, 'utf-8')
 
     try {
-      // Use spawn with argument array to avoid shell injection via command string
-      const result = await spawnAsync(
+      return await spawnAsync(
         SANDBOX_EXEC_PATH,
         ['-f', profilePath, '/bin/bash', '-c', command],
         execOptions
       )
-      return result
     } finally {
       try { unlinkSync(profilePath) } catch { /* cleanup best-effort */ }
     }
   } else {
     // Fallback: exec without Seatbelt (Windows, Linux, macOS without sandbox-exec)
-    // Uses spawn to avoid shell injection — command is passed as argument to bash -c
     const shell = process.platform === 'win32' ? 'cmd.exe' : '/bin/bash'
     const args = process.platform === 'win32' ? ['/c', command] : ['-c', command]
     return spawnAsync(shell, args, execOptions)

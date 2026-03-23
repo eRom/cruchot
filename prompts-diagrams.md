@@ -13,19 +13,18 @@ Architecture à 3 couches :
 
 2. **Preload (contextBridge)** — ~140 méthodes typées exposées via `window.api`, jamais ipcRenderer directement. Callbacks nettoyés via removeAllListeners.
 
-3. **Main (Node.js)** — Validation Zod sur tous les IPC handlers. Clés API chiffrées via safeStorage (Keychain macOS). Settings protégés par whitelist de clés autorisées (ALLOWED_SETTING_KEYS) + validation longueur 10K max. Workspace tools (bash) avec env minimal isolé (PATH restreint, HOME=workspace, TMPDIR=os.tmpdir(), pas d'héritage process.env) et blocklist de commandes (~36 patterns, dont 6 anti-évasion shell : backticks, $(), source/dot-script en position commande, séquences hex, ANSI-C quoting) + writeFile limité à 5MB (Zod .max). MCP servers : env minimal stdio (PATH/HOME/TMPDIR/LANG/SHELL/USER — plus d'héritage process.env complet), env vars custom chiffrées, headers HTTP masqués du renderer. Git : env immutable GIT_BASE_ENV (Readonly) + getEnv() construit par appel (pas de mutation globale entre instances), HOME=process.env.HOME (plus rootPath — empêche l'injection .gitconfig), GIT_CONFIG_NOSYSTEM=1 (bloque la config système). Git IPC : validateGitPaths() sur getDiff, stageFiles ET unstageFiles (path traversal : rejet chemins absolus, "..", resolve+startsWith). files:read confiné via isPathAllowed() (userData + workspace uniquement). files:readText pour le drag & drop (chemin absolu, whitelist extensions texte/code, DANGEROUS_EXTENSIONS bloquées, taille max 500KB, realpathSync anti-symlink). Path traversal protection (path.resolve + startsWith, path segments via normalize+sep cross-platform). Fichiers sensibles bloqués (SENSITIVE_PATTERNS case-insensitive). Custom protocol local-image:// avec allowlist de répertoires + fs.realpathSync() anti-symlink escape. shell.openExternal avec confirmation dialog pour domaines non-trusted. Workspace open : 2 niveaux de protection — HARD_BLOCKED_ROOTS (/, /etc, /usr, /System, /Library, /var, /bin, /sbin, /tmp, /private/*, /opt, /cores, /dev, /proc, /sys → bloqués définitivement) + SENSITIVE_ROOTS (/Applications, /Volumes, /Users → dialog natif showMessageBox avec avertissement explicite, l'utilisateur peut approuver). Factory reset + data cleanup : double confirmation (renderer "DELETE" + dialog.showMessageBox natif côté main pour les deux). Task executor : settings whitelist TASK_ALLOWED_KEYS (pas d'accès direct DB sans filtre). Recherche FTS5 : sanitizeFtsQuery() neutralise les opérateurs MATCH (AND/OR/NOT/NEAR, accolades, astérisques, préfixes colonne:) + résultats tronqués à 500 chars. XML context injection sanitisé (</file> et </workspace-context> échappés dans buildWorkspaceContextBlock). Chat fileContexts : sanitizeContent() sur path et contenu avant injection XML dans le system prompt. Remote Telegram/Web : comparaison pairing code via crypto.timingSafeEqual (anti timing side-channel), .slice(0,6).padEnd(6) pour normaliser la longueur des buffers. Remote Web : maxPayload 64KB sur WebSocketServer (anti-DoS), broadcastToAuthenticatedClients uniquement (plus de broadcast aux clients non-pairés), sanitize sur sendToolResult avant envoi. Export/import sécurisé : token d'instance 32 bytes généré au premier lancement, stocké chiffré via safeStorage (pas dans ALLOWED_SETTING_KEYS — inaccessible depuis le renderer via settings:get/set), export .mlx chiffré AES-256-GCM (IV 12 bytes unique par export, authTag 16 bytes pour intégrité), import avec validation Zod du payload déchiffré, import:bulk-with-token valide le token hex (64 chars, regex hex strict), taille fichier limitée à 200 MB (statSync avant lecture).
+3. **Main (Node.js)** — Validation Zod sur tous les IPC handlers. Clés API chiffrées via safeStorage (Keychain macOS). Settings protégés par whitelist de clés autorisées (ALLOWED_SETTING_KEYS) + validation longueur 10K max. Conversation tools (bash) libre — pas de blocklist applicative, sécurité via Seatbelt macOS (confinement au workspacePath de la conversation, profil SBPL dans fichier temp -f). writeFile limité à 5MB. readFile whitelist ~80 extensions texte. Toute conversation a un workspacePath (NOT NULL, default ~/.cruchot/sandbox/). MCP servers : env minimal stdio (PATH/HOME/TMPDIR/LANG/SHELL/USER — plus d'héritage process.env complet), env vars custom chiffrées, headers HTTP masqués du renderer. files:read confiné via isPathAllowed() (userData + workspace uniquement). files:readText pour le drag & drop (chemin absolu, whitelist extensions texte/code, DANGEROUS_EXTENSIONS bloquées, taille max 500KB, realpathSync anti-symlink). Path traversal protection (path.resolve + startsWith, path segments via normalize+sep cross-platform). Fichiers sensibles bloqués (SENSITIVE_PATTERNS case-insensitive). Custom protocol local-image:// avec allowlist de répertoires + fs.realpathSync() anti-symlink escape. shell.openExternal avec confirmation dialog pour domaines non-trusted. Workspace open : 2 niveaux de protection — HARD_BLOCKED_ROOTS (/, /etc, /usr, /System, /Library, /var, /bin, /sbin, /tmp, /private/*, /opt, /cores, /dev, /proc, /sys → bloqués définitivement) + SENSITIVE_ROOTS (/Applications, /Volumes, /Users → dialog natif showMessageBox avec avertissement explicite, l'utilisateur peut approuver). Factory reset + data cleanup : double confirmation (renderer "DELETE" + dialog.showMessageBox natif côté main pour les deux). Task executor : settings whitelist TASK_ALLOWED_KEYS (pas d'accès direct DB sans filtre). Recherche FTS5 : sanitizeFtsQuery() neutralise les opérateurs MATCH (AND/OR/NOT/NEAR, accolades, astérisques, préfixes colonne:) + résultats tronqués à 500 chars. XML context injection sanitisé (</file> et </workspace-context> échappés dans buildWorkspaceContextBlock). Chat fileContexts : sanitizeContent() sur path et contenu avant injection XML dans le system prompt. Remote Telegram/Web : comparaison pairing code via crypto.timingSafeEqual (anti timing side-channel), .slice(0,6).padEnd(6) pour normaliser la longueur des buffers. Remote Web : maxPayload 64KB sur WebSocketServer (anti-DoS), broadcastToAuthenticatedClients uniquement (plus de broadcast aux clients non-pairés), sanitize sur sendToolResult avant envoi. Export/import sécurisé : token d'instance 32 bytes généré au premier lancement, stocké chiffré via safeStorage (pas dans ALLOWED_SETTING_KEYS — inaccessible depuis le renderer via settings:get/set), export .mlx chiffré AES-256-GCM (IV 12 bytes unique par export, authTag 16 bytes pour intégrité), import avec validation Zod du payload déchiffré, import:bulk-with-token valide le token hex (64 chars, regex hex strict), taille fichier limitée à 200 MB (statSync avant lecture).
 
 Flux principaux à montrer :
 - Renderer → IPC (Zod validation) → Main → LLM APIs (clés chiffrées, dont OpenRouter passerelle multi-modèles)
 - Main → IPC streaming chunks → Renderer (DOMPurify)
 - Workspace open : resolvedRoot → HARD_BLOCKED_ROOTS (hard block) → SENSITIVE_ROOTS (dialog approbation) → stat isDirectory → WorkspaceService
-- Workspace : bash tool sandboxé → child_process (env minimal, timeout 30s, blocklist ~36 patterns dont anti-évasion shell)
+- Conversation tools : bash libre via Seatbelt macOS (confinement au workspacePath de la conversation), timeout 30s, fallback sans sandbox Windows/Linux
 - MCP : McpManagerService → subprocess stdio / HTTP (env minimal, vars chiffrées, headers masqués)
 - Attachments : path confiné (userData + workspace uniquement)
 - DB SQLite : WAL mode, prepared statements (Drizzle ORM), credentials jamais en clair, FTS5 queries sanitisées
 - Remote Telegram : triple verrou (token chiffré safeStorage + code pairing 6 chiffres crypto.timingSafeEqual 5min/5 tentatives + allowedUserId vérifié sur chaque message/callback), long polling HTTPS sortant (zéro port entrant), sanitization données sensibles avant envoi, tool approval gate (inline keyboards)
 - Remote Web : validateSessionToken() obligatoire sur TOUS les handlers WebSocket (get-conversations et cancel-stream inclus), écoute 127.0.0.1 uniquement, session tokens hashés SHA-256 en DB, maxPayload 64KB anti-DoS, broadcast réservé aux clients authentifiés, pairing timing-safe
-- Git : env immutable Readonly + construction par appel + HOME=user home (pas workspace) + GIT_CONFIG_NOSYSTEM + validateGitPaths() sur toutes les opérations fichier
 - Settings : whitelist ALLOWED_SETTING_KEYS (IPC) + TASK_ALLOWED_KEYS (task executor) — blocage lecture/écriture arbitraire en DB
 - MCP subprocess : env minimal (plus d'héritage process.env complet — clés API du shell parent ne fuitent plus)
 - Markdown : href validé (whitelist schémas https/http/mailto/#, bloque javascript: et data:)
@@ -59,7 +58,7 @@ Tables et relations :
 **roles** (id PK, name, description?, systemPrompt?, icon?, isBuiltin, category?, tags JSON, variables JSON, createdAt, updatedAt)
   ← conversations.role_id, scheduledTasks.role_id
 
-**conversations** (id PK, title, projectId FK→projects, modelId?, roleId FK→roles, activeLibraryId FK→libraries?, isFavorite BOOL DEFAULT false, isArena BOOL DEFAULT false, createdAt, updatedAt)
+**conversations** (id PK, title, projectId FK→projects, modelId?, roleId FK→roles, workspacePath TEXT NOT NULL DEFAULT '~/.cruchot/sandbox/', activeLibraryId FK→libraries?, isFavorite BOOL DEFAULT false, isArena BOOL DEFAULT false, createdAt, updatedAt)
   ← messages.conversation_id, images.conversation_id
 
 **messages** (id PK, conversationId FK→conversations, parentMessageId?, role [user|assistant|system], content, contentData JSON, modelId?, providerId?, tokensIn?, tokensOut?, cost?, responseTimeMs?, createdAt)
@@ -169,22 +168,17 @@ Catégories et fonctionnalités :
 - Galerie d'images avec aperçu
 - Stockage local sécurisé via protocole custom local-image://
 
-**Workspace Co-Work** (icône : dossier avec engrenage)
-- Arborescence de fichiers interactive (FileTree) avec indicateurs Git (M/A/D/?)
-- 4 outils IA : bash (terminal sandboxé), readFile, writeFile, listFiles
-- Le LLM lit, écrit et exécute des commandes dans le workspace
+**Dossier de travail** (icône : dossier avec engrenage)
+- Chaque conversation a un dossier de travail (workspacePath, jamais null, default ~/.cruchot/sandbox/)
+- 4 outils IA toujours actifs : bash (libre, sécurisé via Seatbelt macOS), readFile, writeFile, listFiles
+- Le LLM lit, écrit et exécute des commandes dans le dossier de travail
+- Arborescence de fichiers interactive (FileTree) dans le WorkspacePanel
 - Détection de changements en temps réel (Chokidar file watcher)
-- Propositions de modifications de fichiers avec approbation (FileOperationCard)
+- Sélecteur de dossier dans le Right Panel (section "Dossier de travail")
+- Nouvelle conversation hérite du workspacePath de son projet
 - Auto-injection des fichiers de contexte (CLAUDE.md, README.md, AGENTS.md, GEMINI.md)
 - @mention de fichiers : taper `@` dans le textarea pour autocomplete des fichiers workspace, le fichier sélectionné reste inline stylé en cyan (overlay transparent), navigation hiérarchique dans les dossiers, filtrage des fichiers sensibles/ignorés, contenu chargé automatiquement comme contexte au moment de l'envoi
 - Drag & drop de fichiers : glisser-déposer depuis le Finder directement dans la zone de saisie, overlay visuel pendant le drag, fichiers texte/code lus via IPC sécurisé (files:readText, whitelist extensions, 500KB max, DANGEROUS_EXTENSIONS bloquées), affichés comme pills FileReference cyan, mergés avec les fichiers workspace et @mentions au send avec déduplication, images/binaires redirigés vers le flux attachments existant
-
-**Intégration Git** (icône : branches/merge)
-- Branche courante, indicateur dirty/clean, compteur de fichiers modifiés
-- Vue Changes : fichiers staged/unstaged avec actions stage/unstage
-- Diff viewer coloré intégré (ajouts vert, suppressions rouge, hunks bleu)
-- AI Commit Message : génération one-shot du message via le LLM sélectionné
-- Commit direct depuis l'interface avec toast de confirmation
 
 **Remote Telegram** (icône : smartphone)
 - Contrôle à distance de l'app depuis un smartphone via Telegram Bot API
@@ -336,7 +330,7 @@ Catégories et fonctionnalités :
 - Token d'instance chiffré via safeStorage pour export/import .mlx (AES-256-GCM, IV unique par export)
 - Sandbox Electron (nodeIntegration: false, contextIsolation: true)
 - CSP stricte, DOMPurify, validation Zod sur tous les IPC
-- Bash tool sandboxé (env minimal, blocklist ~30 patterns)
+- Bash libre confiné par Seatbelt macOS (chaque conversation a son workspacePath)
 - Données 100% locales, zéro télémétrie
 
 Bandeau bas : **Stack technique** — Electron 35 · React 19 · TypeScript · Tailwind CSS 4 · SQLite · Drizzle ORM · Vercel AI SDK 6

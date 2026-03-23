@@ -364,36 +364,6 @@ const api: ElectronAPI = {
     ipcRenderer.removeAllListeners('mcp:status-changed')
   },
 
-  // ── Git ────────────────────────────────────────────────
-  gitGetInfo: () => ipcRenderer.invoke('git:getInfo'),
-
-  gitGetStatus: () => ipcRenderer.invoke('git:getStatus'),
-
-  gitGetDiff: (data: { path?: string; staged?: boolean }) =>
-    ipcRenderer.invoke('git:getDiff', data),
-
-  gitStageFiles: (data: { paths: string[] }) =>
-    ipcRenderer.invoke('git:stageFiles', data),
-
-  gitStageAll: () => ipcRenderer.invoke('git:stageAll'),
-
-  gitUnstageFiles: (data: { paths: string[] }) =>
-    ipcRenderer.invoke('git:unstageFiles', data),
-
-  gitCommit: (data: { message: string }) =>
-    ipcRenderer.invoke('git:commit', data),
-
-  gitGenerateCommitMessage: (data: { providerId: string; modelId: string }) =>
-    ipcRenderer.invoke('git:generateCommitMessage', data),
-
-  onGitChanged: (cb: (info: { isRepo: boolean; branch: string | null; isDirty: boolean; modifiedCount: number }) => void): void => {
-    ipcRenderer.on('git:changed', (_event, data) => cb(data))
-  },
-
-  offGitChanged: (): void => {
-    ipcRenderer.removeAllListeners('git:changed')
-  },
-
   // ── Remote (Telegram) ────────────────────────────────
   remoteConfigure: (token: string) => ipcRenderer.invoke('remote:configure', token),
 
@@ -527,24 +497,9 @@ const api: ElectronAPI = {
   bardaToggle: (id: string, isEnabled: boolean) => ipcRenderer.invoke('barda:toggle', { id, isEnabled }),
   bardaUninstall: (id: string) => ipcRenderer.invoke('barda:uninstall', { id }),
 
-  // ── Sandbox (YOLO mode) ──────────────────────────────
-  sandboxActivate: (conversationId: string, workspacePath?: string) =>
-    ipcRenderer.invoke('sandbox:activate', { conversationId, workspacePath }),
-
-  sandboxDeactivate: (sessionId: string, conversationId: string) =>
-    ipcRenderer.invoke('sandbox:deactivate', { sessionId, conversationId }),
-
-  sandboxStop: (sessionId: string) =>
-    ipcRenderer.invoke('sandbox:stop', { sessionId }),
-
-  sandboxGetStatus: (conversationId: string) =>
-    ipcRenderer.invoke('sandbox:getStatus', { conversationId }),
-
-  sandboxGetProcesses: (sessionId: string) =>
-    ipcRenderer.invoke('sandbox:getProcesses', { sessionId }),
-
-  sandboxOpenPreview: (target: string, sessionId: string) =>
-    ipcRenderer.invoke('sandbox:openPreview', { target, sessionId }),
+  // ── Conversations: Workspace ─────────────────────────
+  conversationSetWorkspacePath: (id: string, workspacePath: string) =>
+    ipcRenderer.invoke('conversations:setWorkspacePath', { id, workspacePath }),
 
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>

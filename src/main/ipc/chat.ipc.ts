@@ -8,11 +8,7 @@ import { classifyError } from '../llm/errors'
 import { buildThinkingProviderOptions } from '../llm/thinking'
 import { validateAttachment, processAttachments, buildContentParts, MAX_FILES_PER_MESSAGE, type AttachmentRef } from '../llm/attachments'
 import { parseFileOperations } from '../llm/file-operations'
-import { buildWorkspaceTools, buildWorkspaceContextBlock, WORKSPACE_TOOLS_PROMPT } from '../llm/workspace-tools'
-import { buildYoloTools } from '../llm/yolo-tools'
-import { buildYoloSystemPrompt } from '../llm/yolo-prompt'
-import { sandboxService } from '../services/sandbox.service'
-import { getActiveWorkspace, getActiveWorkspaceRoot } from './workspace.ipc'
+import { buildConversationTools, buildWorkspaceContextBlock, WORKSPACE_TOOLS_PROMPT } from '../llm/conversation-tools'
 import { mcpManagerService } from '../services/mcp-manager.service'
 import { telegramBotService } from '../services/telegram-bot.service'
 import { remoteServerService } from '../services/remote-server.service'
@@ -51,7 +47,6 @@ const sendMessageSchema = z.object({
     content: z.string().max(500_000),
     language: z.string().max(50)
   })).max(20).optional(),
-  hasWorkspace: z.boolean().optional(),
   searchEnabled: z.boolean().optional(),
   libraryId: z.string().optional()
 })
@@ -134,7 +129,6 @@ export interface HandleChatMessageParams {
   roleId?: string
   attachments?: AttachmentRef[]
   fileContexts?: Array<{ path: string; content: string; language: string }>
-  hasWorkspace?: boolean
   searchEnabled?: boolean
   source: 'desktop' | 'telegram' | 'websocket'
   window: BrowserWindow
@@ -144,7 +138,7 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
   const {
     conversationId, content, modelId, providerId, systemPrompt,
     temperature, maxTokens, topP, thinkingEffort, roleId,
-    attachments: attachmentRefs, fileContexts, hasWorkspace,
+    attachments: attachmentRefs, fileContexts,
     searchEnabled, source, window: win
   } = params
 
@@ -161,9 +155,17 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
   const startTime = Date.now()
 
   try {
+    // Load conversation to get workspace path
+    const conv = getConversation(conversationId)
+    const workspacePath = conv?.workspacePath ?? '~/.cruchot/sandbox/'
+    // Resolve ~ to home dir
+    const resolvedWorkspacePath = workspacePath.startsWith('~/')
+      ? workspacePath.replace('~/', `${process.env.HOME ?? '/tmp'}/`)
+      : workspacePath
+
     // Re-validate attachments (extension, size, existence, path confinement) in the main process
     const validatedRefs: AttachmentRef[] = []
-    const workspaceRoot = getActiveWorkspaceRoot()
+    const workspaceRoot = resolvedWorkspacePath
     if (attachmentRefs && attachmentRefs.length > 0) {
       for (const ref of attachmentRefs) {
         const result = validateAttachment(ref.path, workspaceRoot)
@@ -197,10 +199,6 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
     touchConversation(conversationId)
 
     // Auto-generate title from first message if title is still default
-    const conv = getConversation(conversationId)
-    const isYolo = conv?.isYolo === true
-    const sandboxDir = conv?.sandboxPath ?? null
-
     if (conv && (conv.title === 'Nouvelle conversation' || conv.title.startsWith('[Remote]'))) {
       const shortTitle = (source === 'telegram' ? '[R] ' : '') + content.slice(0, 35) + (content.length > 35 ? '...' : '')
       if (conv.title === 'Nouvelle conversation' || conv.title.startsWith('[Remote] Session')) {
@@ -301,14 +299,9 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       }
     }
 
-    // Build combined system prompt: YOLO + library-context + semantic memory + memory fragments + role prompt
+    // Build combined system prompt: library-context + semantic memory + memory fragments + role prompt
     const memoryBlock = buildMemoryBlock()
     let combinedSystemPrompt = ''
-
-    // YOLO system prompt first (if active)
-    if (isYolo && sandboxDir) {
-      combinedSystemPrompt = buildYoloSystemPrompt(sandboxDir)
-    }
 
     if (libraryContextBlock) {
       if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
@@ -379,14 +372,8 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       }
     }
 
-    // Build tools: YOLO tools OR workspace tools
-    const activeWorkspace = (!isYolo && hasWorkspace) ? getActiveWorkspace() : null
-    let workspaceTools: Record<string, unknown> = {}
-    if (isYolo && sandboxDir) {
-      workspaceTools = buildYoloTools(conv!.id, sandboxDir)
-    } else if (activeWorkspace) {
-      workspaceTools = buildWorkspaceTools(activeWorkspace)
-    }
+    // Build conversation tools (always available — every conversation has a workspace path)
+    const workspaceTools = buildConversationTools(resolvedWorkspacePath)
 
     // Build MCP tools (from connected MCP servers, scoped to project)
     let mcpTools: Record<string, unknown> = {}
@@ -443,18 +430,16 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
 
     const hasTools = Object.keys(tools).length > 0
 
-    // Inject workspace context + tools system prompt when workspace is active (NOT in YOLO mode)
-    if (activeWorkspace && !isYolo) {
-      const contextBlock = buildWorkspaceContextBlock(activeWorkspace.rootPath)
-      const workspacePrompt = contextBlock
-        ? contextBlock + '\n\n' + WORKSPACE_TOOLS_PROMPT
-        : WORKSPACE_TOOLS_PROMPT
+    // Inject workspace context + tools system prompt (always — every conversation has a workspace)
+    const contextBlock = buildWorkspaceContextBlock(resolvedWorkspacePath)
+    const workspacePrompt = contextBlock
+      ? contextBlock + '\n\n' + WORKSPACE_TOOLS_PROMPT
+      : WORKSPACE_TOOLS_PROMPT
 
-      if (aiMessages.length > 0 && aiMessages[0].role === 'system') {
-        aiMessages[0].content += '\n\n' + workspacePrompt
-      } else {
-        aiMessages.unshift({ role: 'system', content: workspacePrompt })
-      }
+    if (aiMessages.length > 0 && aiMessages[0].role === 'system') {
+      aiMessages[0].content += '\n\n' + workspacePrompt
+    } else {
+      aiMessages.unshift({ role: 'system', content: workspacePrompt })
     }
 
     // Inject search system prompt when search mode is enabled
