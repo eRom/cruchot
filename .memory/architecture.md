@@ -3,7 +3,7 @@
 
 ## Vue d'ensemble
 
-App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud, statistiques de couts, workspace unifie (chaque conversation a un dossier de travail), taches planifiees, integration MCP, memory fragments, memoire semantique (RAG local Qdrant), referentiels RAG custom (documents), Remote Telegram, Remote Web, export/import securise (.mlx), slash commands, @mention fichiers, prompt optimizer, drag & drop fichiers, conversations favorites, mode Arena (LLM vs LLM), **Bardas (Gestion de Brigade)** — packs thematiques importables, **Right Panel** — panneau lateral droit avec 6 sections (Parametres, Dossier de travail, Options, Outils, MCP, Remote). Zero serveur backend.
+App desktop locale de chat multi-LLM (Electron). 10 providers (8 cloud + 2 locaux), generation d'images, TTS cloud, statistiques de couts, taches planifiees, integration MCP, memory fragments, memoire semantique (RAG local Qdrant), referentiels RAG custom, Remote Telegram/Web, export/import .mlx, slash commands, @mention fichiers, prompt optimizer, drag & drop, conversations favorites, Arena (LLM vs LLM), Bardas (packs thematiques), conversation tools (bash Seatbelt + fichiers), Right Panel (6 sections). Zero serveur backend.
 
 ## Stack
 
@@ -28,7 +28,7 @@ src/
     ipc/                  # Handlers IPC par domaine
     commands/             # Builtin slash commands definitions
     llm/                  # Router AI SDK, cost-calculator, image gen, conversation-tools, errors, thinking, library-prompt
-    db/schema.ts          # 25 tables Drizzle (+workspacePath NOT NULL DEFAULT '~/.cruchot/sandbox/' sur conversations S44)
+    db/schema.ts          # 25 tables Drizzle
     db/queries/           # Queries par domaine (dont libraries.ts, arena.ts, bardas.ts)
     services/             # Credential, backup, workspace, file-watcher, tts, scheduler, task-executor, mcp-manager, telegram-bot, remote-server, qdrant-memory, qdrant-process, embedding, library, library-embedding, barda-parser, barda-import, seatbelt
   preload/
@@ -43,7 +43,7 @@ src/
 
 ## Navigation (ViewMode)
 
-`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings (10 tabs), images, roles, tasks, mcp, memory, commands, statistics, libraries, arena, brigade. **13 vues non-chat lazy-loaded via React.lazy() + Suspense** (S41). **Right Panel lazy-loaded dans ChatView** (S43)
+`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings, images, roles, tasks, mcp, memory, commands, statistics, libraries, arena, brigade. 13 vues non-chat lazy-loaded (React.lazy + Suspense). Right Panel lazy-loaded dans ChatView.
 
 ## Flux principal — Chat
 
@@ -60,57 +60,33 @@ InputZone → IPC "chat:send" → Main: streamText() → forward chunks IPC → 
 4. Role system prompt
 ```
 
-## Modules principaux
+## Conversation Tools (S44)
 
-- **MCP** : McpManagerService singleton, Map<serverId, MCPClient>, transport stdio/http/sse, prefixage `servername__toolname`, env vars chiffrees, scope par projet
-- **Memory Fragments** : injectes dans system prompt (`<user-memory>` XML), max 50 fragments, 2000 chars/fragment, drag & drop pour reordonner
-- **Remote Telegram** : TelegramBotService singleton, fetch() natif, triple securite (token chiffre + pairing + allowedUserId), conversation bridge, dual-forward, tool approval gate
-- **Remote Web** : RemoteServerService, WebSocket ws://, SPA standalone `src/remote-web/`, calque visuel desktop
-- **Summary** : generateText one-shot, transcript serialize, resultat → clipboard
-- **Slash Commands** : resolution 100% renderer, 8 builtins, autocomplete SlashCommandPicker, scope projet, variables $ARGS/$1-$N/$MODEL etc.
-- **@Mention Fichiers** : transparent overlay pattern (textarea invisible + overlay cyan), useFileMention hook, autocomplete FileMentionPopover, fichiers charges au send via workspaceReadFile, zero backend
-- **Memoire Semantique** : QdrantMemoryService singleton, Qdrant embedded (binaire v1.17), embeddings all-MiniLM-L6-v2 (384d ONNX via @huggingface/transformers + onnxruntime-node CPU), ingestion fire-and-forget, recall silencieux injecte dans system prompt (`<semantic-memory>` XML), UI MemoryExplorer dans settings, badge discret retire (operation silencieuse)
-- **Referentiels RAG Custom** : LibraryService singleton, import documents (PDF/DOCX/MD/code/CSV), dual embedding local (MiniLM 384d) ou Google (gemini-embedding-2-preview 768d), chunking adapte par type, collection Qdrant par referentiel (`library_{id}`), retrieval sticky par conversation (`activeLibraryId`), contexte injecte en premier (`<library-context>` XML), sources deterministes dans MessageItem, indicateur outil synthetique dans ToolCallBlock
-- **Conversation Tools** : 4 outils AI SDK unifies (`conversation-tools.ts`) toujours actifs — bash (libre via Seatbelt, pas de blocklist), readFile, writeFile, listFiles. Chaque conversation a un `workspacePath` (default `~/.cruchot/sandbox/`), Seatbelt confine au dossier. Nouvelle conversation herite du `workspacePath` de son projet
-- **Workspace Context** : `buildWorkspaceContextBlock()` auto-lit CLAUDE.md, README.md etc. → injecte dans system prompt
-- **Prompt Optimizer** : bouton Sparkles dans InputZone, `generateText()` one-shot pour reformuler/ameliorer le prompt avant envoi, handler IPC `prompt:optimize` (Zod)
-- **Drag & Drop Fichiers** : drop depuis le Finder dans InputZone, handler IPC `files:readText` (chemin absolu, whitelist extensions, 500KB max, DANGEROUS_EXTENSIONS), pills FileReference cyan, merge avec @mentions au send
-- **Conversations Favorites** : colonne `is_favorite` sur table `conversations`, toggle via icone etoile ambre dans sidebar, section "Favoris" en haut de ConversationList avec separateur
-- **Arena (LLM vs LLM)** : mode comparatif cote a cote, 2 modeles streamant en parallele (2 canaux IPC `arena:chunk:left`/`right`), separateur VS anime, vote persiste en DB (`arena_matches`), metriques comparees (tokens, cout, temps), multi-rounds, conversations marquees `is_arena`, store Zustand dedie, simplifie (pas de tools/MCP/mentions)
-- **Bardas (Gestion de Brigade)** : fichiers Markdown (.md) avec frontmatter YAML contenant roles, slash commands, prompts, memory fragments, definitions libraries, serveurs MCP sous un namespace unique. Import atomique (transaction SQLite), preview avant import, rapport post-import, toggle ON/OFF global, desinstallation complete. Namespace propage sur 6 tables existantes (colonne `namespace`). Filtre namespace dans 6 vues (roles, commands, prompts, memory, libraries, MCP). Vue BrigadeView (grille de BardaCards). 3 bardas exemples (ecrivain, dev-react, philosophe)
+- 4 tools AI SDK toujours actifs : bash (Seatbelt macOS, libre — pas de blocklist applicative), readFile, writeFile, listFiles
+- `workspacePath` NOT NULL DEFAULT `~/.cruchot/sandbox/` sur chaque conversation
+- Heritage projet : nouvelle conversation herite workspacePath de son projet
+- Bash confine au workspacePath via profil Seatbelt
+
 ## Donnees
 
-- SQLite WAL + FTS5, 25 tables (+ `bardas` S41, + colonne `namespace` sur 6 tables S41, + `workspacePath` NOT NULL DEFAULT `~/.cruchot/sandbox/` sur conversations S44), **23 index de performance**
-- Qdrant vector DB embedded (stockage `userData/qdrant-storage/`, config YAML `userData/qdrant-config/`)
-- Collections Qdrant : `conversations_memory` (memoire semantique) + `library_{id}` (referentiels RAG)
+- SQLite WAL + FTS5, 25 tables, ~24 index de performance
+- Qdrant vector DB embedded (`userData/qdrant-storage/`)
+- Collections Qdrant : `conversations_memory` + `library_{id}`
 - Cles API chiffrees via safeStorage (Keychain macOS)
 - Settings UI via Zustand persist (localStorage)
-- Images/attachments sur filesystem, servis via `local-image://` protocol
+- Images/attachments sur filesystem via `local-image://` protocol
 
-## Securite (resume — score 97/100 apres audit S36)
+## Securite (score 97/100 apres audit S36)
 
-- Renderer : sandbox true, CSP stricte, DOMPurify sur Shiki + Mermaid, `will-navigate` guard
-- IPC : Zod validation partout (y compris prompts:search, workspace:getTree), settings whitelist `ALLOWED_SETTING_KEYS`
-- Files : `isPathAllowed()` + `realpathSync()`, SENSITIVE_PATTERNS, extension blocklist (23 ext dangereuses), filename path traversal check
-- Conversation tools : bash libre (pas de blocklist), securite via Seatbelt macOS (confinement au workspacePath de la conversation), timeout 30s
-- MCP : env minimal stdio, env vars chiffrees, headers masques du renderer
-- Remote : triple verrou Telegram, `validateSessionToken()` sur tous handlers WS, ecoute 127.0.0.1, CF token via env var (pas CLI), message length validation 100K
-- Remote-web CSP : `connect-src` restreint au reseau local (localhost, 127.0.0.1, 192.168.*, 10.*)
-- Workspace : `deleteFile` bloque `.git/`/`node_modules/` via `isIgnored()`, root path resolu (symlinks)
-- Library RAG : Zod validation IPC, `validateSourcePath()` (BLOCKED_SOURCE_ROOTS + SENSITIVE_FILE_PATTERNS + realpathSync), fichiers copies dans userData, XML sanitise, collections Qdrant isolees, cleanup FK cascade
-- Sourcemaps : desactives partout (main, preload, renderer, remote-web, tsconfig)
-- Factory reset : double confirmation (renderer + dialog natif main)
-- Bulk import : size check 200MB avant readFileSync
-- Distribution : `forceCodeSigning: true`, macOS hardenedRuntime + notarize
-
-## Distribution
-
-- electron-builder v26.8.1, targets macOS DMG + ZIP (universal)
-- Auto-updater electron-updater, publish GitHub Releases (`eRom/cruchot`)
-- CI/CD : `release.yml` (tag v*), `ci.yml` (typecheck renderer+main + audit + lint + build)
-- Build : esbuild (main) + esbuild (renderer, defaut Vite), manualChunks vendor splitting (S37)
-- `forceCodeSigning: true` — builds echouent sans certificat
-- Pas encore de certificat Apple Developer ID — ad-hoc pour dev local
+- Renderer : sandbox true, CSP stricte, DOMPurify, `will-navigate` guard
+- IPC : Zod validation partout, settings whitelist
+- Files : `isPathAllowed()` + `realpathSync()`, SENSITIVE_PATTERNS, 23 ext dangereuses
+- Bash : Seatbelt macOS confine au workspacePath (S44)
+- MCP : env minimal stdio, env vars chiffrees
+- Remote : triple verrou Telegram, `validateSessionToken()` WS, ecoute 127.0.0.1
+- Library RAG : `validateSourcePath()` (BLOCKED_SOURCE_ROOTS + SENSITIVE_FILE_PATTERNS)
+- Sourcemaps : desactives partout
+- Distribution : macOS ad-hoc signing (pas de certificat Apple)
 
 ## GitHub
 
