@@ -687,7 +687,6 @@ export function InputZone({
         roleId: roleIdForPersist,
         attachments: attachmentRefsForIpc.length > 0 ? attachmentRefsForIpc : undefined,
         fileContexts: fileContexts && fileContexts.length > 0 ? fileContexts : undefined,
-        hasWorkspace: workspaceIsOpen || undefined,
         searchEnabled: searchEnabled || undefined,
         libraryId: activeLibraryId || undefined
       })

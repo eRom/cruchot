@@ -24,7 +24,6 @@ export interface Model {
   supportsImages: boolean
   supportsStreaming: boolean
   supportsThinking: boolean
-  supportsYolo?: boolean
 }
 
 interface ProvidersState {

@@ -23,7 +23,6 @@ export interface SendMessagePayload {
   roleId?: string
   attachments?: AttachmentRef[]
   fileContexts?: WorkspaceFileContext[]
-  hasWorkspace?: boolean
   searchEnabled?: boolean
   libraryId?: string
 }
@@ -118,7 +117,6 @@ export interface ModelInfo {
   supportsImages: boolean
   supportsStreaming: boolean
   supportsThinking: boolean
-  supportsYolo?: boolean
 }
 
 export interface ConversationInfo {
@@ -347,22 +345,6 @@ export interface ImageRecord {
   path: string
   size: number
   createdAt: Date
-}
-
-// ── Git ─────────────────────────────────────────────────────
-export type GitFileStatusCode = 'M' | 'A' | 'D' | 'R' | '?' | 'C' | 'U' | ' '
-
-export interface GitFileStatus {
-  path: string
-  staging: GitFileStatusCode
-  working: GitFileStatusCode
-}
-
-export interface GitInfo {
-  isRepo: boolean
-  branch: string | null
-  isDirty: boolean
-  modifiedCount: number
 }
 
 // ── Memory Fragments ─────────────────────────────────────────
@@ -944,18 +926,6 @@ export interface ElectronAPI {
   onMcpStatusChanged: (callback: (event: McpStatusEvent) => void) => void
   offMcpStatusChanged: () => void
 
-  // Git
-  gitGetInfo: () => Promise<GitInfo | null>
-  gitGetStatus: () => Promise<GitFileStatus[]>
-  gitGetDiff: (data: { path?: string; staged?: boolean }) => Promise<string>
-  gitStageFiles: (data: { paths: string[] }) => Promise<void>
-  gitStageAll: () => Promise<void>
-  gitUnstageFiles: (data: { paths: string[] }) => Promise<void>
-  gitCommit: (data: { message: string }) => Promise<{ hash: string }>
-  gitGenerateCommitMessage: (data: { providerId: string; modelId: string }) => Promise<{ message: string; cost: number }>
-  onGitChanged: (callback: (info: GitInfo) => void) => void
-  offGitChanged: () => void
-
   // Remote (Telegram)
   remoteConfigure: (token: string) => Promise<{ botUsername: string }>
   remoteStart: (conversationId?: string) => Promise<{ pairingCode: string }>
@@ -1048,13 +1018,8 @@ export interface ElectronAPI {
   bardaToggle: (id: string, isEnabled: boolean) => Promise<void>
   bardaUninstall: (id: string) => Promise<void>
 
-  // Sandbox (YOLO mode)
-  sandboxActivate: (conversationId: string, workspacePath?: string) => Promise<{ sessionId: string; sandboxPath: string }>
-  sandboxDeactivate: (sessionId: string, conversationId: string) => Promise<void>
-  sandboxStop: (sessionId: string) => Promise<void>
-  sandboxGetStatus: (conversationId: string) => Promise<SandboxInfo>
-  sandboxGetProcesses: (sessionId: string) => Promise<SandboxProcessInfo[]>
-  sandboxOpenPreview: (target: string, sessionId: string) => Promise<void>
+  // Conversations: Workspace
+  conversationSetWorkspacePath: (id: string, workspacePath: string) => Promise<void>
 
   // Settings
   getSetting: (key: string) => Promise<string | null>
@@ -1122,17 +1087,3 @@ export interface BardaParseError {
   message: string
 }
 
-// ── Sandbox (YOLO mode) ─────────────────────────────────────────
-export interface SandboxInfo {
-  sessionId: string
-  sandboxPath: string
-  isActive: boolean
-}
-
-export interface SandboxProcessInfo {
-  pid: number
-  command: string
-  type: 'script' | 'server' | 'install'
-  startedAt: string  // ISO string (serialise via IPC)
-  port?: number
-}

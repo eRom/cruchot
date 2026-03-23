@@ -1,16 +1,15 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-22 (S43)
+> Derniere mise a jour : 2026-03-23 (S44)
 
 ## Main process
 
 | Fichier | Role |
 |---------|------|
 | `src/main/index.ts` | Lifecycle, auto-updater, protocol `local-image://` |
-| `src/main/ipc/chat.ipc.ts` | Chat handler + `handleChatMessage()` exportee, streamText, dual-forward, library retrieval + synthetic tool chunks |
+| `src/main/ipc/chat.ipc.ts` | Chat handler + `handleChatMessage()` exportee, streamText, conversation-tools (toujours actifs), library retrieval + synthetic tool chunks |
 | `src/main/ipc/index.ts` | Registre IPC, `ALLOWED_SETTING_KEYS` whitelist |
 | `src/main/ipc/conversations.ipc.ts` | CRUD conversations (Zod) + `conversations:toggleFavorite` |
-| `src/main/ipc/workspace.ipc.ts` | 8 handlers workspace + couplage Git |
-| `src/main/ipc/git.ipc.ts` | 8 handlers Git + push `git:changed` |
+| `src/main/ipc/workspace.ipc.ts` | 8 handlers workspace |
 | `src/main/ipc/mcp.ipc.ts` | 12 handlers MCP (Zod) |
 | `src/main/ipc/remote.ipc.ts` | 8 handlers Remote Telegram |
 | `src/main/ipc/remote-server.ipc.ts` | Handlers Remote Web |
@@ -22,7 +21,6 @@
 | `src/main/ipc/prompt-optimizer.ipc.ts` | Handler `prompt:optimize` — generateText one-shot pour ameliorer un prompt (Zod) |
 | `src/main/ipc/arena.ipc.ts` | 5 handlers Arena (send, cancel, vote, getMatches, getStats) + dual streaming parallele |
 | `src/main/ipc/barda.ipc.ts` | 5 handlers Barda (import, preview, list, toggle, uninstall) + path validation securisee |
-| `src/main/ipc/sandbox.ipc.ts` | 6 handlers YOLO sandbox (activate, deactivate, stop, getStatus, getProcesses, openPreview) + Zod + path confinement |
 | `src/main/ipc/statistics.ipc.ts` | 5 handlers stats |
 | `src/main/ipc/images.ipc.ts` | Generation images |
 | `src/main/ipc/roles.ipc.ts` | CRUD roles |
@@ -32,14 +30,12 @@
 | `src/main/llm/router.ts` | Routeur `getModel()` AI SDK |
 | `src/main/llm/registry.ts` | 11 providers, modeles text + image |
 | `src/main/llm/thinking.ts` | providerOptions par provider |
-| `src/main/llm/workspace-tools.ts` | 4 outils AI SDK + `buildWorkspaceContextBlock()` |
-| `src/main/llm/yolo-tools.ts` | 5 tools YOLO AI SDK v6 (bash, createFile, readFile, listFiles, openPreview) + validatePath sandbox |
-| `src/main/llm/yolo-prompt.ts` | System prompt YOLO plan-then-execute (3 phases) |
+| `src/main/llm/conversation-tools.ts` | 4 outils AI SDK unifies (bash libre via Seatbelt, readFile, writeFile, listFiles) toujours actifs, confines au workspacePath de la conversation |
 | `src/main/llm/library-prompt.ts` | Injection `<library-context>` XML dans system prompt, sanitisation |
 | `src/main/llm/errors.ts` | Classification erreurs |
 | `src/main/llm/cost-calculator.ts` | Table PRICING + calcul cout |
 | `src/main/llm/image.ts` | Generation images multi-provider |
-| `src/main/db/schema.ts` | 25 tables Drizzle (+ bardas S41) |
+| `src/main/db/schema.ts` | 25 tables Drizzle (+ bardas S41, + workspacePath sur conversations S44) |
 | `src/main/db/queries/cleanup.ts` | Bulk delete, ordre FK strict (dont bardas, arena_matches, library_chunks → library_sources → libraries) |
 | `src/main/db/queries/bardas.ts` | CRUD bardas + deleteResourcesByNamespace (8 DELETE FK-strict) + countActiveFragments |
 | `src/main/db/queries/arena.ts` | CRUD arena_matches + stats agregees win/loss/tie par modele |
@@ -51,7 +47,6 @@
 | `src/main/services/mcp-manager.service.ts` | Singleton MCP lifecycle |
 | `src/main/services/telegram-bot.service.ts` | Singleton Remote Telegram (~550 lignes) |
 | `src/main/services/remote-server.service.ts` | Singleton Remote Web (~960 lignes) |
-| `src/main/services/git.service.ts` | Git standalone, execFile securise |
 | `src/main/services/workspace.service.ts` | Scan, read/write/delete, .coworkignore |
 | `src/main/services/file-watcher.service.ts` | Chokidar wrapper |
 | `src/main/services/credential.service.ts` | Wrapper safeStorage |
@@ -71,9 +66,7 @@
 | `src/main/services/bulk-import.service.ts` | Import .mlx, decrypt, Zod validation, size check 200MB |
 | `src/main/services/barda-parser.service.ts` | Parseur Markdown barda — frontmatter YAML + sections ## + ressources ### + MCP YAML fenced, validation stricte |
 | `src/main/services/barda-import.service.ts` | Import atomique barda — transaction SQLite, namespace propagation, MCP skip, rapport |
-| `src/main/services/sandbox.service.ts` | Singleton SandboxService — create/destroy sessions, profil Seatbelt SBPL, dossiers ~/cruchot/sandbox/ |
-| `src/main/services/process-manager.service.ts` | Singleton ProcessManagerService — track/kill process enfants, SIGTERM→SIGKILL grace, max 5/session |
-| `src/main/services/seatbelt.ts` | Wrapper sandbox-exec macOS (-f fichier temp) + fallback, env minimal, NVM auto-detect |
+| `src/main/services/seatbelt.ts` | Wrapper sandbox-exec macOS (-f fichier temp) + fallback, confine bash au workspacePath de chaque conversation, NVM auto-detect |
 
 ## Preload
 
@@ -89,11 +82,12 @@
 | `src/renderer/src/App.tsx` | Routing ViewMode (14 vues), 13 vues lazy-loaded (React.lazy + Suspense), shortcuts, onboarding |
 | `components/chat/ChatView.tsx` | Message list + RightPanel (lazy) + WorkspacePanel, library sync, auto open/close right panel |
 | `components/chat/InputZone.tsx` | Saisie simplifiee (Paperclip, PanelRight toggle, VoiceInput, Send), @mentions, slash commands, drag & drop, draftContent sync vers ui.store |
-| `components/chat/right-panel/RightPanel.tsx` | Assembleur 300px — 5 sections (Params, Options, MCP, Outils, Remote) |
+| `components/chat/right-panel/RightPanel.tsx` | Assembleur 300px — 6 sections (Params, Dossier de travail, Options, Outils, MCP, Remote) |
 | `components/chat/right-panel/ParamsSection.tsx` | ModelSelector, ThinkingSelector custom (4 niveaux), RoleSelector, tokens/cout |
-| `components/chat/right-panel/OptionsSection.tsx` | Web Search Switch, Library Radix Select (sticky), YoloToggle |
+| `components/chat/right-panel/WorkspaceSection.tsx` | Dossier de travail — affiche le workspacePath de la conversation, folder picker pour changer |
+| `components/chat/right-panel/OptionsSection.tsx` | Web Search Switch, Library Radix Select (sticky) |
 | `components/chat/right-panel/McpSection.tsx` | Liste serveurs MCP avec pastille status + Switch toggle |
-| `components/chat/right-panel/ToolsSection.tsx` | Grille 2x2 : PromptPicker, Resume, Ameliorer, Fork |
+| `components/chat/right-panel/ToolsSection.tsx` | Grille 1x4 : PromptPicker, Resume, Ameliorer, Fork |
 | `components/chat/right-panel/RemoteSection.tsx` | Telegram Switch + Web Remote Switch, pastilles status |
 | `components/chat/right-panel/CollapsibleSection.tsx` | Wrapper card collapsable (rounded-xl, chevron rotate) |
 | `components/chat/LibraryPicker.tsx` | Select simple referentiel sticky — badge actif + dropdown + detachement |
@@ -115,8 +109,7 @@
 | `components/conversations/ConversationList.tsx` | Liste avec section Favoris en haut + separateur + groupes par date |
 | `components/layout/UserMenu.tsx` | Menu dropdown navigation — sous-menu Personnalisation (dont Referentiels), entree Arena (Swords) |
 | `components/mcp/McpView.tsx` | Vue MCP standalone |
-| `components/workspace/WorkspacePanel.tsx` | FileTree + FilePanel + Git tabs |
-| `components/workspace/ChangesPanel.tsx` | Staged/unstaged, commit, AI message |
+| `components/workspace/WorkspacePanel.tsx` | FileTree + FilePanel (pas de Git tab) |
 | `components/settings/SettingsView.tsx` | 10 tabs |
 | `components/commands/CommandsView.tsx` | Grille CRUD + export/import JSON |
 | `components/prompts/PromptsView.tsx` | Grille CRUD + export/import JSON |
@@ -131,9 +124,6 @@
 | `components/brigade/BrigadeView.tsx` | Vue principale Gestion de Brigade — grille BardaCards, import avec preview, rapport post-import |
 | `components/brigade/BardaCard.tsx` | Card barda — namespace badge, compteurs, toggle ON/OFF, desinstaller |
 | `components/brigade/BardaPreview.tsx` | Preview avant import + rapport post-import + affichage erreur parsing |
-| `components/chat/YoloToggle.tsx` | Toggle YOLO amber + Dialog warning "J'accepte les risques" |
-| `components/chat/YoloStatusBar.tsx` | Barre status sandbox amber (path, processes, Stop, Open Folder) |
-
 ## Renderer — Stores & Hooks
 
 | Fichier | Role |
@@ -144,7 +134,6 @@
 | `stores/messages.store.ts` | Messages conversation active |
 | `stores/ui.store.ts` | ViewMode, isStreaming, openPanel ('workspace'\|'right'\|null), draftContent, toggleRightPanel |
 | `stores/barda.store.ts` | Store Zustand bardas — CRUD, disabledNamespaces (Set computed pour filtrage) |
-| `stores/sandbox.store.ts` | Store YOLO — isActive, sessionId, sandboxPath, conversationId, processes, activate/deactivate/stop |
 | `stores/workspace.store.ts` | rootPath, tree, attachedFiles, isPanelOpen |
 | `stores/slash-commands.store.ts` | Slash commands CRUD |
 | `stores/library.store.ts` | Libraries CRUD + indexing progress Map + activeLibraryId (global, sync depuis ChatView) |
@@ -164,7 +153,6 @@
 | `.github/workflows/release.yml` | CI/CD release (tag v*) |
 | `.github/workflows/ci.yml` | CI typecheck renderer+main + audit + lint + build |
 | `security-audit-s36.md` | Rapport audit secu S36 — 31 vulns, 20 fixes, score 97/100 |
-| `security-audit-s42.md` | Rapport audit secu S42 — sandbox-yolo hardening |
 | `prompt-perf.md` | Prompt audit de performance 6 axes (cold-start, bundle, TTFMP, heap, runtime, build) |
 | `scripts/prepare-models.sh` | Copie modele ONNX dans vendor/models/ pour production bundling |
 

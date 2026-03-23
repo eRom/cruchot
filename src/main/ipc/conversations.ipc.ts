@@ -10,7 +10,8 @@ import {
   setConversationProject,
   updateConversationRole,
   toggleFavorite,
-  forkConversation
+  forkConversation,
+  setWorkspacePath
 } from '../db/queries/conversations'
 import { getMessagesForConversation, deleteMessagesForConversation, deleteAllMessages } from '../db/queries/messages'
 
@@ -80,6 +81,24 @@ export function registerConversationsIpc(): void {
   ipcMain.handle('conversations:fork', async (_event, id: string) => {
     idSchema.parse(id)
     return forkConversation(id)
+  })
+
+  ipcMain.handle('conversations:setWorkspacePath', async (_event, payload: unknown) => {
+    const schema = z.object({
+      id: idSchema,
+      workspacePath: z.string().min(1).max(1000)
+    })
+    const { id, workspacePath } = schema.parse(payload)
+
+    // Block dangerous root paths
+    const BLOCKED_ROOTS = ['/', '/System', '/usr', '/etc', '/Library', '/bin', '/sbin', '/var', '/private']
+    for (const root of BLOCKED_ROOTS) {
+      if (workspacePath === root || workspacePath.startsWith(root + '/')) {
+        throw new Error(`Chemin bloque : ${workspacePath}`)
+      }
+    }
+
+    setWorkspacePath(id, workspacePath)
   })
 
   console.log('[IPC] Conversations handlers registered')

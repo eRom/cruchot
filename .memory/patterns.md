@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-22 (S43)
+> Derniere mise a jour : 2026-03-23 (S44)
 
 ## Conventions de nommage
 
@@ -32,9 +32,13 @@
 - `defaultModelId` format `providerId::modelId` — `split('::')` avant `selectModel()`
 - Conversation herite `projectId` actif, sidebar filtre par projet
 
-## Workspace Co-Work + Tools
+## Conversation Tools (unifie S44)
 
-- 4 outils AI SDK : bash (env minimal, blocklist ~39 + newline guard), readFile (whitelist ~80 ext), writeFile, listFiles
+- 4 outils AI SDK dans `conversation-tools.ts` : bash (libre, pas de blocklist — securite via Seatbelt), readFile, writeFile, listFiles
+- **Toujours actifs** — plus de dual path workspace/yolo, plus de `hasWorkspace` flag
+- Chaque conversation a un `workspacePath` (NOT NULL, DEFAULT `~/.cruchot/sandbox/`), Seatbelt confine bash a ce dossier
+- Nouvelle conversation herite `workspacePath` du projet parent
+- `~/.cruchot/sandbox/` (avec le dot) cree au startup de l'app
 - `buildWorkspaceContextBlock()` auto-lit CLAUDE.md, README.md etc. → system prompt
 - Fichiers attaches en system prompt (`<workspace-files>` XML)
 - ToolCallBlock/ReasoningBlock : auto-collapse quand stream finit (useRef + useEffect)
@@ -120,7 +124,7 @@
 - **2 canaux IPC streaming** : `arena:chunk:left` et `arena:chunk:right` (webContents.send fire-and-forget), meme format que `chat:chunk` (start/text-delta/reasoning-delta/finish/error)
 - **Store dedie** : `arena.store.ts` completement isole du chat normal (pas dans messages.store), state : leftMessage/rightMessage/rounds/vote/currentMatchId
 - **Hook dedie** : `useArenaStreaming.ts` ecoute les 2 canaux + `arena:match-created`, cleanup cancel au unmount
-- **Simplifie volontairement** : pas de workspace tools, pas de MCP, pas de @mentions, pas de drag&drop, pas de search, pas de library retrieval, pas de Remote forwarding — comparaison LLM vanilla pure
+- **Simplifie volontairement** : pas de conversation tools, pas de MCP, pas de @mentions, pas de drag&drop, pas de search, pas de library retrieval, pas de Remote forwarding — comparaison LLM vanilla pure
 - **Multi-rounds** : apres vote, `archiveCurrentRound()` deplace le round courant dans `rounds[]`, reset le state streaming
 - **Conversation arena** : `is_arena` colonne boolean sur `conversations`, set via `setConversationArena()` au premier `arena:send`
 - **Sidebar integration** : ConversationItem affiche `Swords` icon si `isArena`, Sidebar route vers `'arena'` view au clic
@@ -134,6 +138,7 @@
 - Zone orange : nettoyage partiel (conversations, projets, images, taches, MCP). Zone rouge : factory reset complet (25 tables + `localStorage.clear()`)
 - Backend : ordre FK strict, stop services avant delete, trash fichiers, confirmation dialog natif main
 - Cleanup : `bardas` avant les tables namespacees, `arena_matches` avant `messages`, `library_chunks` → `library_sources` → `libraries` (ordre FK) + drop collections Qdrant `library_*`
+- `~/.cruchot/sandbox/` nettoye via trash lors du factory reset
 - Singletons : `export const fooService = new FooService()` (pas getInstance())
 
 ## Conventions UI
@@ -143,9 +148,11 @@
 - ConversationList : `overflow-y-auto` (PAS Radix ScrollArea)
 - Title bar macOS : `hiddenInset`, traffic lights `{x:15, y:10}`, drag zones 38px
 
-## Right Panel (S43)
+## Right Panel (S43, updated S44)
 
-- **5 sections** : Parametres, Options, MCP, Outils, Remote — chaque section dans une card `rounded-xl border border-border/40 bg-card/50`
+- **6 sections** : Parametres, Dossier de travail, Options, Outils, MCP, Remote — chaque section dans une card `rounded-xl border border-border/40 bg-card/50`
+- **MCP et Remote** collapsed par defaut (`defaultOpen={false}`)
+- **ToolsSection** : 1 ligne de 4 boutons (`grid-cols-4`)
 - **CollapsibleSection** : wrapper generique, titre sans icone, chevron rotate (pas swap), `defaultOpen={true}`
 - **Mutuellement exclusif** avec WorkspacePanel : `openPanel: 'workspace' | 'right' | null` dans `ui.store`
 - **Auto-open** : nouvelle conversation (0 messages) → right panel s'ouvre. Switch vers existante → ferme
@@ -172,22 +179,6 @@
 - **Parseur** : maison (~220 lignes, pas de lib Markdown), split par `matchStart` (pas lastIndexOf)
 - **Exemples** : 3 fichiers dans `examples/` (barda-ecrivain.md, barda-dev-react.md, barda-philosophe.md)
 
-## Mode YOLO — Sandbox (S42)
-
-- **SandboxService** singleton : `createSession(workspacePath?)` → `~/cruchot/sandbox/[UUID]` ou workspace path. `destroySession()` via `trash`. `generateSeatbeltProfile()` avec substitution `SANDBOX_DIR`/`HOME`
-- **ProcessManagerService** singleton : `Map<sessionId, Set<TrackedProcess>>`, `track/killOne/killAll/killGlobal`, kill par groupe process (`process.kill(-pid)`), SIGTERM → 3s grace → SIGKILL, max 5 process/session, auto-cleanup sur exit event
-- **Seatbelt macOS** : profil SBPL ecrit dans fichier temp `/tmp/cruchot-sb-[UUID].sb`, `sandbox-exec -f` (PAS `-p` inline — evite injection shell), cleanup `finally { unlinkSync }`. Fallback exec() sans sandbox sur Windows/Linux
-- **5 tools YOLO** : `buildYoloTools(sessionId, sandboxDir)` retourne bash/createFile/readFile/listFiles/openPreview. `inputSchema` Zod (AI SDK v6). `validatePath()` avec `realpathSync + startsWith(sandboxDir + path.sep)`. Bash via `execSandboxed()`, output tronque 100KB, fichier max 10MB
-- **System prompt** : `buildYoloSystemPrompt(sandboxDir)` — 3 phases (plan → execute → finalise), reseau complet autorise, fichiers confines au sandbox
-- **Integration chat.ipc.ts** : `isYolo = conv?.isYolo === true` → `buildYoloTools()` au lieu de `buildWorkspaceTools()`, YOLO prompt injecte EN PREMIER dans system prompt, workspace context skipe en mode YOLO
-- **IPC** : 6 handlers `sandbox:*` (activate, deactivate, stop, getStatus, getProcesses, openPreview), Zod. `deactivate` passe `conversationId` pour reset DB
-- **Frontend** : `sandbox.store.ts` (Zustand, state + conversationId pour deactivate DB), `YoloToggle` (button amber + Dialog warning "J'accepte les risques"), `YoloStatusBar` (barre amber, path tronque, process count, Stop, Open Folder)
-- **DB** : `is_yolo` INTEGER DEFAULT 0 + `sandbox_path` TEXT sur `conversations`, index `idx_conversations_is_yolo`
-- **supportsYolo** : champ boolean sur `ModelDefinition`, true pour modeles tool-use competents, false pour Haiku/DeepSeek/Nano/Perplexity/image
-- **Cleanup startup** : `getYoloConversations()` → reset `is_yolo=0` sur orphelins. `processManagerService.killGlobal()` dans `will-quit` (avant les autres cleanups)
-- **Conversation switch** : `useSandboxStore.getState().deactivate()` (pas juste `reset()`) → kill process + destroy session + reset DB
-- **Reseau** : `(allow network*)` dans profil SBPL (pas de restriction localhost — mode YOLO, user consent)
-
 ## Performance (S37)
 
 - **React.lazy + Suspense** : 13 vues non-chat lazy-loaded dans App.tsx (seul ChatView est eager)
@@ -213,10 +204,10 @@
 - **Nettoyage release** : supprimer `.blockmap` et `latest*.yml` via `gh release delete-asset` apres publication
 - **Version bump** : mettre a jour `package.json` version AVANT de creer le tag (electron-builder utilise cette version pour nommer les artifacts)
 
-## Securite — Patterns (S36)
+## Securite — Patterns (S36, updated S44)
 
-- **Bash blocklist** : newlines bloquees en premier (`/[\r\n]/`), puis ~39 regex patterns (heredoc, alias, backtick, $(), sudo, rm, exfiltration, etc.)
-- **Path validation** : `realpathSync()` avant `isPathAllowed()` ou `validatePath()` — resout symlinks
+- **Conversation tools bash** : libre (pas de blocklist applicative), securite via Seatbelt macOS (confinement au workspacePath). Profil SBPL dans fichier temp `-f`, fallback sans sandbox sur Windows/Linux
+- **Path validation** : `realpathSync()` avant `validatePath()` dans conversation-tools.ts — resout symlinks, verifie `startsWith(workspacePath + sep)`
 - **Library addSources** : `validateSourcePath()` avec BLOCKED_SOURCE_ROOTS (15 chemins systeme) + SENSITIVE_FILE_PATTERNS (14 patterns)
 - **Filename sanitization** : `path.basename(filename) !== filename` bloque les separateurs de chemin
 - **DANGEROUS_EXTENSIONS** : 23 extensions (.app, .exe, .pkg, .dmg, .jar, .ps1, .vbs, etc.)
