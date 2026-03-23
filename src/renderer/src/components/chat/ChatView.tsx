@@ -9,9 +9,7 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useUiStore } from '@/stores/ui.store'
 import MessageList from './MessageList'
 import { InputZone } from './InputZone'
-import { YoloStatusBar } from './YoloStatusBar'
 import { WorkspacePanel } from '@/components/workspace/WorkspacePanel'
-import { useSandboxStore } from '@/stores/sandbox.store'
 import { useLibraryStore } from '@/stores/library.store'
 import { MessageSquare, Sparkles } from 'lucide-react'
 import { EVENTS } from '@/lib/utils'
@@ -36,19 +34,23 @@ export default function ChatView() {
   const openPanel = useUiStore((s) => s.openPanel)
   const activeProjectId = useProjectsStore((s) => s.activeProjectId)
 
-  // Auto-open/close workspace when project changes
+  // Sync workspace from conversation's workspacePath
   useEffect(() => {
-    const project = useProjectsStore.getState().projects.find((p) => p.id === activeProjectId)
-
-    if (project?.workspacePath) {
-      useWorkspaceStore.getState().openWorkspace(project.workspacePath, project.id)
-    } else {
-      const currentRoot = useWorkspaceStore.getState().rootPath
-      if (currentRoot) {
-        useWorkspaceStore.getState().closeWorkspace()
-      }
+    if (!activeConversationId) return
+    const loadWorkspacePath = async () => {
+      try {
+        const convs = await window.api.getConversations()
+        const conv = convs?.find((c: { id: string }) => c.id === activeConversationId)
+        const wsPath = (conv as { workspacePath?: string })?.workspacePath
+        if (wsPath && wsPath !== '~/.cruchot/sandbox/') {
+          useWorkspaceStore.getState().openWorkspace(wsPath)
+        } else {
+          useWorkspaceStore.getState().setRootPath(null)
+        }
+      } catch { /* silent */ }
     }
-  }, [activeProjectId])
+    loadWorkspacePath()
+  }, [activeConversationId])
 
   // File watcher sync
   useEffect(() => {
@@ -82,9 +84,6 @@ export default function ChatView() {
 
   // Load messages + restore model + restore role when switching conversations
   useEffect(() => {
-    // Kill processes and reset sandbox when switching conversations
-    useSandboxStore.getState().deactivate().catch(() => {})
-
     if (!activeConversationId) {
       setMessages([])
       useRolesStore.getState().setActiveRole(null)
@@ -172,9 +171,6 @@ export default function ChatView() {
     <div className="flex flex-1 min-h-0">
       {/* Chat area */}
       <div className="flex flex-1 flex-col bg-background min-w-0 min-h-0">
-        {/* YOLO status bar — shown when sandbox is active */}
-        <YoloStatusBar />
-
         {/* Messages area */}
         {activeConversationId && hasMessages ? (
           <MessageList

@@ -72,11 +72,11 @@ export const conversations = sqliteTable('conversations', {
   projectId: text('project_id').references(() => projects.id),
   modelId: text('model_id'),
   roleId: text('role_id').references(() => roles.id),
+  workspacePath: text('workspace_path').notNull().default('~/.cruchot/sandbox/'),
   activeLibraryId: text('active_library_id'),
   isFavorite: integer('is_favorite', { mode: 'boolean' }).default(false),
   isArena: integer('is_arena', { mode: 'boolean' }).default(false),
-  isYolo: integer('is_yolo', { mode: 'boolean' }).default(false),
-  sandboxPath: text('sandbox_path'),
+
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })

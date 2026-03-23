@@ -1,7 +1,7 @@
 import { eq, desc, isNull, asc } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { getDatabase } from '../index'
-import { conversations, messages } from '../schema'
+import { conversations, messages, projects } from '../schema'
 
 export function getAllConversations() {
   const db = getDatabase()
@@ -22,11 +22,21 @@ export function createConversation(title?: string, projectId?: string) {
   const id = nanoid()
   const now = new Date()
 
+  // Inherit workspace path from project if available
+  let workspacePath = '~/.cruchot/sandbox/'
+  if (projectId) {
+    const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+    if (project?.workspacePath) {
+      workspacePath = project.workspacePath
+    }
+  }
+
   db.insert(conversations)
     .values({
       id,
       title: title || 'Nouvelle conversation',
       projectId: projectId ?? null,
+      workspacePath,
       createdAt: now,
       updatedAt: now
     })
@@ -109,6 +119,14 @@ export function toggleFavorite(id: string, isFavorite: boolean) {
   return getConversation(id)
 }
 
+export function setWorkspacePath(id: string, workspacePath: string) {
+  const db = getDatabase()
+  db.update(conversations)
+    .set({ workspacePath, updatedAt: new Date() })
+    .where(eq(conversations.id, id))
+    .run()
+}
+
 export function setConversationArena(id: string, isArena: boolean) {
   const db = getDatabase()
   db.update(conversations)
@@ -117,26 +135,6 @@ export function setConversationArena(id: string, isArena: boolean) {
     .run()
 }
 
-export function setConversationYolo(id: string, isYolo: boolean, sandboxPath?: string | null) {
-  const db = getDatabase()
-  db.update(conversations)
-    .set({
-      isYolo,
-      sandboxPath: sandboxPath ?? null,
-      updatedAt: new Date()
-    })
-    .where(eq(conversations.id, id))
-    .run()
-}
-
-export function getYoloConversations() {
-  const db = getDatabase()
-  return db
-    .select()
-    .from(conversations)
-    .where(eq(conversations.isYolo, true))
-    .all()
-}
 
 export function deleteAllConversations() {
   const db = getDatabase()
@@ -161,11 +159,11 @@ export function forkConversation(sourceId: string) {
         projectId: source.projectId,
         modelId: source.modelId,
         roleId: source.roleId,
+        workspacePath: source.workspacePath,
         activeLibraryId: source.activeLibraryId,
         isFavorite: false,
         isArena: false,
-        isYolo: false,
-        sandboxPath: null,
+
         createdAt: now,
         updatedAt: now
       })

@@ -111,7 +111,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: false,
     supportsStreaming: true,
     supportsThinking: true,
-    supportsYolo: true
+
   },
   {
     id: 'qwen3.5-flash',
@@ -125,7 +125,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: false,
     supportsStreaming: true,
     supportsThinking: true,
-    supportsYolo: false
+
   },
   {
     id: 'qwen3.5-plus',
@@ -139,7 +139,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: false,
     supportsStreaming: true,
     supportsThinking: true,
-    supportsYolo: true
+
   },
   {
     id: 'qwq-plus',
@@ -153,7 +153,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: false,
     supportsStreaming: true,
     supportsThinking: true,
-    supportsYolo: false
+
   },
 
   // Anthropic
@@ -169,7 +169,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: true,
     supportsStreaming: true,
     supportsThinking: false,
-    supportsYolo: false
+
   },
   {
     id: 'claude-opus-4-6',
@@ -183,7 +183,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: true,
     supportsStreaming: true,
     supportsThinking: true,
-    supportsYolo: true
+
   },
   {
     id: 'claude-sonnet-4-6',
@@ -197,7 +197,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: true,
     supportsStreaming: true,
     supportsThinking: true,
-    supportsYolo: true
+
   },
 
   // DeepSeek
@@ -213,7 +213,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: false,
     supportsStreaming: true,
     supportsThinking: true,
-    supportsYolo: false
+
   },
   {
     id: 'deepseek-reasoner',
@@ -227,7 +227,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: false,
     supportsStreaming: true,
     supportsThinking: true,
-    supportsYolo: false
+
   },
 
   // Google
@@ -243,7 +243,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: true,
     supportsStreaming: true,
     supportsThinking: true,
-    supportsYolo: true
+
   },
   {
     id: 'gemini-3.1-pro-preview',
@@ -257,7 +257,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: true,
     supportsStreaming: true,
     supportsThinking: true,
-    supportsYolo: true
+
   },
 
   // Mistral AI
@@ -273,7 +273,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: false,
     supportsStreaming: true,
     supportsThinking: false,
-    supportsYolo: true
+
   },
   {
     id: 'devstral-2512',
@@ -287,7 +287,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: false,
     supportsStreaming: true,
     supportsThinking: false,
-    supportsYolo: true
+
   },
   {
     id: 'magistral-medium-2509',
@@ -301,7 +301,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: true,
     supportsStreaming: true,
     supportsThinking: true,
-    supportsYolo: true
+
   },
   {
     id: 'mistral-large-2512',
@@ -315,7 +315,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: true,
     supportsStreaming: true,
     supportsThinking: false,
-    supportsYolo: true
+
   },
 
   // OpenAI
@@ -331,7 +331,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: true,
     supportsStreaming: true,
     supportsThinking: false,
-    supportsYolo: true
+
   },
   {
     id: 'gpt-5-mini',
@@ -345,7 +345,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: true,
     supportsStreaming: true,
     supportsThinking: false,
-    supportsYolo: true
+
   },
   {
     id: 'gpt-5-nano',
@@ -359,7 +359,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: false,
     supportsStreaming: true,
     supportsThinking: false,
-    supportsYolo: false
+
   },
   {
     id: 'gpt-5.3-codex',
@@ -373,7 +373,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: false,
     supportsStreaming: true,
     supportsThinking: true,
-    supportsYolo: true
+
   },
   {
     id: 'gpt-5.4',
@@ -387,7 +387,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: true,
     supportsStreaming: true,
     supportsThinking: true,
-    supportsYolo: true
+
   },
 
   // xAI
@@ -403,7 +403,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: true,
     supportsStreaming: true,
     supportsThinking: true,
-    supportsYolo: true
+
   },
 
   // ── Image Generation Models (alphabetical by provider, then displayName) ──
@@ -421,7 +421,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: false,
     supportsStreaming: false,
     supportsThinking: false,
-    supportsYolo: false
+
   },
   {
     id: 'gemini-3-pro-image-preview',
@@ -435,7 +435,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: false,
     supportsStreaming: false,
     supportsThinking: false,
-    supportsYolo: false
+
   },
 
   // OpenAI
@@ -451,7 +451,7 @@ export const MODELS: ModelDefinition[] = [
     supportsImages: false,
     supportsStreaming: false,
     supportsThinking: false,
-    supportsYolo: false
+
   }
 ]
 

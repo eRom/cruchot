@@ -20,7 +20,7 @@ export interface ModelDefinition {
   supportsImages: boolean
   supportsStreaming: boolean
   supportsThinking: boolean
-  supportsYolo: boolean
+
 }
 
 export interface ModelPricing {

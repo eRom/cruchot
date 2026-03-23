@@ -28,7 +28,7 @@ export function McpSection() {
   }
 
   return (
-    <CollapsibleSection title="MCP" defaultOpen>
+    <CollapsibleSection title="MCP" defaultOpen={false}>
       {servers.length === 0 ? (
         <p className="text-sm text-muted-foreground/60">Aucun serveur MCP</p>
       ) : (

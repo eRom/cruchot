@@ -62,7 +62,7 @@ export function RemoteSection() {
   }
 
   return (
-    <CollapsibleSection title="Remote" defaultOpen>
+    <CollapsibleSection title="Remote" defaultOpen={false}>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2 px-1 py-1">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">

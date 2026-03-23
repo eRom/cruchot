@@ -14,10 +14,10 @@ import { seedBuiltinCommands } from './db/queries/slash-commands'
 import { BUILTIN_COMMANDS } from './commands/builtin'
 import { qdrantMemoryService } from './services/qdrant-memory.service'
 import { ensureInstanceToken } from './services/instance-token.service'
-import { getYoloConversations, setConversationYolo } from './db/queries/conversations'
-import { processManagerService } from './services/process-manager.service'
+
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'
+import os from 'node:os'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -66,22 +66,13 @@ app.whenReady().then(() => {
 
   mainWindow = createMainWindow()
 
+  // Ensure default sandbox directory exists
+  const sandboxDir = path.join(os.homedir(), '.cruchot', 'sandbox')
+  fs.mkdirSync(sandboxDir, { recursive: true })
+
   // Defer non-critical init to after window creation (improves cold start)
   ensureInstanceToken()
   seedBuiltinCommands(BUILTIN_COMMANDS)
-
-  // Cleanup orphaned YOLO conversations from previous crash
-  try {
-    const yoloConvs = getYoloConversations()
-    if (yoloConvs.length > 0) {
-      console.log(`[Sandbox] Cleaning up ${yoloConvs.length} orphaned YOLO conversation(s)`)
-      for (const conv of yoloConvs) {
-        setConversationYolo(conv.id, false, null)
-      }
-    }
-  } catch (err) {
-    console.error('[Sandbox] Failed to cleanup orphaned YOLO conversations:', err)
-  }
 
   // Scheduler — start timers for enabled scheduled tasks
   schedulerService.init(mainWindow)
@@ -125,7 +116,6 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
-  processManagerService.killGlobal().catch(() => {})
   qdrantMemoryService.stop().catch(() => {})
   telegramBotService.destroy().catch(() => {})
   remoteServerService.destroy().catch(() => {})
