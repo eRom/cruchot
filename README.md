@@ -4,13 +4,17 @@
 
 > **Cruchot** : Tous vos LLMs, une seule interface. **Open source**, **gratuit** et **App 100% locale**.
 
-App desktop locale de chat multi-LLM construite avec Electron. 11 providers, generation d'images, RAG custom, memoire semantique, workspace co-work, integration Git, controle a distance, et bien plus. Zero serveur backend, donnees 100% locales.
+App desktop locale de chat multi-LLM construite avec Electron. 11 providers, generation d'images, RAG custom, memoire semantique, dossier de travail par conversation, controle a distance, et bien plus. Zero serveur backend, donnees 100% locales.
 
 <p align="center">
   <img src="resources/infographie.png" alt="Infographie Cruchot" width="800" />
 </p>
 
 ## Updates
+
+- 23/03/2026
+  - **Dossier de travail par conversation** : chaque conversation a un dossier de travail (defaut `~/.cruchot/sandbox/`), tools IA toujours actifs (bash libre via Seatbelt, readFile, writeFile, listFiles)
+  - **Simplification** : suppression du mode YOLO, suppression de l'integration Git, unification des tools
 
 - 21/03/2026
   - **Bardas (Gestion de Brigade)** : systeme de packs thematiques importables au format Markdown (.md) — roles, commandes, prompts, fragments, referentiels, MCP regroupes sous un namespace unique
@@ -98,7 +102,7 @@ src/
     ipc/          #   Handlers IPC par domaine (Zod validation)
     llm/          #   Routeur AI SDK, cost-calculator, tools, prompts
     db/           #   Schema Drizzle (25 tables), queries
-    services/     #   Singletons metier (library, qdrant, git, mcp, remote...)
+    services/     #   Singletons metier (library, qdrant, seatbelt, mcp, remote...)
   preload/        # Bridge IPC securise (contextBridge)
   renderer/src/   # React app
     components/   #   Composants par domaine
@@ -131,9 +135,10 @@ src/
 - Modèles d'OpenRouter spécifiques pour Image
 - Selection d'aspect ratio, galerie avec apercu
 
-### Workspace Co-Work
-- Arborescence de fichiers interactive avec indicateurs Git (M/A/D/?)
-- 4 outils IA : bash (terminal sandbox), readFile, writeFile, listFiles
+### Dossier de travail
+- Chaque conversation a un dossier de travail (defaut : `~/.cruchot/sandbox/`, modifiable)
+- 4 outils IA toujours actifs : bash (libre, confine par Seatbelt macOS), readFile, writeFile, listFiles
+- Arborescence de fichiers interactive (WorkspacePanel)
 - Detection de changements en temps reel (Chokidar)
 - `@mention` de fichiers inline dans le textarea (autocomplete + overlay cyan)
 - **Drag & drop de fichiers** depuis le Finder directement dans la zone de saisie (texte, code, documents)
@@ -193,7 +198,7 @@ src/
 - Format ouvert : editable dans n'importe quel editeur texte, versionnable dans Git
 
 ### Autres fonctionnalites
-- **Projets** : organisation avec modele par defaut, workspace lie, system prompt
+- **Projets** : organisation avec modele par defaut, dossier par defaut, system prompt
 - **Roles** : builtin et custom, variables dynamiques `{{varName}}`
 - **Prompts** : bibliotheque reutilisable (complet, complement, system)
 - **Taches planifiees** : execution LLM automatique (intervalle, quotidien, hebdomadaire)
@@ -219,9 +224,8 @@ L'architecture de securite repose sur l'isolation stricte des 3 couches Electron
 ### Main (Node.js)
 - **Cles API** : chiffrees via `safeStorage` (Keychain macOS), jamais exposees au renderer
 - **IPC** : validation Zod sur tous les handlers, settings proteges par whitelist (`ALLOWED_SETTING_KEYS`)
-- **Bash tool** : env minimal isole (PATH restreint, HOME=workspace), blocklist ~36 patterns (dont anti-evasion shell), timeout 30s
+- **Conversation tools** : bash libre confine par Seatbelt macOS (profil SBPL par conversation), timeout 30s, fallback sans sandbox sur Windows/Linux
 - **Fichiers** : `isPathAllowed()` (confinement userData + workspace), `SENSITIVE_PATTERNS`, extension blocklist, `fs.realpathSync()` anti-symlink
-- **Git** : env immutable `GIT_BASE_ENV` (Readonly), `GIT_CONFIG_NOSYSTEM=1`, `validateGitPaths()` sur toutes les operations
 - **MCP** : env minimal stdio (PATH/HOME/TMPDIR/LANG/SHELL/USER), env vars chiffrees
 - **Remote** : `crypto.timingSafeEqual` sur le pairing, `maxPayload 64KB` (WebSocket), broadcast reserve aux clients authentifies
 - **FTS5** : `sanitizeFtsQuery()` neutralise les operateurs MATCH, resultats tronques a 500 chars

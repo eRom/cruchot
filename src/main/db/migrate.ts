@@ -437,23 +437,6 @@ export function runMigrations(): void {
     }
   }
 
-  // Add YOLO mode columns to conversations table
-  try {
-    sqlite.exec('ALTER TABLE conversations ADD COLUMN is_yolo INTEGER DEFAULT 0')
-  } catch {
-    // Column already exists — ignore
-  }
-  try {
-    sqlite.exec('ALTER TABLE conversations ADD COLUMN sandbox_path TEXT')
-  } catch {
-    // Column already exists — ignore
-  }
-
-  // YOLO index
-  sqlite.exec(`
-    CREATE INDEX IF NOT EXISTS idx_conversations_is_yolo ON conversations(is_yolo);
-  `)
-
   // Barda indexes
   sqlite.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_bardas_namespace ON bardas(namespace);
@@ -464,4 +447,25 @@ export function runMigrations(): void {
     CREATE INDEX IF NOT EXISTS idx_libraries_namespace ON libraries(namespace);
     CREATE INDEX IF NOT EXISTS idx_mcp_servers_namespace ON mcp_servers(namespace);
   `)
+
+  // --- Refactor workspace-sandbox (S44) ---
+
+  // Add workspace_path to conversations (always has a default)
+  try {
+    sqlite.exec(`ALTER TABLE conversations ADD COLUMN workspace_path TEXT NOT NULL DEFAULT '~/.cruchot/sandbox/'`)
+  } catch {
+    // Column already exists — ignore
+  }
+
+  // Migrate existing conversations: inherit workspace_path from their project
+  sqlite.exec(`
+    UPDATE conversations SET workspace_path = (
+      SELECT p.workspace_path FROM projects p WHERE p.id = conversations.project_id
+    ) WHERE project_id IS NOT NULL AND (
+      SELECT p.workspace_path FROM projects p WHERE p.id = conversations.project_id
+    ) IS NOT NULL
+  `)
+
+  // Drop old YOLO index (no longer needed)
+  sqlite.exec(`DROP INDEX IF EXISTS idx_conversations_is_yolo`)
 }

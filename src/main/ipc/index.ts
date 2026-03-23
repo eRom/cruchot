@@ -23,7 +23,7 @@ import { registerTtsIpc } from './tts.ipc'
 import { registerScheduledTasksIpc } from './scheduled-tasks.ipc'
 import { registerMcpIpc } from './mcp.ipc'
 import { registerMemoryFragmentsIpc } from './memory-fragments.ipc'
-import { registerGitIpc } from './git.ipc'
+
 import { registerRemoteIpc } from './remote.ipc'
 import { registerRemoteServerIpc } from './remote-server.ipc'
 import { registerSummaryIpc } from './summary.ipc'
@@ -35,7 +35,7 @@ import { registerLibraryIpc } from './library.ipc'
 import { registerPromptOptimizerIpc } from './prompt-optimizer.ipc'
 import { registerArenaIpc } from './arena.ipc'
 import { registerBardaHandlers } from './barda.ipc'
-import { registerSandboxIpc } from './sandbox.ipc'
+
 
 /**
  * Registre central des IPC handlers.
@@ -105,8 +105,6 @@ export function registerAllIpcHandlers(): void {
   // ── Memory Fragments ─────────────────────
   registerMemoryFragmentsIpc()
 
-  // ── Git ──────────────────────────────────
-  registerGitIpc()
 
   // ── Remote (Telegram) ────────────────────────
   registerRemoteIpc()
@@ -141,8 +139,6 @@ export function registerAllIpcHandlers(): void {
   // ── Barda (Brigade Packs) ──────────────────────
   registerBardaHandlers()
 
-  // ── Sandbox (YOLO mode) ──────────────────────────────
-  registerSandboxIpc()
 
   // ── Settings ────────────────────────────────────────
   const ALLOWED_SETTING_KEYS = new Set([

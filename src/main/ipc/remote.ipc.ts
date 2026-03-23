@@ -3,7 +3,6 @@ import { z } from 'zod'
 import { telegramBotService } from '../services/telegram-bot.service'
 import { updateSessionAutoApprove, getActiveSession } from '../db/queries/remote-sessions'
 import { handleChatMessage } from './chat.ipc'
-import { getActiveWorkspace } from './workspace.ipc'
 
 const tokenSchema = z.string().regex(/^\d+:[A-Za-z0-9_-]+$/, 'Format de token invalide')
 
@@ -54,15 +53,12 @@ export function registerRemoteIpc(): void {
       }
     } catch { /* use defaults */ }
 
-    const workspace = getActiveWorkspace()
-
     try {
       await handleChatMessage({
         conversationId: session.conversationId,
         content: event.text,
         modelId,
         providerId,
-        hasWorkspace: workspace !== null,
         source: 'telegram',
         window: mainWindow
       })

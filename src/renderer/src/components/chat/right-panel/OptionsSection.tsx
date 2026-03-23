@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { Search, Library } from 'lucide-react'
 import { CollapsibleSection } from './CollapsibleSection'
-import { YoloToggle } from '@/components/chat/YoloToggle'
 import { Switch } from '@/components/ui/switch'
 import {
   Select,
@@ -13,8 +12,6 @@ import {
 } from '@/components/ui/select'
 import { useUiStore } from '@/stores/ui.store'
 import { useConversationsStore } from '@/stores/conversations.store'
-import { useProvidersStore } from '@/stores/providers.store'
-import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useLibraryStore } from '@/stores/library.store'
 import { cn } from '@/lib/utils'
@@ -24,20 +21,15 @@ const NO_LIBRARY = '__none__'
 export function OptionsSection() {
   const isStreaming = useUiStore((s) => s.isStreaming)
   const activeConversationId = useConversationsStore((s) => s.activeConversationId)
-  const { selectedModelId, selectedProviderId } = useProvidersStore()
-  const workspaceRootPath = useWorkspaceStore((s) => s.rootPath)
   const searchEnabled = useSettingsStore((s) => s.searchEnabled) ?? false
   const setSearchEnabled = useSettingsStore((s) => s.setSearchEnabled)
   const { libraries, loadLibraries, activeLibraryId, setActiveLibraryId } = useLibraryStore()
 
   const isBusy = isStreaming
 
-  const selectedModel = useProvidersStore((s) => s.getSelectedModel())
-
   useEffect(() => {
     if (libraries.length === 0) loadLibraries()
   }, [libraries.length, loadLibraries])
-  // Note: activeLibraryId sync is handled in ChatView (always mounted, race-safe)
 
   const readyLibraries = useMemo(
     () => libraries.filter((l) => l.status === 'ready' || l.sourcesCount > 0),
@@ -137,14 +129,6 @@ export function OptionsSection() {
           </SelectContent>
         </Select>
 
-        {activeConversationId && (
-          <YoloToggle
-            conversationId={activeConversationId}
-            modelSupportsYolo={selectedModel?.supportsYolo ?? false}
-            workspacePath={workspaceRootPath ?? undefined}
-            disabled={isBusy}
-          />
-        )}
       </div>
     </CollapsibleSection>
   )

@@ -76,7 +76,7 @@ export function ToolsSection({ onOptimizedPrompt, onPromptInsert }: ToolsSection
 
   return (
     <CollapsibleSection title="Outils" defaultOpen>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-4 gap-1.5">
         <div className="[&_button]:h-10 [&_button]:w-full [&_button]:rounded-lg [&_button]:border [&_button]:border-border/40 [&_button]:gap-2 [&_button]:px-2 [&_button]:text-xs [&_button]:font-normal [&_button]:justify-center">
           <PromptPicker onInsert={onPromptInsert} disabled={isBusy} />
         </div>

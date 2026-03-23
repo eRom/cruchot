@@ -4,7 +4,7 @@ import * as path from 'path'
 import { z } from 'zod'
 import { WorkspaceService } from '../services/workspace.service'
 import { FileWatcherService } from '../services/file-watcher.service'
-import { onWorkspaceFileChanged, resetGitService } from './git.ipc'
+
 
 // System paths that are ALWAYS blocked as workspace root (no override)
 const HARD_BLOCKED_ROOTS = [
@@ -116,8 +116,6 @@ export function registerWorkspaceIpc(): void {
         ['node_modules', '.git', 'dist', 'build', '.next', '__pycache__', '.cache'],
         (event) => {
           forwardToRenderer(event)
-          // Notify git service of file changes (debounced push to renderer)
-          onWorkspaceFileChanged(win)
         }
       )
       await activeWatcher.start()
@@ -133,7 +131,6 @@ export function registerWorkspaceIpc(): void {
       activeWatcher = null
     }
     activeWorkspace = null
-    resetGitService()
   })
 
   // ── Get file tree ──────────────────────────────────────

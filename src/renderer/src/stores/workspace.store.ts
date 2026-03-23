@@ -18,6 +18,7 @@ interface WorkspaceState {
   attachFile: (path: string) => void
   detachFile: (path: string) => void
   clearAttachedFiles: () => void
+  setRootPath: (path: string | null) => void
   getAttachedFileContexts: () => Promise<WorkspaceFileContext[]>
 }
 
@@ -90,6 +91,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   clearAttachedFiles: () => {
     set({ attachedFiles: [] })
+  },
+
+  setRootPath: (path) => {
+    set({ rootPath: path, tree: null, selectedFilePath: null, attachedFiles: [] })
   },
 
   getAttachedFileContexts: async () => {

@@ -1,5 +1,6 @@
 import { ParamsSection } from './ParamsSection'
 import { OptionsSection } from './OptionsSection'
+import { WorkspaceSection } from './WorkspaceSection'
 import { McpSection } from './McpSection'
 import { RemoteSection } from './RemoteSection'
 import { ToolsSection } from './ToolsSection'
@@ -13,9 +14,10 @@ export function RightPanel({ onPromptInsert, onOptimizedPrompt }: RightPanelProp
   return (
     <div className="flex h-full w-[300px] shrink-0 flex-col gap-3 bg-background overflow-y-auto p-3">
       <ParamsSection />
+      <WorkspaceSection />
       <OptionsSection />
-      <McpSection />
       <ToolsSection onOptimizedPrompt={onOptimizedPrompt} onPromptInsert={onPromptInsert} />
+      <McpSection />
       <RemoteSection />
     </div>
   )

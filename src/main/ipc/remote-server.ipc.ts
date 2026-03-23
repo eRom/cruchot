@@ -4,7 +4,6 @@ import { remoteServerService } from '../services/remote-server.service'
 import { getActiveWebSocketSession } from '../db/queries/remote-server'
 import { updateSessionAutoApprove } from '../db/queries/remote-sessions'
 import { handleChatMessage } from './chat.ipc'
-import { getActiveWorkspace } from './workspace.ipc'
 
 const configSchema = z.object({
   port: z.number().int().min(1024).max(65535).optional(),
@@ -56,15 +55,12 @@ export function registerRemoteServerIpc(): void {
       }
     } catch { /* use defaults */ }
 
-    const workspace = getActiveWorkspace()
-
     try {
       await handleChatMessage({
         conversationId: session.conversationId,
         content: event.text,
         modelId,
         providerId,
-        hasWorkspace: workspace !== null,
         source: 'websocket',
         window: mainWindow
       })
