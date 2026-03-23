@@ -169,7 +169,7 @@ export default function ChatView() {
   const hasMessages = conversationMessages.length > 0
 
   return (
-    <div className="flex h-full">
+    <div className="flex flex-1 min-h-0">
       {/* Chat area */}
       <div className="flex flex-1 flex-col bg-background min-w-0 min-h-0">
         {/* YOLO status bar — shown when sandbox is active */}
