@@ -1,5 +1,5 @@
 # Gotchas — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-23 (S44)
+> Derniere mise a jour : 2026-03-24 (S45)
 
 ## AI SDK v6 — Breaking changes
 
@@ -29,7 +29,9 @@
 - **ANSI codes** : `FORCE_COLOR=0 NO_COLOR=1` dans env child_process
 - **macOS Alt key** : OPT+B → `∫`. Utiliser `e.code === 'KeyB'` (hardware)
 - **CMD+B Chromium** : intercepte pour bold → `addEventListener(capture: true)`
-- **CMD+B = sidebar** : toggleSidebar(), PAS workspace panel
+- **CMD+B = sidebar** : toggleSidebar() via TopBar (plus dans Sidebar header)
+- **ViewMode simplifie (S45)** : `prompts|roles|mcp|memory|commands|libraries|brigade` n'existent plus — utiliser `customize` + `customizeTab`
+- **Vues internes CustomizeView** : MemoryView et McpView n'ont plus de header retour (supprime en S45), les autres gardent leur nav interne (grid→edit→back)
 - **React 19** : `contentData: Record<string, unknown>` empoisonne JSX → cast `as string`
 - **Gemini hallucine des tool calls** en XML brut (`<function_calls>`)
 

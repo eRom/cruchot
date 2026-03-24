@@ -1,5 +1,5 @@
 # Fichiers cles — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-23 (S44)
+> Derniere mise a jour : 2026-03-24 (S45)
 
 ## Main process
 
@@ -69,7 +69,7 @@
 
 | Fichier | Role |
 |---------|------|
-| `App.tsx` | Routing 14 vues, lazy-loaded |
+| `App.tsx` | Routing 8 vues (chat + 7 lazy), Cmd+U customize |
 | `chat/ChatView.tsx` | Message list + RightPanel + WorkspacePanel |
 | `chat/InputZone.tsx` | Saisie, @mentions, slash commands, drag & drop |
 | `chat/right-panel/RightPanel.tsx` | 6 sections (Params, Dossier, Options, Outils, MCP, Remote) |
@@ -84,10 +84,12 @@
 | `chat/MarkdownRenderer.tsx` | react-markdown + Shiki + KaTeX + Mermaid |
 | `chat/ContextWindowIndicator.tsx` | Barre tokens + badges |
 | `libraries/LibrariesView.tsx` | CRUD referentiels |
-| `layout/Sidebar.tsx` | Nav, projets, conversations |
+| `layout/TopBar.tsx` | Drag region macOS + toggles sidebar/right panel |
+| `layout/Sidebar.tsx` | Nav (Chat/Taches/Arena), projets, conversations (300px) |
 | `arena/ArenaView.tsx` | Layout Arena (colonnes + VS + vote) |
 | `brigade/BrigadeView.tsx` | Grille BardaCards, import/preview |
 | `workspace/WorkspacePanel.tsx` | FileTree + FilePanel |
+| `customize/CustomizeView.tsx` | 7 onglets (Prompts, Roles, Commands, Memory, Libraries, MCP, Brigade) |
 | `common/CommandPalette.tsx` | Cmd+K recherche globale |
 
 ## Stores & Hooks
@@ -98,7 +100,7 @@
 | `stores/arena.store.ts` | Store Arena dedie |
 | `stores/settings.store.ts` | Persist localStorage |
 | `stores/messages.store.ts` | Messages + getConversationMessages() |
-| `stores/ui.store.ts` | ViewMode, openPanel, draftContent |
+| `stores/ui.store.ts` | ViewMode, openPanel, settingsTab, customizeTab, draftContent |
 | `stores/barda.store.ts` | Bardas + disabledNamespaces |
 | `stores/providers.store.ts` | Models + getSelectedModel() |
 | `stores/workspace.store.ts` | rootPath, tree, attachedFiles |

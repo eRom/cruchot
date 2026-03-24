@@ -1,5 +1,5 @@
 # Patterns — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-23 (S44)
+> Derniere mise a jour : 2026-03-24 (S45)
 
 ## Conventions de nommage
 
@@ -71,14 +71,38 @@
 - Namespace propage sur 6 tables, import atomique (transaction SQLite, anti-TOCTOU)
 - MCP skip si existant, desinstallation atomique FK-strict, toggle ON/OFF via `disabledNamespaces`
 
-## Right Panel (S43-S44)
+## Right Panel (S43-S45)
 
 - 6 sections : Parametres, Dossier de travail, Options, Outils, MCP, Remote
+- Toujours visible : collapsed (40px, icones) / expanded (300px, contenu) — toggle via TopBar
 - Mutuellement exclusif avec WorkspacePanel : `openPanel: 'workspace' | 'right' | null`
-- Auto-open uniquement a la creation (Sidebar.handleNewConversation)
+- Sections cards : `bg-sidebar` (meme fond que sidebar)
+- Thinking selector : Radix Select (meme composant que Model/Role selectors)
 - Communication : CustomEvent (`EVENTS.PROMPT_INSERT/PROMPT_OPTIMIZED`) + `ui.store.draftContent`
 - Library sync dans ChatView (pas OptionsSection), flag `cancelled` anti-race
+
+## TopBar (S45)
+
+- Composant `layout/TopBar.tsx` : 38px pleine largeur, drag region macOS + 2 toggles a droite
+- Toggle sidebar : `PanelLeftClose`/`PanelLeftOpen` via `useSettingsStore().toggleSidebar`
+- Toggle right panel : `PanelRightClose`/`PanelRightOpen` via `useUiStore().toggleRightPanel`
+- Logique icones harmonisee : expanded → Close, collapsed → Open (les deux panneaux)
 - Raccourcis : CMD+B = sidebar, OPT+CMD+B = right panel (`e.code === 'KeyB'`, capture phase)
+
+## CustomizeView (S45)
+
+- Regroupe 7 anciens ViewMode en onglets : Prompts, Roles, Commandes, Memoire, Referentiels, MCP, Brigade
+- Meme layout que SettingsView : sidebar navigation (w-48) + contenu scrollable
+- `CustomizeTab` type + `customizeTab` state dans ui.store (meme pattern que `SettingsTab`)
+- Raccourci CMD+U ouvre la vue Personnaliser
+- Vues internes lazy-loaded dans le contenu (React.lazy + Suspense)
+
+## Sidebar (S45)
+
+- Largeur expanded : 300px (was 260px), collapsed : 52px
+- Header : 3 boutons Chat/Taches/Arena (expanded : labels, collapsed : icones + tooltips)
+- Plus de toggle sidebar dans le header (deplace dans TopBar)
+- Plus de drag region (deplacee dans TopBar)
 
 ## Selectors centralises
 
@@ -91,9 +115,11 @@
 - Footer message : actions hover a gauche, info a droite
 - ModelSelector : liste plate, pas de groupement par provider
 - WorkspacePanel : toggle (pas close), ne PAS auto-open au changement de conversation
-- ConversationList : `overflow-y-auto` (PAS Radix ScrollArea)
+- ConversationList : `overflow-y-auto` (PAS Radix ScrollArea), icone `MessagesSquare` (Arena: `Swords`)
 - Remote badge : dans ContextWindowIndicator, PAS toolbar
 - Singletons : `export const fooService = new FooService()`
+- UserMenu : Personnaliser (Cmd+U) → Parametres (Cmd+,) → Images → Statistiques
+- ProjectSelector : "Gerer les projets..." en bas du dropdown (point d'entree unique projets)
 
 ## Data Cleanup / Factory Reset
 

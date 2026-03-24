@@ -1,5 +1,5 @@
 # Architecture — Multi-LLM Desktop
-> Derniere mise a jour : 2026-03-23 (S44)
+> Derniere mise a jour : 2026-03-24 (S45)
 
 ## Vue d'ensemble
 
@@ -37,13 +37,21 @@ src/
   renderer/src/
     App.tsx               # Routing par ViewMode
     stores/               # Zustand stores
-    components/           # chat/, chat/right-panel/, layout/, projects/, prompts/, roles/, tasks/, mcp/, memory/, commands/, libraries/, arena/, brigade/, settings/, statistics/, images/, conversations/, workspace/, common/
+    components/           # chat/, chat/right-panel/, layout/, projects/, prompts/, roles/, tasks/, mcp/, memory/, commands/, libraries/, arena/, brigade/, settings/, statistics/, images/, conversations/, workspace/, customize/, common/
     hooks/                # useStreaming, useArenaStreaming, useInitApp, useKeyboardShortcuts, useAudioPlayer, useContextWindow, useFileMention, useSlashCommands
 ```
 
-## Navigation (ViewMode)
+## Navigation (ViewMode) — S45
 
-`App.tsx` route via `useUiStore.currentView` : chat, projects, prompts, settings, images, roles, tasks, mcp, memory, commands, statistics, libraries, arena, brigade. 13 vues non-chat lazy-loaded (React.lazy + Suspense). Right Panel lazy-loaded dans ChatView.
+`App.tsx` route via `useUiStore.currentView` : chat, settings, customize, statistics, images, projects, tasks, arena. 7 vues non-chat lazy-loaded (React.lazy + Suspense).
+
+**CustomizeView** (S45) : regroupe 7 anciens ViewMode (prompts, roles, mcp, memory, commands, libraries, brigade) en onglets dans une vue unique avec sidebar navigation (meme layout que SettingsView). `CustomizeTab` dans ui.store.
+
+**TopBar** (S45) : barre 38px pleine largeur avec drag region macOS + 2 boutons toggle (sidebar, right panel) a droite. Remplace les drag regions separees sidebar/main et les toggles integres dans les panneaux.
+
+**Right Panel** : toujours visible (collapsed 40px / expanded 300px), toggle via TopBar. Sections `bg-sidebar`.
+
+**Raccourcis** : Cmd+B sidebar, Opt+Cmd+B right panel, Cmd+U personnaliser, Cmd+, parametres, Cmd+K palette.
 
 ## Flux principal — Chat
 
