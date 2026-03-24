@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowUp, ImageIcon, Loader2, PanelRight, Paperclip, Square } from 'lucide-react'
+import { ArrowUp, ImageIcon, Loader2, Paperclip, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { VoiceInput } from '@/components/chat/VoiceInput'
@@ -110,7 +110,7 @@ export function InputZone({
   const activeProjectId = useProjectsStore((s) => s.activeProjectId)
   const { messages, addMessage } = useMessagesStore()
   const isStreaming = useUiStore((s) => s.isStreaming)
-  const openPanel = useUiStore((s) => s.openPanel)
+
   const temperature = useSettingsStore((s) => s.temperature)
   const settingsMaxTokens = useSettingsStore((s) => s.maxTokens)
   const topP = useSettingsStore((s) => s.topP)
@@ -1082,7 +1082,7 @@ export function InputZone({
 
           {/* Barre d'outils en bas du textarea */}
           <div className="flex items-center justify-between gap-2 px-2 pb-2 pt-1">
-            {/* Cote gauche — Paperclip + PanelRight + VoiceInput */}
+            {/* Cote gauche — Paperclip + VoiceInput */}
             <div className="flex items-center gap-1.5">
               {/* Paperclip — attach files (hidden in image mode) */}
               {!isImageMode && (
@@ -1104,27 +1104,6 @@ export function InputZone({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top">Joindre des fichiers</TooltipContent>
-                </Tooltip>
-              )}
-              {/* Right panel toggle */}
-              {!isImageMode && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => useUiStore.getState().toggleRightPanel()}
-                      className={cn(
-                        'size-7 rounded-lg',
-                        'text-muted-foreground/60 hover:text-muted-foreground',
-                        'transition-colors',
-                        openPanel === 'right' && 'text-primary'
-                      )}
-                    >
-                      <PanelRight className="size-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Panneau lateral (Opt+Cmd+B)</TooltipContent>
                 </Tooltip>
               )}
               <VoiceInput
