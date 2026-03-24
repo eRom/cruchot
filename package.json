@@ -1,6 +1,6 @@
 {
   "name": "cruchot",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Cruchot — Chat multi-provider avec support OpenAI, Anthropic, Gemini, Mistral, xAI, OpenRouter, Ollama, LM Studio",
   "main": "./out/main/index.js",
   "author": "Romain",
