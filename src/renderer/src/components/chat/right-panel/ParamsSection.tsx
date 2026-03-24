@@ -1,7 +1,14 @@
-import { useMemo, useState, useRef, useEffect } from 'react'
+import { useMemo } from 'react'
 import { Brain } from 'lucide-react'
 import { ModelSelector } from '@/components/chat/ModelSelector'
 import { RoleSelector } from '@/components/roles/RoleSelector'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
 import { useContextWindow } from '@/hooks/useContextWindow'
 import { useMessagesStore } from '@/stores/messages.store'
 import { useConversationsStore } from '@/stores/conversations.store'
@@ -24,9 +31,6 @@ export function ParamsSection() {
   const isStreaming = useUiStore((s) => s.isStreaming)
   const thinkingEffort = useSettingsStore((s) => s.thinkingEffort)
   const setThinkingEffort = useSettingsStore((s) => s.setThinkingEffort)
-
-  const [thinkingOpen, setThinkingOpen] = useState(false)
-  const thinkingRef = useRef<HTMLDivElement>(null)
 
   const conversationMessages = useMemo(
     () => messages.filter((m) => m.conversationId === activeConversationId),
@@ -52,17 +56,6 @@ export function ParamsSection() {
 
   const currentLevel = THINKING_LEVELS.find((l) => l.value === thinkingEffort) ?? THINKING_LEVELS[0]
 
-  useEffect(() => {
-    if (!thinkingOpen) return
-    function handleClick(e: MouseEvent) {
-      if (thinkingRef.current && !thinkingRef.current.contains(e.target as Node)) {
-        setThinkingOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [thinkingOpen])
-
   return (
     <div className="rounded-xl border border-border/40 bg-card/50">
       <div className="px-3.5 py-2.5 text-sm font-medium text-foreground/80">
@@ -74,42 +67,29 @@ export function ParamsSection() {
           <ModelSelector disabled={isBusy} />
         </div>
 
-        <div className="relative" ref={thinkingRef}>
-          <button
-            onClick={() => !isBusy && supportsThinking && setThinkingOpen(!thinkingOpen)}
+        <div className="[&_button]:w-full [&_button]:max-w-none [&_button]:h-auto [&_button]:rounded-lg [&_button]:py-1.5 [&_button]:px-3 [&_button]:text-sm">
+          <Select
+            value={supportsThinking ? thinkingEffort : 'off'}
+            onValueChange={(v) => setThinkingEffort(v as ThinkingEffort)}
             disabled={isBusy || !supportsThinking}
-            className={cn(
-              'flex w-full items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-1.5',
-              'text-sm transition-colors',
-              supportsThinking && !isBusy ? 'hover:bg-accent/50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
-            )}
           >
-            <Brain className={cn('size-4 text-purple-500', supportsThinking ? currentLevel.opacity : 'opacity-20')} />
-            <span className="flex-1 text-left text-muted-foreground">
-              {supportsThinking ? currentLevel.label : 'Off'}
-            </span>
-          </button>
-
-          {thinkingOpen && (
-            <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-border/60 bg-popover py-1 shadow-md">
+            <SelectTrigger>
+              <Brain className={cn('size-4 shrink-0 text-purple-500', supportsThinking ? currentLevel.opacity : 'opacity-20')} />
+              <SelectValue>
+                <span className="truncate text-xs font-medium">
+                  {supportsThinking ? currentLevel.label : 'Off'}
+                </span>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
               {THINKING_LEVELS.map((level) => (
-                <button
-                  key={level.value}
-                  onClick={() => {
-                    setThinkingEffort(level.value)
-                    setThinkingOpen(false)
-                  }}
-                  className={cn(
-                    'flex w-full items-center gap-2 px-3 py-1.5 text-sm transition-colors hover:bg-accent/50',
-                    thinkingEffort === level.value && 'bg-accent/30'
-                  )}
-                >
+                <SelectItem key={level.value} value={level.value}>
                   <Brain className={cn('size-4 text-purple-500', level.opacity)} />
                   <span>{level.label}</span>
-                </button>
+                </SelectItem>
               ))}
-            </div>
-          )}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="[&_button]:w-full [&_button]:max-w-none [&_button]:h-auto [&_button]:rounded-lg [&_button]:py-1.5 [&_button]:px-3 [&_button]:text-sm [&_button_svg:first-child]:size-4">
