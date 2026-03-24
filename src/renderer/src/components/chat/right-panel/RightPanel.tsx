@@ -31,14 +31,14 @@ export function RightPanel({ onPromptInsert, onOptimizedPrompt }: RightPanelProp
   return (
     <div
       className={cn(
-        'flex h-full shrink-0 flex-col bg-background border-l border-border/40',
+        'flex h-full shrink-0 flex-col bg-background',
         'transition-[width] duration-200 ease-out',
         expanded ? 'w-[300px]' : 'w-10'
       )}
     >
       {/* Expanded: full sections */}
       {expanded && (
-        <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-3 pb-3">
+        <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-3 pt-3 pb-3">
           <ParamsSection />
           <WorkspaceSection />
           <OptionsSection />
