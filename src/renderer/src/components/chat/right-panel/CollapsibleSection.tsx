@@ -12,7 +12,7 @@ export function CollapsibleSection({ title, icon: Icon, defaultOpen = true, chil
   const [isOpen, setIsOpen] = useState(defaultOpen)
 
   return (
-    <div className="rounded-xl border border-border/40 bg-card/50">
+    <div className="rounded-xl border border-border/40 bg-sidebar">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex w-full items-center gap-2 px-3.5 py-2.5 text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"

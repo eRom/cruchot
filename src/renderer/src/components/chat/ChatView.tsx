@@ -187,8 +187,11 @@ export default function ChatView() {
         </div>
       </div>
 
-      {/* Right panel — mutually exclusive with workspace */}
-      {openPanel === 'right' && (
+      {/* Workspace panel */}
+      {openPanel === 'workspace' && workspaceRootPath && <WorkspacePanel />}
+
+      {/* Right panel — always rendered, collapsed/expanded */}
+      {openPanel !== 'workspace' && (
         <Suspense fallback={null}>
           <RightPanel
             onPromptInsert={(text) => window.dispatchEvent(new CustomEvent(EVENTS.PROMPT_INSERT, { detail: text }))}
@@ -196,7 +199,6 @@ export default function ChatView() {
           />
         </Suspense>
       )}
-      {openPanel === 'workspace' && workspaceRootPath && <WorkspacePanel />}
     </div>
   )
 }

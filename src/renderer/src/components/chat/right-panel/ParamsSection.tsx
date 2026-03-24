@@ -57,7 +57,7 @@ export function ParamsSection() {
   const currentLevel = THINKING_LEVELS.find((l) => l.value === thinkingEffort) ?? THINKING_LEVELS[0]
 
   return (
-    <div className="rounded-xl border border-border/40 bg-card/50">
+    <div className="rounded-xl border border-border/40 bg-sidebar">
       <div className="px-3.5 py-2.5 text-sm font-medium text-foreground/80">
         Parametres
       </div>
