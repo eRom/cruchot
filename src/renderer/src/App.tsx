@@ -82,6 +82,10 @@ function App(): React.JSX.Element {
     useUiStore.getState().toggleRightPanel()
   }, [])
 
+  const handleCustomize = useCallback(() => {
+    setCurrentView('customize')
+  }, [setCurrentView])
+
   const handleEscape = useCallback(async () => {
     if (commandPaletteOpen) {
       setCommandPaletteOpen(false)
@@ -99,6 +103,7 @@ function App(): React.JSX.Element {
     onModelList: handleModelList,
     onToggleSidebar: handleToggleSidebar,
     onToggleRightPanel: handleToggleRightPanel,
+    onCustomize: handleCustomize,
     onEscape: handleEscape,
   })
 

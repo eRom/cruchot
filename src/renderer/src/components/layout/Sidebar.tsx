@@ -12,23 +12,22 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import {
   Clock,
   MessageSquarePlus,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Plus
+  Plus,
+  Swords
 } from 'lucide-react'
 import { RemoteIndicator } from './RemoteIndicator'
 import { UserMenu } from './UserMenu'
 import React, { useCallback, useEffect, useMemo } from 'react'
 
 /** Sidebar width constants — keep in sync with AppLayout grid */
-const SIDEBAR_WIDTH_EXPANDED = 260
+const SIDEBAR_WIDTH_EXPANDED = 300
 const SIDEBAR_WIDTH_COLLAPSED = 52
 
 export function Sidebar(): React.JSX.Element {
   const { conversations, activeConversationId, setActiveConversation, setConversations, addConversation, updateConversation, removeConversation } =
     useConversationsStore()
   const activeProjectId = useProjectsStore((s) => s.activeProjectId)
-  const { sidebarCollapsed, toggleSidebar } = useSettingsStore()
+  const { sidebarCollapsed } = useSettingsStore()
   const { currentView, setCurrentView } = useUiStore()
 
 
@@ -137,9 +136,6 @@ export function Sidebar(): React.JSX.Element {
         'select-none overflow-hidden'
       )}
     >
-      {/* ── Drag region (traffic lights macOS) ─────────── */}
-      <div className="h-[38px] shrink-0 [-webkit-app-region:drag]" />
-
       {/* ── Header ─────────────────────────────────────── */}
       <div
         className={cn(
@@ -147,20 +143,6 @@ export function Sidebar(): React.JSX.Element {
           collapsed ? 'flex-col gap-1 px-1 py-2' : 'gap-2 px-3 py-1.5'
         )}
       >
-        {/* Collapse toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleSidebar}
-          className="size-8 shrink-0 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
-        >
-          {collapsed ? (
-            <PanelLeftOpen className="size-4" />
-          ) : (
-            <PanelLeftClose className="size-4" />
-          )}
-        </Button>
-
         {/* Remote indicator */}
         {!collapsed && <RemoteIndicator />}
 
@@ -196,6 +178,22 @@ export function Sidebar(): React.JSX.Element {
               </TooltipTrigger>
               <TooltipContent side="right">Taches</TooltipContent>
             </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => { setCurrentView('arena'); }}
+                  className={cn(
+                    'size-8 shrink-0 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/60',
+                    currentView === 'arena' && 'text-sidebar-primary'
+                  )}
+                >
+                  <Swords className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Arena</TooltipContent>
+            </Tooltip>
           </>
         ) : (
           <div className="flex flex-1 gap-1">
@@ -223,6 +221,19 @@ export function Sidebar(): React.JSX.Element {
             >
               <Clock className="size-4 shrink-0" />
               <span className="truncate">Taches</span>
+            </button>
+            <button
+              onClick={() => { setCurrentView('arena'); }}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5',
+                'text-[13px] font-medium text-sidebar-foreground/70',
+                'transition-colors duration-150',
+                'hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
+                currentView === 'arena' && 'text-sidebar-primary'
+              )}
+            >
+              <Swords className="size-4 shrink-0" />
+              <span className="truncate">Arena</span>
             </button>
           </div>
         )}

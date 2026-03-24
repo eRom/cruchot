@@ -1,4 +1,4 @@
-import { PanelRightClose, PanelRightOpen, SlidersHorizontal, FolderOpen, Settings2, Wrench, Plug, Radio } from 'lucide-react'
+import { SlidersHorizontal, FolderOpen, Settings2, Wrench, Plug, Radio } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useUiStore } from '@/stores/ui.store'
@@ -36,30 +36,6 @@ export function RightPanel({ onPromptInsert, onOptimizedPrompt }: RightPanelProp
         expanded ? 'w-[300px]' : 'w-10'
       )}
     >
-      {/* Toggle button */}
-      <div className={cn(
-        'shrink-0 flex items-center',
-        expanded ? 'justify-end px-3 py-2' : 'justify-center py-2'
-      )}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => useUiStore.getState().toggleRightPanel()}
-              className="size-8 shrink-0 text-muted-foreground/50 hover:text-foreground hover:bg-accent/60"
-            >
-              {expanded ? (
-                <PanelRightClose className="size-4" />
-              ) : (
-                <PanelRightOpen className="size-4" />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="left">Panneau lateral (Opt+Cmd+B)</TooltipContent>
-        </Tooltip>
-      </div>
-
       {/* Expanded: full sections */}
       {expanded && (
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-3 pb-3">
