@@ -1,8 +1,10 @@
 import { create } from 'zustand'
 
-export type ViewMode = 'chat' | 'settings' | 'statistics' | 'images' | 'projects' | 'prompts' | 'roles' | 'tasks' | 'mcp' | 'memory' | 'commands' | 'libraries' | 'arena' | 'brigade'
+export type ViewMode = 'chat' | 'settings' | 'statistics' | 'images' | 'projects' | 'tasks' | 'arena' | 'customize'
 
 export type SettingsTab = 'general' | 'appearance' | 'apikeys' | 'model' | 'audio' | 'keybindings' | 'data' | 'backup' | 'remote' | 'summary' | 'privacy'
+
+export type CustomizeTab = 'prompts' | 'roles' | 'mcp' | 'memory' | 'commands' | 'libraries' | 'brigade'
 
 export type OpenPanel = 'workspace' | 'right' | null
 
@@ -12,6 +14,7 @@ interface UiState {
   commandPaletteOpen: boolean
   searchOpen: boolean
   settingsTab: SettingsTab | null
+  customizeTab: CustomizeTab | null
   openPanel: OpenPanel
   draftContent: string
 
@@ -20,6 +23,7 @@ interface UiState {
   setCommandPaletteOpen: (open: boolean) => void
   setSearchOpen: (open: boolean) => void
   setSettingsTab: (tab: SettingsTab | null) => void
+  setCustomizeTab: (tab: CustomizeTab | null) => void
   setOpenPanel: (panel: OpenPanel) => void
   toggleRightPanel: () => void
   setDraftContent: (content: string) => void
@@ -31,6 +35,7 @@ export const useUiStore = create<UiState>((set) => ({
   commandPaletteOpen: false,
   searchOpen: false,
   settingsTab: null,
+  customizeTab: null,
   openPanel: null,
   draftContent: '',
 
@@ -39,6 +44,7 @@ export const useUiStore = create<UiState>((set) => ({
   setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
   setSearchOpen: (open) => set({ searchOpen: open }),
   setSettingsTab: (tab) => set({ settingsTab: tab }),
+  setCustomizeTab: (tab) => set({ customizeTab: tab }),
   setOpenPanel: (panel) => set({ openPanel: panel }),
   toggleRightPanel: () => set((s) => ({ openPanel: s.openPanel === 'right' ? null : 'right' })),
   setDraftContent: (content) => set({ draftContent: content })

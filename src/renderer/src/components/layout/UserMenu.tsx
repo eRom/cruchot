@@ -5,9 +5,6 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -16,20 +13,11 @@ import type { ViewMode } from '@/stores/ui.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import {
   BarChart3,
-  BookOpen,
-  Brain,
   ChevronsDownUp,
-  Library,
-  Shield,
-  TerminalSquare,
   ChevronsUpDown,
-  Clock,
-  FolderOpen,
   Image,
-  Network,
   Settings,
   Swords,
-  UserCircle,
   UserPen
 } from 'lucide-react'
 import React, { useState } from 'react'
@@ -38,10 +26,9 @@ interface UserMenuProps {
   isCollapsed: boolean
   currentView: ViewMode
   onNavigate: (view: ViewMode) => void
-  enabledTasksCount: number
 }
 
-export function UserMenu({ isCollapsed, currentView, onNavigate, enabledTasksCount }: UserMenuProps): React.JSX.Element {
+export function UserMenu({ isCollapsed, currentView, onNavigate }: UserMenuProps): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const userName = useSettingsStore((s) => s.userName) ?? ''
   const userAvatarPath = useSettingsStore((s) => s.userAvatarPath) ?? ''
@@ -106,76 +93,11 @@ export function UserMenu({ isCollapsed, currentView, onNavigate, enabledTasksCou
         {/* Groupe workspace */}
         <DropdownMenuGroup>
           <MenuItem
-            icon={FolderOpen}
-            label="Projets"
-            isActive={currentView === 'projects'}
-            onSelect={() => onNavigate('projects')}
+            icon={UserPen}
+            label="Personnaliser"
+            isActive={currentView === 'customize'}
+            onSelect={() => onNavigate('customize')}
           />
-          <MenuItem
-            icon={Clock}
-            label="Taches"
-            isActive={currentView === 'tasks'}
-            onSelect={() => onNavigate('tasks')}
-            badge={enabledTasksCount}
-          />
-
-          {/* Sous-menu Personnalisation */}
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger
-              className={cn(
-                'gap-2',
-                (currentView === 'prompts' || currentView === 'roles' || currentView === 'mcp' || currentView === 'memory' || currentView === 'commands' || currentView === 'libraries' || currentView === 'brigade')
-                  && 'font-semibold text-accent-foreground'
-              )}
-            >
-              <UserPen className="size-4" />
-              Personnalisation
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              <MenuItem
-                icon={BookOpen}
-                label="Prompts"
-                isActive={currentView === 'prompts'}
-                onSelect={() => onNavigate('prompts')}
-              />
-              <MenuItem
-                icon={UserCircle}
-                label="Roles"
-                isActive={currentView === 'roles'}
-                onSelect={() => onNavigate('roles')}
-              />
-              <MenuItem
-                icon={Network}
-                label="MCP"
-                isActive={currentView === 'mcp'}
-                onSelect={() => onNavigate('mcp')}
-              />
-              <MenuItem
-                icon={Brain}
-                label="Memoire"
-                isActive={currentView === 'memory'}
-                onSelect={() => onNavigate('memory')}
-              />
-              <MenuItem
-                icon={TerminalSquare}
-                label="Commandes"
-                isActive={currentView === 'commands'}
-                onSelect={() => onNavigate('commands')}
-              />
-              <MenuItem
-                icon={Library}
-                label="Referentiels"
-                isActive={currentView === 'libraries'}
-                onSelect={() => onNavigate('libraries')}
-              />
-              <MenuItem
-                icon={Shield}
-                label="Brigade"
-                isActive={currentView === 'brigade'}
-                onSelect={() => onNavigate('brigade')}
-              />
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
         </DropdownMenuGroup>
 
         <DropdownMenuSeparator />

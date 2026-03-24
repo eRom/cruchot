@@ -46,6 +46,7 @@ export function ChatOptionsMenu({ disabled, supportsThinking }: ChatOptionsMenuP
   const servers = useMcpStore((s) => s.servers)
   const toggleServer = useMcpStore((s) => s.toggleServer)
   const setCurrentView = useUiStore((s) => s.setCurrentView)
+  const setCustomizeTab = useUiStore((s) => s.setCustomizeTab)
 
   const mcpConnectedCount = useMemo(
     () => servers.filter((s) => s.status === 'connected').length,
@@ -172,14 +173,14 @@ export function ChatOptionsMenu({ disabled, supportsThinking }: ChatOptionsMenuP
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => setCurrentView('mcp')} className="gap-2">
+              <DropdownMenuItem onSelect={() => { setCustomizeTab('mcp'); setCurrentView('customize') }} className="gap-2">
                 <Settings2 className="size-4" />
                 Gerer les serveurs...
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         ) : (
-          <DropdownMenuItem onSelect={() => setCurrentView('mcp')} className="gap-2">
+          <DropdownMenuItem onSelect={() => { setCustomizeTab('mcp'); setCurrentView('customize') }} className="gap-2">
             <Network className="size-4 text-muted-foreground" />
             <span className="flex-1 text-muted-foreground">MCP</span>
             <span className="text-[10px] text-muted-foreground">Configurer...</span>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { FolderOpen, Plus, ChevronDown, Pencil, Trash2 } from 'lucide-react'
+import { FolderOpen, Plus, ChevronDown, Pencil, Settings2, Trash2 } from 'lucide-react'
 import { useProjectsStore, type Project } from '@/stores/projects.store'
 import { useProvidersStore } from '@/stores/providers.store'
 import { useUiStore } from '@/stores/ui.store'
@@ -176,7 +176,7 @@ export function ProjectSelector() {
             </div>
           )}
 
-          {/* Bouton nouveau projet -> navigue vers la vue Projets */}
+          {/* Actions projets */}
           <div className="border-t border-border/40 p-1">
             <button
               onClick={openNewProject}
@@ -187,6 +187,16 @@ export function ProjectSelector() {
             >
               <Plus className="size-4" />
               <span className="font-medium">Nouveau projet</span>
+            </button>
+            <button
+              onClick={() => { setIsOpen(false); setCurrentView('projects') }}
+              className={cn(
+                'flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors',
+                'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+              )}
+            >
+              <Settings2 className="size-4" />
+              <span>Gerer les projets...</span>
             </button>
           </div>
         </div>
