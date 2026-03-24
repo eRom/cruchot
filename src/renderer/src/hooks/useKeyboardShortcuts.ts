@@ -14,6 +14,8 @@ export interface KeyboardShortcutCallbacks {
   onToggleSidebar?: () => void
   /** Opt+Cmd+B — toggle right panel */
   onToggleRightPanel?: () => void
+  /** Cmd+U — open customize */
+  onCustomize?: () => void
   /** Escape — stop streaming */
   onEscape?: () => void
 }
@@ -42,6 +44,11 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
     if (callbacks.onModelList) {
       const handler = callbacks.onModelList
       bindings.push(['command+m,ctrl+m', handler])
+    }
+
+    if (callbacks.onCustomize) {
+      const handler = callbacks.onCustomize
+      bindings.push(['command+u,ctrl+u', handler])
     }
 
     if (callbacks.onEscape) {
@@ -106,6 +113,7 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
     callbacks.onModelList,
     callbacks.onToggleSidebar,
     callbacks.onToggleRightPanel,
+    callbacks.onCustomize,
     callbacks.onEscape,
   ])
 }

@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, Brain, Plus, Check, X } from 'lucide-react'
-import { useUiStore } from '@/stores/ui.store'
+import { Brain, Plus, Check, X } from 'lucide-react'
 import { useMemoryStore } from '@/stores/memory.store'
 import { useBardaStore } from '@/stores/barda.store'
 import { MemoryFragmentCard } from './MemoryFragmentCard'
@@ -9,7 +8,7 @@ import { SemanticMemorySection } from './SemanticMemorySection'
 import { toast } from 'sonner'
 
 export function MemoryView() {
-  const setCurrentView = useUiStore((s) => s.setCurrentView)
+
   const fragments = useMemoryStore((s) => s.fragments)
   const createFragment = useMemoryStore((s) => s.createFragment)
   const updateFragment = useMemoryStore((s) => s.updateFragment)
@@ -106,20 +105,10 @@ export function MemoryView() {
 
   return (
     <div className="flex h-full flex-col bg-background">
-      {/* Header */}
-      <div className="flex items-center gap-3 border-b border-border/40 px-6 py-4">
-        <button
-          onClick={() => setCurrentView('chat')}
-          className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-        >
-          <ArrowLeft className="size-5" />
-        </button>
-        <h1 className="text-lg font-semibold text-foreground">Memoire</h1>
-      </div>
-
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-8 py-6">
         <div className="mx-auto max-w-2xl space-y-6">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Memoire</h1>
           {/* Subheader */}
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">

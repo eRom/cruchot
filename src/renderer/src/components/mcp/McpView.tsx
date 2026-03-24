@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, Plus, Network } from 'lucide-react'
-import { useUiStore } from '@/stores/ui.store'
+import { Plus, Network } from 'lucide-react'
 import { useMcpStore } from '@/stores/mcp.store'
 import { McpServerCard } from './McpServerCard'
 import { McpServerForm } from './McpServerForm'
@@ -10,7 +9,7 @@ import { useBardaStore } from '@/stores/barda.store'
 type SubView = 'grid' | 'create' | 'edit'
 
 export function McpView() {
-  const setCurrentView = useUiStore((s) => s.setCurrentView)
+
   const servers = useMcpStore((s) => s.servers)
   const loading = useMcpStore((s) => s.loading)
   const loadServers = useMcpStore((s) => s.loadServers)
@@ -127,20 +126,10 @@ export function McpView() {
 
   return (
     <div className="flex h-full flex-col bg-background">
-      {/* Header */}
-      <div className="flex items-center gap-3 border-b border-border/40 px-6 py-4">
-        <button
-          onClick={() => setCurrentView('chat')}
-          className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-        >
-          <ArrowLeft className="size-5" />
-        </button>
-        <h1 className="text-lg font-semibold text-foreground">Serveurs MCP</h1>
-      </div>
-
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-8 py-6">
         <div className="mx-auto max-w-3xl space-y-6">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Serveurs MCP</h1>
           {/* Subheader */}
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">

@@ -17,7 +17,6 @@ import {
   ChevronsUpDown,
   Image,
   Settings,
-  Swords,
   UserPen
 } from 'lucide-react'
 import React, { useState } from 'react'
@@ -90,20 +89,14 @@ export function UserMenu({ isCollapsed, currentView, onNavigate }: UserMenuProps
         align={isCollapsed ? 'center' : 'start'}
         className="w-56"
       >
-        {/* Groupe workspace */}
         <DropdownMenuGroup>
           <MenuItem
             icon={UserPen}
             label="Personnaliser"
             isActive={currentView === 'customize'}
             onSelect={() => onNavigate('customize')}
+            shortcut="⌘U"
           />
-        </DropdownMenuGroup>
-
-        <DropdownMenuSeparator />
-
-        {/* Groupe app */}
-        <DropdownMenuGroup>
           <MenuItem
             icon={Settings}
             label="Parametres"
@@ -116,12 +109,6 @@ export function UserMenu({ isCollapsed, currentView, onNavigate }: UserMenuProps
             label="Images"
             isActive={currentView === 'images'}
             onSelect={() => onNavigate('images')}
-          />
-          <MenuItem
-            icon={Swords}
-            label="Arena"
-            isActive={currentView === 'arena'}
-            onSelect={() => onNavigate('arena')}
           />
           <MenuItem
             icon={BarChart3}
