@@ -29,19 +29,6 @@ export function TasksView() {
     window.api.getScheduledTasks().then(setTasks).catch(console.error)
   }, [setTasks])
 
-  // Listen for task execution events
-  useEffect(() => {
-    window.api.onTaskExecuted((data) => {
-      // Refresh the task to get updated lastRunAt, runCount, etc.
-      window.api.getScheduledTask(data.taskId).then((task) => {
-        if (task) updateTask(data.taskId, task)
-      })
-    })
-    return () => {
-      window.api.offTaskExecuted()
-    }
-  }, [updateTask])
-
   // Filtered + sorted
   const filteredTasks = useMemo(() => {
     let list = tasks

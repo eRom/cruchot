@@ -8,6 +8,7 @@ export interface Conversation {
   roleId?: string | null
   isFavorite?: boolean
   isArena?: boolean
+  isScheduledTask?: boolean
   createdAt: Date
   updatedAt: Date
 }

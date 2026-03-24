@@ -420,6 +420,13 @@ export function runMigrations(): void {
     // Column already exists — ignore
   }
 
+  // Add is_scheduled_task column to conversations table
+  try {
+    sqlite.exec('ALTER TABLE conversations ADD COLUMN is_scheduled_task INTEGER DEFAULT 0')
+  } catch {
+    // Column already exists — ignore
+  }
+
   // Add namespace column to tables managed by Barda packs
   const namespaceMigrations = [
     'ALTER TABLE roles ADD COLUMN namespace TEXT',

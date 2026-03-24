@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useState, useRef, useEffect } from 'react'
-import { MessagesSquare, Pencil, Trash2, Check, X, Star, Swords } from 'lucide-react'
+import { MessagesSquare, Pencil, Trash2, Check, X, Star, Swords, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Conversation } from '@/stores/conversations.store'
@@ -24,7 +24,7 @@ function ConversationItemBase({
   onDelete,
   onToggleFavorite
 }: ConversationItemProps): React.JSX.Element {
-  const Icon = conversation.isArena ? Swords : MessagesSquare
+  const Icon = conversation.isArena ? Swords : conversation.isScheduledTask ? Clock : MessagesSquare
   const [isRenaming, setIsRenaming] = useState(false)
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
   const [renameValue, setRenameValue] = useState('')

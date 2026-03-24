@@ -6,7 +6,7 @@ import { classifyError } from '../llm/errors'
 import { buildThinkingProviderOptions } from '../llm/thinking'
 import { parseFileOperations } from '../llm/file-operations'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
-import { createConversation, renameConversation, updateConversationModel, updateConversationRole } from '../db/queries/conversations'
+import { createConversation, renameConversation, updateConversationModel, updateConversationRole, setConversationScheduledTask } from '../db/queries/conversations'
 import { getRole } from '../db/queries/roles'
 import { buildMemoryBlock } from '../db/queries/memory-fragments'
 import { updateTaskRunStatus, incrementRunCount, getScheduledTask } from '../db/queries/scheduled-tasks'
@@ -44,6 +44,7 @@ export async function executeScheduledTask(
     // Create a new conversation for this execution
     const conv = createConversation(task.name, task.projectId ?? undefined)
     conversationId = conv.id
+    setConversationScheduledTask(conversationId, true)
 
     // Rename with the task name
     renameConversation(conversationId, task.name)
