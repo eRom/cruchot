@@ -12,18 +12,12 @@ import ChatView from '@/components/chat/ChatView'
 
 // Lazy-load non-chat views — reduces initial bundle by ~2MB
 const SettingsView = React.lazy(() => import('@/components/settings/SettingsView').then(m => ({ default: m.SettingsView })))
+const CustomizeView = React.lazy(() => import('@/components/customize/CustomizeView').then(m => ({ default: m.CustomizeView })))
 const StatsView = React.lazy(() => import('@/components/statistics/StatsView').then(m => ({ default: m.StatsView })))
 const ImagesView = React.lazy(() => import('@/components/images/ImagesView').then(m => ({ default: m.ImagesView })))
 const ProjectsView = React.lazy(() => import('@/components/projects/ProjectsView').then(m => ({ default: m.ProjectsView })))
-const PromptsView = React.lazy(() => import('@/components/prompts/PromptsView').then(m => ({ default: m.PromptsView })))
-const RolesView = React.lazy(() => import('@/components/roles/RolesView').then(m => ({ default: m.RolesView })))
 const TasksView = React.lazy(() => import('@/components/tasks/TasksView').then(m => ({ default: m.TasksView })))
-const McpView = React.lazy(() => import('@/components/mcp/McpView').then(m => ({ default: m.McpView })))
-const MemoryView = React.lazy(() => import('@/components/memory/MemoryView').then(m => ({ default: m.MemoryView })))
-const CommandsView = React.lazy(() => import('@/components/commands/CommandsView').then(m => ({ default: m.CommandsView })))
-const LibrariesView = React.lazy(() => import('@/components/libraries/LibrariesView').then(m => ({ default: m.LibrariesView })))
 const ArenaView = React.lazy(() => import('@/components/arena/ArenaView').then(m => ({ default: m.ArenaView })))
-const BrigadeView = React.lazy(() => import('@/components/brigade/BrigadeView').then(m => ({ default: m.BrigadeView })))
 import { useUiStore } from '@/stores/ui.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
@@ -140,18 +134,12 @@ function App(): React.JSX.Element {
             {currentView === 'chat' && <ChatView />}
             <Suspense fallback={null}>
               {currentView === 'settings' && <SettingsView />}
+              {currentView === 'customize' && <CustomizeView />}
               {currentView === 'statistics' && <StatsView />}
               {currentView === 'images' && <ImagesView />}
               {currentView === 'projects' && <ProjectsView />}
-              {currentView === 'prompts' && <PromptsView />}
-              {currentView === 'roles' && <RolesView />}
               {currentView === 'tasks' && <TasksView />}
-              {currentView === 'mcp' && <McpView />}
-              {currentView === 'memory' && <MemoryView />}
-              {currentView === 'commands' && <CommandsView />}
-              {currentView === 'libraries' && <LibrariesView />}
               {currentView === 'arena' && <ArenaView />}
-              {currentView === 'brigade' && <BrigadeView />}
             </Suspense>
           </AppLayout>
 

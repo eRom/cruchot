@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MessageSquarePlus, Moon, Settings, Sun, FolderOpen, Cpu, UserCircle, Clock, Shield, Swords } from 'lucide-react'
+import { MessageSquarePlus, Moon, Settings, Sun, FolderOpen, Cpu, UserPen, UserCircle, Clock, Shield, Swords } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useConversationsStore, type Conversation } from '@/stores/conversations.store'
 import { useProjectsStore, type Project } from '@/stores/projects.store'
@@ -57,6 +57,7 @@ function CommandPalette({
   const projects = useProjectsStore((s) => s.projects)
   const setCurrentView = useUiStore((s) => s.setCurrentView)
   const setSettingsTab = useUiStore((s) => s.setSettingsTab)
+  const setCustomizeTab = useUiStore((s) => s.setCustomizeTab)
 
   // Fetch ALL conversations when palette opens (store only has current project's)
   const [allConversations, setAllConversations] = useState<Conversation[]>([])
@@ -102,12 +103,24 @@ function CommandPalette({
         },
       },
       {
+        id: 'action:customize',
+        label: 'Personnaliser',
+        group: 'Actions',
+        icon: <UserPen className="size-4" />,
+        onSelect: () => {
+          setCustomizeTab('prompts')
+          setCurrentView('customize')
+          onClose()
+        },
+      },
+      {
         id: 'action:roles',
         label: 'Roles',
         group: 'Actions',
         icon: <UserCircle className="size-4" />,
         onSelect: () => {
-          setCurrentView('roles')
+          setCustomizeTab('roles')
+          setCurrentView('customize')
           onClose()
         },
       },
@@ -137,7 +150,8 @@ function CommandPalette({
         group: 'Actions',
         icon: <Shield className="size-4" />,
         onSelect: () => {
-          setCurrentView('brigade')
+          setCustomizeTab('brigade')
+          setCurrentView('customize')
           onClose()
         },
       },

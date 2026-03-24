@@ -7,9 +7,11 @@ import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useUiStore, type ViewMode } from '@/stores/ui.store'
-import { useTasksStore } from '@/stores/tasks.store'
+
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import {
+  Clock,
+  MessageSquarePlus,
   PanelLeftClose,
   PanelLeftOpen,
   Plus
@@ -28,7 +30,7 @@ export function Sidebar(): React.JSX.Element {
   const activeProjectId = useProjectsStore((s) => s.activeProjectId)
   const { sidebarCollapsed, toggleSidebar } = useSettingsStore()
   const { currentView, setCurrentView } = useUiStore()
-  const enabledTasksCount = useTasksStore((s) => s.tasks.filter((t) => t.isEnabled).length)
+
 
   // ── Recharger les conversations quand le projet change ────
   useEffect(() => {
@@ -162,34 +164,67 @@ export function Sidebar(): React.JSX.Element {
         {/* Remote indicator */}
         {!collapsed && <RemoteIndicator />}
 
-        {/* New conversation button */}
+        {/* Action buttons: Chat + Tasks */}
         {collapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleNewConversation}
-                className="size-8 shrink-0 text-sidebar-foreground/50 hover:text-sidebar-primary hover:bg-sidebar-accent/60"
-              >
-                <Plus className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Nouvelle discussion</TooltipContent>
-          </Tooltip>
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleNewConversation}
+                  className="size-8 shrink-0 text-sidebar-foreground/50 hover:text-sidebar-primary hover:bg-sidebar-accent/60"
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Nouvelle discussion</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => { setCurrentView('tasks'); }}
+                  className={cn(
+                    'size-8 shrink-0 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/60',
+                    currentView === 'tasks' && 'text-sidebar-primary'
+                  )}
+                >
+                  <Clock className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Taches</TooltipContent>
+            </Tooltip>
+          </>
         ) : (
-          <button
-            onClick={handleNewConversation}
-            className={cn(
-              'flex flex-1 items-center gap-2 rounded-lg px-2 py-1.5',
-              'text-[13px] font-medium text-sidebar-foreground/70',
-              'transition-colors duration-150',
-              'hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
-            )}
-          >
-            <Plus className="size-4 shrink-0" />
-            <span className="truncate">Nouvelle discussion</span>
-          </button>
+          <div className="flex flex-1 gap-1">
+            <button
+              onClick={handleNewConversation}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5',
+                'text-[13px] font-medium text-sidebar-foreground/70',
+                'transition-colors duration-150',
+                'hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
+              )}
+            >
+              <MessageSquarePlus className="size-4 shrink-0" />
+              <span className="truncate">Chat</span>
+            </button>
+            <button
+              onClick={() => { setCurrentView('tasks'); }}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5',
+                'text-[13px] font-medium text-sidebar-foreground/70',
+                'transition-colors duration-150',
+                'hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
+                currentView === 'tasks' && 'text-sidebar-primary'
+              )}
+            >
+              <Clock className="size-4 shrink-0" />
+              <span className="truncate">Taches</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -228,7 +263,6 @@ export function Sidebar(): React.JSX.Element {
           isCollapsed={collapsed}
           currentView={currentView}
           onNavigate={handleNavClick}
-          enabledTasksCount={enabledTasksCount}
         />
       </div>
     </aside>
