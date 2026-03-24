@@ -11,7 +11,7 @@ export function TopBar() {
   const rightExpanded = openPanel === 'right'
 
   return (
-    <div className="flex h-[38px] shrink-0 items-center bg-background">
+    <div className="flex h-[38px] shrink-0 items-center bg-background border-b">
       {/* Drag region — fills all space, traffic lights macOS */}
       <div className="flex-1 h-full [-webkit-app-region:drag]" />
 
