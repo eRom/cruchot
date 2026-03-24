@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
 import { useSettingsStore } from '@/stores/settings.store'
+import { useTasksStore } from '@/stores/tasks.store'
 import { useUiStore, type ViewMode } from '@/stores/ui.store'
 
 import { useWorkspaceStore } from '@/stores/workspace.store'
@@ -29,6 +30,7 @@ export function Sidebar(): React.JSX.Element {
   const activeProjectId = useProjectsStore((s) => s.activeProjectId)
   const { sidebarCollapsed } = useSettingsStore()
   const { currentView, setCurrentView } = useUiStore()
+  const loadTasks = useTasksStore((s) => s.loadTasks)
 
 
   // ── Recharger les conversations quand le projet change ────
@@ -36,13 +38,14 @@ export function Sidebar(): React.JSX.Element {
     window.api.getConversations(activeProjectId).then(setConversations).catch(console.error)
   }, [activeProjectId, setConversations])
 
-  // ── Refresh sidebar quand une tache planifiee s'execute ────
+  // ── Refresh sidebar + tasks store quand une tache planifiee s'execute ────
   useEffect(() => {
     window.api.onTaskExecuted(() => {
       window.api.getConversations(activeProjectId).then(setConversations).catch(console.error)
+      loadTasks()
     })
     return () => { window.api.offTaskExecuted() }
-  }, [activeProjectId, setConversations])
+  }, [activeProjectId, setConversations, loadTasks])
 
   // ── Filtrage local (securite, au cas ou le backend n'est pas sync) ──
   const filteredConversations = useMemo(() => {

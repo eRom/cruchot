@@ -135,6 +135,14 @@ export function setConversationArena(id: string, isArena: boolean) {
     .run()
 }
 
+export function setConversationScheduledTask(id: string, isScheduledTask: boolean) {
+  const db = getDatabase()
+  db.update(conversations)
+    .set({ isScheduledTask, updatedAt: new Date() })
+    .where(eq(conversations.id, id))
+    .run()
+}
+
 
 export function deleteAllConversations() {
   const db = getDatabase()

@@ -128,6 +128,7 @@ export interface ConversationInfo {
   activeLibraryId?: string | null
   isFavorite?: boolean
   isArena?: boolean
+  isScheduledTask?: boolean
   createdAt: Date
   updatedAt: Date
 }
