@@ -1063,8 +1063,6 @@ export interface ElectronAPI {
   permissionsReset: () => Promise<void>
 
   // Tool Approval
-  onToolApproval: (cb: (request: ToolApprovalRequest) => void) => void
-  offToolApproval: () => void
   approveToolCall: (approvalId: string, decision: 'allow' | 'deny' | 'allow-session') => Promise<void>
 
   // Settings

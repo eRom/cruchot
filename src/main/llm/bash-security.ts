@@ -6,7 +6,6 @@ import { homedir } from 'os'
 
 export const COMMAND_SUBSTITUTION_PATTERNS: string[] = [
   '$(',
-  '${',
   '$[',
   '<(',
   '>(',
@@ -181,6 +180,12 @@ export function runBashSecurityChecks(command: string): SecurityCheckResult {
     }
   }
 
+  // Check 4: Semicolons followed by dangerous commands
+  const strippedForChaining = command.replace(/'[^']*'|"[^"]*"/g, '') // Remove quoted strings
+  if (/;\s*(rm|chmod|chown|sudo|kill|shutdown|reboot|mkfs)\b/.test(strippedForChaining)) {
+    return { pass: false, failedCheck: 4, reason: 'Commande dangereuse chainee detectee' }
+  }
+
   // Check 5: Dangerous variable assignments (IFS=, PATH=, LD_PRELOAD=, etc.)
   // Match VAR= at word boundary (start of token or after ;|&)
   for (const varName of DANGEROUS_VARIABLES) {
@@ -225,6 +230,17 @@ export function runBashSecurityChecks(command: string): SecurityCheckResult {
       failedCheck: 8,
       reason: 'Redirection I/O vers un chemin sensible interdite',
     }
+  }
+
+  // Check 9: Inline IFS manipulation (IFS=x command)
+  const strippedForIfs = command.replace(/'[^']*'|"[^"]*"/g, '')
+  if (/\bIFS=[^\s]*\s+\S/.test(strippedForIfs)) {
+    return { pass: false, failedCheck: 9, reason: 'Manipulation IFS inline detectee' }
+  }
+
+  // Check 10: Git commit message with command substitution
+  if (/\bgit\b.*\bcommit\b.*-m\b/.test(command) && /\$\(|\`/.test(command)) {
+    return { pass: false, failedCheck: 10, reason: 'Substitution de commande dans git commit detectee' }
   }
 
   // Check 11: /proc/environ access

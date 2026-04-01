@@ -525,12 +525,6 @@ const api: ElectronAPI = {
   permissionsReset: (): Promise<void> => ipcRenderer.invoke('permissions:reset'),
 
   // ── Tool Approval ─────────────────────────────────────────
-  onToolApproval: (cb: (request: { approvalId: string; toolName: string; toolArgs: Record<string, unknown> }) => void): void => {
-    ipcRenderer.on('chat:tool-approval', (_event, request) => cb(request))
-  },
-  offToolApproval: (): void => {
-    ipcRenderer.removeAllListeners('chat:tool-approval')
-  },
   approveToolCall: (approvalId: string, decision: 'allow' | 'deny' | 'allow-session'): Promise<void> =>
     ipcRenderer.invoke('chat:approve-tool', { approvalId, decision }),
 
