@@ -23,8 +23,8 @@ const TABS: TabItem[] = [
   { type: 'separator' },
   { type: 'tab', id: 'memory', label: 'Memoire', icon: <Brain className="size-4" /> },
   { type: 'tab', id: 'libraries', label: 'Referentiels', icon: <Library className="size-4" /> },
-  { type: 'tab', id: 'skills' as CustomizeTab, label: 'Skills', icon: <Sparkles className="size-4" /> },
   { type: 'separator' },
+  { type: 'tab', id: 'skills' as CustomizeTab, label: 'Skills', icon: <Sparkles className="size-4" /> },
   { type: 'tab', id: 'mcp', label: 'MCP', icon: <Network className="size-4" /> },
   { type: 'tab', id: 'brigade', label: 'Brigade', icon: <Shield className="size-4" /> },
 ]
