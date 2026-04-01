@@ -36,6 +36,7 @@ import { registerPromptOptimizerIpc } from './prompt-optimizer.ipc'
 import { registerArenaIpc } from './arena.ipc'
 import { registerBardaHandlers } from './barda.ipc'
 import { registerSkillsIpc } from './skills.ipc'
+import { registerPermissionsIpc } from './permissions.ipc'
 
 
 /**
@@ -142,6 +143,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Skills (Packs autonomes SKILL.md) ───────────────
   registerSkillsIpc()
+
+  // ── Permissions (tool access control) ──────────────
+  registerPermissionsIpc()
 
   // ── Settings ────────────────────────────────────────
   const ALLOWED_SETTING_KEYS = new Set([
