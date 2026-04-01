@@ -294,14 +294,51 @@ class SkillService {
    * Clone a git repo with --depth 1 to a temp directory.
    * Returns { success, tempDir } or { success: false, error }.
    */
+  /**
+   * Parse a GitHub URL to extract repo URL, branch, and subpath.
+   * Handles: https://github.com/user/repo/tree/branch/path/to/dir
+   * Returns: { repoUrl, branch?, subpath? }
+   */
+  parseGitHubUrl(gitUrl: string): { repoUrl: string; branch?: string; subpath?: string } {
+    // Match: https://github.com/owner/repo/tree/branch/optional/path
+    const treeMatch = gitUrl.match(/^(https:\/\/github\.com\/[^/]+\/[^/]+)\/tree\/([^/]+)(?:\/(.+))?$/)
+    if (treeMatch) {
+      return {
+        repoUrl: treeMatch[1],
+        branch: treeMatch[2],
+        subpath: treeMatch[3] ?? undefined
+      }
+    }
+
+    // Match: https://github.com/owner/repo (with optional .git and trailing slash)
+    const repoMatch = gitUrl.match(/^(https:\/\/github\.com\/[^/]+\/[^/]+?)(?:\.git)?\/?$/)
+    if (repoMatch) {
+      return { repoUrl: repoMatch[1] }
+    }
+
+    // Fallback: use as-is
+    return { repoUrl: gitUrl }
+  }
+
   cloneRepo(gitUrl: string): { success: true; tempDir: string } | { success: false; error: string } {
+    const { repoUrl, branch, subpath } = this.parseGitHubUrl(gitUrl)
     const tempDir = path.join('/tmp', `cruchot-skill-${randomUUID()}`)
+
     try {
-      execSync(`git clone --depth 1 ${JSON.stringify(gitUrl)} ${JSON.stringify(tempDir)}`, {
+      const branchArg = branch ? `--branch ${JSON.stringify(branch)}` : ''
+      execSync(`git clone --depth 1 ${branchArg} ${JSON.stringify(repoUrl)} ${JSON.stringify(tempDir)}`, {
         timeout: 60_000,
         stdio: 'pipe'
       })
-      return { success: true, tempDir }
+
+      // If the URL pointed to a subpath, return that subpath as the skill dir
+      const skillDir = subpath ? path.join(tempDir, subpath) : tempDir
+      if (subpath && !fs.existsSync(skillDir)) {
+        try { execSync(`trash ${JSON.stringify(tempDir)}`, { stdio: 'pipe' }) } catch {}
+        return { success: false, error: `Sous-dossier "${subpath}" introuvable dans le depot` }
+      }
+
+      return { success: true, tempDir: skillDir }
     } catch (err) {
       // Cleanup failed clone attempt
       try {

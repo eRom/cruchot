@@ -50,9 +50,13 @@ const nameSchema = z.object({
 
 // ── Helper: cleanup temp dir ──────────────────────────────────────────────
 
+/** Cleanup temp dir. If it's a subpath of a /tmp/cruchot-skill-* clone, trash the clone root. */
 function cleanupTemp(tempDir: string): void {
   try {
-    execSync(`trash ${JSON.stringify(tempDir)}`, { stdio: 'pipe' })
+    // Find the clone root (/tmp/cruchot-skill-<uuid>)
+    const cloneRootMatch = tempDir.match(/^(\/tmp\/cruchot-skill-[a-f0-9-]+)/)
+    const target = cloneRootMatch ? cloneRootMatch[1] : tempDir
+    execSync(`trash ${JSON.stringify(target)}`, { stdio: 'pipe' })
   } catch {
     // Best-effort cleanup
   }
