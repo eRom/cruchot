@@ -103,10 +103,11 @@ function parseSimpleYaml(raw: string): Record<string, unknown> {
       continue
     }
 
-    // Multiline block scalar (|)
-    if (value === '|') {
+    // Multiline block scalar: | (literal), > (folded), |- (literal strip), >- (folded strip)
+    const blockMatch = value.match(/^([|>])(-?)$/)
+    if (blockMatch) {
+      const isFolded = blockMatch[1] === '>'
       const blockLines: string[] = []
-      // Determine base indent from the first non-empty following line
       let baseIndent = -1
       i++
       while (i < lines.length) {
@@ -123,7 +124,16 @@ function parseSimpleYaml(raw: string): Record<string, unknown> {
         blockLines.push(bLine.slice(baseIndent))
         i++
       }
-      result[key] = blockLines.join('\n').trimEnd()
+      if (isFolded) {
+        // Folded: join lines with spaces (empty lines become newlines)
+        result[key] = blockLines
+          .join('\n')
+          .replace(/([^\n])\n([^\n])/g, '$1 $2')  // join consecutive non-empty lines
+          .trimEnd()
+      } else {
+        // Literal: preserve newlines
+        result[key] = blockLines.join('\n').trimEnd()
+      }
       continue
     }
 
