@@ -14,6 +14,8 @@ import { seedBuiltinCommands } from './db/queries/slash-commands'
 import { BUILTIN_COMMANDS } from './commands/builtin'
 import { qdrantMemoryService } from './services/qdrant-memory.service'
 import { ensureInstanceToken } from './services/instance-token.service'
+import { skillService } from './services/skill.service'
+import { listSkills, createSkill, deleteSkill } from './db/queries/skills'
 
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'
@@ -69,6 +71,42 @@ app.whenReady().then(() => {
   // Ensure default sandbox directory exists
   const sandboxDir = path.join(os.homedir(), '.cruchot', 'sandbox')
   fs.mkdirSync(sandboxDir, { recursive: true })
+
+  // ── Skills ────────────────────────────────────────────
+  skillService.ensureSkillsDir()
+
+  // Sync filesystem skills with DB
+  try {
+    const discoveredSkills = skillService.discoverSkills()
+    const dbSkills = listSkills()
+    const dbSkillNames = new Set(dbSkills.map(s => s.name))
+    const fsSkillNames = new Set(discoveredSkills.map(s => s.parsed.frontmatter.name))
+
+    // Add skills found on filesystem but not in DB
+    for (const { parsed } of discoveredSkills) {
+      if (!dbSkillNames.has(parsed.frontmatter.name)) {
+        createSkill({
+          name: parsed.frontmatter.name,
+          description: parsed.frontmatter.description,
+          allowedTools: parsed.frontmatter.allowedTools,
+          shell: parsed.frontmatter.shell,
+          effort: parsed.frontmatter.effort,
+          argumentHint: parsed.frontmatter.argumentHint,
+          userInvocable: parsed.frontmatter.userInvocable,
+          source: 'local'
+        })
+      }
+    }
+
+    // Remove DB entries for skills deleted from filesystem (except barda-managed)
+    for (const dbSkill of dbSkills) {
+      if (!fsSkillNames.has(dbSkill.name) && dbSkill.source !== 'barda') {
+        deleteSkill(dbSkill.id)
+      }
+    }
+  } catch (err) {
+    console.warn('[Skills] Startup sync failed:', err)
+  }
 
   // Defer non-critical init to after window creation (improves cold start)
   ensureInstanceToken()

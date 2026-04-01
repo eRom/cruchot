@@ -16,6 +16,8 @@ import { buildMemoryBlock } from '../db/queries/memory-fragments'
 import { qdrantMemoryService } from '../services/qdrant-memory.service'
 import { buildSemanticMemoryBlock } from '../llm/memory-prompt'
 import { buildLibraryContextBlock, type LibraryChunkForPrompt } from '../llm/library-prompt'
+import { buildSkillContextBlock } from '../llm/skill-prompt'
+import { getSkillByName } from '../db/queries/skills'
 import { libraryService } from '../services/library.service'
 import { getConversationLibraryId, getLibrary } from '../db/queries/libraries'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
@@ -48,7 +50,9 @@ const sendMessageSchema = z.object({
     language: z.string().max(50)
   })).max(20).optional(),
   searchEnabled: z.boolean().optional(),
-  libraryId: z.string().optional()
+  libraryId: z.string().optional(),
+  skillName: z.string().max(200).optional(),
+  skillArgs: z.string().max(10_000).optional()
 })
 
 let currentAbortController: AbortController | null = null
@@ -130,6 +134,8 @@ export interface HandleChatMessageParams {
   attachments?: AttachmentRef[]
   fileContexts?: Array<{ path: string; content: string; language: string }>
   searchEnabled?: boolean
+  skillName?: string
+  skillArgs?: string
   source: 'desktop' | 'telegram' | 'websocket'
   window: BrowserWindow
 }
@@ -139,7 +145,7 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
     conversationId, content, modelId, providerId, systemPrompt,
     temperature, maxTokens, topP, thinkingEffort, roleId,
     attachments: attachmentRefs, fileContexts,
-    searchEnabled, source, window: win
+    searchEnabled, skillName, skillArgs, source, window: win
   } = params
 
   // Abort any existing stream
@@ -299,6 +305,48 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       }
     }
 
+    // Skill injection (if invoked via /skill-name)
+    let skillContextBlock = ''
+    if (skillName) {
+      const dbSkill = getSkillByName(skillName)
+      if (dbSkill && dbSkill.enabled) {
+        const toolCallId = `skill-invoke-${Date.now()}`
+
+        // Send synthetic tool-call chunk
+        win.webContents.send('chat:chunk', {
+          type: 'tool-call',
+          toolName: 'skill',
+          toolArgs: { name: skillName },
+          toolCallId
+        })
+
+        try {
+          const result = await buildSkillContextBlock(
+            skillName,
+            skillArgs ?? '',
+            resolvedWorkspacePath
+          )
+          if (result) {
+            skillContextBlock = result.block
+          }
+          win.webContents.send('chat:chunk', {
+            type: 'tool-result',
+            toolName: 'skill',
+            toolCallId,
+            toolIsError: false
+          })
+        } catch (err) {
+          console.warn('[Chat] Skill execution failed:', err)
+          win.webContents.send('chat:chunk', {
+            type: 'tool-result',
+            toolName: 'skill',
+            toolCallId,
+            toolIsError: true
+          })
+        }
+      }
+    }
+
     // Build combined system prompt: library-context + semantic memory + memory fragments + role prompt
     const memoryBlock = buildMemoryBlock()
     let combinedSystemPrompt = ''
@@ -318,6 +366,10 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
     if (systemPrompt) {
       if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
       combinedSystemPrompt += systemPrompt
+    }
+    if (skillContextBlock) {
+      if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
+      combinedSystemPrompt += skillContextBlock
     }
     if (combinedSystemPrompt) {
       aiMessages.push({ role: 'system', content: combinedSystemPrompt })
