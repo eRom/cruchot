@@ -3,6 +3,7 @@
  * Transaction atomique, verification namespace unique, limite fragments.
  */
 import crypto from 'node:crypto'
+import { execSync } from 'node:child_process'
 import { eq, sql } from 'drizzle-orm'
 import { getDatabase } from '../db/index'
 import {
@@ -18,6 +19,9 @@ import {
   getBardaByNamespace,
   countActiveFragments
 } from '../db/queries/bardas'
+import { createSkill, getSkillByName } from '../db/queries/skills'
+import { skillService } from './skill.service'
+import { matonService } from './skill-maton.service'
 import type { ParsedBardaInternal } from './barda-parser.service'
 
 // ── Types ────────────────────────────────────────────────
@@ -71,6 +75,7 @@ class BardaImportService {
         fragmentsCount: parsed.fragments.length,
         librariesCount: parsed.libraries.length,
         mcpServersCount: parsed.mcp.length,
+        skillsCount: parsed.skills.length,
         createdAt: now,
         updatedAt: now
       }).run()
@@ -194,6 +199,86 @@ class BardaImportService {
 
       return { bardaId, succes, skips, warnings }
     })
+
+    // Import skills (filesystem ops — async, outside transaction)
+    const namespace = parsed.metadata.namespace
+    for (const skillDef of parsed.skills) {
+      const skillFullName = `${namespace}:${skillDef.name}`
+      const existingSkill = getSkillByName(skillFullName)
+      if (existingSkill) {
+        report.skips.push({ type: 'Skill', name: skillDef.name, reason: 'Skill deja installe' })
+        continue
+      }
+
+      // Parse source URL from content (format: "- source: https://...")
+      const sourceMatch = skillDef.content.match(/^-\s*source:\s*(.+)$/m)
+      if (!sourceMatch) {
+        report.warnings.push(`Skill ${skillDef.name}: source manquante`)
+        continue
+      }
+
+      const source = sourceMatch[1].trim()
+      const isGit = source.startsWith('http://') || source.startsWith('https://')
+
+      try {
+        let sourceDir: string
+        let tempDir: string | null = null
+
+        if (isGit) {
+          const cloneResult = skillService.cloneRepo(source)
+          if (!cloneResult.success) {
+            report.warnings.push(`Skill ${skillDef.name}: ${cloneResult.error}`)
+            continue
+          }
+          sourceDir = cloneResult.tempDir
+          tempDir = cloneResult.tempDir
+        } else {
+          sourceDir = source
+        }
+
+        // Validate
+        const validation = skillService.validateSkillDir(sourceDir)
+        if (!validation.success) {
+          report.warnings.push(`Skill ${skillDef.name}: ${validation.error}`)
+          if (tempDir) try { execSync(`trash "${tempDir}"`, { stdio: 'pipe' }) } catch {}
+          continue
+        }
+
+        // Maton scan
+        const scanResult = await matonService.scan(sourceDir)
+        if (scanResult.success && scanResult.report.verdict === 'CRITICAL') {
+          report.warnings.push(`Skill ${skillDef.name}: menaces critiques detectees, non installe`)
+          if (tempDir) try { execSync(`trash "${tempDir}"`, { stdio: 'pipe' }) } catch {}
+          continue
+        }
+
+        // Install to filesystem
+        skillService.installSkill(sourceDir, skillFullName)
+
+        // Insert into DB
+        const fm = validation.parsed.frontmatter
+        createSkill({
+          name: skillFullName,
+          description: fm.description,
+          allowedTools: fm.allowedTools,
+          shell: fm.shell,
+          effort: fm.effort,
+          argumentHint: fm.argumentHint,
+          userInvocable: fm.userInvocable,
+          source: 'barda',
+          gitUrl: isGit ? source : undefined,
+          namespace,
+          matonVerdict: scanResult.success ? scanResult.report.verdict : null,
+          matonReport: scanResult.success ? (scanResult.report as unknown as Record<string, unknown>) : null
+        })
+
+        report.succes.push(`Skill: ${skillFullName}`)
+
+        if (tempDir) try { execSync(`trash "${tempDir}"`, { stdio: 'pipe' }) } catch {}
+      } catch (err) {
+        report.warnings.push(`Skill ${skillDef.name}: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    }
 
     return report
   }

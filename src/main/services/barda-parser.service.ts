@@ -30,6 +30,7 @@ export interface ParsedBardaInternal {
       headers?: Record<string, string>
     }
   }>
+  skills: Array<{ name: string; content: string }>
 }
 
 export type ParseResult =
@@ -48,13 +49,14 @@ const frontmatterSchema = z.object({
 
 // ── Sections reconnues ──────────────────────────────────────
 
-const KNOWN_SECTIONS: Record<string, keyof Pick<ParsedBardaInternal, 'roles' | 'commands' | 'prompts' | 'fragments' | 'libraries' | 'mcp'>> = {
+const KNOWN_SECTIONS: Record<string, keyof Pick<ParsedBardaInternal, 'roles' | 'commands' | 'prompts' | 'fragments' | 'libraries' | 'mcp' | 'skills'>> = {
   'Roles': 'roles',
   'Commands': 'commands',
   'Prompts': 'prompts',
   'Memory Fragments': 'fragments',
   'Libraries': 'libraries',
-  'MCP': 'mcp'
+  'MCP': 'mcp',
+  'Skills': 'skills'
 }
 
 // ── Service ─────────────────────────────────────────────────
@@ -117,7 +119,8 @@ class BardaParserService {
       prompts: [],
       fragments: [],
       libraries: [],
-      mcp: []
+      mcp: [],
+      skills: []
     }
 
     let hasContent = false

@@ -9,6 +9,7 @@ import {
   Plug,
   Terminal,
   Users,
+  Wrench,
   X
 } from 'lucide-react'
 
@@ -27,7 +28,8 @@ const SECTION_CONFIG = [
   { key: 'prompts' as const, icon: FileText, label: 'Prompts' },
   { key: 'fragments' as const, icon: Brain, label: 'Fragments' },
   { key: 'libraries' as const, icon: BookOpen, label: 'Referentiels' },
-  { key: 'mcp' as const, icon: Plug, label: 'MCP' }
+  { key: 'mcp' as const, icon: Plug, label: 'MCP' },
+  { key: 'skills' as const, icon: Wrench, label: 'Skills' }
 ]
 
 export function BardaPreview({ parsed, onConfirm, onCancel, isImporting }: BardaPreviewProps) {
