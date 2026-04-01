@@ -8,7 +8,8 @@ import { classifyError } from '../llm/errors'
 import { buildThinkingProviderOptions } from '../llm/thinking'
 import { validateAttachment, processAttachments, buildContentParts, MAX_FILES_PER_MESSAGE, type AttachmentRef } from '../llm/attachments'
 import { parseFileOperations } from '../llm/file-operations'
-import { buildConversationTools, buildWorkspaceContextBlock, WORKSPACE_TOOLS_PROMPT } from '../llm/conversation-tools'
+import { buildConversationTools, buildWorkspaceContextBlock, WORKSPACE_TOOLS_PROMPT } from '../llm/tools'
+import { getAllPermissionRules } from '../db/queries/permissions'
 import { mcpManagerService } from '../services/mcp-manager.service'
 import { telegramBotService } from '../services/telegram-bot.service'
 import { remoteServerService } from '../services/remote-server.service'
@@ -22,7 +23,6 @@ import { libraryService } from '../services/library.service'
 import { getConversationLibraryId, getLibrary } from '../db/queries/libraries'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
 import { touchConversation, renameConversation, getConversation, updateConversationModel, updateConversationRole } from '../db/queries/conversations'
-import { getActiveSession } from '../db/queries/remote-sessions'
 
 const attachmentSchema = z.object({
   path: z.string().min(1),
@@ -57,66 +57,13 @@ const sendMessageSchema = z.object({
 
 let currentAbortController: AbortController | null = null
 
-// ── Tool Approval Gate ──────────────────────────────────────
+// ── Pending Approvals (for tool permission pipeline) ──────
+const pendingApprovals = new Map<string, {
+  resolve: (decision: 'allow' | 'deny' | 'allow-session') => void
+  timeout: NodeJS.Timeout
+}>()
 
-interface ToolLike {
-  description?: string
-  inputSchema?: unknown
-  execute?: (args: unknown) => Promise<unknown>
-  [key: string]: unknown
-}
-
-function shouldAutoApprove(toolName: string, session: { autoApproveRead: boolean; autoApproveWrite: boolean; autoApproveBash: boolean; autoApproveList: boolean; autoApproveMcp: boolean }): boolean {
-  // Workspace tools
-  if (toolName === 'readFile') return session.autoApproveRead
-  if (toolName === 'listFiles') return session.autoApproveList
-  if (toolName === 'writeFile') return session.autoApproveWrite
-  if (toolName === 'bash') return session.autoApproveBash
-  // Search tool (external API like MCP)
-  if (toolName === 'search') return session.autoApproveMcp
-  // MCP tools (contain double underscore)
-  if (toolName.includes('__')) return session.autoApproveMcp
-  // Unknown tools default to requiring approval
-  return false
-}
-
-function wrapToolsWithApproval(
-  tools: Record<string, ToolLike>,
-  bot: typeof telegramBotService,
-  session: { autoApproveRead: boolean; autoApproveWrite: boolean; autoApproveBash: boolean; autoApproveList: boolean; autoApproveMcp: boolean }
-): Record<string, ToolLike> {
-  const wrapped: Record<string, ToolLike> = {}
-
-  for (const [name, t] of Object.entries(tools)) {
-    if (shouldAutoApprove(name, session)) {
-      // Auto-approved — notify Telegram but don't wait
-      const originalExecute = t.execute
-      wrapped[name] = {
-        ...t,
-        execute: async (args: unknown) => {
-          // Notify Telegram about auto-approved tool
-          bot.sendToolResult(name, `[auto-approve] ${name}(${JSON.stringify(args).slice(0, 200)})`).catch(() => {})
-          return originalExecute ? originalExecute(args) : undefined
-        }
-      }
-    } else {
-      // Requires approval
-      const originalExecute = t.execute
-      wrapped[name] = {
-        ...t,
-        execute: async (args: unknown) => {
-          const approved = await bot.requestApproval(nanoid(), name, args as Record<string, unknown>)
-          if (!approved) {
-            return { error: 'Tool call denied by user via Telegram' }
-          }
-          return originalExecute ? originalExecute(args) : undefined
-        }
-      }
-    }
-  }
-
-  return wrapped
-}
+const APPROVAL_TIMEOUT_MS = 60_000 // 60 seconds
 
 // ── Exported chat handler (used by both IPC and Telegram) ───
 
@@ -424,8 +371,57 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       }
     }
 
-    // Build conversation tools (always available — every conversation has a workspace path)
-    const workspaceTools = buildConversationTools(resolvedWorkspacePath)
+    // Build conversation tools with permission pipeline
+    const rules = getAllPermissionRules()
+    const workspaceTools = buildConversationTools(resolvedWorkspacePath, {
+      rules,
+      onAskApproval: async (request) => {
+        const approvalId = crypto.randomUUID()
+
+        return new Promise<'allow' | 'deny' | 'allow-session'>((resolve) => {
+          const timeout = setTimeout(() => {
+            pendingApprovals.delete(approvalId)
+            resolve('deny')
+            win.webContents.send('chat:chunk', {
+              type: 'tool-approval-resolved',
+              approvalId,
+              decision: 'deny'
+            })
+          }, APPROVAL_TIMEOUT_MS)
+
+          pendingApprovals.set(approvalId, { resolve, timeout })
+
+          // Route approval request based on source
+          if (source === 'telegram' && isRemoteConnected) {
+            telegramBotService.requestApproval(approvalId, request.toolName, request.toolArgs)
+              .then(approved => {
+                clearTimeout(timeout)
+                pendingApprovals.delete(approvalId)
+                resolve(approved ? 'allow' : 'deny')
+              })
+              .catch(() => {
+                clearTimeout(timeout)
+                pendingApprovals.delete(approvalId)
+                resolve('deny')
+              })
+          } else if (source === 'websocket' && isWsConnected) {
+            // WebSocket remote — similar pattern
+            // For now, deny by default (WebSocket approval not yet wired)
+            clearTimeout(timeout)
+            pendingApprovals.delete(approvalId)
+            resolve('deny')
+          } else {
+            // Desktop: send approval request via IPC chunk
+            win.webContents.send('chat:chunk', {
+              type: 'tool-approval',
+              approvalId,
+              toolName: request.toolName,
+              toolArgs: request.toolArgs
+            })
+          }
+        })
+      }
+    })
 
     // Build MCP tools (from connected MCP servers, scoped to project)
     let mcpTools: Record<string, unknown> = {}
@@ -449,36 +445,8 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       }
     }
 
-    // Merge all tools
-    let tools = { ...workspaceTools, ...mcpTools } as Record<string, ToolLike>
-
-    // Wrap tools with approval gate when Remote is connected
-    if (isRemoteConnected && source === 'telegram') {
-      const session = getActiveSession()
-      if (session) {
-        tools = wrapToolsWithApproval(tools, telegramBotService, {
-          autoApproveRead: session.autoApproveRead,
-          autoApproveWrite: session.autoApproveWrite,
-          autoApproveBash: session.autoApproveBash,
-          autoApproveList: session.autoApproveList,
-          autoApproveMcp: session.autoApproveMcp
-        })
-      }
-    }
-    // Wrap tools with approval gate when WebSocket Remote is connected
-    if (isWsConnected && source === 'websocket') {
-      const { getActiveWebSocketSession } = await import('../db/queries/remote-server')
-      const wsSession = getActiveWebSocketSession()
-      if (wsSession) {
-        tools = wrapToolsWithApproval(tools, remoteServerService, {
-          autoApproveRead: wsSession.autoApproveRead,
-          autoApproveWrite: wsSession.autoApproveWrite,
-          autoApproveBash: wsSession.autoApproveBash,
-          autoApproveList: wsSession.autoApproveList,
-          autoApproveMcp: wsSession.autoApproveMcp
-        })
-      }
-    }
+    // Merge all tools (workspace tools already wrapped by permission pipeline)
+    const tools = { ...workspaceTools, ...mcpTools }
 
     const hasTools = Object.keys(tools).length > 0
 
@@ -894,6 +862,23 @@ export function registerChatIpc(): void {
     if (currentAbortController) {
       currentAbortController.abort()
       currentAbortController = null
+    }
+  })
+
+  ipcMain.handle('chat:approve-tool', async (_event, payload: unknown) => {
+    const schema = z.object({
+      approvalId: z.string().min(1),
+      decision: z.enum(['allow', 'deny', 'allow-session'])
+    })
+    const parsed = schema.safeParse(payload)
+    if (!parsed.success) throw new Error('Invalid approve-tool payload')
+
+    const { approvalId, decision } = parsed.data
+    const pending = pendingApprovals.get(approvalId)
+    if (pending) {
+      clearTimeout(pending.timeout)
+      pendingApprovals.delete(approvalId)
+      pending.resolve(decision)
     }
   })
 

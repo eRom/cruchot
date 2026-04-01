@@ -9,6 +9,7 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useUiStore } from '@/stores/ui.store'
 import MessageList from './MessageList'
 import { InputZone } from './InputZone'
+import { ToolApprovalBanner } from './ToolApprovalBanner'
 import { WorkspacePanel } from '@/components/workspace/WorkspacePanel'
 import { useLibraryStore } from '@/stores/library.store'
 import { MessageSquare, Sparkles } from 'lucide-react'
@@ -183,6 +184,7 @@ export default function ChatView() {
 
         {/* Zone B — Input */}
         <div className="shrink-0">
+          <ToolApprovalBanner />
           <InputZone />
         </div>
       </div>

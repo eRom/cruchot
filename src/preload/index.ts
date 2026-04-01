@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { ElectronAPI, SendMessagePayload, StreamChunk } from './types'
+import type { ElectronAPI, SendMessagePayload, StreamChunk, PermissionRuleInfo } from './types'
 
 // Expose une API securisee au renderer — JAMAIS ipcRenderer directement
 const api: ElectronAPI = {
@@ -515,6 +515,18 @@ const api: ElectronAPI = {
   // ── Conversations: Workspace ─────────────────────────
   conversationSetWorkspacePath: (id: string, workspacePath: string) =>
     ipcRenderer.invoke('conversations:setWorkspacePath', { id, workspacePath }),
+
+  // ── Permissions ───────────────────────────────────────────
+  permissionsList: (): Promise<PermissionRuleInfo[]> => ipcRenderer.invoke('permissions:list') as Promise<PermissionRuleInfo[]>,
+  permissionsAdd: (data: { toolName: string; ruleContent: string | null; behavior: 'allow' | 'deny' | 'ask' }): Promise<PermissionRuleInfo> =>
+    ipcRenderer.invoke('permissions:add', data) as Promise<PermissionRuleInfo>,
+  permissionsDelete: (data: { id: string }): Promise<void> =>
+    ipcRenderer.invoke('permissions:delete', data),
+  permissionsReset: (): Promise<void> => ipcRenderer.invoke('permissions:reset'),
+
+  // ── Tool Approval ─────────────────────────────────────────
+  approveToolCall: (approvalId: string, decision: 'allow' | 'deny' | 'allow-session'): Promise<void> =>
+    ipcRenderer.invoke('chat:approve-tool', { approvalId, decision }),
 
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>

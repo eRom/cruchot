@@ -483,6 +483,17 @@ export const skills = sqliteTable('skills', {
 })
 
 // ---------------------------------------------------------------------------
+// Permission Rules (tool access control)
+// ---------------------------------------------------------------------------
+export const permissionRules = sqliteTable('permission_rules', {
+  id: text('id').primaryKey(),
+  toolName: text('tool_name').notNull(),
+  ruleContent: text('rule_content'),
+  behavior: text('behavior', { enum: ['allow', 'deny', 'ask'] }).notNull(),
+  createdAt: integer('created_at').notNull()
+})
+
+// ---------------------------------------------------------------------------
 // Images
 // ---------------------------------------------------------------------------
 export const images = sqliteTable('images', {

@@ -82,18 +82,36 @@ export interface ToolCallInfo {
 }
 
 export interface StreamChunk {
-  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'tool-result' | 'finish' | 'error'
+  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'tool-result' | 'tool-approval' | 'tool-approval-resolved' | 'finish' | 'error'
   content?: string
   error?: string
   toolName?: string
   toolArgs?: Record<string, unknown>
   toolCallId?: string
   toolIsError?: boolean
+  approvalId?: string
+  decision?: 'allow' | 'deny'
   usage?: {
     promptTokens: number
     completionTokens: number
     totalTokens: number
   }
+}
+
+/** Permission rule for tool access control */
+export interface PermissionRuleInfo {
+  id: string
+  toolName: string
+  ruleContent?: string | null
+  behavior: 'allow' | 'deny' | 'ask'
+  createdAt: number
+}
+
+/** Tool approval request sent during streaming */
+export interface ToolApprovalRequest {
+  approvalId: string
+  toolName: string
+  toolArgs: Record<string, unknown>
 }
 
 export interface ProviderInfo {
@@ -1037,6 +1055,15 @@ export interface ElectronAPI {
 
   // Conversations: Workspace
   conversationSetWorkspacePath: (id: string, workspacePath: string) => Promise<void>
+
+  // Permissions
+  permissionsList: () => Promise<PermissionRuleInfo[]>
+  permissionsAdd: (data: { toolName: string; ruleContent: string | null; behavior: 'allow' | 'deny' | 'ask' }) => Promise<PermissionRuleInfo>
+  permissionsDelete: (data: { id: string }) => Promise<void>
+  permissionsReset: () => Promise<void>
+
+  // Tool Approval
+  approveToolCall: (approvalId: string, decision: 'allow' | 'deny' | 'allow-session') => Promise<void>
 
   // Settings
   getSetting: (key: string) => Promise<string | null>
