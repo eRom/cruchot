@@ -456,6 +456,7 @@ export const bardas = sqliteTable('bardas', {
   fragmentsCount: integer('fragments_count').default(0),
   librariesCount: integer('libraries_count').default(0),
   mcpServersCount: integer('mcp_servers_count').default(0),
+  skillsCount: integer('skills_count').default(0),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
