@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import { useUiStore, type SettingsTab } from '@/stores/ui.store'
-import { Archive, ArrowLeft, Blocks, Database, FileText, Keyboard, Palette, Settings, Shield, SlidersHorizontal, Smartphone, Volume2 } from 'lucide-react'
+import { Archive, ArrowLeft, Blocks, Database, FileText, Keyboard, Lock, Palette, Settings, Shield, SlidersHorizontal, Smartphone, Volume2 } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { AppearanceSettings } from './AppearanceSettings'
 import { AudioSettings } from './AudioSettings'
@@ -12,6 +12,7 @@ import { ProvidersSection } from './ProvidersSection'
 import { ModelSettings } from './ModelSettings'
 import { RemoteTab } from './RemoteTab'
 import { PrivacySettings } from './PrivacySettings'
+import { PermissionsSettings } from './PermissionsSettings'
 import { SummaryTab } from './SummaryTab'
 
 type TabItem =
@@ -33,6 +34,7 @@ const TABS: TabItem[] = [
   { type: 'tab', id: 'backup', label: 'Sauvegardes', icon: <Archive className="size-4" /> },
   { type: 'separator' },
   { type: 'tab', id: 'privacy', label: 'Confidentialite', icon: <Shield className="size-4" /> },
+  { type: 'tab', id: 'permissions', label: 'Permissions', icon: <Lock className="size-4" /> },
 ]
 
 export function SettingsView() {
@@ -103,6 +105,7 @@ export function SettingsView() {
             {activeTab === 'backup' && <BackupSettings />}
             {activeTab === 'data' && <DataSettings />}
             {activeTab === 'privacy' && <PrivacySettings />}
+            {activeTab === 'permissions' && <PermissionsSettings />}
           </div>
         </div>
       </div>
