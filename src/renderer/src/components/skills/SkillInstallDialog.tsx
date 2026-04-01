@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 import {
   AlertTriangle,
   Bot,
@@ -119,7 +120,7 @@ function parseContextualVerdict(text: string): { verdict: string | null; justifi
   return { verdict: match[1].toUpperCase(), justification: justification || null }
 }
 
-function AnalysisSection({ text }: { text: string }): React.JSX.Element {
+function AnalysisSection({ text, model, cost }: { text: string; model?: string | null; cost?: number | null }): React.JSX.Element {
   const [expanded, setExpanded] = useState(false)
   return (
     <div>
@@ -130,6 +131,8 @@ function AnalysisSection({ text }: { text: string }): React.JSX.Element {
         {expanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
         <Bot className="size-3.5 text-blue-400" />
         Analyse complete
+        {model && <span className="text-[10px] text-muted-foreground/50">{model.split('::')[1]}</span>}
+        {cost != null && cost > 0 && <span className="text-[10px] text-muted-foreground/50">${cost.toFixed(4)}</span>}
       </button>
       {expanded && (
         <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-border/40 bg-sidebar p-3 whitespace-pre-wrap text-xs leading-relaxed text-foreground/80">
@@ -145,8 +148,9 @@ function AnalysisSection({ text }: { text: string }): React.JSX.Element {
 export function SkillInstallDialog({ onClose, onInstalled }: SkillInstallDialogProps): React.JSX.Element {
   const [state, setState] = useState<InstallState>({ step: 'input' })
   const [gitUrl, setGitUrl] = useState('')
+  const [matonEnabled, setMatonEnabled] = useState(true)
 
-  // GitHub flow: clone → scan → analyze → ready
+  // GitHub flow: clone → (optional: scan → analyze) → ready
   const handleClone = async () => {
     const url = gitUrl.trim()
     if (!url) { toast.error('Entrez une URL GitHub'); return }
@@ -163,16 +167,16 @@ export function SkillInstallDialog({ onClose, onInstalled }: SkillInstallDialogP
         return
       }
 
-      // Now run LLM analysis if Maton+model are available
-      const analyzeResult = await runAnalysis(result.tempDir)
+      // If Maton disabled, skip to ready without analysis
+      const analyzeResult = matonEnabled ? await runAnalysis(result.tempDir) : null
 
       setState({
         step: 'ready',
         tempDir: result.tempDir,
         name: result.name ?? url,
         description: result.description ?? '',
-        matonVerdict: result.matonVerdict ?? null,
-        matonReport: result.matonReport ?? null,
+        matonVerdict: matonEnabled ? (result.matonVerdict ?? null) : null,
+        matonReport: matonEnabled ? (result.matonReport ?? null) : null,
         gitUrl: url,
         pythonMissing: result.pythonMissing ?? false,
         analyzeText: analyzeResult?.text ?? null,
@@ -198,8 +202,7 @@ export function SkillInstallDialog({ onClose, onInstalled }: SkillInstallDialogP
         return
       }
 
-      // Run LLM analysis
-      const analyzeResult = await runAnalysis(dirPath)
+      const analyzeResult = matonEnabled ? await runAnalysis(dirPath) : null
 
       setState({
         step: 'ready',
@@ -289,6 +292,15 @@ export function SkillInstallDialog({ onClose, onInstalled }: SkillInstallDialogP
               <div className="h-px flex-1 bg-border/60" />
             </div>
             <Button variant="outline" className="w-full" onClick={handlePickFolder}>Choisir un dossier local</Button>
+
+            {/* Maton toggle */}
+            <div className="flex items-center justify-between rounded-lg border border-border/40 bg-sidebar px-3 py-2">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="size-4 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">Analyse Maton</span>
+              </div>
+              <Switch checked={matonEnabled} onCheckedChange={setMatonEnabled} />
+            </div>
           </div>
         )}
 
@@ -357,12 +369,6 @@ export function SkillInstallDialog({ onClose, onInstalled }: SkillInstallDialogP
                           : verdict === 'CRITICAL' ? 'text-red-400'
                           : 'text-muted-foreground'
                         }`}>{verdict ?? '—'}</span>
-                        {state.analyzeModel && (
-                          <span className="text-[10px] text-muted-foreground/50">{state.analyzeModel.split('::')[1]}</span>
-                        )}
-                        {state.analyzeCost != null && state.analyzeCost > 0 && (
-                          <span className="text-[10px] text-muted-foreground/50">${state.analyzeCost.toFixed(4)}</span>
-                        )}
                       </div>
                       {justification && (
                         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{justification}</p>
@@ -371,7 +377,7 @@ export function SkillInstallDialog({ onClose, onInstalled }: SkillInstallDialogP
                   </div>
 
                   {/* Full analysis (collapsed) */}
-                  <AnalysisSection text={state.analyzeText} />
+                  <AnalysisSection text={state.analyzeText} model={state.analyzeModel} cost={state.analyzeCost} />
                 </>
               )
             })()}
