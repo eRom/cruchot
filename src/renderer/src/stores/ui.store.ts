@@ -17,6 +17,7 @@ interface UiState {
   customizeTab: CustomizeTab | null
   openPanel: OpenPanel
   draftContent: string
+  pendingApproval: { approvalId: string; toolName: string; toolArgs: Record<string, unknown> } | null
 
   setCurrentView: (view: ViewMode) => void
   setIsStreaming: (streaming: boolean) => void
@@ -27,6 +28,7 @@ interface UiState {
   setOpenPanel: (panel: OpenPanel) => void
   toggleRightPanel: () => void
   setDraftContent: (content: string) => void
+  setPendingApproval: (approval: { approvalId: string; toolName: string; toolArgs: Record<string, unknown> } | null) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -38,6 +40,7 @@ export const useUiStore = create<UiState>((set) => ({
   customizeTab: null,
   openPanel: null,
   draftContent: '',
+  pendingApproval: null,
 
   setCurrentView: (view) => set({ currentView: view }),
   setIsStreaming: (streaming) => set({ isStreaming: streaming }),
@@ -47,5 +50,6 @@ export const useUiStore = create<UiState>((set) => ({
   setCustomizeTab: (tab) => set({ customizeTab: tab }),
   setOpenPanel: (panel) => set({ openPanel: panel }),
   toggleRightPanel: () => set((s) => ({ openPanel: s.openPanel === 'right' ? null : 'right' })),
-  setDraftContent: (content) => set({ draftContent: content })
+  setDraftContent: (content) => set({ draftContent: content }),
+  setPendingApproval: (approval) => set({ pendingApproval: approval }),
 }))
