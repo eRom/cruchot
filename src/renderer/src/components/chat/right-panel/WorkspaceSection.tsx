@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { FolderOpen, RotateCcw } from 'lucide-react'
+import { FolderOpen, FolderOpenDot } from 'lucide-react'
 import { CollapsibleSection } from './CollapsibleSection'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
@@ -34,14 +34,11 @@ export function WorkspaceSection() {
     } catch { /* silent */ }
   }, [activeConversationId])
 
-  const handleResetFolder = useCallback(async () => {
-    if (!activeConversationId) return
+  const handleOpenInFinder = useCallback(async () => {
     try {
-      await window.api.conversationSetWorkspacePath(activeConversationId, DEFAULT_SANDBOX)
-      setWorkspacePath(DEFAULT_SANDBOX)
-      useWorkspaceStore.getState().setRootPath(null)
+      await window.api.workspaceOpenInFinder(workspacePath)
     } catch { /* silent */ }
-  }, [activeConversationId])
+  }, [workspacePath])
 
   const displayPath = workspacePath === DEFAULT_SANDBOX
     ? 'Sandbox (defaut)'
@@ -64,16 +61,14 @@ export function WorkspaceSection() {
           <FolderOpen className="size-3.5 shrink-0 text-muted-foreground/60" />
           <span className="truncate">{displayPath}</span>
         </button>
-        {workspacePath !== DEFAULT_SANDBOX && (
-          <button
-            onClick={handleResetFolder}
-            disabled={isBusy}
-            className="rounded-md p-1.5 text-muted-foreground/50 transition-colors hover:bg-accent/50 hover:text-muted-foreground"
-            title="Reinitialiser au sandbox par defaut"
-          >
-            <RotateCcw className="size-3.5" />
-          </button>
-        )}
+        <button
+          onClick={handleOpenInFinder}
+          disabled={isBusy}
+          className="rounded-md p-1.5 text-muted-foreground/50 transition-colors hover:bg-accent/50 hover:text-muted-foreground"
+          title="Ouvrir dans le Finder"
+        >
+          <FolderOpenDot className="size-3.5" />
+        </button>
       </div>
     </CollapsibleSection>
   )

@@ -1,4 +1,5 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron'
+import { ipcMain, dialog, shell, BrowserWindow } from 'electron'
+import * as os from 'os'
 import * as fs from 'fs'
 import * as path from 'path'
 import { z } from 'zod'
@@ -179,6 +180,16 @@ export function registerWorkspaceIpc(): void {
     if (!parsed.success) throw new Error('Invalid file path')
 
     await activeWorkspace.deleteFile(parsed.data)
+  })
+
+  // ── Open workspace folder in OS file manager ──────────
+  ipcMain.handle('workspace:openInFinder', async (_event, folderPath: unknown) => {
+    const parsed = z.string().min(1).safeParse(folderPath)
+    if (!parsed.success) throw new Error('Invalid folder path')
+    const resolved = parsed.data.startsWith('~/')
+      ? path.join(os.homedir(), parsed.data.slice(2))
+      : path.resolve(parsed.data)
+    await shell.openPath(resolved)
   })
 
   // ── Get workspace info ─────────────────────────────────

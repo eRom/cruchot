@@ -251,6 +251,9 @@ const api: ElectronAPI = {
 
   workspaceClose: () => ipcRenderer.invoke('workspace:close'),
 
+  workspaceOpenInFinder: (folderPath: string) =>
+    ipcRenderer.invoke('workspace:openInFinder', folderPath),
+
   workspaceGetTree: (relativePath?: string) =>
     ipcRenderer.invoke('workspace:getTree', relativePath),
 

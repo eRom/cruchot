@@ -829,6 +829,7 @@ export interface ElectronAPI {
   workspaceSelectFolder: () => Promise<string | null>
   workspaceOpen: (data: { rootPath: string; projectId?: string }) => Promise<WorkspaceInfo>
   workspaceClose: () => Promise<void>
+  workspaceOpenInFinder: (folderPath: string) => Promise<void>
   workspaceGetTree: (relativePath?: string) => Promise<FileNode | FileNode[]>
   workspaceReadFile: (path: string) => Promise<FileContent>
   workspaceWriteFile: (data: { path: string; content: string }) => Promise<void>
