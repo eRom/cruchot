@@ -35,6 +35,7 @@ import { registerLibraryIpc } from './library.ipc'
 import { registerPromptOptimizerIpc } from './prompt-optimizer.ipc'
 import { registerArenaIpc } from './arena.ipc'
 import { registerBardaHandlers } from './barda.ipc'
+import { registerSkillsIpc } from './skills.ipc'
 
 
 /**
@@ -139,6 +140,8 @@ export function registerAllIpcHandlers(): void {
   // ── Barda (Brigade Packs) ──────────────────────
   registerBardaHandlers()
 
+  // ── Skills (Packs autonomes SKILL.md) ───────────────
+  registerSkillsIpc()
 
   // ── Settings ────────────────────────────────────────
   const ALLOWED_SETTING_KEYS = new Set([
