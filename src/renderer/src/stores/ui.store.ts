@@ -4,7 +4,7 @@ export type ViewMode = 'chat' | 'settings' | 'statistics' | 'images' | 'projects
 
 export type SettingsTab = 'general' | 'appearance' | 'apikeys' | 'model' | 'audio' | 'keybindings' | 'data' | 'backup' | 'remote' | 'summary' | 'privacy'
 
-export type CustomizeTab = 'prompts' | 'roles' | 'mcp' | 'memory' | 'commands' | 'libraries' | 'brigade'
+export type CustomizeTab = 'prompts' | 'roles' | 'mcp' | 'memory' | 'commands' | 'libraries' | 'skills' | 'brigade'
 
 export type OpenPanel = 'workspace' | 'right' | null
 

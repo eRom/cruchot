@@ -100,7 +100,8 @@ const TOOL_CONFIG: Record<string, { icon: typeof FileText; label: string }> = {
   listFiles: { icon: FolderSearch, label: 'Exploration des fichiers' },
   searchInFiles: { icon: Search, label: 'Recherche dans les fichiers' },
   search: { icon: Search, label: 'Recherche web' },
-  librarySearch: { icon: BookOpen, label: 'Recherche referentiel' }
+  librarySearch: { icon: BookOpen, label: 'Recherche referentiel' },
+  skill: { icon: Sparkles, label: 'Skill' }
 }
 
 /** Resolve tool config — handles MCP prefixed tools (e.g. github__create_issue) */
@@ -162,7 +163,7 @@ function ToolCallBlock({ toolCalls, isStreaming }: { toolCalls: ToolCallDisplay[
           {toolCalls.map((tc, i) => {
             const config = getToolConfig(tc.toolName)
             const Icon = config.icon
-            const detail = tc.args?.library || tc.args?.command || tc.args?.path || tc.args?.query || ''
+            const detail = tc.args?.name || tc.args?.library || tc.args?.command || tc.args?.path || tc.args?.query || ''
 
             return (
               <div key={i} className="flex items-center gap-2 text-xs">

@@ -1,7 +1,7 @@
 import React, { Suspense, useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useUiStore, type CustomizeTab } from '@/stores/ui.store'
-import { ArrowLeft, BookOpen, Brain, Library, Network, Shield, TerminalSquare, UserCircle } from 'lucide-react'
+import { ArrowLeft, BookOpen, Brain, Library, Network, Shield, Sparkles, TerminalSquare, UserCircle } from 'lucide-react'
 
 const PromptsView = React.lazy(() => import('@/components/prompts/PromptsView').then(m => ({ default: m.PromptsView })))
 const RolesView = React.lazy(() => import('@/components/roles/RolesView').then(m => ({ default: m.RolesView })))
@@ -10,6 +10,7 @@ const MemoryView = React.lazy(() => import('@/components/memory/MemoryView').the
 const CommandsView = React.lazy(() => import('@/components/commands/CommandsView').then(m => ({ default: m.CommandsView })))
 const LibrariesView = React.lazy(() => import('@/components/libraries/LibrariesView').then(m => ({ default: m.LibrariesView })))
 const BrigadeView = React.lazy(() => import('@/components/brigade/BrigadeView').then(m => ({ default: m.BrigadeView })))
+const SkillsView = React.lazy(() => import('@/components/skills/SkillsView').then(m => ({ default: m.SkillsView })))
 
 type TabItem =
   | { type: 'tab'; id: CustomizeTab; label: string; icon: React.ReactNode }
@@ -22,6 +23,7 @@ const TABS: TabItem[] = [
   { type: 'separator' },
   { type: 'tab', id: 'memory', label: 'Memoire', icon: <Brain className="size-4" /> },
   { type: 'tab', id: 'libraries', label: 'Referentiels', icon: <Library className="size-4" /> },
+  { type: 'tab', id: 'skills' as CustomizeTab, label: 'Skills', icon: <Sparkles className="size-4" /> },
   { type: 'separator' },
   { type: 'tab', id: 'mcp', label: 'MCP', icon: <Network className="size-4" /> },
   { type: 'tab', id: 'brigade', label: 'Brigade', icon: <Shield className="size-4" /> },
@@ -89,6 +91,7 @@ export function CustomizeView() {
             {activeTab === 'memory' && <MemoryView />}
             {activeTab === 'commands' && <CommandsView />}
             {activeTab === 'libraries' && <LibrariesView />}
+            {activeTab === 'skills' && <SkillsView />}
             {activeTab === 'brigade' && <BrigadeView />}
           </Suspense>
         </div>
