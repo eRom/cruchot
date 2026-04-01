@@ -1,9 +1,9 @@
 import { FileOperationCard } from '@/components/workspace/FileOperationCard'
 import { cn } from '@/lib/utils'
-import type { Message, ToolCallDisplay } from '@/stores/messages.store'
+import type { Message, ToolCallDisplay, ToolCallResultMeta } from '@/stores/messages.store'
 import { useMessagesStore } from '@/stores/messages.store'
 import { BookOpen, Brain, Check, CheckCircle2, ChevronDown, ChevronRight, Copy, File as FileIcon, FileText, FolderSearch, Image as ImageIcon, Loader2, Network, Pencil, Search, Sparkles, Terminal, Wrench, XCircle } from 'lucide-react'
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FileOperation } from '../../../../preload/types'
 import { AudioPlayer } from './AudioPlayer'
 import { MessageContent } from './MessageContent'
@@ -97,7 +97,11 @@ const TOOL_CONFIG: Record<string, { icon: typeof FileText; label: string }> = {
   bash: { icon: Terminal, label: 'Commande shell' },
   readFile: { icon: FileText, label: 'Lecture du fichier' },
   writeFile: { icon: Pencil, label: 'Ecriture du fichier' },
+  FileEdit: { icon: Pencil, label: 'Edition du fichier' },
   listFiles: { icon: FolderSearch, label: 'Exploration des fichiers' },
+  GrepTool: { icon: Search, label: 'Recherche dans les fichiers' },
+  GlobTool: { icon: FolderSearch, label: 'Recherche de fichiers' },
+  WebFetchTool: { icon: Network, label: 'Acces web' },
   searchInFiles: { icon: Search, label: 'Recherche dans les fichiers' },
   search: { icon: Search, label: 'Recherche web' },
   librarySearch: { icon: BookOpen, label: 'Recherche referentiel' },
@@ -115,7 +119,204 @@ function getToolConfig(toolName: string): { icon: typeof FileText; label: string
   return { icon: Wrench, label: toolName }
 }
 
-/** Collapsible block showing tool calls with status */
+
+/** Format file size for display */
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+/** Grouped tool call types for display */
+type ToolCallGroup = {
+  type: 'group'
+  toolName: string
+  items: ToolCallDisplay[]
+}
+
+type ToolCallSingleton = {
+  type: 'singleton'
+  item: ToolCallDisplay
+}
+
+type GroupedToolCall = ToolCallGroup | ToolCallSingleton
+
+/** Group consecutive tool calls of the same type.
+ *  Running tools are always singletons (visible individually). */
+function groupToolCalls(toolCalls: ToolCallDisplay[]): GroupedToolCall[] {
+  const result: GroupedToolCall[] = []
+  let i = 0
+
+  while (i < toolCalls.length) {
+    const tc = toolCalls[i]
+
+    // Running tools are always singletons
+    if (tc.status === 'running') {
+      result.push({ type: 'singleton', item: tc })
+      i++
+      continue
+    }
+
+    // Look ahead for consecutive same-name completed tools
+    let j = i + 1
+    while (
+      j < toolCalls.length &&
+      toolCalls[j].toolName === tc.toolName &&
+      toolCalls[j].status !== 'running'
+    ) {
+      j++
+    }
+
+    const count = j - i
+    if (count >= 2) {
+      result.push({
+        type: 'group',
+        toolName: tc.toolName,
+        items: toolCalls.slice(i, j)
+      })
+    } else {
+      result.push({ type: 'singleton', item: tc })
+    }
+    i = j
+  }
+
+  return result
+}
+
+/** Extract display detail from tool args */
+function getToolDetail(tc: ToolCallDisplay): string {
+  const args = tc.args
+  if (!args) return ''
+  switch (tc.toolName) {
+    case 'bash':
+      return String(args.command || '')
+    case 'readFile':
+    case 'writeFile':
+    case 'FileEdit':
+      return String(args.file_path || args.path || '')
+    case 'listFiles':
+      return String(args.path || '')
+    case 'GrepTool':
+      return String(args.pattern || '')
+    case 'GlobTool':
+      return String(args.pattern || '')
+    case 'WebFetchTool':
+      return String(args.url || '')
+    default:
+      return String(args.command || args.path || args.query || args.name || '')
+  }
+}
+
+/** Format meta summary for a completed tool */
+function formatToolMeta(tc: ToolCallDisplay): string | null {
+  const m = tc.resultMeta
+  if (!m) return null
+  const parts: string[] = []
+  if (m.duration != null) parts.push(`${(m.duration / 1000).toFixed(1)}s`)
+  if (m.exitCode != null && m.exitCode !== 0) parts.push(`exit ${m.exitCode}`)
+  if (m.lineCount != null) parts.push(`${m.lineCount} lignes`)
+  if (m.byteSize != null) parts.push(formatFileSize(m.byteSize))
+  if (m.matchCount != null) parts.push(`${m.matchCount} match${m.matchCount > 1 ? 'es' : ''}`)
+  if (m.fileCount != null) parts.push(`${m.fileCount} fichier${m.fileCount > 1 ? 's' : ''}`)
+  return parts.length > 0 ? parts.join(', ') : null
+}
+
+/** Single tool call row — used in singletons and inside expanded groups */
+function ToolCallItemRow({ tc }: { tc: ToolCallDisplay }) {
+  const [showResult, setShowResult] = useState(false)
+  const config = getToolConfig(tc.toolName)
+  const Icon = config.icon
+  const detail = getToolDetail(tc)
+  const meta = formatToolMeta(tc)
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 text-xs py-0.5">
+        {tc.status === 'running' ? (
+          <Loader2 className="size-3 shrink-0 animate-spin text-cyan-500" />
+        ) : tc.status === 'success' ? (
+          <CheckCircle2 className="size-3 shrink-0 text-emerald-500" />
+        ) : (
+          <XCircle className="size-3 shrink-0 text-red-500" />
+        )}
+        <Icon className="size-3 shrink-0 text-muted-foreground/60" />
+        <span className="truncate text-muted-foreground">
+          {config.label}
+          {detail ? <span className="text-foreground/70 ml-1">{detail}</span> : null}
+        </span>
+        {meta && <span className="text-muted-foreground/50 text-[10px] shrink-0">{meta}</span>}
+        {tc.status !== 'running' && tc.result && (
+          <button
+            onClick={() => setShowResult(!showResult)}
+            className="text-[10px] text-primary/70 hover:text-primary ml-auto shrink-0"
+          >
+            {showResult ? '▾ masquer' : '▸ voir'}
+          </button>
+        )}
+      </div>
+      {showResult && tc.result && (
+        <pre className="mt-1 mb-1.5 ml-5 rounded-md border border-border/50 bg-background px-3 py-2 text-[11px] leading-relaxed text-muted-foreground font-mono max-h-40 overflow-y-auto whitespace-pre-wrap break-all">
+          {tc.result}
+        </pre>
+      )}
+    </div>
+  )
+}
+
+/** Group of consecutive identical tool calls — expandable */
+function ToolCallGroupRow({ group }: { group: ToolCallGroup }) {
+  const [expanded, setExpanded] = useState(false)
+  const config = getToolConfig(group.toolName)
+  const Icon = config.icon
+  const hasError = group.items.some(tc => tc.status === 'error')
+  const errorCount = group.items.filter(tc => tc.status === 'error').length
+  // Preview: first 3 details joined
+  const preview = group.items
+    .slice(0, 3)
+    .map(tc => getToolDetail(tc))
+    .filter(Boolean)
+    .join(', ')
+
+  return (
+    <div className="rounded-md bg-card/80 dark:bg-card/40 px-2.5 py-1.5 my-0.5">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-2 text-xs w-full text-left"
+      >
+        {hasError ? (
+          <XCircle className="size-3 shrink-0 text-red-500" />
+        ) : (
+          <CheckCircle2 className="size-3 shrink-0 text-emerald-500" />
+        )}
+        <Icon className="size-3 shrink-0 text-muted-foreground/60" />
+        <span className="font-medium text-muted-foreground">{config.label}</span>
+        <span className="text-[10px] text-muted-foreground/60 bg-muted/50 px-1.5 rounded-full">
+          {'\u00d7'} {group.items.length}
+        </span>
+        {hasError && (
+          <span className="text-[10px] text-red-500">{errorCount} erreur{errorCount > 1 ? 's' : ''}</span>
+        )}
+        <span className="text-muted-foreground/40 text-[10px] ml-auto">
+          {expanded ? '\u25be' : '\u25b8'}
+        </span>
+      </button>
+      {!expanded && preview && (
+        <div className="text-[10px] text-muted-foreground/40 ml-[28px] truncate mt-0.5">
+          {preview}{group.items.length > 3 ? '...' : ''}
+        </div>
+      )}
+      {expanded && (
+        <div className="ml-3.5 mt-1.5 border-l-2 border-border/40 pl-3 space-y-0.5">
+          {group.items.map((tc, i) => (
+            <ToolCallItemRow key={i} tc={tc} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Collapsible block showing grouped tool calls with status */
 function ToolCallBlock({ toolCalls, isStreaming }: { toolCalls: ToolCallDisplay[]; isStreaming: boolean }) {
   const [expanded, setExpanded] = useState(isStreaming)
   const hasRunning = toolCalls.some(tc => tc.status === 'running')
@@ -129,8 +330,11 @@ function ToolCallBlock({ toolCalls, isStreaming }: { toolCalls: ToolCallDisplay[
     }
     prevRunning.current = isActive
   }, [hasRunning, isStreaming])
+
   const allSuccess = !hasRunning && toolCalls.every(tc => tc.status === 'success')
   const hasError = toolCalls.some(tc => tc.status === 'error')
+
+  const grouped = useMemo(() => groupToolCalls(toolCalls), [toolCalls])
 
   return (
     <div className="mb-2">
@@ -159,40 +363,16 @@ function ToolCallBlock({ toolCalls, isStreaming }: { toolCalls: ToolCallDisplay[
         )}
       </button>
       {(expanded || hasRunning) && (
-        <div className="mt-1.5 rounded-lg border border-cyan-200/40 dark:border-cyan-500/20 bg-cyan-50/50 dark:bg-cyan-950/20 px-3 py-2 space-y-1">
-          {toolCalls.map((tc, i) => {
-            const config = getToolConfig(tc.toolName)
-            const Icon = config.icon
-            const detail = tc.args?.name || tc.args?.library || tc.args?.command || tc.args?.path || tc.args?.query || ''
-
-            return (
-              <div key={i} className="flex items-center gap-2 text-xs">
-                {tc.status === 'running' ? (
-                  <Loader2 className="size-3 shrink-0 animate-spin text-cyan-500" />
-                ) : tc.status === 'success' ? (
-                  <CheckCircle2 className="size-3 shrink-0 text-emerald-500" />
-                ) : (
-                  <XCircle className="size-3 shrink-0 text-red-500" />
-                )}
-                <Icon className="size-3 shrink-0 text-muted-foreground/60" />
-                <span className="text-muted-foreground">
-                  {config.label}
-                  {detail ? <span className="text-foreground/70 ml-1">{String(detail)}</span> : null}
-                </span>
-              </div>
-            )
-          })}
+        <div className="mt-1.5 rounded-lg border border-cyan-200/40 dark:border-cyan-500/20 bg-cyan-50/50 dark:bg-cyan-950/20 px-3 py-2 space-y-0.5">
+          {grouped.map((entry, i) =>
+            entry.type === 'group'
+              ? <ToolCallGroupRow key={i} group={entry} />
+              : <ToolCallItemRow key={i} tc={entry.item} />
+          )}
         </div>
       )}
     </div>
   )
-}
-
-/** Format file size for display */
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 /** Check if a file exists by trying to load it (for image thumbnails) */
