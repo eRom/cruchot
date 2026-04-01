@@ -75,6 +75,7 @@ export function useStreaming() {
   const appendReasoning = useMessagesStore((s) => s.appendReasoning)
   const addToolCall = useMessagesStore((s) => s.addToolCall)
   const updateLastToolCallStatus = useMessagesStore((s) => s.updateLastToolCallStatus)
+  const updateLastToolCallResult = useMessagesStore((s) => s.updateLastToolCallResult)
   const updateMessage = useMessagesStore((s) => s.updateMessage)
   const setStreamingMessageId = useMessagesStore((s) => s.setStreamingMessageId)
   const updateConversation = useConversationsStore((s) => s.updateConversation)
@@ -161,7 +162,12 @@ export function useStreaming() {
         case 'tool-result': {
           const msgId = streamingIdRef.current
           if (msgId) {
-            updateLastToolCallStatus(msgId, chunk.toolIsError ? 'error' : 'success')
+            const status = chunk.toolIsError ? 'error' : 'success'
+            if (chunk.toolResult !== undefined) {
+              updateLastToolCallResult(msgId, status, chunk.toolResult, chunk.toolResultMeta)
+            } else {
+              updateLastToolCallStatus(msgId, status)
+            }
           }
           break
         }
@@ -258,7 +264,7 @@ export function useStreaming() {
         }
       }
     },
-    [activeConversationId, addMessage, appendToMessage, appendReasoning, addToolCall, updateLastToolCallStatus, updateMessage, setStreamingMessageId, setIsStreaming, setLastRecallCount]
+    [activeConversationId, addMessage, appendToMessage, appendReasoning, addToolCall, updateLastToolCallStatus, updateLastToolCallResult, updateMessage, setStreamingMessageId, setIsStreaming, setLastRecallCount]
   )
 
   // Listen for streaming chunks
