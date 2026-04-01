@@ -101,6 +101,45 @@ function FindingsSection({ report }: { report: Record<string, unknown> | null })
   )
 }
 
+/** Parse "### Contextual Verdict: OK" + justification from LLM output */
+function parseContextualVerdict(text: string): { verdict: string | null; justification: string | null } {
+  // Match: ### Contextual Verdict: OK (or WARNING, CRITICAL) — with optional emoji
+  const match = text.match(/###\s*Contextual\s*Verdict\s*:\s*[^\w]*(OK|WARNING|CRITICAL)/i)
+  if (!match) {
+    // Fallback: try "Verdict Contextuel" (French)
+    const frMatch = text.match(/###?\s*Verdict\s*Contextuel\s*:\s*[^\w]*(OK|WARNING|CRITICAL)/i)
+    if (!frMatch) return { verdict: null, justification: null }
+    const afterMatch = text.slice(text.indexOf(frMatch[0]) + frMatch[0].length).trim()
+    const justification = afterMatch.split('\n\n')[0].replace(/^\n+/, '').trim()
+    return { verdict: frMatch[1].toUpperCase(), justification: justification || null }
+  }
+  // Extract justification: text between the verdict line and the next section or end
+  const afterMatch = text.slice(text.indexOf(match[0]) + match[0].length).trim()
+  const justification = afterMatch.split('\n\n')[0].replace(/^\n+/, '').trim()
+  return { verdict: match[1].toUpperCase(), justification: justification || null }
+}
+
+function AnalysisSection({ text }: { text: string }): React.JSX.Element {
+  const [expanded, setExpanded] = useState(false)
+  return (
+    <div>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+      >
+        {expanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
+        <Bot className="size-3.5 text-blue-400" />
+        Analyse complete
+      </button>
+      {expanded && (
+        <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-border/40 bg-sidebar p-3 whitespace-pre-wrap text-xs leading-relaxed text-foreground/80">
+          {text}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Dialog ────────────────────────────────────────────────────────────────────
 
 export function SkillInstallDialog({ onClose, onInstalled }: SkillInstallDialogProps): React.JSX.Element {
@@ -301,27 +340,44 @@ export function SkillInstallDialog({ onClose, onInstalled }: SkillInstallDialogP
               </div>
             )}
 
-            {/* LLM contextual analysis */}
-            {state.analyzeText && (
-              <div className="rounded-lg border border-border/40 bg-sidebar p-3">
-                <div className="mb-2 flex items-center gap-2">
-                  <Bot className="size-4 text-blue-400" />
-                  <span className="text-xs font-medium text-muted-foreground">Analyse contextuelle</span>
-                  {state.analyzeModel && (
-                    <span className="text-[10px] text-muted-foreground/50">{state.analyzeModel.split('::')[1]}</span>
-                  )}
-                  {state.analyzeCost != null && state.analyzeCost > 0 && (
-                    <span className="text-[10px] text-muted-foreground/50">${state.analyzeCost.toFixed(4)}</span>
-                  )}
-                </div>
-                <div className="max-h-48 overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed text-foreground/80">
-                  {state.analyzeText}
-                </div>
-              </div>
-            )}
+            {/* Contextual verdict (LLM) */}
+            {state.analyzeText && (() => {
+              const { verdict, justification } = parseContextualVerdict(state.analyzeText)
+              return (
+                <>
+                  {/* Contextuel block */}
+                  <div className="flex items-start gap-3 rounded-lg border border-border/40 bg-sidebar p-3">
+                    <VerdictIcon verdict={verdict} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-muted-foreground">Contextuel</span>
+                        <span className={`text-xs font-semibold ${
+                          verdict === 'OK' ? 'text-emerald-500'
+                          : verdict === 'WARNING' ? 'text-orange-500'
+                          : verdict === 'CRITICAL' ? 'text-red-400'
+                          : 'text-muted-foreground'
+                        }`}>{verdict ?? '—'}</span>
+                        {state.analyzeModel && (
+                          <span className="text-[10px] text-muted-foreground/50">{state.analyzeModel.split('::')[1]}</span>
+                        )}
+                        {state.analyzeCost != null && state.analyzeCost > 0 && (
+                          <span className="text-[10px] text-muted-foreground/50">${state.analyzeCost.toFixed(4)}</span>
+                        )}
+                      </div>
+                      {justification && (
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{justification}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Full analysis (collapsed) */}
+                  <AnalysisSection text={state.analyzeText} />
+                </>
+              )
+            })()}
 
             {/* No LLM analysis available */}
-            {!state.analyzeText && state.matonVerdict && (
+            {!state.analyzeText && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
                 <Bot className="size-3.5" />
                 Analyse contextuelle non disponible (modele par defaut non configure ou Maton absent)
