@@ -65,6 +65,49 @@ const pendingApprovals = new Map<string, {
 
 const APPROVAL_TIMEOUT_MS = 60_000 // 60 seconds
 
+// ── Tool result extraction helpers ─────────────────────────
+
+const MAX_TOOL_RESULT_LENGTH = 10_000 // 10KB
+
+function extractToolMeta(
+  toolName: string,
+  output: unknown
+): { result: string; resultMeta: Record<string, number> } {
+  const raw = typeof output === 'string' ? output : JSON.stringify(output, null, 2)
+  const result = raw.length > MAX_TOOL_RESULT_LENGTH
+    ? raw.slice(0, MAX_TOOL_RESULT_LENGTH) + '\n[tronqué]'
+    : raw
+  const meta: Record<string, number> = {}
+
+  if (toolName === 'bash') {
+    if (output && typeof output === 'object') {
+      const obj = output as Record<string, unknown>
+      if (typeof obj.exitCode === 'number') meta.exitCode = obj.exitCode
+    }
+  } else if (toolName === 'readFile') {
+    if (typeof output === 'string') {
+      meta.lineCount = output.split('\n').length
+      meta.byteSize = Buffer.byteLength(output, 'utf8')
+    }
+  } else if (toolName === 'writeFile') {
+    if (output && typeof output === 'object') {
+      const obj = output as Record<string, unknown>
+      if (typeof obj.size === 'number') meta.byteSize = obj.size
+    }
+  } else if (toolName === 'GrepTool') {
+    if (typeof output === 'string') {
+      const lines = output.split('\n').filter(l => l.trim())
+      meta.matchCount = lines.length
+    }
+  } else if (toolName === 'listFiles' || toolName === 'GlobTool') {
+    if (typeof output === 'string') {
+      meta.fileCount = output.split('\n').filter(l => l.trim()).length
+    }
+  }
+
+  return { result, resultMeta: meta }
+}
+
 // ── Exported chat handler (used by both IPC and Telegram) ───
 
 export interface HandleChatMessageParams {
@@ -482,7 +525,21 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
     // Accumulate text during streaming (needed because with maxSteps, result.text only has the last step)
     let accumulatedReasoning = ''
     let accumulatedText = ''
-    const accumulatedToolCalls: Array<{ toolName: string; args?: Record<string, unknown>; status: 'running' | 'success' | 'error'; error?: string }> = []
+    const accumulatedToolCalls: Array<{
+      toolName: string
+      args?: Record<string, unknown>
+      status: 'running' | 'success' | 'error'
+      error?: string
+      result?: string
+      resultMeta?: {
+        duration?: number
+        exitCode?: number
+        lineCount?: number
+        byteSize?: number
+        matchCount?: number
+        fileCount?: number
+      }
+    }> = []
     const accumulatedSearchSources: Array<{ title: string; url: string; snippet?: string }> = []
 
     // State machine for parsing <think> tags from open-source models (LM Studio, Ollama, etc.)
@@ -613,6 +670,7 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
           // Tool execution completed — update status
           const toolResult = chunk as { type: 'tool-result'; toolName: string; toolCallId: string; output: unknown }
           const isError = toolResult.output != null && typeof toolResult.output === 'object' && 'error' in (toolResult.output as Record<string, unknown>)
+          const { result: toolResultText, resultMeta } = extractToolMeta(toolResult.toolName, toolResult.output)
           // Extract search sources from Perplexity Search tool results
           if (toolResult.toolName === 'search' && toolResult.output && typeof toolResult.output === 'object') {
             const output = toolResult.output as Record<string, unknown>
@@ -632,12 +690,16 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
           if (tc) {
             tc.status = isError ? 'error' : 'success'
             if (isError) tc.error = String((toolResult.output as Record<string, unknown>).error)
+            tc.result = toolResultText
+            tc.resultMeta = Object.keys(resultMeta).length > 0 ? resultMeta : undefined
           }
           win.webContents.send('chat:chunk', {
             type: 'tool-result',
             toolName: toolResult.toolName,
             toolCallId: toolResult.toolCallId,
-            toolIsError: isError
+            toolIsError: isError,
+            toolResult: toolResultText,
+            toolResultMeta: Object.keys(resultMeta).length > 0 ? resultMeta : undefined
           })
           // Forward tool result to Telegram + WebSocket
           if (isRemoteConnected) {
