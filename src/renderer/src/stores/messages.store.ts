@@ -2,11 +2,22 @@ import { create } from 'zustand'
 
 export type StreamPhase = 'processing' | 'reasoning' | 'generating' | null
 
+export interface ToolCallResultMeta {
+  duration?: number      // ms
+  exitCode?: number      // bash
+  lineCount?: number     // readFile
+  byteSize?: number      // readFile/writeFile
+  matchCount?: number    // GrepTool
+  fileCount?: number     // listFiles, GlobTool
+}
+
 export interface ToolCallDisplay {
   toolName: string
   args?: Record<string, unknown>
   status: 'running' | 'success' | 'error'
   error?: string
+  result?: string                // résultat brut (tronqué ~10KB)
+  resultMeta?: ToolCallResultMeta
 }
 
 export interface Message {
@@ -42,6 +53,7 @@ interface MessagesState {
   appendReasoning: (id: string, text: string) => void
   addToolCall: (id: string, toolCall: ToolCallDisplay) => void
   updateLastToolCallStatus: (id: string, status: 'success' | 'error') => void
+  updateLastToolCallResult: (id: string, status: 'success' | 'error', result?: string, resultMeta?: ToolCallResultMeta) => void
   removeMessage: (id: string) => void
   clearMessages: () => void
   setStreamingMessageId: (id: string | null) => void
@@ -96,6 +108,21 @@ export const useMessagesStore = create<MessagesState>((set, get) => ({
         for (let i = updated.length - 1; i >= 0; i--) {
           if (updated[i].status === 'running') {
             updated[i] = { ...updated[i], status }
+            break
+          }
+        }
+        return { ...m, toolCalls: updated }
+      })
+    })),
+
+  updateLastToolCallResult: (id, status, result, resultMeta) =>
+    set((state) => ({
+      messages: state.messages.map((m) => {
+        if (m.id !== id || !m.toolCalls?.length) return m
+        const updated = [...m.toolCalls]
+        for (let i = updated.length - 1; i >= 0; i--) {
+          if (updated[i].status === 'running') {
+            updated[i] = { ...updated[i], status, result, resultMeta }
             break
           }
         }
