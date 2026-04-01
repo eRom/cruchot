@@ -67,7 +67,7 @@ export function buildConversationTools(
             return { error: 'Action refusee par l\'utilisateur' }
           }
           if (result === 'allow-session') {
-            const sessionKey = `${name}::${args.command ?? args.path ?? args.file_path ?? args.url ?? '*'}`
+            const sessionKey = `${name}::${args.command ?? args.file_path ?? args.path ?? args.pattern ?? args.url ?? ''}`
             addSessionApproval(sessionKey)
           }
         }

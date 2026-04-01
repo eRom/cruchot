@@ -175,11 +175,9 @@ export function registerAllIpcHandlers(): void {
     // Summary
     'multi-llm:summary-model-id',
     'multi-llm:summary-prompt',
-    // Remote
-    'multi-llm:remote:telegram-token',
+    // Remote (non-sensitive — tokens are managed via dedicated encrypted handlers)
     'multi-llm:remote:allowed-user-id',
     'multi-llm:remote:cf-hostname',
-    'multi-llm:remote:cf-token',
     // Local providers
     'lmstudio:baseUrl',
     'ollama:baseUrl',

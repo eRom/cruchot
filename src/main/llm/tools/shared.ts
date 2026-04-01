@@ -104,8 +104,12 @@ export function validatePath(filePath: string, workspacePath: string): { valid: 
       return { valid: false, resolved: fullPath, reason: 'Chemin hors du dossier de travail' }
     }
     return { valid: true, resolved: fullPath }
-  } catch {
-    return { valid: true, resolved: fullPath } // Can't resolve — allow (file doesn't exist yet)
+  } catch (err) {
+    // Only allow if the error is about non-existent path (for write operations)
+    if (err && typeof err === 'object' && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return { valid: true, resolved: fullPath }
+    }
+    return { valid: false, resolved: fullPath, reason: 'Impossible de valider le chemin' }
   }
 }
 

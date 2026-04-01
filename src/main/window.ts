@@ -62,7 +62,11 @@ export function createMainWindow(): BrowserWindow {
             detail: url
           })
           .then(({ response }) => {
-            if (response === 0) shell.openExternal(url)
+            if (response === 0) {
+              // Reconstruct URL from parsed components to prevent URL manipulation
+              const safeUrl = `${parsed.protocol}//${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}`
+              shell.openExternal(safeUrl)
+            }
           })
       }
     } catch {

@@ -295,6 +295,20 @@ export function registerFilesIpc(): void {
       resolved = path.resolve(filePath)
     }
 
+    // Validate: block sensitive directories (credentials, secrets, etc.)
+    const SENSITIVE_DIR_PATTERNS = [
+      '/.ssh/', '/.aws/', '/.gnupg/', '/.gpg/',
+      '/.config/gcloud/', '/.azure/', '/.kube/', '/.docker/',
+      '/.credentials/', '/.password-store/',
+      '/Library/Keychains/'
+    ]
+    const normalizedResolved = resolved.replace(/\\/g, '/')
+    for (const pattern of SENSITIVE_DIR_PATTERNS) {
+      if (normalizedResolved.includes(pattern)) {
+        throw new Error('Acces refuse : chemin sensible')
+      }
+    }
+
     // Validate: no dangerous extension
     if (hasDangerousExtension(resolved)) {
       throw new Error('Extension de fichier non autorisee')
