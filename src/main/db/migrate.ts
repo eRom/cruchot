@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import { getSqliteDatabase } from './index'
 
 /**
@@ -505,5 +506,49 @@ export function runMigrations(): void {
   // Add skills_count to bardas (idempotent — column may already exist)
   try { sqlite.exec('ALTER TABLE bardas ADD COLUMN skills_count INTEGER DEFAULT 0') } catch {
     // Column already exists — ignore
+  }
+
+  // --- Permission Rules (tool access control) ---
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS permission_rules (
+      id TEXT PRIMARY KEY,
+      tool_name TEXT NOT NULL,
+      rule_content TEXT,
+      behavior TEXT NOT NULL CHECK(behavior IN ('allow', 'deny', 'ask')),
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_permission_rules_tool ON permission_rules(tool_name);
+  `)
+
+  const existingRules = sqlite.prepare('SELECT COUNT(*) as count FROM permission_rules').get() as { count: number }
+  if (existingRules.count === 0) {
+    const now = Math.floor(Date.now() / 1000)
+    const seedRules = [
+      { tool: 'bash', content: 'npm *', behavior: 'allow' },
+      { tool: 'bash', content: 'npx *', behavior: 'allow' },
+      { tool: 'bash', content: 'git *', behavior: 'allow' },
+      { tool: 'bash', content: 'node *', behavior: 'allow' },
+      { tool: 'bash', content: 'cat *', behavior: 'allow' },
+      { tool: 'bash', content: 'ls *', behavior: 'allow' },
+      { tool: 'bash', content: 'find *', behavior: 'allow' },
+      { tool: 'bash', content: 'grep *', behavior: 'allow' },
+      { tool: 'bash', content: 'echo *', behavior: 'allow' },
+      { tool: 'bash', content: 'pwd', behavior: 'allow' },
+      { tool: 'bash', content: 'which *', behavior: 'allow' },
+      { tool: 'bash', content: 'rm -rf *', behavior: 'deny' },
+      { tool: 'bash', content: 'sudo *', behavior: 'deny' },
+      { tool: 'bash', content: 'chmod *', behavior: 'deny' },
+      { tool: 'bash', content: 'chown *', behavior: 'deny' },
+      { tool: 'WebFetchTool', content: '*.github.com', behavior: 'allow' },
+      { tool: 'WebFetchTool', content: '*.npmjs.com', behavior: 'allow' },
+      { tool: 'WebFetchTool', content: '*.mozilla.org', behavior: 'allow' },
+      { tool: 'WebFetchTool', content: '*.stackoverflow.com', behavior: 'allow' },
+    ]
+    const insert = sqlite.prepare(
+      'INSERT INTO permission_rules (id, tool_name, rule_content, behavior, created_at) VALUES (?, ?, ?, ?, ?)'
+    )
+    for (const rule of seedRules) {
+      insert.run(crypto.randomUUID(), rule.tool, rule.content, rule.behavior, now)
+    }
   }
 }
