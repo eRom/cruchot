@@ -10,7 +10,8 @@ import {
   libraries,
   librarySources,
   libraryChunks,
-  mcpServers
+  mcpServers,
+  skills
 } from '../schema'
 
 // ── Bardas CRUD ─────────────────────────────────────────
@@ -115,6 +116,9 @@ export function deleteResourcesByNamespace(namespace: string) {
 
   // 8. mcp_servers
   db.delete(mcpServers).where(eq(mcpServers.namespace, namespace)).run()
+
+  // 9. Skills
+  db.delete(skills).where(eq(skills.namespace, namespace)).run()
 }
 
 export function countActiveFragments(): number {

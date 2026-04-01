@@ -461,6 +461,27 @@ export const bardas = sqliteTable('bardas', {
 })
 
 // ---------------------------------------------------------------------------
+// Skills (Installable Skill Packs)
+// ---------------------------------------------------------------------------
+export const skills = sqliteTable('skills', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  description: text('description'),
+  allowedTools: text('allowed_tools', { mode: 'json' }).$type<string[]>(),
+  shell: text('shell').default('bash'),
+  effort: text('effort'),
+  argumentHint: text('argument_hint'),
+  userInvocable: integer('user_invocable', { mode: 'boolean' }).default(true),
+  enabled: integer('enabled', { mode: 'boolean' }).default(true),
+  source: text('source', { enum: ['local', 'git', 'barda'] }).notNull(),
+  gitUrl: text('git_url'),
+  namespace: text('namespace'),
+  matonVerdict: text('maton_verdict'),
+  matonReport: text('maton_report', { mode: 'json' }).$type<Record<string, unknown>>(),
+  installedAt: integer('installed_at').notNull()
+})
+
+// ---------------------------------------------------------------------------
 // Images
 // ---------------------------------------------------------------------------
 export const images = sqliteTable('images', {

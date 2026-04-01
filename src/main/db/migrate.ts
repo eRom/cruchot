@@ -475,4 +475,29 @@ export function runMigrations(): void {
 
   // Drop old YOLO index (no longer needed)
   sqlite.exec(`DROP INDEX IF EXISTS idx_conversations_is_yolo`)
+
+  // --- Skills system (S46) ---
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS skills (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      description TEXT,
+      allowed_tools TEXT,
+      shell TEXT DEFAULT 'bash',
+      effort TEXT,
+      argument_hint TEXT,
+      user_invocable INTEGER DEFAULT 1,
+      enabled INTEGER DEFAULT 1,
+      source TEXT NOT NULL CHECK(source IN ('local', 'git', 'barda')),
+      git_url TEXT,
+      namespace TEXT,
+      maton_verdict TEXT,
+      maton_report TEXT,
+      installed_at INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_skills_name ON skills(name);
+    CREATE INDEX IF NOT EXISTS idx_skills_namespace ON skills(namespace);
+    CREATE INDEX IF NOT EXISTS idx_skills_enabled ON skills(enabled);
+  `)
 }
