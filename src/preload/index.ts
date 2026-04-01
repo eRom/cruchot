@@ -516,6 +516,24 @@ const api: ElectronAPI = {
   conversationSetWorkspacePath: (id: string, workspacePath: string) =>
     ipcRenderer.invoke('conversations:setWorkspacePath', { id, workspacePath }),
 
+  // ── Permissions ───────────────────────────────────────────
+  permissionsList: (): Promise<unknown[]> => ipcRenderer.invoke('permissions:list'),
+  permissionsAdd: (data: { toolName: string; ruleContent: string | null; behavior: 'allow' | 'deny' | 'ask' }): Promise<unknown> =>
+    ipcRenderer.invoke('permissions:add', data),
+  permissionsDelete: (data: { id: string }): Promise<void> =>
+    ipcRenderer.invoke('permissions:delete', data),
+  permissionsReset: (): Promise<void> => ipcRenderer.invoke('permissions:reset'),
+
+  // ── Tool Approval ─────────────────────────────────────────
+  onToolApproval: (cb: (request: { approvalId: string; toolName: string; toolArgs: Record<string, unknown> }) => void): void => {
+    ipcRenderer.on('chat:tool-approval', (_event, request) => cb(request))
+  },
+  offToolApproval: (): void => {
+    ipcRenderer.removeAllListeners('chat:tool-approval')
+  },
+  approveToolCall: (approvalId: string, decision: 'allow' | 'deny' | 'allow-session'): Promise<void> =>
+    ipcRenderer.invoke('chat:approve-tool', { approvalId, decision }),
+
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>
     ipcRenderer.invoke('settings:get', key),
