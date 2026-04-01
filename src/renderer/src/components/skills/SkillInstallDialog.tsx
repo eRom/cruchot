@@ -32,6 +32,7 @@ type InstallState =
       matonReport: Record<string, unknown> | null
       gitUrl?: string
       pythonMissing: boolean
+      matonRequested: boolean
       // LLM analysis
       analyzeText: string | null
       analyzeModel: string | null
@@ -179,6 +180,7 @@ export function SkillInstallDialog({ onClose, onInstalled }: SkillInstallDialogP
         matonReport: matonEnabled ? (result.matonReport ?? null) : null,
         gitUrl: url,
         pythonMissing: result.pythonMissing ?? false,
+        matonRequested: matonEnabled,
         analyzeText: analyzeResult?.text ?? null,
         analyzeModel: analyzeResult?.model ?? null,
         analyzeCost: analyzeResult?.cost ?? null
@@ -212,6 +214,7 @@ export function SkillInstallDialog({ onClose, onInstalled }: SkillInstallDialogP
         matonVerdict: null,
         matonReport: null,
         pythonMissing: false,
+        matonRequested: matonEnabled,
         analyzeText: analyzeResult?.text ?? null,
         analyzeModel: analyzeResult?.model ?? null,
         analyzeCost: analyzeResult?.cost ?? null
@@ -344,8 +347,8 @@ export function SkillInstallDialog({ onClose, onInstalled }: SkillInstallDialogP
               </div>
             )}
 
-            {/* No scanner available */}
-            {!state.matonVerdict && !state.pythonMissing && (
+            {/* No scanner: only show if user requested analysis but Maton is missing */}
+            {!state.matonVerdict && state.matonRequested && (
               <div className="flex items-center gap-2 rounded-lg border border-border/40 bg-sidebar p-3 text-xs text-muted-foreground">
                 <ShieldOff className="size-4 shrink-0" />
                 Maton non installe — installez le skill "maton" pour activer le scan de securite
@@ -382,8 +385,8 @@ export function SkillInstallDialog({ onClose, onInstalled }: SkillInstallDialogP
               )
             })()}
 
-            {/* No LLM analysis available */}
-            {!state.analyzeText && (
+            {/* No LLM analysis: only show if user requested it */}
+            {!state.analyzeText && state.matonRequested && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
                 <Bot className="size-3.5" />
                 Analyse contextuelle non disponible (modele par defaut non configure ou Maton absent)
