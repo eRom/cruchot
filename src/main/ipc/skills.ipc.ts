@@ -278,7 +278,10 @@ export function registerSkillsIpc(): void {
     const parsed = nameSchema.safeParse(payload)
     if (!parsed.success) throw new Error('Invalid payload')
 
-    return skillService.getSkillTree(parsed.data.name)
+    const { name } = parsed.data
+    if (!/^[a-zA-Z0-9_\-.:]+$/.test(name)) throw new Error('Invalid skill name')
+
+    return skillService.getSkillTree(name)
   })
 
   // ── skills:get-content ─────────────────────────────────────────────────
@@ -286,7 +289,10 @@ export function registerSkillsIpc(): void {
     const parsed = nameSchema.safeParse(payload)
     if (!parsed.success) throw new Error('Invalid payload')
 
-    const skillDir = join(skillService.getSkillsDir(), parsed.data.name)
+    const { name } = parsed.data
+    if (!/^[a-zA-Z0-9_\-.:]+$/.test(name)) throw new Error('Invalid skill name')
+
+    const skillDir = join(skillService.getSkillsDir(), name)
 
     try {
       const parsedSkill = skillService.loadSkillFromDir(skillDir)
@@ -304,7 +310,10 @@ export function registerSkillsIpc(): void {
     const parsed = nameSchema.safeParse(payload)
     if (!parsed.success) throw new Error('Invalid payload')
 
-    const skillDir = join(skillService.getSkillsDir(), parsed.data.name)
+    const { name } = parsed.data
+    if (!/^[a-zA-Z0-9_\-.:]+$/.test(name)) throw new Error('Invalid skill name')
+
+    const skillDir = join(skillService.getSkillsDir(), name)
     await shell.openPath(skillDir)
   })
 
