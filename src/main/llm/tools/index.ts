@@ -1,6 +1,7 @@
 import { buildBashTool } from './bash'
 import { buildReadFileTool } from './file-read'
 import { buildWriteFileTool } from './file-write'
+import { buildFileEditTool } from './file-edit'
 import { buildListFilesTool } from './list-files'
 import { runBashSecurityChecks } from '../bash-security'
 import { evaluatePermission, addSessionApproval, type PermissionRule } from '../permission-engine'
@@ -20,6 +21,7 @@ export function buildConversationTools(
     bash: buildBashTool(workspacePath),
     readFile: buildReadFileTool(workspacePath),
     writeFile: buildWriteFileTool(workspacePath),
+    FileEdit: buildFileEditTool(workspacePath),
     listFiles: buildListFilesTool(workspacePath),
   }
 
