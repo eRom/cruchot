@@ -6,7 +6,7 @@ import { useUiStore } from '@/stores/ui.store'
 import { useSemanticMemoryStore } from '@/stores/semantic-memory.store'
 
 interface StreamChunk {
-  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'tool-result' | 'finish' | 'error'
+  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'tool-result' | 'tool-approval' | 'tool-approval-resolved' | 'finish' | 'error'
   content?: string
   modelId?: string
   providerId?: string
@@ -19,6 +19,8 @@ interface StreamChunk {
   toolArgs?: Record<string, unknown>
   toolCallId?: string
   toolIsError?: boolean
+  approvalId?: string
+  decision?: string
   usage?: {
     promptTokens: number
     completionTokens: number
@@ -37,8 +39,11 @@ const TOOL_LABELS: Record<string, string> = {
   bash: 'Commande shell',
   readFile: 'Lecture du fichier',
   writeFile: 'Ecriture du fichier',
+  FileEdit: 'Modification du fichier',
   listFiles: 'Exploration des fichiers',
-  searchInFiles: 'Recherche dans les fichiers',
+  GrepTool: 'Recherche dans les fichiers',
+  GlobTool: 'Recherche de fichiers',
+  WebFetchTool: 'Acces web',
   search: 'Recherche web'
 }
 
@@ -88,6 +93,20 @@ export function useStreaming() {
       }
 
       switch (chunk.type) {
+        case 'tool-approval': {
+          useUiStore.getState().setPendingApproval({
+            approvalId: chunk.approvalId!,
+            toolName: chunk.toolName!,
+            toolArgs: chunk.toolArgs ?? {}
+          })
+          return
+        }
+
+        case 'tool-approval-resolved': {
+          useUiStore.getState().setPendingApproval(null)
+          return
+        }
+
         case 'start': {
           // Immediately create a placeholder assistant message with "processing" phase
           const id = crypto.randomUUID()
