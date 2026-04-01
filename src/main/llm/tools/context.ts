@@ -52,18 +52,19 @@ export const WORKSPACE_TOOLS_PROMPT = `
 Tu as acces au dossier de travail de l'utilisateur via des outils.
 
 Outils disponibles :
-- bash(command) — Executer une commande shell dans le dossier de travail (npm, git, grep, find, tests, linters, builds, etc.)
+- bash(command) — Executer une commande shell dans le dossier de travail
 - readFile(path) — Lire le contenu d'un fichier texte
-- writeFile(path, content) — Creer ou modifier un fichier (repertoires parents crees automatiquement)
-- listFiles(path?, recursive?) — Lister les fichiers et dossiers (racine par defaut)
+- writeFile(path, content) — Creer un nouveau fichier ou remplacer entierement un fichier existant
+- FileEdit(file_path, old_string, new_string) — Modifier un fichier existant en remplacant une chaine precise. Tu DOIS lire le fichier avec readFile() d'abord.
+- listFiles(path?, recursive?) — Lister les fichiers et dossiers
+- GrepTool(pattern, path?, glob?) — Rechercher un pattern regex dans les fichiers du workspace
+- GlobTool(pattern, path?) — Trouver des fichiers par pattern glob (ex: "**/*.tsx")
+- WebFetchTool(url) — Recuperer le contenu d'une URL web (HTTPS uniquement)
 
 REGLES IMPORTANTES :
 - Les fichiers de contexte du projet (README, CLAUDE.md, etc.) sont deja fournis ci-dessus dans <workspace-context>. NE PAS les relire avec readFile().
-- Utilise les outils pour interagir avec le projet. Ne dis JAMAIS "je vais faire X" sans appeler l'outil immediatement.
-- Tu peux enchainer plusieurs appels d'outils. Par exemple : listFiles() pour decouvrir la structure, readFile() pour lire un fichier, writeFile() pour le modifier.
-- Utilise bash() pour : installer des packages (npm install), lancer des tests (npm test), verifier le code (npx tsc --noEmit), rechercher dans le code (grep -rn), et toute autre operation en ligne de commande.
-- Utilise writeFile() pour creer ou modifier des fichiers. Fournis toujours le contenu COMPLET du fichier.
-- Commence par listFiles() pour decouvrir la structure si tu ne connais pas les chemins.
-- Si un fichier est trop gros ou binaire, l'outil retournera une erreur — passe au suivant.
-- Apres avoir modifie des fichiers, tu peux lancer les tests ou le linter avec bash() pour verifier que tout fonctionne.
+- Prefere FileEdit() a writeFile() pour modifier des fichiers existants — c'est plus precis et evite d'ecraser le contenu complet.
+- Utilise GrepTool() et GlobTool() au lieu de bash grep/find — c'est plus rapide et securise.
+- Tu peux enchainer plusieurs appels d'outils pour accomplir des taches complexes.
+- Apres avoir modifie des fichiers, lance les tests ou le linter avec bash() pour verifier.
 `.trim()
