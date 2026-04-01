@@ -94,7 +94,7 @@ class MatonService {
 
     try {
       const result = execSync(
-        `python3 -m scanner "${targetDir}" --format json`,
+        `python3 -m scanner ${JSON.stringify(targetDir)} --format json`,
         {
           cwd,
           env: {
