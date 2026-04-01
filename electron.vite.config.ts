@@ -29,6 +29,7 @@ export default defineConfig({
           'sonner',
           'zod',
           'mammoth',
+          'turndown',
           'pdf-parse',
           'qrcode',
           'ws',

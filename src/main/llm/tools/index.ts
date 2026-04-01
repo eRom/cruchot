@@ -5,6 +5,7 @@ import { buildFileEditTool } from './file-edit'
 import { buildListFilesTool } from './list-files'
 import { buildGrepTool } from './grep'
 import { buildGlobTool } from './glob'
+import { buildWebFetchTool } from './web-fetch'
 import { runBashSecurityChecks } from '../bash-security'
 import { evaluatePermission, addSessionApproval, type PermissionRule } from '../permission-engine'
 
@@ -27,6 +28,7 @@ export function buildConversationTools(
     listFiles: buildListFilesTool(workspacePath),
     GrepTool: buildGrepTool(workspacePath),
     GlobTool: buildGlobTool(workspacePath),
+    WebFetchTool: buildWebFetchTool(),
   }
 
   // Without pipeline options, return raw tools (for tests/Arena)
