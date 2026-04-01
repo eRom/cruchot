@@ -12,6 +12,9 @@ App desktop locale de chat multi-LLM construite avec Electron. 11 providers, gen
 
 ## Updates
 
+- 01/04/2026
+  - **Skills** : systeme de packs autonomes installables (GitHub, dossier local, Barda) au format Markdown + frontmatter YAML (compatible Claude Code). Scan de securite Maton integre (scanner Python + analyse contextuelle LLM). Invocation via `/skill-name` dans les conversations, injection dans le system prompt, execution de blocs shell via Seatbelt. UI complete dans Personnaliser > Skills.
+
 - 22/03/2026
   - **Mode YOLO (Sandbox)** : execution autonome sandboxee — le LLM ecrit et execute du code dans un environnement confine (Seatbelt macOS), 5 outils (bash, createFile, readFile, listFiles, openPreview), reseau complet, confinement fichiers strict
 
@@ -100,7 +103,7 @@ src/
   main/           # Electron main process
     ipc/          #   Handlers IPC par domaine (Zod validation)
     llm/          #   Routeur AI SDK, cost-calculator, tools, prompts
-    db/           #   Schema Drizzle (25 tables), queries
+    db/           #   Schema Drizzle (26 tables), queries
     services/     #   Singletons metier (library, qdrant, git, mcp, remote...)
   preload/        # Bridge IPC securise (contextBridge)
   renderer/src/   # React app
@@ -195,6 +198,16 @@ src/
 - 3 bardas exemples inclus (ecrivain, dev-react, philosophe) dans `examples/`
 - Format ouvert : editable dans n'importe quel editeur texte, versionnable dans Git
 
+### Skills
+- Packs autonomes au format Markdown + frontmatter YAML (compatible Claude Code)
+- Installation depuis URL GitHub (monorepo supporte), dossier local, ou section `## Skills` dans un Barda
+- Scan de securite Maton : scanner Python (107 regles, 18 categories) + analyse contextuelle LLM via modele par defaut
+- Toggle Maton ON/OFF a l'installation, verdicts Scanner + Contextuel avec findings detailles
+- Invocation via `/skill-name args` dans les conversations (merge dans le dropdown autocomplete)
+- Injection `<skill-context>` dans le system prompt, execution de blocs shell `!cmd` via Seatbelt
+- Vue complete dans Personnaliser > Skills : grille, detail (tree filtre, preview, metadata), toggle ON/OFF, desinstallation
+- Sync bidirectionnelle filesystem ↔ DB au demarrage
+
 ### Autres fonctionnalites
 - **Projets** : organisation avec modele par defaut, workspace lie, system prompt
 - **Roles** : builtin et custom, variables dynamiques `{{varName}}`
@@ -216,7 +229,7 @@ L'architecture de securite repose sur l'isolation stricte des 3 couches Electron
 - Liens Markdown : whitelist de schemas (https, http, mailto, #)
 
 ### Preload (bridge)
-- ~140 methodes typees via `contextBridge`, jamais `ipcRenderer` directement
+- ~150 methodes typees via `contextBridge`, jamais `ipcRenderer` directement
 - Cleanup des listeners via `removeAllListeners`
 
 ### Main (Node.js)
@@ -227,13 +240,14 @@ L'architecture de securite repose sur l'isolation stricte des 3 couches Electron
 - **Git** : env immutable `GIT_BASE_ENV` (Readonly), `GIT_CONFIG_NOSYSTEM=1`, `validateGitPaths()` sur toutes les operations
 - **MCP** : env minimal stdio (PATH/HOME/TMPDIR/LANG/SHELL/USER), env vars chiffrees
 - **Remote** : `crypto.timingSafeEqual` sur le pairing, `maxPayload 64KB` (WebSocket), broadcast reserve aux clients authentifies
+- **Skills** : `realpathSync()` sur les chemins, regex validation des noms (`[a-zA-Z0-9_\-.:]+`), `JSON.stringify()` anti-injection dans les commandes Python, recherche SKILL.md confinee (3 niveaux max), cleanup temp dirs (`/tmp/cruchot-skill-*`), Maton scan avant installation
 - **FTS5** : `sanitizeFtsQuery()` neutralise les operateurs MATCH, resultats tronques a 500 chars
 - **XML injection** : contenu sanitise avant injection dans le system prompt (workspace, fichiers, library-context, semantic-memory)
 - **Factory reset** : double confirmation (renderer + dialog natif main)
 - **Export .mlx** : AES-256-GCM, IV unique par export, token hors whitelist renderer
 
 ### Donnees
-- SQLite WAL + 25 tables Drizzle, donnees 100% locales
+- SQLite WAL + 26 tables Drizzle, donnees 100% locales
 - Qdrant vector DB embedded (127.0.0.1 uniquement)
 - Zero telemetrie, zero serveur backend
 
