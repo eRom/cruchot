@@ -29,7 +29,7 @@ function VerdictDot({ verdict }: { verdict: string | null }): React.JSX.Element 
 function SourceBadge({ skill }: { skill: SkillInfo }): React.JSX.Element {
   if (skill.source === 'git') {
     return (
-      <span className="shrink-0 inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-600 dark:text-blue-400">
+      <span className="shrink-0 inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
         Git
       </span>
     )

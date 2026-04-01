@@ -30,7 +30,7 @@ type FilterType = 'all' | 'complet' | 'complement'
 // ── Type label/icon helpers ──────────────────────────────────
 
 const TYPE_CONFIG: Record<string, { label: string; icon: typeof FileText; color: string }> = {
-  complet: { label: 'Complet', icon: FileText, color: 'text-blue-500' },
+  complet: { label: 'Complet', icon: FileText, color: 'text-primary' },
   complement: { label: 'Complement', icon: Puzzle, color: 'text-amber-500' }
 }
 
@@ -479,7 +479,7 @@ function PromptCard({
           <span
             className={cn(
               'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
-              prompt.type === 'complet' && 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+              prompt.type === 'complet' && 'bg-primary/10 text-primary',
               prompt.type === 'complement' && 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
             )}
           >

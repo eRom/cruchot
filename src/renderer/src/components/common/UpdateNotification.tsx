@@ -57,7 +57,7 @@ export function UpdateNotification(): React.JSX.Element | null {
     <div
       className={cn(
         'flex items-center gap-3 px-4 py-2 text-sm font-medium animate-in slide-in-from-top-2 duration-300',
-        state.status === 'available' && 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+        state.status === 'available' && 'bg-primary/10 text-primary',
         state.status === 'downloading' && 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
         state.status === 'downloaded' && 'bg-green-500/10 text-green-600 dark:text-green-400',
         state.status === 'error' && 'bg-red-500/10 text-red-600 dark:text-red-400'
@@ -100,7 +100,7 @@ export function UpdateNotification(): React.JSX.Element | null {
       {state.status === 'available' && (
         <button
           onClick={handleDownload}
-          className="rounded-md bg-blue-500/20 px-3 py-1 text-xs font-semibold hover:bg-blue-500/30 transition-colors"
+          className="rounded-md bg-primary/20 px-3 py-1 text-xs font-semibold hover:bg-primary/30 transition-colors"
         >
           Télécharger
         </button>

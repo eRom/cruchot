@@ -102,12 +102,12 @@ export function RemoteSection() {
                 <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-emerald-500 animate-pulse" />
               )}
               {isWebRunning && webClients === 0 && (
-                <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-blue-500" />
+                <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-primary" />
               )}
             </span>
             <span className={cn(
               isWebRunning && webClients > 0 && 'text-emerald-500',
-              isWebRunning && webClients === 0 && 'text-blue-500'
+              isWebRunning && webClients === 0 && 'text-primary'
             )}>
               Web {isWebRunning && webClients > 0 ? `(${webClients})` : ''}
             </span>
