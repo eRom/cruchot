@@ -1,8 +1,20 @@
 import { spawn, type ExecOptions } from 'child_process'
-import { existsSync, writeFileSync, unlinkSync, readdirSync } from 'fs'
+import { existsSync, writeFileSync, unlinkSync } from 'fs'
 import { join } from 'path'
+import { buildSafeEnv, wrapCommand } from '../llm/bash-security'
 
 const SANDBOX_EXEC_PATH = '/usr/bin/sandbox-exec'
+
+export const SEATBELT_DENIED_PATHS = [
+  '.ssh', '.aws', '.gnupg', '.gpg', '.config/gcloud', '.azure',
+  '.kube', '.docker', '.credentials', '.password-store',
+  'Library/Keychains'
+]
+
+export const SEATBELT_DENIED_FILES = [
+  '.netrc', '.npmrc', '.pypirc', '.env',
+  '.bash_history', '.zsh_history'
+]
 
 export function isSeatbeltAvailable(): boolean {
   return process.platform === 'darwin' && existsSync(SANDBOX_EXEC_PATH)
@@ -10,6 +22,15 @@ export function isSeatbeltAvailable(): boolean {
 
 function generateSeatbeltProfile(sandboxDir: string): string {
   const home = process.env.HOME || '/Users/unknown'
+
+  const denyPathRules = SEATBELT_DENIED_PATHS
+    .map(p => `(deny file-read* (subpath "${home}/${p}"))`)
+    .join('\n')
+
+  const denyFileRules = SEATBELT_DENIED_FILES
+    .map(f => `(deny file-read* (literal "${home}/${f}"))`)
+    .join('\n')
+
   return `(version 1)
 (deny default)
 (allow process*)
@@ -39,6 +60,10 @@ function generateSeatbeltProfile(sandboxDir: string): string {
 (allow file-read* (subpath "/private/etc"))
 (allow file-read* (subpath "/etc"))
 (allow file-read* (subpath "/var"))
+
+;; Deny sensitive paths and files in home (must come before the broad allow below)
+${denyPathRules}
+${denyFileRules}
 
 ;; Allow read home (for configs, nvm, etc.)
 (allow file-read* (subpath "${home}"))
@@ -72,34 +97,7 @@ export async function execSandboxed(
   const maxBuffer = opts.maxBuffer ?? 100 * 1024 // 100KB
   const cwd = opts.cwd ?? sandboxDir
 
-  // Minimal env
-  const env: Record<string, string> = {
-    PATH: '/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin',
-    HOME: sandboxDir,
-    TMPDIR: '/tmp',
-    LANG: 'en_US.UTF-8',
-    FORCE_COLOR: '0',
-    NO_COLOR: '1'
-  }
-
-  // Add NVM node path if available (resolve in Node.js, not shell)
-  const homePath = process.env.HOME
-  if (homePath) {
-    const nvmDir = `${homePath}/.nvm`
-    const nvmVersionsDir = join(nvmDir, 'versions', 'node')
-    if (existsSync(nvmVersionsDir)) {
-      try {
-        const versions = readdirSync(nvmVersionsDir).sort()
-        const latest = versions[versions.length - 1]
-        if (latest) {
-          env.NVM_DIR = nvmDir
-          env.PATH = `${join(nvmVersionsDir, latest, 'bin')}:${env.PATH}`
-        }
-      } catch {
-        // NVM dir not readable — skip
-      }
-    }
-  }
+  const env = buildSafeEnv(sandboxDir)
 
   const execOptions: ExecOptions = {
     cwd,
@@ -116,10 +114,11 @@ export async function execSandboxed(
     const profilePath = join('/tmp', `cruchot-sb-${crypto.randomUUID()}.sb`)
     writeFileSync(profilePath, profile, 'utf-8')
 
+    const wrappedCmd = wrapCommand(command, 'bash')
     try {
       return await spawnAsync(
         SANDBOX_EXEC_PATH,
-        ['-f', profilePath, '/bin/bash', '-c', command],
+        ['-f', profilePath, '/bin/bash', '-c', wrappedCmd],
         execOptions
       )
     } finally {
@@ -127,9 +126,11 @@ export async function execSandboxed(
     }
   } else {
     // Fallback: exec without Seatbelt (Windows, Linux, macOS without sandbox-exec)
-    const shell = process.platform === 'win32' ? 'cmd.exe' : '/bin/bash'
-    const args = process.platform === 'win32' ? ['/c', command] : ['-c', command]
-    return spawnAsync(shell, args, execOptions)
+    if (process.platform === 'win32') {
+      return spawnAsync('cmd.exe', ['/c', command], execOptions)
+    }
+    const wrappedCmd = wrapCommand(command, 'bash')
+    return spawnAsync('/bin/bash', ['-c', wrappedCmd], execOptions)
   }
 }
 
