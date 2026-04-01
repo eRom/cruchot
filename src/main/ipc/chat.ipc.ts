@@ -541,6 +541,7 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
       }
     }> = []
     const accumulatedSearchSources: Array<{ title: string; url: string; snippet?: string }> = []
+    const toolStartTimes = new Map<string, number>() // toolCallId → Date.now()
 
     // State machine for parsing <think> tags from open-source models (LM Studio, Ollama, etc.)
     // These models emit reasoning inside <think>...</think> as plain text-delta chunks.
@@ -646,7 +647,8 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
           })
           if (isWsConnected) remoteServerService.pushReasoningChunk(chunk.text)
         } else if (chunk.type === 'tool-call') {
-          // Track tool call as running
+          // Track tool call as running + record start time
+          toolStartTimes.set(chunk.toolCallId, Date.now())
           accumulatedToolCalls.push({
             toolName: chunk.toolName,
             args: chunk.args as Record<string, unknown>,
@@ -671,6 +673,12 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
           const toolResult = chunk as { type: 'tool-result'; toolName: string; toolCallId: string; output: unknown }
           const isError = toolResult.output != null && typeof toolResult.output === 'object' && 'error' in (toolResult.output as Record<string, unknown>)
           const { result: toolResultText, resultMeta } = extractToolMeta(toolResult.toolName, toolResult.output)
+          // Compute per-tool duration
+          const toolStart = toolStartTimes.get(toolResult.toolCallId)
+          if (toolStart) {
+            resultMeta.duration = Date.now() - toolStart
+            toolStartTimes.delete(toolResult.toolCallId)
+          }
           // Extract search sources from Perplexity Search tool results
           if (toolResult.toolName === 'search' && toolResult.output && typeof toolResult.output === 'object') {
             const output = toolResult.output as Record<string, unknown>

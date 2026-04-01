@@ -19,6 +19,15 @@ interface StreamChunk {
   toolArgs?: Record<string, unknown>
   toolCallId?: string
   toolIsError?: boolean
+  toolResult?: string
+  toolResultMeta?: {
+    duration?: number
+    exitCode?: number
+    lineCount?: number
+    byteSize?: number
+    matchCount?: number
+    fileCount?: number
+  }
   approvalId?: string
   decision?: string
   usage?: {
