@@ -586,6 +586,39 @@ export function InputZone({
           setContent('')
           return
         }
+
+        // Skill commands — send with skillName/skillArgs, main process handles injection
+        if (resolved.isSkill) {
+          const skillContent = `/${resolved.commandName}${resolved.prompt ? ' ' + resolved.prompt : ''}`
+          setContent('')
+          requestAnimationFrame(() => {
+            if (textareaRef.current) {
+              textareaRef.current.style.height = `${TEXTAREA_MIN_HEIGHT}px`
+            }
+          })
+          updateConversation(conversationId, { modelId: `${selectedProviderId}::${selectedModelId}` })
+          try {
+            await window.api.sendMessage({
+              conversationId,
+              content: skillContent,
+              modelId: selectedModelId,
+              providerId: selectedProviderId,
+              systemPrompt: activeSystemPrompt ?? undefined,
+              temperature,
+              maxTokens: settingsMaxTokens,
+              topP,
+              thinkingEffort: selectedModel?.supportsThinking ? thinkingEffort : undefined,
+              roleId: activeRoleId && activeRoleId !== '__project__' ? activeRoleId : undefined,
+              skillName: resolved.commandName,
+              skillArgs: resolved.prompt
+            })
+          } catch {
+            // Error handled by stream handler in main
+          }
+          onMessageSent?.(skillContent)
+          return
+        }
+
         resolvedContent = resolved.prompt
         slashCommandName = resolved.commandName
       }
