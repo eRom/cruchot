@@ -6,8 +6,16 @@ import { ipcMain, shell } from 'electron'
 import { execSync } from 'node:child_process'
 import { join } from 'path'
 import { z } from 'zod'
+import { generateText, stepCountIs } from 'ai'
 import { skillService } from '../services/skill.service'
 import { matonService } from '../services/skill-maton.service'
+import { buildSkillContextBlock } from '../llm/skill-prompt'
+import { buildConversationTools } from '../llm/conversation-tools'
+import { getModel } from '../llm/router'
+import { calculateMessageCost } from '../llm/cost-calculator'
+import { getDatabase } from '../db'
+import { settings } from '../db/schema'
+import { eq } from 'drizzle-orm'
 import {
   createSkill,
   listSkills,
@@ -60,6 +68,16 @@ function cleanupTemp(tempDir: string): void {
   } catch {
     // Best-effort cleanup
   }
+}
+
+/** Get default model from settings. Returns { providerId, modelId } or null. */
+function getDefaultModel(): { providerId: string; modelId: string } | null {
+  const db = getDatabase()
+  const row = db.select().from(settings).where(eq(settings.key, 'multi-llm:default-model-id')).get()
+  if (!row?.value) return null
+  const parts = row.value.split('::')
+  if (parts.length !== 2) return null
+  return { providerId: parts[0], modelId: parts[1] }
 }
 
 // ── Register ──────────────────────────────────────────────────────────────
@@ -293,6 +311,76 @@ export function registerSkillsIpc(): void {
   // ── skills:check-python ────────────────────────────────────────────────
   ipcMain.handle('skills:check-python', async () => {
     return skillService.checkPythonAvailable()
+  })
+
+  // ── skills:analyze ─────────────────────────────────────────────────────
+  // Run Maton skill via LLM to get contextual verdict (SkillInferenceCall)
+  ipcMain.handle('skills:analyze', async (_event, payload: unknown) => {
+    const schema = z.object({
+      targetDir: z.string().min(1).max(2000)
+    })
+    const parsed = schema.safeParse(payload)
+    if (!parsed.success) throw new Error('Invalid payload')
+
+    const { targetDir } = parsed.data
+
+    // 1. Check Maton skill is installed
+    const matonSkill = getSkillByName('maton')
+    if (!matonSkill) {
+      return { success: false, error: 'maton_not_installed' }
+    }
+
+    // 2. Get default model
+    const defaultModel = getDefaultModel()
+    if (!defaultModel) {
+      return { success: false, error: 'no_default_model' }
+    }
+
+    // 3. Build Maton skill context
+    const skillResult = await buildSkillContextBlock('maton', targetDir, targetDir)
+    if (!skillResult) {
+      return { success: false, error: 'Impossible de charger le skill maton' }
+    }
+
+    // 4. Build tools (bash confined to targetDir so the LLM can run the scanner)
+    const tools = buildConversationTools(targetDir)
+
+    // 5. Call LLM — one-shot generateText with tools
+    try {
+      const model = getModel(defaultModel.providerId, defaultModel.modelId)
+      const result = await generateText({
+        model,
+        system: skillResult.block,
+        messages: [
+          { role: 'user', content: `Analyse de securite du dossier : ${targetDir}` }
+        ],
+        tools,
+        maxSteps: 20,
+        stopWhen: stepCountIs(20),
+        temperature: 0.2,
+        maxTokens: 4096
+      } as Parameters<typeof generateText>[0])
+
+      // 6. Calculate cost
+      const usage = result.usage
+      const cost = calculateMessageCost(
+        defaultModel.modelId,
+        usage?.inputTokens ?? 0,
+        usage?.outputTokens ?? 0
+      )
+
+      return {
+        success: true,
+        text: result.text.trim(),
+        model: `${defaultModel.providerId}::${defaultModel.modelId}`,
+        tokensIn: usage?.inputTokens ?? 0,
+        tokensOut: usage?.outputTokens ?? 0,
+        cost
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      return { success: false, error: `Analyse LLM echouee: ${message}` }
+    }
   })
 
   console.log('[IPC] Skills handlers registered')
