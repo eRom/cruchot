@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { useSkillsStore } from '@/stores/skills.store'
-import type { SkillInfo, SkillTreeNode } from '../../../../../preload/types'
+import type { SkillInfo, SkillTreeNode } from '../../../../preload/types'
 import {
   ArrowLeft,
   File,

@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import type { SkillInfo } from '../../../../../preload/types'
+import type { SkillInfo } from '../../../../preload/types'
 import { Trash2 } from 'lucide-react'
 
 interface SkillCardProps {
