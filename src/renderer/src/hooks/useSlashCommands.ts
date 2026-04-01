@@ -26,7 +26,8 @@ interface UseSlashCommandsResult {
  */
 export function useSlashCommands(content: string): UseSlashCommandsResult {
   const commands = useSlashCommandsStore((s) => s.commands)
-  const enabledSkills = useSkillsStore((s) => s.skills.filter(sk => sk.enabled && sk.userInvocable))
+  const allSkills = useSkillsStore((s) => s.skills)
+  const enabledSkills = useMemo(() => allSkills.filter(sk => sk.enabled && sk.userInvocable), [allSkills])
   const activeProjectId = useProjectsStore((s) => s.activeProjectId)
   const activeProject = useProjectsStore((s) => s.projects.find((p) => p.id === s.activeProjectId))
   const selectedModel = useProvidersStore((s) => {
