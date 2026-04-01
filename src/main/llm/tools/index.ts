@@ -3,6 +3,7 @@ import { buildReadFileTool } from './file-read'
 import { buildWriteFileTool } from './file-write'
 import { buildFileEditTool } from './file-edit'
 import { buildListFilesTool } from './list-files'
+import { buildGrepTool } from './grep'
 import { runBashSecurityChecks } from '../bash-security'
 import { evaluatePermission, addSessionApproval, type PermissionRule } from '../permission-engine'
 
@@ -23,6 +24,7 @@ export function buildConversationTools(
     writeFile: buildWriteFileTool(workspacePath),
     FileEdit: buildFileEditTool(workspacePath),
     listFiles: buildListFilesTool(workspacePath),
+    GrepTool: buildGrepTool(workspacePath),
   }
 
   // Without pipeline options, return raw tools (for tests/Arena)
