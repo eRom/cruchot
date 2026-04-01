@@ -10,7 +10,8 @@ import {
   libraries,
   librarySources,
   libraryChunks,
-  mcpServers
+  mcpServers,
+  skills
 } from '../schema'
 
 // ── Bardas CRUD ─────────────────────────────────────────
@@ -27,6 +28,7 @@ export function createBarda(data: {
   fragmentsCount?: number
   librariesCount?: number
   mcpServersCount?: number
+  skillsCount?: number
 }) {
   const db = getDatabase()
   const id = crypto.randomUUID()
@@ -46,6 +48,7 @@ export function createBarda(data: {
     fragmentsCount: data.fragmentsCount ?? 0,
     librariesCount: data.librariesCount ?? 0,
     mcpServersCount: data.mcpServersCount ?? 0,
+    skillsCount: data.skillsCount ?? 0,
     createdAt: now,
     updatedAt: now
   }).run()
@@ -115,6 +118,9 @@ export function deleteResourcesByNamespace(namespace: string) {
 
   // 8. mcp_servers
   db.delete(mcpServers).where(eq(mcpServers.namespace, namespace)).run()
+
+  // 9. Skills
+  db.delete(skills).where(eq(skills.namespace, namespace)).run()
 }
 
 export function countActiveFragments(): number {

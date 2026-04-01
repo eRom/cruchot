@@ -497,6 +497,21 @@ const api: ElectronAPI = {
   bardaToggle: (id: string, isEnabled: boolean) => ipcRenderer.invoke('barda:toggle', { id, isEnabled }),
   bardaUninstall: (id: string) => ipcRenderer.invoke('barda:uninstall', { id }),
 
+  // ── Skills ──────────────────────────────────────────────
+  skillsList: () => ipcRenderer.invoke('skills:list'),
+  skillsValidate: (dirPath: string) => ipcRenderer.invoke('skills:validate', { dirPath }),
+  skillsScan: (dirPath: string) => ipcRenderer.invoke('skills:scan', { dirPath }),
+  skillsInstallGit: (gitUrl: string) => ipcRenderer.invoke('skills:install-git', { gitUrl }),
+  skillsConfirmInstall: (data: { tempDir?: string; localDir?: string; gitUrl?: string; matonVerdict?: string | null; matonReport?: Record<string, unknown> | null }) =>
+    ipcRenderer.invoke('skills:confirm-install', data),
+  skillsToggle: (id: string, enabled: boolean) => ipcRenderer.invoke('skills:toggle', { id, enabled }),
+  skillsUninstall: (id: string) => ipcRenderer.invoke('skills:uninstall', { id }),
+  skillsGetTree: (name: string) => ipcRenderer.invoke('skills:get-tree', { name }),
+  skillsGetContent: (name: string) => ipcRenderer.invoke('skills:get-content', { name }),
+  skillsOpenFinder: (name: string) => ipcRenderer.invoke('skills:open-finder', { name }),
+  skillsCheckPython: () => ipcRenderer.invoke('skills:check-python'),
+  skillsAnalyze: (targetDir: string) => ipcRenderer.invoke('skills:analyze', { targetDir }),
+
   // ── Conversations: Workspace ─────────────────────────
   conversationSetWorkspacePath: (id: string, workspacePath: string) =>
     ipcRenderer.invoke('conversations:setWorkspacePath', { id, workspacePath }),

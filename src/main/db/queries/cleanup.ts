@@ -21,7 +21,8 @@ import {
   librarySources,
   libraries,
   arenaMatches,
-  bardas
+  bardas,
+  skills
 } from '../schema'
 
 /**
@@ -43,6 +44,7 @@ export function deleteConversationsProjectsImages(): { imagePaths: string[] } {
   db.delete(vectorSyncState).run()
   db.delete(messages).run()
   db.delete(bardas).run()
+  db.delete(skills).run()
   db.delete(scheduledTasks).run()
   db.delete(mcpServers).run()
   db.delete(slashCommands).run()
@@ -76,6 +78,7 @@ export function factoryResetDatabase(): { imagePaths: string[] } {
   db.delete(messages).run()
   db.delete(conversations).run()
   db.delete(bardas).run()
+  db.delete(skills).run()
   db.delete(scheduledTasks).run()
   db.delete(mcpServers).run()
   db.delete(slashCommands).run()

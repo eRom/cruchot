@@ -25,6 +25,8 @@ export interface SendMessagePayload {
   fileContexts?: WorkspaceFileContext[]
   searchEnabled?: boolean
   libraryId?: string
+  skillName?: string
+  skillArgs?: string
 }
 
 export interface FileNode {
@@ -1019,6 +1021,20 @@ export interface ElectronAPI {
   bardaToggle: (id: string, isEnabled: boolean) => Promise<void>
   bardaUninstall: (id: string) => Promise<void>
 
+  // Skills
+  skillsList: () => Promise<SkillInfo[]>
+  skillsValidate: (dirPath: string) => Promise<SkillValidationResult>
+  skillsScan: (dirPath: string) => Promise<any>
+  skillsInstallGit: (gitUrl: string) => Promise<SkillScanResult>
+  skillsConfirmInstall: (data: { tempDir?: string; localDir?: string; gitUrl?: string; matonVerdict?: string | null; matonReport?: Record<string, unknown> | null }) => Promise<SkillInfo>
+  skillsToggle: (id: string, enabled: boolean) => Promise<void>
+  skillsUninstall: (id: string) => Promise<void>
+  skillsGetTree: (name: string) => Promise<SkillTreeNode[]>
+  skillsGetContent: (name: string) => Promise<{ content: string; frontmatter: any } | null>
+  skillsOpenFinder: (name: string) => Promise<void>
+  skillsCheckPython: () => Promise<boolean>
+  skillsAnalyze: (targetDir: string) => Promise<SkillAnalyzeResult>
+
   // Conversations: Workspace
   conversationSetWorkspacePath: (id: string, workspacePath: string) => Promise<void>
 
@@ -1045,6 +1061,7 @@ export interface BardaInfo {
   fragmentsCount: number
   librariesCount: number
   mcpServersCount: number
+  skillsCount: number
   createdAt: number
 }
 
@@ -1074,6 +1091,7 @@ export interface ParsedBarda {
   fragments: ParsedResource[]
   libraries: ParsedResource[]
   mcp: ParsedResource[]
+  skills: ParsedResource[]
 }
 
 export interface BardaImportReport {
@@ -1086,5 +1104,60 @@ export interface BardaImportReport {
 export interface BardaParseError {
   line: number
   message: string
+}
+
+// ── Skills ───────────────────────────────────────────────
+export interface SkillInfo {
+  id: string
+  name: string
+  description: string | null
+  allowedTools: string[] | null
+  shell: string | null
+  effort: string | null
+  argumentHint: string | null
+  userInvocable: boolean | null
+  enabled: boolean | null
+  source: 'local' | 'git' | 'barda'
+  gitUrl: string | null
+  namespace: string | null
+  matonVerdict: string | null
+  matonReport: Record<string, unknown> | null
+  installedAt: number
+}
+
+export interface SkillTreeNode {
+  name: string
+  type: 'file' | 'directory'
+  size?: number
+  children?: SkillTreeNode[]
+}
+
+export interface SkillScanResult {
+  success: boolean
+  phase?: 'scanned'
+  tempDir?: string
+  name?: string
+  description?: string
+  matonVerdict?: string | null
+  matonReport?: Record<string, unknown> | null
+  pythonMissing?: boolean
+  error?: string
+}
+
+export interface SkillValidationResult {
+  success: boolean
+  name?: string
+  description?: string
+  error?: string
+}
+
+export interface SkillAnalyzeResult {
+  success: boolean
+  text?: string
+  model?: string
+  tokensIn?: number
+  tokensOut?: number
+  cost?: number
+  error?: string
 }
 

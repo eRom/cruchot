@@ -3,11 +3,13 @@ import { useSlashCommandsStore, type SlashCommand } from '@/stores/slash-command
 import { useProjectsStore } from '@/stores/projects.store'
 import { useProvidersStore } from '@/stores/providers.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
+import { useSkillsStore } from '@/stores/skills.store'
 
 interface SlashCommandMatch {
   command: SlashCommand
   isProjectScoped: boolean
   isAction?: boolean
+  isSkill?: boolean
 }
 
 interface UseSlashCommandsResult {
@@ -16,7 +18,7 @@ interface UseSlashCommandsResult {
   /** Matching commands for the current input */
   matches: SlashCommandMatch[]
   /** Resolve a slash command input to the substituted prompt, or null if not a command */
-  resolve: (content: string) => { prompt: string; commandName: string; isAction?: boolean } | null
+  resolve: (content: string) => { prompt: string; commandName: string; isAction?: boolean; isSkill?: boolean } | null
 }
 
 /**
@@ -24,6 +26,8 @@ interface UseSlashCommandsResult {
  */
 export function useSlashCommands(content: string): UseSlashCommandsResult {
   const commands = useSlashCommandsStore((s) => s.commands)
+  const allSkills = useSkillsStore((s) => s.skills)
+  const enabledSkills = useMemo(() => allSkills.filter(sk => sk.enabled && sk.userInvocable), [allSkills])
   const activeProjectId = useProjectsStore((s) => s.activeProjectId)
   const activeProject = useProjectsStore((s) => s.projects.find((p) => p.id === s.activeProjectId))
   const selectedModel = useProvidersStore((s) => {
@@ -72,8 +76,29 @@ export function useSlashCommands(content: string): UseSlashCommandsResult {
       }
     }
 
+    // Skills (invocable via /skill-name)
+    for (const skill of enabledSkills) {
+      if (!seen.has(skill.name)) {
+        result.push({
+          command: {
+            id: `__skill_${skill.name}`,
+            name: skill.name,
+            description: skill.description ?? 'Skill',
+            prompt: '',
+            isBuiltin: false,
+            sortOrder: 100,
+            createdAt: new Date(skill.installedAt * 1000),
+            updatedAt: new Date(skill.installedAt * 1000)
+          } as SlashCommand,
+          isProjectScoped: false,
+          isSkill: true
+        })
+        seen.add(skill.name)
+      }
+    }
+
     return result
-  }, [commands, activeProjectId, ACTION_COMMANDS])
+  }, [commands, activeProjectId, ACTION_COMMANDS, enabledSkills])
 
   // Check if content starts with /
   const isActive = content.startsWith('/') && !content.startsWith('/ ')
@@ -97,7 +122,7 @@ export function useSlashCommands(content: string): UseSlashCommandsResult {
 
   // Resolve function
   const resolve = useMemo(() => {
-    return (rawContent: string): { prompt: string; commandName: string; isAction?: boolean } | null => {
+    return (rawContent: string): { prompt: string; commandName: string; isAction?: boolean; isSkill?: boolean } | null => {
       if (!rawContent.startsWith('/')) return null
 
       const firstLine = rawContent.split('\n')[0]
@@ -109,6 +134,11 @@ export function useSlashCommands(content: string): UseSlashCommandsResult {
       // Find command (project > global > builtin)
       const match = availableCommands.find(({ command }) => command.name === commandName)
       if (!match) return null
+
+      // Skills are handled differently — return raw args with isSkill flag
+      if (match.isSkill) {
+        return { prompt: argString.trim(), commandName: match.command.name, isSkill: true }
+      }
 
       const args = parseArgs(argString)
       let prompt = match.command.prompt

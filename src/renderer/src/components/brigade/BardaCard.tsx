@@ -8,7 +8,8 @@ import {
   Plug,
   Terminal,
   Trash2,
-  Users
+  Users,
+  Wrench
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -22,7 +23,8 @@ const COUNTER_ITEMS = [
   { key: 'promptsCount' as const, icon: FileText, label: 'Prompts' },
   { key: 'fragmentsCount' as const, icon: Brain, label: 'Fragments' },
   { key: 'librariesCount' as const, icon: BookOpen, label: 'Referentiels' },
-  { key: 'mcpServersCount' as const, icon: Plug, label: 'MCP' }
+  { key: 'mcpServersCount' as const, icon: Plug, label: 'MCP' },
+  { key: 'skillsCount' as const, icon: Wrench, label: 'Skills' }
 ]
 
 export function BardaCard({ barda }: BardaCardProps): React.JSX.Element {
