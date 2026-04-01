@@ -127,7 +127,7 @@ export function registerSkillsIpc(): void {
         return { success: false, error: validation.error }
       }
 
-      const { skillName, parsed: parsedSkill } = validation
+      const { skillName, parsed: parsedSkill, skillRoot } = validation
 
       // 3. Check name conflict
       const existing = getSkillByName(skillName)
@@ -139,8 +139,8 @@ export function registerSkillsIpc(): void {
         }
       }
 
-      // 4. Scan with Maton
-      const scanResult = await matonService.scan(tempDir)
+      // 4. Scan with Maton (scan the skill root, not the clone root)
+      const scanResult = await matonService.scan(skillRoot)
 
       let matonVerdict: string | null = null
       let matonReport: Record<string, unknown> | null = null
@@ -154,10 +154,11 @@ export function registerSkillsIpc(): void {
       }
 
       // 5. Return scan result (confirm-install will do the actual install)
+      // skillRoot is the dir containing SKILL.md (may differ from tempDir for monorepos)
       return {
         success: true,
         phase: 'scanned',
-        tempDir,
+        tempDir: skillRoot,
         name: skillName,
         description: parsedSkill.frontmatter.description,
         matonVerdict,
@@ -187,7 +188,7 @@ export function registerSkillsIpc(): void {
       throw new Error(validation.error)
     }
 
-    const { skillName, parsed: parsedSkill } = validation
+    const { skillName, parsed: parsedSkill, skillRoot } = validation
 
     // 2. Re-check conflict
     const existing = getSkillByName(skillName)
@@ -196,8 +197,8 @@ export function registerSkillsIpc(): void {
       throw new Error(`Un skill nommé "${skillName}" est déjà installé`)
     }
 
-    // 3. Install skill from sourceDir to ~/.cruchot/skills/<skillName>/
-    const installResult = skillService.installSkill(sourceDir, skillName)
+    // 3. Install skill from skillRoot (the dir containing SKILL.md) to ~/.cruchot/skills/<skillName>/
+    const installResult = skillService.installSkill(skillRoot, skillName)
     if (!installResult.success) {
       if (tempDir) cleanupTemp(tempDir)
       throw new Error(installResult.error ?? 'Installation échouée')
