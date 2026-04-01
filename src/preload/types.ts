@@ -25,6 +25,8 @@ export interface SendMessagePayload {
   fileContexts?: WorkspaceFileContext[]
   searchEnabled?: boolean
   libraryId?: string
+  skillName?: string
+  skillArgs?: string
 }
 
 export interface FileNode {
@@ -1058,6 +1060,7 @@ export interface BardaInfo {
   fragmentsCount: number
   librariesCount: number
   mcpServersCount: number
+  skillsCount: number
   createdAt: number
 }
 
@@ -1087,6 +1090,7 @@ export interface ParsedBarda {
   fragments: ParsedResource[]
   libraries: ParsedResource[]
   mcp: ParsedResource[]
+  skills: ParsedResource[]
 }
 
 export interface BardaImportReport {

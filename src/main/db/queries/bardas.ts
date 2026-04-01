@@ -28,6 +28,7 @@ export function createBarda(data: {
   fragmentsCount?: number
   librariesCount?: number
   mcpServersCount?: number
+  skillsCount?: number
 }) {
   const db = getDatabase()
   const id = crypto.randomUUID()
@@ -47,6 +48,7 @@ export function createBarda(data: {
     fragmentsCount: data.fragmentsCount ?? 0,
     librariesCount: data.librariesCount ?? 0,
     mcpServersCount: data.mcpServersCount ?? 0,
+    skillsCount: data.skillsCount ?? 0,
     createdAt: now,
     updatedAt: now
   }).run()

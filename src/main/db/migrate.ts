@@ -311,6 +311,7 @@ export function runMigrations(): void {
       fragments_count INTEGER DEFAULT 0,
       libraries_count INTEGER DEFAULT 0,
       mcp_servers_count INTEGER DEFAULT 0,
+      skills_count INTEGER DEFAULT 0,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
@@ -500,4 +501,9 @@ export function runMigrations(): void {
     CREATE INDEX IF NOT EXISTS idx_skills_namespace ON skills(namespace);
     CREATE INDEX IF NOT EXISTS idx_skills_enabled ON skills(enabled);
   `)
+
+  // Add skills_count to bardas (idempotent — column may already exist)
+  try { sqlite.exec('ALTER TABLE bardas ADD COLUMN skills_count INTEGER DEFAULT 0') } catch {
+    // Column already exists — ignore
+  }
 }
