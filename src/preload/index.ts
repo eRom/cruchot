@@ -510,6 +510,7 @@ const api: ElectronAPI = {
   skillsGetContent: (name: string) => ipcRenderer.invoke('skills:get-content', { name }),
   skillsOpenFinder: (name: string) => ipcRenderer.invoke('skills:open-finder', { name }),
   skillsCheckPython: () => ipcRenderer.invoke('skills:check-python'),
+  skillsAnalyze: (targetDir: string) => ipcRenderer.invoke('skills:analyze', { targetDir }),
 
   // ── Conversations: Workspace ─────────────────────────
   conversationSetWorkspacePath: (id: string, workspacePath: string) =>

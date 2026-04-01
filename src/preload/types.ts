@@ -1033,6 +1033,7 @@ export interface ElectronAPI {
   skillsGetContent: (name: string) => Promise<{ content: string; frontmatter: any } | null>
   skillsOpenFinder: (name: string) => Promise<void>
   skillsCheckPython: () => Promise<boolean>
+  skillsAnalyze: (targetDir: string) => Promise<SkillAnalyzeResult>
 
   // Conversations: Workspace
   conversationSetWorkspacePath: (id: string, workspacePath: string) => Promise<void>
@@ -1147,6 +1148,16 @@ export interface SkillValidationResult {
   success: boolean
   name?: string
   description?: string
+  error?: string
+}
+
+export interface SkillAnalyzeResult {
+  success: boolean
+  text?: string
+  model?: string
+  tokensIn?: number
+  tokensOut?: number
+  cost?: number
   error?: string
 }
 
