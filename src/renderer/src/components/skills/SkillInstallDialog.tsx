@@ -3,6 +3,8 @@ import { Input } from '@/components/ui/input'
 import {
   AlertTriangle,
   CheckCircle,
+  ChevronDown,
+  ChevronRight,
   Loader2,
   ShieldAlert,
   ShieldOff,
@@ -47,13 +49,59 @@ function VerdictIcon({ verdict }: { verdict: string | null }): React.JSX.Element
   return <ShieldOff className="size-8 text-muted-foreground" />
 }
 
-function verdictLabel(verdict: string | null): string {
-  if (!verdict) return 'Analyse non disponible'
+function verdictLabel(verdict: string | null, report: Record<string, unknown> | null): string {
+  if (!verdict) return 'Maton non installe — scan de securite indisponible'
   const upper = verdict.toUpperCase()
+  const summary = report?.summary as { critical?: number; warning?: number } | undefined
   if (upper === 'OK') return 'Aucun probleme detecte'
-  if (upper === 'WARNING') return 'Avertissements detectes — verifiez avant installation'
-  if (upper === 'CRITICAL') return 'Problemes critiques detectes — installation bloquee'
+  if (upper === 'WARNING') {
+    const count = summary?.warning ?? 0
+    return `${count} avertissement${count > 1 ? 's' : ''} — verifiez les details avant installation`
+  }
+  if (upper === 'CRITICAL') {
+    const cc = summary?.critical ?? 0
+    const wc = summary?.warning ?? 0
+    const parts = []
+    if (cc > 0) parts.push(`${cc} critique${cc > 1 ? 's' : ''}`)
+    if (wc > 0) parts.push(`${wc} avertissement${wc > 1 ? 's' : ''}`)
+    return `${parts.join(', ')} — ces alertes peuvent etre des faux positifs, verifiez les details`
+  }
   return `Verdict : ${verdict}`
+}
+
+function FindingsSection({ report }: { report: Record<string, unknown> | null }): React.JSX.Element | null {
+  const [expanded, setExpanded] = useState(false)
+  const findings = (report?.findings ?? []) as Array<{
+    severity: string; rule_id: string; file: string; line: number; description: string
+  }>
+  if (findings.length === 0) return null
+
+  return (
+    <div className="mt-3">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+      >
+        {expanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
+        Voir les {findings.length} finding{findings.length > 1 ? 's' : ''}
+      </button>
+      {expanded && (
+        <div className="mt-2 max-h-48 space-y-1.5 overflow-y-auto">
+          {findings.map((f, i) => (
+            <div key={i} className="rounded border border-border/40 bg-background px-3 py-2 text-xs">
+              <div className="flex items-center gap-2">
+                <span className={`font-mono font-medium ${f.severity === 'CRITICAL' ? 'text-red-400' : 'text-orange-400'}`}>
+                  {f.rule_id}
+                </span>
+                <span className="text-muted-foreground">{f.file}:{f.line}</span>
+              </div>
+              <p className="mt-0.5 text-muted-foreground">{f.description}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ── Dialog ────────────────────────────────────────────────────────────────────
@@ -235,13 +283,14 @@ export function SkillInstallDialog({ onClose, onInstalled }: SkillInstallDialogP
                   <p className="mt-0.5 text-sm text-muted-foreground/70">{state.description}</p>
                 )}
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {verdictLabel(state.matonVerdict)}
+                  {verdictLabel(state.matonVerdict, state.matonReport)}
                 </p>
                 {state.pythonMissing && (
                   <p className="mt-1 text-xs text-orange-500">
                     Python non trouve — l'analyse Maton a ete ignoree
                   </p>
                 )}
+                <FindingsSection report={state.matonReport} />
               </div>
             </div>
 
@@ -252,15 +301,24 @@ export function SkillInstallDialog({ onClose, onInstalled }: SkillInstallDialogP
               </Button>
               <Button
                 onClick={handleConfirm}
-                disabled={state.matonVerdict?.toUpperCase() === 'CRITICAL'}
-                variant={state.matonVerdict?.toUpperCase() === 'WARNING' ? 'outline' : 'default'}
+                variant={
+                  state.matonVerdict?.toUpperCase() === 'CRITICAL' || state.matonVerdict?.toUpperCase() === 'WARNING'
+                    ? 'outline'
+                    : 'default'
+                }
                 className={
-                  state.matonVerdict?.toUpperCase() === 'WARNING'
-                    ? 'border-orange-500/60 text-orange-500 hover:bg-orange-500/10'
-                    : undefined
+                  state.matonVerdict?.toUpperCase() === 'CRITICAL'
+                    ? 'border-red-500/60 text-red-400 hover:bg-red-500/10'
+                    : state.matonVerdict?.toUpperCase() === 'WARNING'
+                      ? 'border-orange-500/60 text-orange-500 hover:bg-orange-500/10'
+                      : undefined
                 }
               >
-                Installer
+                {state.matonVerdict?.toUpperCase() === 'CRITICAL'
+                  ? 'Installer malgre les risques'
+                  : state.matonVerdict?.toUpperCase() === 'WARNING'
+                    ? 'Installer quand meme'
+                    : 'Installer'}
               </Button>
             </div>
           </div>
