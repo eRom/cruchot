@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { ElectronAPI, SendMessagePayload, StreamChunk } from './types'
+import type { ElectronAPI, SendMessagePayload, StreamChunk, PermissionRuleInfo } from './types'
 
 // Expose une API securisee au renderer — JAMAIS ipcRenderer directement
 const api: ElectronAPI = {
@@ -517,9 +517,9 @@ const api: ElectronAPI = {
     ipcRenderer.invoke('conversations:setWorkspacePath', { id, workspacePath }),
 
   // ── Permissions ───────────────────────────────────────────
-  permissionsList: (): Promise<unknown[]> => ipcRenderer.invoke('permissions:list'),
-  permissionsAdd: (data: { toolName: string; ruleContent: string | null; behavior: 'allow' | 'deny' | 'ask' }): Promise<unknown> =>
-    ipcRenderer.invoke('permissions:add', data),
+  permissionsList: (): Promise<PermissionRuleInfo[]> => ipcRenderer.invoke('permissions:list') as Promise<PermissionRuleInfo[]>,
+  permissionsAdd: (data: { toolName: string; ruleContent: string | null; behavior: 'allow' | 'deny' | 'ask' }): Promise<PermissionRuleInfo> =>
+    ipcRenderer.invoke('permissions:add', data) as Promise<PermissionRuleInfo>,
   permissionsDelete: (data: { id: string }): Promise<void> =>
     ipcRenderer.invoke('permissions:delete', data),
   permissionsReset: (): Promise<void> => ipcRenderer.invoke('permissions:reset'),
