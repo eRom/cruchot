@@ -53,7 +53,7 @@ function buildSessionKey(toolName: string, toolArgs: Record<string, unknown>): s
     toolName === 'GlobTool'
   ) {
     value =
-      (toolArgs.filePath as string | undefined) ??
+      (toolArgs.file_path as string | undefined) ??
       (toolArgs.path as string | undefined) ??
       (toolArgs.pattern as string | undefined) ??
       ''
@@ -110,7 +110,7 @@ function matchesRule(rule: PermissionRule, context: PermissionContext): boolean 
 
   if (FILE_TOOLS.has(context.toolName)) {
     const filePath =
-      (context.toolArgs.filePath as string | undefined) ??
+      (context.toolArgs.file_path as string | undefined) ??
       (context.toolArgs.path as string | undefined) ??
       (context.toolArgs.pattern as string | undefined) ??
       ''

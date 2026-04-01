@@ -9,7 +9,7 @@ interface PermissionRuleInfo {
   createdAt: number
 }
 
-const TOOL_NAMES = ['bash', 'readFile', 'writeFile', 'FileEdit', 'listFiles', 'GrepTool', 'GlobTool', 'WebFetchTool'] as const
+const TOOL_NAMES = ['*', 'bash', 'readFile', 'writeFile', 'FileEdit', 'listFiles', 'GrepTool', 'GlobTool', 'WebFetchTool'] as const
 const BEHAVIOR_LABELS: Record<string, string> = { allow: 'Autoriser', deny: 'Refuser', ask: 'Demander' }
 const BEHAVIOR_COLORS: Record<string, string> = {
   allow: 'text-green-400',

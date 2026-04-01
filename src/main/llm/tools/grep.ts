@@ -53,7 +53,7 @@ export function buildGrepTool(workspacePath: string) {
               if (ext && !TEXT_EXTENSIONS.has(ext)) continue
               if (!ext && !KNOWN_EXTENSIONLESS.some(n => item.name === n)) continue
 
-              if (globPattern && !minimatch(item.name, globPattern, { dot: true })) continue
+              if (globPattern && !minimatch(relPath, globPattern, { dot: true })) continue
 
               try {
                 const stat = statSync(fullItemPath)
