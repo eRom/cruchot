@@ -356,7 +356,24 @@ class SkillService {
    * Checks SKILL.md presence, parses frontmatter, applies security checks.
    * Returns { success, skillName } or { success: false, error }.
    */
-  validateSkillDir(dirPath: string): { success: true; skillName: string; parsed: ParsedSkill } | { success: false; error: string } {
+  /** Recursively search for SKILL.md up to maxDepth levels deep. Returns the dir containing it, or null. */
+  private findSkillMd(dirPath: string, maxDepth: number): string | null {
+    if (maxDepth <= 0) return null
+    try {
+      const entries = fs.readdirSync(dirPath, { withFileTypes: true })
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue
+        if (entry.name.startsWith('.') || entry.name === 'node_modules') continue
+        const subDir = path.join(dirPath, entry.name)
+        if (fs.existsSync(path.join(subDir, 'SKILL.md'))) return subDir
+        const deeper = this.findSkillMd(subDir, maxDepth - 1)
+        if (deeper) return deeper
+      }
+    } catch { /* unreadable dir */ }
+    return null
+  }
+
+  validateSkillDir(dirPath: string): { success: true; skillName: string; parsed: ParsedSkill; skillRoot: string } | { success: false; error: string } {
     // Security: resolve real path to prevent symlink traversal
     let resolvedDir: string
     try {
@@ -372,14 +389,20 @@ class SkillService {
       }
     }
 
+    // Look for SKILL.md: first at root, then search up to 3 levels deep
+    let skillRoot = resolvedDir
     const skillMdPath = path.join(resolvedDir, 'SKILL.md')
     if (!fs.existsSync(skillMdPath)) {
-      return { success: false, error: `SKILL.md introuvable dans : ${resolvedDir}` }
+      const found = this.findSkillMd(resolvedDir, 3)
+      if (!found) {
+        return { success: false, error: `SKILL.md introuvable dans : ${resolvedDir}` }
+      }
+      skillRoot = found
     }
 
     try {
-      const parsed = this.loadSkillFromDir(resolvedDir)
-      return { success: true, skillName: parsed.frontmatter.name, parsed }
+      const parsed = this.loadSkillFromDir(skillRoot)
+      return { success: true, skillName: parsed.frontmatter.name, parsed, skillRoot }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       return { success: false, error: message }
