@@ -212,7 +212,9 @@ function formatToolMeta(tc: ToolCallDisplay): string | null {
   const m = tc.resultMeta
   if (!m) return null
   const parts: string[] = []
-  if (m.duration != null) parts.push(`${(m.duration / 1000).toFixed(1)}s`)
+  if (m.duration != null && m.duration >= 100) {
+    parts.push(m.duration >= 1000 ? `${(m.duration / 1000).toFixed(1)}s` : `${Math.round(m.duration)}ms`)
+  }
   if (m.exitCode != null && m.exitCode !== 0) parts.push(`exit ${m.exitCode}`)
   if (m.lineCount != null) parts.push(`${m.lineCount} lignes`)
   if (m.byteSize != null) parts.push(formatFileSize(m.byteSize))
@@ -482,8 +484,8 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
             : 'flex-1 min-w-0 py-2 text-foreground' 
         )}
       >
-        {/* Processing phase — spinner before any content arrives, or tool call feedback */}
-        {isStreaming && message.streamPhase === 'processing' && (
+        {/* Processing phase — spinner before any content arrives (hidden once toolCalls block takes over) */}
+        {isStreaming && message.streamPhase === 'processing' && !(message.toolCalls && message.toolCalls.length > 0) && (
           <div className="flex items-center gap-2 py-1 text-muted-foreground">
             <Loader2 className="size-4 animate-spin" />
             <span className="text-sm">{message.toolCall || 'Traitement en cours...'}</span>
