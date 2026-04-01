@@ -177,7 +177,7 @@ const components: Partial<Components> = {
         href={safeHref}
         target="_blank"
         rel="noopener noreferrer"
-        className="font-medium text-blue-500 underline underline-offset-2 transition-colors hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300"
+        className="font-medium text-primary underline underline-offset-2 transition-colors hover:text-primary/80"
       >
         {children}
       </a>

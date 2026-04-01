@@ -31,7 +31,7 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const TRANSPORT_COLORS: Record<string, string> = {
-  stdio: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  stdio: 'bg-primary/10 text-primary',
   sse: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
   http: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
 }

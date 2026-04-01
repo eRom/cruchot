@@ -439,7 +439,7 @@ export function RemoteTab(): React.JSX.Element {
                 onClick={handleGeneratePairing}
                 className={cn(
                   'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-                  'bg-blue-600 text-white hover:bg-blue-500'
+                  'bg-primary text-primary-foreground hover:bg-primary/90'
                 )}
               >
                 Generer code de pairing
@@ -447,7 +447,7 @@ export function RemoteTab(): React.JSX.Element {
             </div>
 
             {wsStore.pairingCode && (
-              <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-4 space-y-3">
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <code className="rounded bg-muted px-3 py-1.5 text-lg font-mono font-bold tracking-widest text-foreground">
                     {wsStore.pairingCode}

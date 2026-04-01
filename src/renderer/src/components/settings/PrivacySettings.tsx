@@ -84,7 +84,7 @@ const LOCAL_PROVIDERS = ['LM Studio', 'Ollama']
 
 const levelConfig: Record<PrivacyLevel, { icon: typeof ShieldCheck; color: string; label: string }> = {
   safe: { icon: ShieldCheck, color: 'text-emerald-500', label: 'Excellent' },
-  good: { icon: Shield, color: 'text-blue-500', label: 'Bon' },
+  good: { icon: Shield, color: 'text-primary', label: 'Bon' },
   caution: { icon: ShieldAlert, color: 'text-amber-500', label: 'Vigilance' },
 }
 
@@ -147,7 +147,7 @@ export function PrivacySettings() {
                       provider.level === 'safe'
                         ? 'bg-emerald-500/10 text-emerald-500'
                         : provider.level === 'good'
-                          ? 'bg-blue-500/10 text-blue-500'
+                          ? 'bg-primary/10 text-primary'
                           : 'bg-amber-500/10 text-amber-500'
                     }`}>
                       {config.label}

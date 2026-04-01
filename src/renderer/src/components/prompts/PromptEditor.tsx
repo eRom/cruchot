@@ -144,7 +144,7 @@ export function PromptEditor({ prompt, onSave, onCancel }: PromptEditorProps) {
               {detectedVars.map((v) => (
                 <span
                   key={v.name}
-                  className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded"
+                  className="text-xs px-2 py-1 bg-primary/15 text-primary rounded"
                 >
                   {`{{${v.name}}}`}
                 </span>

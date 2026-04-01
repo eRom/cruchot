@@ -80,7 +80,7 @@ function ArenaModelSelector({ side }: { side: 'left' | 'right' }) {
           'h-8 w-full gap-1.5 rounded-lg border-border/50 px-3',
           'bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground',
           'transition-all duration-200',
-          side === 'left' ? 'text-blue-400' : 'text-green-400'
+          side === 'left' ? 'text-primary' : 'text-green-400'
         )}
       >
         {selectedProviderId && (
@@ -198,7 +198,7 @@ export function ArenaColumn({ side }: ArenaColumnProps): React.JSX.Element {
       'flex flex-1 flex-col min-w-0 min-h-0 rounded-lg border',
       'border-border/40 bg-background/50',
       vote === side && 'ring-2 ring-amber-400/60',
-      side === 'left' ? 'border-l-blue-500/30' : 'border-r-green-500/30'
+      side === 'left' ? 'border-l-primary/30' : 'border-r-green-500/30'
     )}>
       {/* Model selector */}
       <div className="shrink-0 border-b border-border/30 p-2">

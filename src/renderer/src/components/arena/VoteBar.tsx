@@ -67,7 +67,7 @@ export function VoteBar(): React.JSX.Element | null {
         size="sm"
         className={cn(
           'gap-1.5 transition-colors',
-          'hover:border-blue-500 hover:text-blue-500'
+          'hover:border-primary hover:text-primary'
         )}
         onClick={() => handleVote('left')}
       >

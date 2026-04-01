@@ -45,7 +45,7 @@ const TYPE_LABEL = {
 } as const
 
 const TYPE_COLOR = {
-  complet: 'text-blue-500',
+  complet: 'text-primary',
   complement: 'text-amber-500',
 } as const
 
@@ -194,7 +194,7 @@ export function PromptPicker({ onInsert, disabled }: PromptPickerProps) {
                   filtered.map((prompt) => {
                     const effectiveType = prompt.type === 'system' ? 'complet' : prompt.type
                     const Icon = TYPE_ICON[effectiveType] ?? Sparkles
-                    const color = TYPE_COLOR[effectiveType] ?? 'text-blue-500'
+                    const color = TYPE_COLOR[effectiveType] ?? 'text-primary'
                     const label = TYPE_LABEL[effectiveType] ?? 'Complet'
                     const vars = extractVariables(prompt.content)
 

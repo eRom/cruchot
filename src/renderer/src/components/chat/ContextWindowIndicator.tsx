@@ -206,7 +206,7 @@ function WebServerBadge() {
             isRunning && clientCount > 0
               ? 'text-emerald-500'
               : isRunning
-                ? 'text-blue-500'
+                ? 'text-primary'
                 : 'text-muted-foreground/60 hover:text-muted-foreground/80'
           )}
         >
@@ -216,7 +216,7 @@ function WebServerBadge() {
               <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-emerald-500 animate-pulse" />
             )}
             {isRunning && clientCount === 0 && (
-              <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-blue-500" />
+              <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-primary" />
             )}
           </span>
           <span className="hidden sm:inline">
@@ -295,7 +295,7 @@ function SummaryButton() {
             'text-[10px] font-medium transition-all duration-200',
             'hover:bg-accent/60',
             loading
-              ? 'text-blue-500 animate-pulse'
+              ? 'text-primary animate-pulse'
               : canGenerate
                 ? 'text-muted-foreground/60 hover:text-muted-foreground/80'
                 : 'text-muted-foreground/40 cursor-default'

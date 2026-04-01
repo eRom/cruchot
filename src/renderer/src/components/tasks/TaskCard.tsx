@@ -27,7 +27,7 @@ interface TaskCardProps {
 }
 
 const SCHEDULE_COLORS: Record<string, string> = {
-  manual: 'bg-blue-500',
+  manual: 'bg-primary',
   interval: 'bg-emerald-500',
   daily: 'bg-orange-500',
   weekly: 'bg-indigo-500'
@@ -183,7 +183,7 @@ export function TaskCard({
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           <span className={cn(
             'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium',
-            task.scheduleType === 'manual' && 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+            task.scheduleType === 'manual' && 'bg-primary/10 text-primary',
             task.scheduleType === 'interval' && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
             task.scheduleType === 'daily' && 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
             task.scheduleType === 'weekly' && 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'

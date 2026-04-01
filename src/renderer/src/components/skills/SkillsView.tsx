@@ -29,7 +29,7 @@ function TreeView({ nodes, depth = 0 }: { nodes: SkillTreeNode[]; depth?: number
         <div key={i} style={{ paddingLeft: depth * 16 }}>
           <div className="flex items-center gap-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground">
             {node.type === 'directory' ? (
-              <Folder className="size-3.5 shrink-0 text-blue-400" />
+              <Folder className="size-3.5 shrink-0 text-primary" />
             ) : (
               <File className="size-3.5 shrink-0" />
             )}

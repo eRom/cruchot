@@ -551,7 +551,7 @@ function CommandCard({
             className={cn(
               'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
               command.isBuiltin
-                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                ? 'bg-primary/10 text-primary'
                 : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
             )}
           >

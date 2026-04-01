@@ -130,7 +130,7 @@ function AnalysisSection({ text, model, cost }: { text: string; model?: string |
         className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
       >
         {expanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
-        <Bot className="size-3.5 text-blue-400" />
+        <Bot className="size-3.5 text-primary" />
         Analyse complete
         {model && <span className="text-[10px] text-muted-foreground/50">{model.split('::')[1]}</span>}
         {cost != null && cost > 0 && <span className="text-[10px] text-muted-foreground/50">${cost.toFixed(4)}</span>}
