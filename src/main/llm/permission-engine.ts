@@ -49,7 +49,7 @@ const READONLY_COMMANDS: Set<string> = new Set([
  * Returns true if the command starts with a known read-only command.
  * For compound commands (&&, ||, ;, |), checks EACH subcommand.
  */
-function isReadOnlyCommand(command: string): boolean {
+export function isReadOnlyCommand(command: string): boolean {
   // Split on shell operators (&&, ||, ;, |) — simplified, doesn't handle quotes
   const subcommands = command.split(/\s*(?:&&|\|\||[;|])\s*/).filter(Boolean)
   if (subcommands.length === 0) return false
