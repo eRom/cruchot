@@ -34,7 +34,7 @@ export function createMemoryFragment(content: string, isActive = true) {
     .values({ id, content, isActive, sortOrder, createdAt: now, updatedAt: now })
     .run()
 
-  return db.select().from(memoryFragments).where(eq(memoryFragments.id, id)).get()!
+  return { id, content, isActive, sortOrder, createdAt: now, updatedAt: now }
 }
 
 export function updateMemoryFragment(id: string, updates: { content?: string; isActive?: boolean }) {
@@ -67,12 +67,14 @@ export function reorderMemoryFragments(orderedIds: string[]) {
   const db = getDatabase()
   const now = new Date()
 
-  for (let i = 0; i < orderedIds.length; i++) {
-    db.update(memoryFragments)
-      .set({ sortOrder: i, updatedAt: now })
-      .where(eq(memoryFragments.id, orderedIds[i]))
-      .run()
-  }
+  db.transaction((tx) => {
+    for (let i = 0; i < orderedIds.length; i++) {
+      tx.update(memoryFragments)
+        .set({ sortOrder: i, updatedAt: now })
+        .where(eq(memoryFragments.id, orderedIds[i]))
+        .run()
+    }
+  })
 }
 
 /**
