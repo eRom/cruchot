@@ -374,6 +374,38 @@ export function runMigrations(): void {
     console.error('[FTS5] Backfill error:', err)
   }
 
+  // ── FK cascade delete triggers ────────────────────────────────────
+  // SQLite does not support ON DELETE CASCADE in REFERENCES clauses at runtime
+  // (it requires foreign_keys = ON AND cascade annotation at table creation).
+  // We use triggers for idempotent cascade deletes on existing tables.
+  // Note: recursive_triggers pragma is NOT set, so we flatten the cascade
+  // (delete grandchildren before children to avoid orphans).
+
+  sqlite.exec(`DROP TRIGGER IF EXISTS cascade_delete_conversation`)
+  sqlite.exec(`
+    CREATE TRIGGER cascade_delete_conversation
+    AFTER DELETE ON conversations BEGIN
+      DELETE FROM attachments WHERE message_id IN (SELECT id FROM messages WHERE conversation_id = OLD.id);
+      DELETE FROM tts_usage WHERE message_id IN (SELECT id FROM messages WHERE conversation_id = OLD.id);
+      DELETE FROM messages WHERE conversation_id = OLD.id;
+      DELETE FROM arena_matches WHERE conversation_id = OLD.id;
+      DELETE FROM images WHERE conversation_id = OLD.id;
+      DELETE FROM remote_sessions WHERE conversation_id = OLD.id;
+      DELETE FROM vector_sync_state WHERE conversation_id = OLD.id;
+    END
+  `)
+
+  // When a message is deleted directly (not via conversation cascade), clean up its children
+  sqlite.exec(`DROP TRIGGER IF EXISTS cascade_delete_message`)
+  sqlite.exec(`
+    CREATE TRIGGER cascade_delete_message
+    AFTER DELETE ON messages BEGIN
+      DELETE FROM attachments WHERE message_id = OLD.id;
+      DELETE FROM tts_usage WHERE message_id = OLD.id;
+      DELETE FROM images WHERE message_id = OLD.id;
+    END
+  `)
+
   // ── Performance indexes (CREATE INDEX IF NOT EXISTS is idempotent) ──
   sqlite.exec(`
     CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
