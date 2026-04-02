@@ -35,3 +35,6 @@ specs/presentation/sources/*
 
 # Audit improvement (local only)
 improvement/
+
+# Internal dev
+_internal/
