@@ -13,13 +13,14 @@ App desktop locale de chat multi-LLM construite avec Electron. 11 providers, gen
 ## Updates
 
 - 02/04/2026
-  - **Seatbelt rewrite** : profil sandbox reecrit (allow default + deny cible) — corrige stdout/stderr muets, CWD garanti via cd explicite dans wrapCommand
-  - **Bash security** : 3 faux positifs corriges (checks #3, #6, #7) — les scripts Python multi-lignes et backticks dans les strings passent desormais
-  - **Permission engine** : `READONLY_COMMANDS` built-in (~60 commandes auto-allow sans regle DB), pipeline deny → readonly → allow → ask
-  - **Mode YOLO** : switch dans le panel Dossier de travail — bypass les prompts d'approbation (les security checks hard restent actifs)
-  - **Tool limit** : 50 → 200 tool calls par message (skills complexes)
-  - **Slash picker** : navigation clavier connectee au visuel (selectedIndex en prop)
-  - **Skill message** : optimistic update du message user (etait invisible)
+  - **Message Fork** : forker une conversation depuis un message assistant specifique (bouton GitFork dans le footer message). Fork par position, pas par timestamp
+  - **Worker Embedding** : inference ONNX delegue a un Worker thread (plus de blocage main process)
+  - **Pagination messages** : chargement par page (50 derniers) + infinite scroll vers l'historique
+  - **ServiceRegistry** : lifecycle centralise des services, lazy-load, shutdown coordonne async
+  - **Train securite** : 7 fixes (SSRF WebFetch, validatePath, MCP pipeline, session approvals, Maton, quote-aware parsing)
+  - **Train perf** : IPC batching 50ms, Shiki skip streaming, provider/MCP cache TTL 5min, SQLite pragmas, SELECT superflu supprime
+  - **Tests** : 121 tests (5 suites) — vitest, bash-security, permission-engine, cost-calculator, errors, think-tag
+  - **Seatbelt rewrite** : profil sandbox (allow default + deny cible), CWD explicite, READONLY_COMMANDS, Mode YOLO, tool limit 200
 
 - 01/04/2026
   - **Skills** : systeme de packs autonomes installables (GitHub, dossier local, Barda) au format Markdown + frontmatter YAML (compatible Claude Code). Scan de securite Maton integre (scanner Python + analyse contextuelle LLM). Invocation via `/skill-name` dans les conversations, injection dans le system prompt, execution de blocs shell via Seatbelt. UI complete dans Personnaliser > Skills.

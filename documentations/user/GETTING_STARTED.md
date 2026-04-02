@@ -35,7 +35,18 @@ Cruchot est un client "Bring Your Own Key" (Apportez votre propre clé). Pour di
 3. Dans la section **Parametres**, sélectionnez le modèle que vous souhaitez utiliser (ex: `gpt-4.1` ou `claude-sonnet-4-20250514`).
 4. Posez votre question dans la zone de saisie en bas de l'écran.
 
-## 4. Outils de Base (Tools)
+## 4. Forker une Conversation
+
+Vous pouvez "forker" (dupliquer) une conversation depuis n'importe quel message assistant pour explorer une direction différente :
+
+1. Survolez un message de l'IA dans la conversation.
+2. Cliquez sur l'icône **Fork** (branchement) dans le pied du message, à côté des boutons de copie et de lecture audio.
+3. Une nouvelle conversation indépendante est créée avec tous les messages jusqu'à ce point.
+4. Vous êtes automatiquement redirigé vers la nouvelle conversation.
+
+Les deux conversations restent totalement indépendantes — vous pouvez continuer l'une ou l'autre sans effet sur l'autre.
+
+## 5. Outils de Base (Tools)
 
 Par défaut, Cruchot permet à l'IA d'interagir avec votre machine de manière sécurisée (si vous le permettez).
 - L'IA peut lire des fichiers, écrire du code, et même exécuter des scripts dans un environnement isolé (le "Sandbox").

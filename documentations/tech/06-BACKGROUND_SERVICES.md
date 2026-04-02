@@ -2,6 +2,16 @@
 
 Cruchot ne se limite pas à une interface réactive. L'application exécute plusieurs services en tâche de fond dans le processus Main d'Electron pour offrir des fonctionnalités d'automatisation, d'accès à distance et de synthèse vocale.
 
+## 0. ServiceRegistry et Cycle de Vie (`service-registry.ts`)
+
+Tous les services en arrière-plan sont enregistrés dans un `ServiceRegistry` centralisé. Ce registre fournit :
+- **Lazy-loading** : les services lourds (Qdrant, MCP, Telegram, Remote) ne sont initialisés qu'au premier accès effectif, pas au démarrage de l'app.
+- **Shutdown coordonné** : à la fermeture (`before-quit`), `serviceRegistry.stopAll()` arrête tous les services via `Promise.allSettled()`, garantissant un arrêt propre même si un service échoue.
+
+## 0.1 Worker Thread Embedding (`embedding.worker.js`)
+
+L'inférence ONNX pour les embeddings (modèle `all-MiniLM-L6-v2`, 384 dimensions) est déléguée à un Worker thread Node.js séparé. Cela évite de bloquer le main process pendant les calculs vectoriels. Le worker est construit comme un entry point séparé dans `electron.vite.config.ts` et communique via `postMessage`/`on('message')`. Timeout de 30 secondes par requête. Le worker est arrêté proprement dans le handler `before-quit` via le ServiceRegistry.
+
 ## 1. Serveur Remote Telegram (`telegram-bot.service.ts`)
 
 Ce service permet à l'utilisateur de continuer ses conversations Cruchot depuis son smartphone via l'application Telegram, en utilisant sa propre machine locale comme "serveur".

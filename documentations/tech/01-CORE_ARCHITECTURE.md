@@ -54,7 +54,9 @@ Au démarrage (`app.whenReady()`), le processus Main orchestre l'initialisation 
     *   `remoteServerService` : Lancement du serveur WebSockets distant.
     *   `qdrantMemoryService` : Démarrage de la base vectorielle locale pour le RAG.
 
-À la fermeture de l'application, tous ces services sont arrêtés proprement (destruction des WebSockets, arrêt de Qdrant, etc.).
+Depuis la v0.7, les services sont gérés par un `ServiceRegistry` centralisé (`service-registry.ts`). Ce registre :
+- **Lazy-load** : les services lourds (Qdrant, MCP, Telegram) ne sont initialisés qu'au premier accès, pas au démarrage.
+- **Shutdown coordonné** : à la fermeture (`before-quit`), `serviceRegistry.stopAll()` arrête tous les services enregistrés via `Promise.allSettled()`, suivi de Qdrant puis de la fermeture de la base de données. Plus de fire-and-forget dans `will-quit`.
 
 ## 3. Communication Client/Serveur (IPC & Streaming)
 
