@@ -5,6 +5,7 @@ import { execFile, type ChildProcess } from 'node:child_process'
 import { WebSocketServer, type WebSocket } from 'ws'
 import QRCode from 'qrcode'
 import { encryptApiKey, decryptApiKey } from './credential.service'
+import { serviceRegistry } from './registry'
 import { getDatabase } from '../db'
 import { settings } from '../db/schema'
 import { eq } from 'drizzle-orm'
@@ -141,6 +142,8 @@ class RemoteServerService extends EventEmitter {
         console.error('[RemoteServer] Auto-start failed:', err)
       }
     }
+
+    serviceRegistry.register('remote-server', { stop: () => this.destroy() })
   }
 
   async start(conversationId?: string): Promise<{ port: number; tunnelUrl: string | null }> {

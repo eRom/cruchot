@@ -8,6 +8,7 @@ import {
   type ScheduleType
 } from '../db/queries/scheduled-tasks'
 import { executeScheduledTask } from './task-executor'
+import { serviceRegistry } from './registry'
 
 /**
  * Singleton scheduler service.
@@ -22,6 +23,7 @@ class SchedulerService {
     this.mainWindow = mainWindow
     this.scheduleAllEnabled()
     console.log('[Scheduler] Initialized')
+    serviceRegistry.register('scheduler', this)
   }
 
   /**
@@ -119,6 +121,10 @@ class SchedulerService {
     }
     this.timers.clear()
     console.log('[Scheduler] All tasks stopped')
+  }
+
+  async stop(): Promise<void> {
+    this.stopAll()
   }
 
   // ── Private helpers ─────────────────────────────────────

@@ -7,6 +7,7 @@ import type { ChildProcess } from 'child_process'
 import { randomUUID } from 'crypto'
 import { startQdrant, waitForQdrantReady, stopQdrant, isQdrantAvailable, QDRANT_PORT_NUMBER } from './qdrant-process'
 import { initEmbedding, embed, embedBatch, isEmbeddingReady, EMBEDDING_DIM } from './embedding.service'
+import { serviceRegistry } from './registry'
 import {
   setSyncStatus, getSyncStatus, getPendingSyncCount,
   getIndexedConversationCount, deleteSyncByMessageId,
@@ -111,6 +112,7 @@ class QdrantMemoryService extends EventEmitter {
       this.restartCount = 0
       this.emit('status', this.status)
       console.log('[QdrantMemory] Service ready')
+      serviceRegistry.register('qdrant', this)
     } catch (err) {
       console.error('[QdrantMemory] Init failed:', err)
       this.status = 'error'
@@ -132,6 +134,14 @@ class QdrantMemoryService extends EventEmitter {
       } catch {
         // Best effort
       }
+    }
+
+    // Stop embedding worker first (it may still write to Qdrant)
+    try {
+      const { stopEmbedding } = await import('./embedding.service')
+      await stopEmbedding()
+    } catch {
+      // Best effort
     }
 
     // Stop Qdrant

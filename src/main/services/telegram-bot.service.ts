@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events'
 import crypto from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import { encryptApiKey, decryptApiKey } from './credential.service'
+import { serviceRegistry } from './registry'
 import { getDatabase } from '../db'
 import { settings } from '../db/schema'
 import {
@@ -151,6 +152,8 @@ class TelegramBotService extends EventEmitter {
     } catch (err) {
       console.warn('[Telegram] Failed to restore session:', err)
     }
+
+    serviceRegistry.register('telegram', { stop: () => this.destroy() })
   }
 
   async configure(token: string): Promise<{ botUsername: string }> {

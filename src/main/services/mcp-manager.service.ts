@@ -2,6 +2,7 @@ import { BrowserWindow } from 'electron'
 import type { Tool } from 'ai'
 import { getAllMcpServers, getEnabledMcpServers, getMcpServer } from '../db/queries/mcp-servers'
 import { encryptApiKey, decryptApiKey } from './credential.service'
+import { serviceRegistry } from './registry'
 
 // Types for MCP client (imported dynamically)
 interface MCPClientInstance {
@@ -45,14 +46,17 @@ class McpManagerService {
     this.mainWindow = mainWindow
 
     const enabledServers = getEnabledMcpServers()
-    if (enabledServers.length === 0) return
 
-    const results = await Promise.allSettled(
-      enabledServers.map(server => this.startServer(server.id))
-    )
+    if (enabledServers.length > 0) {
+      const results = await Promise.allSettled(
+        enabledServers.map(server => this.startServer(server.id))
+      )
 
-    const succeeded = results.filter(r => r.status === 'fulfilled').length
-    console.log(`[MCP] Initialized ${succeeded}/${enabledServers.length} servers`)
+      const succeeded = results.filter(r => r.status === 'fulfilled').length
+      console.log(`[MCP] Initialized ${succeeded}/${enabledServers.length} servers`)
+    }
+
+    serviceRegistry.register('mcp', { stop: () => this.stopAll() })
   }
 
   private static readonly TOOLS_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
