@@ -31,6 +31,7 @@ process.on('uncaughtException', (error) => {
 })
 
 let mainWindow: BrowserWindow | null = null
+let isQuitting = false
 
 // Register custom protocol for serving local images (no bypassCSP — use img-src in CSP instead)
 protocol.registerSchemesAsPrivileged([
@@ -162,15 +163,37 @@ app.on('window-all-closed', () => {
   }
 })
 
-app.on('will-quit', () => {
-  stopEmbedding().catch(() => {})
-  qdrantMemoryService.stop().catch(() => {})
-  telegramBotService.destroy().catch(() => {})
-  remoteServerService.destroy().catch(() => {})
-  mcpManagerService.stopAll().catch(() => {})
-  schedulerService.stopAll()
-  stopAutoUpdater()
-  closeDatabase()
+app.on('before-quit', async (event) => {
+  if (isQuitting) return
+  event.preventDefault()
+  isQuitting = true
+
+  console.log('[App] Graceful shutdown starting...')
+
+  try {
+    // Stop consumers first (parallel — they're independent)
+    await Promise.allSettled([
+      stopEmbedding(),
+      telegramBotService.destroy(),
+      remoteServerService.destroy(),
+      mcpManagerService.stopAll(),
+    ])
+
+    // Synchronous stops
+    schedulerService.stopAll()
+    stopAutoUpdater()
+
+    // Qdrant after embedding worker (which may still write)
+    await qdrantMemoryService.stop().catch(() => {})
+
+    // DB last — everything must be stopped
+    closeDatabase()
+  } catch (err) {
+    console.error('[App] Cleanup error:', err)
+  }
+
+  console.log('[App] Graceful shutdown complete')
+  app.quit()
 })
 
 export { mainWindow }
