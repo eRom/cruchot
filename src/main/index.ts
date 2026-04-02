@@ -13,6 +13,7 @@ import { remoteServerService } from './services/remote-server.service'
 import { seedBuiltinCommands } from './db/queries/slash-commands'
 import { BUILTIN_COMMANDS } from './commands/builtin'
 import { qdrantMemoryService } from './services/qdrant-memory.service'
+import { stopEmbedding } from './services/embedding.service'
 import { ensureInstanceToken } from './services/instance-token.service'
 import { skillService } from './services/skill.service'
 import { listSkills, createSkill, deleteSkill } from './db/queries/skills'
@@ -154,6 +155,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  stopEmbedding().catch(() => {})
   qdrantMemoryService.stop().catch(() => {})
   telegramBotService.destroy().catch(() => {})
   remoteServerService.destroy().catch(() => {})
