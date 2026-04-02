@@ -24,6 +24,7 @@ import {
   deleteSkill,
   getSkillById
 } from '../db/queries/skills'
+import { getAllPermissionRules } from '../db/queries/permissions'
 
 // ── Schemas ──────────────────────────────────────────────────────────────
 
@@ -352,7 +353,11 @@ export function registerSkillsIpc(): void {
     }
 
     // 4. Build tools (bash confined to targetDir so the LLM can run the scanner)
-    const tools = buildConversationTools(targetDir)
+    const rules = getAllPermissionRules()
+    const tools = buildConversationTools(targetDir, {
+      rules,
+      onAskApproval: async () => 'deny' // Maton never gets interactive approval
+    })
 
     // 5. Call LLM — one-shot generateText with tools
     try {
