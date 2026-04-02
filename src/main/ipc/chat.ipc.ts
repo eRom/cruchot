@@ -111,6 +111,55 @@ function extractToolMeta(
   return { result, resultMeta: meta }
 }
 
+// ── Phase interfaces ──────────────────────────────────────
+
+interface ToolCallRecord {
+  toolName: string
+  args?: Record<string, unknown>
+  status: 'running' | 'success' | 'error'
+  error?: string
+  result?: string
+  resultMeta?: {
+    duration?: number
+    exitCode?: number
+    lineCount?: number
+    byteSize?: number
+    matchCount?: number
+    fileCount?: number
+  }
+}
+
+interface ChatPrepareResult {
+  conversationId: string
+  content: string
+  modelId: string
+  providerId: string
+  roleId?: string
+  source: 'desktop' | 'telegram' | 'websocket'
+  model: ReturnType<typeof getModel>
+  aiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<{ type: string; text?: string; image?: string; mimeType?: string }> }>
+  tools: Record<string, unknown>
+  hasTools: boolean
+  providerOptions: ReturnType<typeof buildThinkingProviderOptions> | undefined
+  temperature?: number
+  maxTokens?: number
+  topP?: number
+  isRemoteConnected: boolean
+  isWsConnected: boolean
+  startTime: number
+  conv: ReturnType<typeof getConversation>
+  librarySourcesForMessage: LibraryChunkForPrompt[]
+}
+
+interface ChatStreamResult {
+  fullText: string
+  accumulatedReasoning: string
+  usage: { inputTokens: number; outputTokens: number } | null
+  accumulatedToolCalls: ToolCallRecord[]
+  accumulatedSearchSources: Array<{ title: string; url: string; snippet?: string }>
+  responseTimeMs: number
+}
+
 // ── Exported chat handler (used by both IPC and Telegram) ───
 
 export interface HandleChatMessageParams {
@@ -134,19 +183,15 @@ export interface HandleChatMessageParams {
   window: BrowserWindow
 }
 
-export async function handleChatMessage(params: HandleChatMessageParams): Promise<void> {
+// ── Phase 1: Prepare ─────────────────────────────────────
+
+async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow): Promise<ChatPrepareResult> {
   const {
     conversationId, content, modelId, providerId, systemPrompt,
     temperature, maxTokens, topP, thinkingEffort, roleId,
     attachments: attachmentRefs, fileContexts,
-    searchEnabled, skillName, skillArgs, yoloMode, source, window: win
+    searchEnabled, skillName, skillArgs, yoloMode, source
   } = params
-
-  // Abort any existing stream
-  if (currentAbortController) {
-    currentAbortController.abort()
-  }
-  currentAbortController = new AbortController()
 
   const isRemoteConnected = telegramBotService.getStatus() === 'connected'
   const isWsConnected = remoteServerService.getStatus() === 'running'
@@ -154,444 +199,466 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
 
   const startTime = Date.now()
 
-  try {
-    // Load conversation to get workspace path
-    const conv = getConversation(conversationId)
-    const workspacePath = conv?.workspacePath ?? '~/.cruchot/sandbox/'
-    // Resolve ~ to home dir
-    const resolvedWorkspacePath = workspacePath.startsWith('~/')
-      ? workspacePath.replace('~/', `${process.env.HOME ?? '/tmp'}/`)
-      : workspacePath
+  // Load conversation to get workspace path
+  const conv = getConversation(conversationId)
+  const workspacePath = conv?.workspacePath ?? '~/.cruchot/sandbox/'
+  // Resolve ~ to home dir
+  const resolvedWorkspacePath = workspacePath.startsWith('~/')
+    ? workspacePath.replace('~/', `${process.env.HOME ?? '/tmp'}/`)
+    : workspacePath
 
-    // Re-validate attachments (extension, size, existence, path confinement) in the main process
-    const validatedRefs: AttachmentRef[] = []
-    const workspaceRoot = resolvedWorkspacePath
-    if (attachmentRefs && attachmentRefs.length > 0) {
-      for (const ref of attachmentRefs) {
-        const result = validateAttachment(ref.path, workspaceRoot)
-        if (!result.valid) {
-          throw new Error(result.error)
-        }
-        validatedRefs.push(result.ref)
+  // Re-validate attachments (extension, size, existence, path confinement) in the main process
+  const validatedRefs: AttachmentRef[] = []
+  const workspaceRoot = resolvedWorkspacePath
+  if (attachmentRefs && attachmentRefs.length > 0) {
+    for (const ref of attachmentRefs) {
+      const result = validateAttachment(ref.path, workspaceRoot)
+      if (!result.valid) {
+        throw new Error(result.error)
       }
+      validatedRefs.push(result.ref)
     }
+  }
 
-    // Save user message to DB (with attachment references in contentData)
-    const userContentData: Record<string, unknown> = {}
-    if (validatedRefs.length > 0) {
-      userContentData.attachments = validatedRefs.map(r => ({ path: r.path, name: r.name, size: r.size, type: r.type, mimeType: r.mimeType }))
+  // Save user message to DB (with attachment references in contentData)
+  const userContentData: Record<string, unknown> = {}
+  if (validatedRefs.length > 0) {
+    userContentData.attachments = validatedRefs.map(r => ({ path: r.path, name: r.name, size: r.size, type: r.type, mimeType: r.mimeType }))
+  }
+  const activeLibId = getConversationLibraryId(conversationId)
+  if (activeLibId) {
+    userContentData.libraryId = activeLibId
+  }
+
+  createMessage({
+    conversationId,
+    role: 'user',
+    content,
+    modelId,
+    providerId,
+    contentData: Object.keys(userContentData).length > 0 ? userContentData : undefined
+  })
+
+  // Touch conversation updatedAt
+  touchConversation(conversationId)
+
+  // Auto-generate title from first message if title is still default
+  if (conv && (conv.title === 'Nouvelle conversation' || conv.title.startsWith('[Remote]'))) {
+    const shortTitle = (source === 'telegram' ? '[R] ' : '') + content.slice(0, 35) + (content.length > 35 ? '...' : '')
+    if (conv.title === 'Nouvelle conversation' || conv.title.startsWith('[Remote] Session')) {
+      renameConversation(conversationId, shortTitle)
+      win.webContents.send('conversation:updated', {
+        id: conversationId,
+        title: shortTitle
+      })
     }
-    const activeLibId = getConversationLibraryId(conversationId)
-    if (activeLibId) {
-      userContentData.libraryId = activeLibId
-    }
+  }
 
-    createMessage({
-      conversationId,
-      role: 'user',
-      content,
-      modelId,
-      providerId,
-      contentData: Object.keys(userContentData).length > 0 ? userContentData : undefined
-    })
+  const model = getModel(providerId, modelId)
 
-    // Touch conversation updatedAt
-    touchConversation(conversationId)
+  // Signal the renderer that processing has started
+  win.webContents.send('chat:chunk', {
+    type: 'start',
+    modelId,
+    providerId
+  })
 
-    // Auto-generate title from first message if title is still default
-    if (conv && (conv.title === 'Nouvelle conversation' || conv.title.startsWith('[Remote]'))) {
-      const shortTitle = (source === 'telegram' ? '[R] ' : '') + content.slice(0, 35) + (content.length > 35 ? '...' : '')
-      if (conv.title === 'Nouvelle conversation' || conv.title.startsWith('[Remote] Session')) {
-        renameConversation(conversationId, shortTitle)
-        win.webContents.send('conversation:updated', {
-          id: conversationId,
-          title: shortTitle
-        })
-      }
-    }
+  // Start Telegram streaming if connected
+  if (isRemoteConnected) {
+    await telegramBotService.startStreaming()
+  }
+  // Start WebSocket streaming if connected
+  if (isWsConnected) {
+    remoteServerService.startStreaming()
+  }
 
-    const model = getModel(providerId, modelId)
+  // ── Parallel pre-flight enrichments (M1) ─────────────────
+  // All 4 operations are independent — run them concurrently to minimise TTFT.
+  const [attachResult, recallResult, libraryResult, skillResult] = await Promise.allSettled([
 
-    // Signal the renderer that processing has started
-    win.webContents.send('chat:chunk', {
-      type: 'start',
-      modelId,
-      providerId
-    })
+    // 1. Attachment processing (extract text, encode images)
+    (async (): Promise<Awaited<ReturnType<typeof processAttachments>>> => {
+      if (validatedRefs.length === 0) return []
+      return processAttachments(validatedRefs)
+    })(),
 
-    // Start Telegram streaming if connected
-    if (isRemoteConnected) {
-      await telegramBotService.startStreaming()
-    }
-    // Start WebSocket streaming if connected
-    if (isWsConnected) {
-      remoteServerService.startStreaming()
-    }
+    // 2. Semantic memory recall (Qdrant)
+    (async (): Promise<{ block: string }> => {
+      if (qdrantMemoryService.getStatus() !== 'ready') return { block: '' }
+      const recalls = await qdrantMemoryService.recall(content, {
+        topK: 5,
+        scoreThreshold: 0.35,
+        projectId: conv?.projectId ?? null,
+        conversationId
+      })
+      return { block: recalls.length > 0 ? buildSemanticMemoryBlock(recalls) : '' }
+    })(),
 
-    // ── Parallel pre-flight enrichments (M1) ─────────────────
-    // All 4 operations are independent — run them concurrently to minimise TTFT.
-    const [attachResult, recallResult, libraryResult, skillResult] = await Promise.allSettled([
+    // 3. Library retrieval (RAG)
+    (async (): Promise<{ block: string; sources: LibraryChunkForPrompt[] }> => {
+      const activeLibraryId = getConversationLibraryId(conversationId)
+      if (!activeLibraryId) return { block: '', sources: [] }
 
-      // 1. Attachment processing (extract text, encode images)
-      (async (): Promise<Awaited<ReturnType<typeof processAttachments>>> => {
-        if (validatedRefs.length === 0) return []
-        return processAttachments(validatedRefs)
-      })(),
+      const lib = getLibrary(activeLibraryId)
+      const libName = lib?.name ?? 'Referentiel'
+      const toolCallId = `library-retrieval-${Date.now()}`
 
-      // 2. Semantic memory recall (Qdrant)
-      (async (): Promise<{ block: string }> => {
-        if (qdrantMemoryService.getStatus() !== 'ready') return { block: '' }
-        const recalls = await qdrantMemoryService.recall(content, {
-          topK: 5,
-          scoreThreshold: 0.35,
-          projectId: conv?.projectId ?? null,
-          conversationId
-        })
-        return { block: recalls.length > 0 ? buildSemanticMemoryBlock(recalls) : '' }
-      })(),
+      win.webContents.send('chat:chunk', {
+        type: 'tool-call',
+        toolName: 'librarySearch',
+        toolArgs: { query: content.slice(0, 120), library: libName },
+        toolCallId
+      })
 
-      // 3. Library retrieval (RAG)
-      (async (): Promise<{ block: string; sources: LibraryChunkForPrompt[] }> => {
-        const activeLibraryId = getConversationLibraryId(conversationId)
-        if (!activeLibraryId) return { block: '', sources: [] }
-
-        const lib = getLibrary(activeLibraryId)
-        const libName = lib?.name ?? 'Referentiel'
-        const toolCallId = `library-retrieval-${Date.now()}`
-
-        win.webContents.send('chat:chunk', {
-          type: 'tool-call',
-          toolName: 'librarySearch',
-          toolArgs: { query: content.slice(0, 120), library: libName },
-          toolCallId
-        })
-
-        try {
-          const chunks = await libraryService.retrieveForChat(activeLibraryId, content)
-          win.webContents.send('chat:chunk', {
-            type: 'tool-result',
-            toolName: 'librarySearch',
-            toolCallId,
-            toolIsError: false
-          })
-          if (chunks.length > 0) {
-            return { block: buildLibraryContextBlock(chunks, libName), sources: chunks }
-          }
-          return { block: '', sources: [] }
-        } catch (err) {
-          console.warn('[Chat] Library retrieval failed:', err)
-          win.webContents.send('chat:chunk', {
-            type: 'tool-result',
-            toolName: 'librarySearch',
-            toolCallId,
-            toolIsError: true
-          })
-          return { block: '', sources: [] }
-        }
-      })(),
-
-      // 4. Skill context build
-      (async (): Promise<{ block: string }> => {
-        if (!skillName) return { block: '' }
-        const dbSkill = getSkillByName(skillName)
-        if (!dbSkill || !dbSkill.enabled) return { block: '' }
-
-        const toolCallId = `skill-invoke-${Date.now()}`
-        win.webContents.send('chat:chunk', {
-          type: 'tool-call',
-          toolName: 'skill',
-          toolArgs: { name: skillName },
-          toolCallId
-        })
-
-        try {
-          const result = await buildSkillContextBlock(
-            skillName,
-            skillArgs ?? '',
-            resolvedWorkspacePath
-          )
-          win.webContents.send('chat:chunk', {
-            type: 'tool-result',
-            toolName: 'skill',
-            toolCallId,
-            toolIsError: false
-          })
-          return { block: result?.block ?? '' }
-        } catch (err) {
-          console.warn('[Chat] Skill execution failed:', err)
-          win.webContents.send('chat:chunk', {
-            type: 'tool-result',
-            toolName: 'skill',
-            toolCallId,
-            toolIsError: true
-          })
-          return { block: '' }
-        }
-      })()
-    ])
-
-    // Log any rejected enrichments (should not happen — each IIFE handles its own errors)
-    for (const r of [attachResult, recallResult, libraryResult, skillResult]) {
-      if (r.status === 'rejected') console.error('[Chat] Enrichment failed:', r.reason)
-    }
-
-    // Extract results with graceful fallbacks
-    const processedAttachments = attachResult.status === 'fulfilled' ? attachResult.value : []
-    const semanticMemoryBlock = recallResult.status === 'fulfilled' ? recallResult.value.block : ''
-    const libraryContextBlock = libraryResult.status === 'fulfilled' ? libraryResult.value.block : ''
-    const librarySourcesForMessage: LibraryChunkForPrompt[] = libraryResult.status === 'fulfilled' ? libraryResult.value.sources : []
-    const skillContextBlock = skillResult.status === 'fulfilled' ? skillResult.value.block : ''
-
-    const { imageParts, inlineText } = buildContentParts(processedAttachments)
-
-    // Load conversation history from DB
-    const dbMessages = getMessagesForConversation(conversationId)
-    const aiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<{ type: string; text?: string; image?: string; mimeType?: string }> }> = []
-
-    // Build combined system prompt: base + library-context + semantic memory + memory fragments + role prompt
-    const memoryBlock = buildMemoryBlock()
-    let combinedSystemPrompt = DEFAULT_SYSTEM_PROMPT
-
-    if (libraryContextBlock) {
-      if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
-      combinedSystemPrompt += libraryContextBlock
-    }
-    if (semanticMemoryBlock) {
-      if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
-      combinedSystemPrompt += semanticMemoryBlock
-    }
-    if (memoryBlock) {
-      if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
-      combinedSystemPrompt += memoryBlock
-    }
-    if (systemPrompt) {
-      if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
-      combinedSystemPrompt += systemPrompt
-    }
-    if (skillContextBlock) {
-      if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
-      combinedSystemPrompt += skillContextBlock
-    }
-    if (combinedSystemPrompt) {
-      aiMessages.push({ role: 'system', content: combinedSystemPrompt })
-    }
-
-    for (const msg of dbMessages) {
-      if (msg.role === 'user' || msg.role === 'assistant') {
-        aiMessages.push({ role: msg.role, content: msg.content })
-      }
-    }
-
-    // Inject workspace file context into system prompt
-    if (fileContexts && fileContexts.length > 0) {
-      // Sanitize path and language to prevent XML attribute injection
-      const sanitizeAttr = (s: string) => s.replace(/["<>&]/g, '')
-      // Sanitize content to prevent XML tag injection (same pattern as buildWorkspaceContextBlock)
-      const sanitizeContent = (s: string) => s
-        .replace(/<\/file>/gi, '&lt;/file&gt;')
-        .replace(/<\/workspace-files>/gi, '&lt;/workspace-files&gt;')
-      const fileBlock = fileContexts.map(f =>
-        `<file path="${sanitizeAttr(f.path)}" language="${sanitizeAttr(f.language)}">\n${sanitizeContent(f.content)}\n</file>`
-      ).join('\n\n')
-
-      const workspaceInstruction = `\n\n<workspace-files>\n${fileBlock}\n</workspace-files>\n\nQuand tu proposes des modifications de fichiers, utilise ce format :\n\`\`\`file:create:chemin/fichier.ext\ncontenu\n\`\`\`\n\`\`\`file:modify:chemin/fichier.ext\ncontenu complet modifie\n\`\`\`\n\`\`\`file:delete:chemin/fichier.ext\n\`\`\``
-
-      if (aiMessages.length > 0 && aiMessages[0].role === 'system') {
-        aiMessages[0].content += workspaceInstruction
-      } else {
-        aiMessages.unshift({ role: 'system', content: workspaceInstruction })
-      }
-    }
-
-    // Replace the last user message (just added above) with multi-part content if attachments
-    if (imageParts.length > 0 || inlineText) {
-      // Remove the last user message we just pushed from history
-      const lastIdx = aiMessages.length - 1
-      if (lastIdx >= 0 && aiMessages[lastIdx].role === 'user') {
-        const textWithAttachments = content + inlineText
-        if (imageParts.length > 0) {
-          // Multi-part: text + images
-          const parts: Array<{ type: string; text?: string; image?: string; mimeType?: string }> = [
-            { type: 'text', text: textWithAttachments }
-          ]
-          for (const img of imageParts) {
-            parts.push({ type: 'image', image: img.image, mimeType: img.mimeType })
-          }
-          aiMessages[lastIdx] = { role: 'user', content: parts }
-        } else {
-          // Text only (document/code attachments inlined)
-          aiMessages[lastIdx] = { role: 'user', content: textWithAttachments }
-        }
-      }
-    }
-
-    // Build conversation tools with permission pipeline
-    const rules = getAllPermissionRules()
-    const workspaceTools = buildConversationTools(resolvedWorkspacePath, {
-      rules,
-      onAskApproval: async (request) => {
-        // YOLO mode: auto-accept all tool approvals without prompting
-        if (yoloMode) return 'allow'
-
-        const approvalId = crypto.randomUUID()
-
-        return new Promise<'allow' | 'deny' | 'allow-session'>((resolve) => {
-          const timeout = setTimeout(() => {
-            pendingApprovals.delete(approvalId)
-            resolve('deny')
-            win.webContents.send('chat:chunk', {
-              type: 'tool-approval-resolved',
-              approvalId,
-              decision: 'deny'
-            })
-          }, APPROVAL_TIMEOUT_MS)
-
-          pendingApprovals.set(approvalId, { resolve, timeout })
-
-          // Route approval request based on source
-          if (source === 'telegram' && isRemoteConnected) {
-            telegramBotService.requestApproval(approvalId, request.toolName, request.toolArgs)
-              .then(approved => {
-                clearTimeout(timeout)
-                pendingApprovals.delete(approvalId)
-                resolve(approved ? 'allow' : 'deny')
-              })
-              .catch(() => {
-                clearTimeout(timeout)
-                pendingApprovals.delete(approvalId)
-                resolve('deny')
-              })
-          } else if (source === 'websocket' && isWsConnected) {
-            // WebSocket remote — similar pattern
-            // For now, deny by default (WebSocket approval not yet wired)
-            clearTimeout(timeout)
-            pendingApprovals.delete(approvalId)
-            resolve('deny')
-          } else {
-            // Desktop: send approval request via IPC chunk
-            win.webContents.send('chat:chunk', {
-              type: 'tool-approval',
-              approvalId,
-              toolName: request.toolName,
-              toolArgs: request.toolArgs
-            })
-          }
-        })
-      }
-    })
-
-    // Build MCP tools (from connected MCP servers, scoped to project)
-    let mcpTools: Record<string, unknown> = {}
-    try {
-      mcpTools = await mcpManagerService.getToolsForChat(conv?.projectId)
-    } catch (err) {
-      console.warn('[Chat] Failed to get MCP tools:', err)
-    }
-
-    // Inject Perplexity Search tool if search mode is enabled
-    if (searchEnabled) {
       try {
-        const { getApiKeyForProvider } = await import('./providers.ipc')
-        const perplexityApiKey = getApiKeyForProvider('perplexity')
-        if (perplexityApiKey) {
-          const { perplexitySearch } = await import('@perplexity-ai/ai-sdk')
-          mcpTools = { ...mcpTools, search: perplexitySearch({ apiKey: perplexityApiKey }) }
+        const chunks = await libraryService.retrieveForChat(activeLibraryId, content)
+        win.webContents.send('chat:chunk', {
+          type: 'tool-result',
+          toolName: 'librarySearch',
+          toolCallId,
+          toolIsError: false
+        })
+        if (chunks.length > 0) {
+          return { block: buildLibraryContextBlock(chunks, libName), sources: chunks }
         }
+        return { block: '', sources: [] }
       } catch (err) {
-        console.warn('[Chat] Failed to inject Perplexity Search tool:', err)
+        console.warn('[Chat] Library retrieval failed:', err)
+        win.webContents.send('chat:chunk', {
+          type: 'tool-result',
+          toolName: 'librarySearch',
+          toolCallId,
+          toolIsError: true
+        })
+        return { block: '', sources: [] }
       }
+    })(),
+
+    // 4. Skill context build
+    (async (): Promise<{ block: string }> => {
+      if (!skillName) return { block: '' }
+      const dbSkill = getSkillByName(skillName)
+      if (!dbSkill || !dbSkill.enabled) return { block: '' }
+
+      const toolCallId = `skill-invoke-${Date.now()}`
+      win.webContents.send('chat:chunk', {
+        type: 'tool-call',
+        toolName: 'skill',
+        toolArgs: { name: skillName },
+        toolCallId
+      })
+
+      try {
+        const result = await buildSkillContextBlock(
+          skillName,
+          skillArgs ?? '',
+          resolvedWorkspacePath
+        )
+        win.webContents.send('chat:chunk', {
+          type: 'tool-result',
+          toolName: 'skill',
+          toolCallId,
+          toolIsError: false
+        })
+        return { block: result?.block ?? '' }
+      } catch (err) {
+        console.warn('[Chat] Skill execution failed:', err)
+        win.webContents.send('chat:chunk', {
+          type: 'tool-result',
+          toolName: 'skill',
+          toolCallId,
+          toolIsError: true
+        })
+        return { block: '' }
+      }
+    })()
+  ])
+
+  // Log any rejected enrichments (should not happen — each IIFE handles its own errors)
+  for (const r of [attachResult, recallResult, libraryResult, skillResult]) {
+    if (r.status === 'rejected') console.error('[Chat] Enrichment failed:', r.reason)
+  }
+
+  // Extract results with graceful fallbacks
+  const processedAttachments = attachResult.status === 'fulfilled' ? attachResult.value : []
+  const semanticMemoryBlock = recallResult.status === 'fulfilled' ? recallResult.value.block : ''
+  const libraryContextBlock = libraryResult.status === 'fulfilled' ? libraryResult.value.block : ''
+  const librarySourcesForMessage: LibraryChunkForPrompt[] = libraryResult.status === 'fulfilled' ? libraryResult.value.sources : []
+  const skillContextBlock = skillResult.status === 'fulfilled' ? skillResult.value.block : ''
+
+  const { imageParts, inlineText } = buildContentParts(processedAttachments)
+
+  // Load conversation history from DB
+  const dbMessages = getMessagesForConversation(conversationId)
+  const aiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<{ type: string; text?: string; image?: string; mimeType?: string }> }> = []
+
+  // Build combined system prompt: base + library-context + semantic memory + memory fragments + role prompt
+  const memoryBlock = buildMemoryBlock()
+  let combinedSystemPrompt = DEFAULT_SYSTEM_PROMPT
+
+  if (libraryContextBlock) {
+    if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
+    combinedSystemPrompt += libraryContextBlock
+  }
+  if (semanticMemoryBlock) {
+    if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
+    combinedSystemPrompt += semanticMemoryBlock
+  }
+  if (memoryBlock) {
+    if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
+    combinedSystemPrompt += memoryBlock
+  }
+  if (systemPrompt) {
+    if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
+    combinedSystemPrompt += systemPrompt
+  }
+  if (skillContextBlock) {
+    if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
+    combinedSystemPrompt += skillContextBlock
+  }
+  if (combinedSystemPrompt) {
+    aiMessages.push({ role: 'system', content: combinedSystemPrompt })
+  }
+
+  for (const msg of dbMessages) {
+    if (msg.role === 'user' || msg.role === 'assistant') {
+      aiMessages.push({ role: msg.role, content: msg.content })
     }
+  }
 
-    // Merge all tools (workspace tools already wrapped by permission pipeline)
-    const tools = { ...workspaceTools, ...mcpTools }
+  // Inject workspace file context into system prompt
+  if (fileContexts && fileContexts.length > 0) {
+    // Sanitize path and language to prevent XML attribute injection
+    const sanitizeAttr = (s: string) => s.replace(/["<>&]/g, '')
+    // Sanitize content to prevent XML tag injection (same pattern as buildWorkspaceContextBlock)
+    const sanitizeContent = (s: string) => s
+      .replace(/<\/file>/gi, '&lt;/file&gt;')
+      .replace(/<\/workspace-files>/gi, '&lt;/workspace-files&gt;')
+    const fileBlock = fileContexts.map(f =>
+      `<file path="${sanitizeAttr(f.path)}" language="${sanitizeAttr(f.language)}">\n${sanitizeContent(f.content)}\n</file>`
+    ).join('\n\n')
 
-    const hasTools = Object.keys(tools).length > 0
-
-    // Inject workspace context + tools system prompt (always — every conversation has a workspace)
-    const contextBlock = buildWorkspaceContextBlock(resolvedWorkspacePath)
-    const workspacePrompt = contextBlock
-      ? contextBlock + '\n\n' + WORKSPACE_TOOLS_PROMPT
-      : WORKSPACE_TOOLS_PROMPT
+    const workspaceInstruction = `\n\n<workspace-files>\n${fileBlock}\n</workspace-files>\n\nQuand tu proposes des modifications de fichiers, utilise ce format :\n\`\`\`file:create:chemin/fichier.ext\ncontenu\n\`\`\`\n\`\`\`file:modify:chemin/fichier.ext\ncontenu complet modifie\n\`\`\`\n\`\`\`file:delete:chemin/fichier.ext\n\`\`\``
 
     if (aiMessages.length > 0 && aiMessages[0].role === 'system') {
-      aiMessages[0].content += '\n\n' + workspacePrompt
+      aiMessages[0].content += workspaceInstruction
     } else {
-      aiMessages.unshift({ role: 'system', content: workspacePrompt })
+      aiMessages.unshift({ role: 'system', content: workspaceInstruction })
     }
+  }
 
-    // Inject search system prompt when search mode is enabled
-    if (searchEnabled) {
-      const searchPrompt = `Le mode recherche web est active. Vous disposez d'un outil "search" pour chercher sur le web via Perplexity.
+  // Replace the last user message (just added above) with multi-part content if attachments
+  if (imageParts.length > 0 || inlineText) {
+    // Remove the last user message we just pushed from history
+    const lastIdx = aiMessages.length - 1
+    if (lastIdx >= 0 && aiMessages[lastIdx].role === 'user') {
+      const textWithAttachments = content + inlineText
+      if (imageParts.length > 0) {
+        // Multi-part: text + images
+        const parts: Array<{ type: string; text?: string; image?: string; mimeType?: string }> = [
+          { type: 'text', text: textWithAttachments }
+        ]
+        for (const img of imageParts) {
+          parts.push({ type: 'image', image: img.image, mimeType: img.mimeType })
+        }
+        aiMessages[lastIdx] = { role: 'user', content: parts }
+      } else {
+        // Text only (document/code attachments inlined)
+        aiMessages[lastIdx] = { role: 'user', content: textWithAttachments }
+      }
+    }
+  }
+
+  // Build conversation tools with permission pipeline
+  const rules = getAllPermissionRules()
+  const workspaceTools = buildConversationTools(resolvedWorkspacePath, {
+    rules,
+    onAskApproval: async (request) => {
+      // YOLO mode: auto-accept all tool approvals without prompting
+      if (yoloMode) return 'allow'
+
+      const approvalId = crypto.randomUUID()
+
+      return new Promise<'allow' | 'deny' | 'allow-session'>((resolve) => {
+        const timeout = setTimeout(() => {
+          pendingApprovals.delete(approvalId)
+          resolve('deny')
+          win.webContents.send('chat:chunk', {
+            type: 'tool-approval-resolved',
+            approvalId,
+            decision: 'deny'
+          })
+        }, APPROVAL_TIMEOUT_MS)
+
+        pendingApprovals.set(approvalId, { resolve, timeout })
+
+        // Route approval request based on source
+        if (source === 'telegram' && isRemoteConnected) {
+          telegramBotService.requestApproval(approvalId, request.toolName, request.toolArgs)
+            .then(approved => {
+              clearTimeout(timeout)
+              pendingApprovals.delete(approvalId)
+              resolve(approved ? 'allow' : 'deny')
+            })
+            .catch(() => {
+              clearTimeout(timeout)
+              pendingApprovals.delete(approvalId)
+              resolve('deny')
+            })
+        } else if (source === 'websocket' && isWsConnected) {
+          // WebSocket remote — similar pattern
+          // For now, deny by default (WebSocket approval not yet wired)
+          clearTimeout(timeout)
+          pendingApprovals.delete(approvalId)
+          resolve('deny')
+        } else {
+          // Desktop: send approval request via IPC chunk
+          win.webContents.send('chat:chunk', {
+            type: 'tool-approval',
+            approvalId,
+            toolName: request.toolName,
+            toolArgs: request.toolArgs
+          })
+        }
+      })
+    }
+  })
+
+  // Build MCP tools (from connected MCP servers, scoped to project)
+  let mcpTools: Record<string, unknown> = {}
+  try {
+    mcpTools = await mcpManagerService.getToolsForChat(conv?.projectId)
+  } catch (err) {
+    console.warn('[Chat] Failed to get MCP tools:', err)
+  }
+
+  // Inject Perplexity Search tool if search mode is enabled
+  if (searchEnabled) {
+    try {
+      const { getApiKeyForProvider } = await import('./providers.ipc')
+      const perplexityApiKey = getApiKeyForProvider('perplexity')
+      if (perplexityApiKey) {
+        const { perplexitySearch } = await import('@perplexity-ai/ai-sdk')
+        mcpTools = { ...mcpTools, search: perplexitySearch({ apiKey: perplexityApiKey }) }
+      }
+    } catch (err) {
+      console.warn('[Chat] Failed to inject Perplexity Search tool:', err)
+    }
+  }
+
+  // Merge all tools (workspace tools already wrapped by permission pipeline)
+  const tools = { ...workspaceTools, ...mcpTools }
+
+  const hasTools = Object.keys(tools).length > 0
+
+  // Inject workspace context + tools system prompt (always — every conversation has a workspace)
+  const contextBlock = buildWorkspaceContextBlock(resolvedWorkspacePath)
+  const workspacePrompt = contextBlock
+    ? contextBlock + '\n\n' + WORKSPACE_TOOLS_PROMPT
+    : WORKSPACE_TOOLS_PROMPT
+
+  if (aiMessages.length > 0 && aiMessages[0].role === 'system') {
+    aiMessages[0].content += '\n\n' + workspacePrompt
+  } else {
+    aiMessages.unshift({ role: 'system', content: workspacePrompt })
+  }
+
+  // Inject search system prompt when search mode is enabled
+  if (searchEnabled) {
+    const searchPrompt = `Le mode recherche web est active. Vous disposez d'un outil "search" pour chercher sur le web via Perplexity.
 
 IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" pour trouver des informations sur le web. N'utilisez PAS les outils de workspace (bash, readFile, listFiles, writeFile) sauf si l'utilisateur demande explicitement de travailler sur des fichiers locaux. Citez vos sources dans la reponse.`
-      if (aiMessages.length > 0 && aiMessages[0].role === 'system') {
-        aiMessages[0].content += '\n\n' + searchPrompt
-      } else {
-        aiMessages.unshift({ role: 'system', content: searchPrompt })
-      }
+    if (aiMessages.length > 0 && aiMessages[0].role === 'system') {
+      aiMessages[0].content += '\n\n' + searchPrompt
+    } else {
+      aiMessages.unshift({ role: 'system', content: searchPrompt })
     }
+  }
 
-    // Build providerOptions for thinking if supported
-    const providerOptions = thinkingEffort && thinkingEffort !== 'off'
-      ? buildThinkingProviderOptions(providerId, thinkingEffort)
-      : undefined
+  // Build providerOptions for thinking if supported
+  const providerOptions = thinkingEffort && thinkingEffort !== 'off'
+    ? buildThinkingProviderOptions(providerId, thinkingEffort)
+    : undefined
 
-    // Accumulate text during streaming (needed because with maxSteps, result.text only has the last step)
-    let accumulatedReasoning = ''
-    let accumulatedText = ''
-    const accumulatedToolCalls: Array<{
-      toolName: string
-      args?: Record<string, unknown>
-      status: 'running' | 'success' | 'error'
-      error?: string
-      result?: string
-      resultMeta?: {
-        duration?: number
-        exitCode?: number
-        lineCount?: number
-        byteSize?: number
-        matchCount?: number
-        fileCount?: number
-      }
-    }> = []
-    const accumulatedSearchSources: Array<{ title: string; url: string; snippet?: string }> = []
-    const toolStartTimes = new Map<string, number>() // toolCallId → Date.now()
+  return {
+    conversationId,
+    content,
+    modelId,
+    providerId,
+    roleId,
+    source,
+    model,
+    aiMessages,
+    tools,
+    hasTools,
+    providerOptions,
+    temperature,
+    maxTokens,
+    topP,
+    isRemoteConnected,
+    isWsConnected,
+    startTime,
+    conv,
+    librarySourcesForMessage
+  }
+}
 
-    // Token batching — accumulate text-delta chunks, flush every 50ms
-    let batchBuffer = ''
-    let batchTimer: ReturnType<typeof setInterval> | null = null
-    const BATCH_INTERVAL_MS = 50
+// ── Phase 2: Stream ──────────────────────────────────────
 
-    function flushBatch() {
-      if (batchBuffer.length > 0) {
-        win.webContents.send('chat:chunk', { type: 'text-delta', content: batchBuffer })
-        if (isRemoteConnected) telegramBotService.pushChunk(batchBuffer)
-        if (isWsConnected) remoteServerService.pushChunk(batchBuffer)
-        batchBuffer = ''
-      }
+async function streamChat(
+  prepared: ChatPrepareResult,
+  win: BrowserWindow,
+  abortSignal: AbortSignal
+): Promise<ChatStreamResult> {
+  const {
+    model, aiMessages, tools, hasTools, providerOptions,
+    temperature, maxTokens, topP,
+    isRemoteConnected, isWsConnected, startTime
+  } = prepared
+
+  // Accumulate text during streaming (needed because with maxSteps, result.text only has the last step)
+  let accumulatedReasoning = ''
+  let accumulatedText = ''
+  const accumulatedToolCalls: ToolCallRecord[] = []
+  const accumulatedSearchSources: Array<{ title: string; url: string; snippet?: string }> = []
+  const toolStartTimes = new Map<string, number>() // toolCallId -> Date.now()
+
+  // Token batching — accumulate text-delta chunks, flush every 50ms
+  let batchBuffer = ''
+  let batchTimer: ReturnType<typeof setInterval> | null = null
+  const BATCH_INTERVAL_MS = 50
+
+  function flushBatch() {
+    if (batchBuffer.length > 0) {
+      win.webContents.send('chat:chunk', { type: 'text-delta', content: batchBuffer })
+      if (isRemoteConnected) telegramBotService.pushChunk(batchBuffer)
+      if (isWsConnected) remoteServerService.pushChunk(batchBuffer)
+      batchBuffer = ''
     }
+  }
 
-    function startBatchTimer() {
-      if (!batchTimer) {
-        batchTimer = setInterval(flushBatch, BATCH_INTERVAL_MS)
-      }
+  function startBatchTimer() {
+    if (!batchTimer) {
+      batchTimer = setInterval(flushBatch, BATCH_INTERVAL_MS)
     }
+  }
 
-    function stopBatchTimer() {
-      if (batchTimer) {
-        clearInterval(batchTimer)
-        batchTimer = null
-      }
-      flushBatch()
+  function stopBatchTimer() {
+    if (batchTimer) {
+      clearInterval(batchTimer)
+      batchTimer = null
     }
+    flushBatch()
+  }
 
-    // Parser for <think>...</think> tags from open-source models (LM Studio, Ollama, etc.)
-    const thinkParser = new ThinkTagParser()
+  // Parser for <think>...</think> tags from open-source models (LM Studio, Ollama, etc.)
+  const thinkParser = new ThinkTagParser()
 
+  try {
     const result = streamText({
       model,
       messages: aiMessages,
-      abortSignal: currentAbortController.signal,
+      abortSignal,
       temperature,
       maxTokens,
       topP,
@@ -737,112 +804,159 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
     // Get usage from resolved promise (more reliable than onFinish for some providers)
     const usage = await result.usage
     const responseTimeMs = Date.now() - startTime
-    const tokensIn = usage?.inputTokens ?? 0
-    const tokensOut = usage?.outputTokens ?? 0
-    const cost = calculateMessageCost(modelId, tokensIn, tokensOut)
 
-    // Save last used model on the conversation (for restore on switch)
-    updateConversationModel(conversationId, `${providerId}::${modelId}`)
-
-    // Persist role on the conversation (first message only in practice)
-    if (roleId) {
-      updateConversationRole(conversationId, roleId)
+    return {
+      fullText,
+      accumulatedReasoning,
+      usage: usage ? { inputTokens: usage.inputTokens ?? 0, outputTokens: usage.outputTokens ?? 0 } : null,
+      accumulatedToolCalls,
+      accumulatedSearchSources,
+      responseTimeMs
     }
+  } finally {
+    // Ensure batch timer is always cleaned up (covers error/abort paths)
+    stopBatchTimer()
+  }
+}
 
-    // Parse file operations from assistant response
-    const fileOps = parseFileOperations(fullText)
+// ── Phase 3: Finalize ────────────────────────────────────
 
-    // Build contentData
-    const contentData: Record<string, unknown> = {}
-    if (accumulatedReasoning) contentData.reasoning = accumulatedReasoning
-    if (accumulatedToolCalls.length > 0) {
-      // Finalize any still-running tool calls as success (in case onStepFinish didn't fire for them)
-      contentData.toolCalls = accumulatedToolCalls.map(tc => ({
-        ...tc,
-        status: tc.status === 'running' ? 'success' : tc.status
-      }))
-    }
-    if (fileOps.length > 0) contentData.fileOperations = fileOps.map(op => ({ ...op, status: 'pending' }))
-    if (accumulatedSearchSources.length > 0) contentData.searchSources = accumulatedSearchSources
-    if (librarySourcesForMessage.length > 0) {
-      contentData.librarySources = librarySourcesForMessage.map(s => ({
-        id: s.id,
-        sourceId: s.sourceId,
-        libraryId: s.libraryId,
-        libraryName: s.libraryName,
-        filename: s.filename,
-        heading: s.heading,
-        lineStart: s.lineStart,
-        lineEnd: s.lineEnd,
-        chunkPreview: s.contentPreview,
-        score: s.score
-      }))
-    }
+async function finalizeChat(
+  prepared: ChatPrepareResult,
+  streamResult: ChatStreamResult,
+  win: BrowserWindow
+): Promise<void> {
+  const {
+    conversationId, content, modelId, providerId, roleId, conv,
+    librarySourcesForMessage
+  } = prepared
+  const {
+    fullText, accumulatedReasoning, usage, accumulatedToolCalls,
+    accumulatedSearchSources, responseTimeMs
+  } = streamResult
 
-    const savedMessage = createMessage({
+  const tokensIn = usage?.inputTokens ?? 0
+  const tokensOut = usage?.outputTokens ?? 0
+  const cost = calculateMessageCost(modelId, tokensIn, tokensOut)
+
+  // Save last used model on the conversation (for restore on switch)
+  updateConversationModel(conversationId, `${providerId}::${modelId}`)
+
+  // Persist role on the conversation (first message only in practice)
+  if (roleId) {
+    updateConversationRole(conversationId, roleId)
+  }
+
+  // Parse file operations from assistant response
+  const fileOps = parseFileOperations(fullText)
+
+  // Build contentData
+  const contentData: Record<string, unknown> = {}
+  if (accumulatedReasoning) contentData.reasoning = accumulatedReasoning
+  if (accumulatedToolCalls.length > 0) {
+    // Finalize any still-running tool calls as success (in case onStepFinish didn't fire for them)
+    contentData.toolCalls = accumulatedToolCalls.map(tc => ({
+      ...tc,
+      status: tc.status === 'running' ? 'success' : tc.status
+    }))
+  }
+  if (fileOps.length > 0) contentData.fileOperations = fileOps.map(op => ({ ...op, status: 'pending' }))
+  if (accumulatedSearchSources.length > 0) contentData.searchSources = accumulatedSearchSources
+  if (librarySourcesForMessage.length > 0) {
+    contentData.librarySources = librarySourcesForMessage.map(s => ({
+      id: s.id,
+      sourceId: s.sourceId,
+      libraryId: s.libraryId,
+      libraryName: s.libraryName,
+      filename: s.filename,
+      heading: s.heading,
+      lineStart: s.lineStart,
+      lineEnd: s.lineEnd,
+      chunkPreview: s.contentPreview,
+      score: s.score
+    }))
+  }
+
+  const savedMessage = createMessage({
+    conversationId,
+    role: 'assistant',
+    content: fullText,
+    modelId,
+    providerId,
+    tokensIn,
+    tokensOut,
+    cost,
+    responseTimeMs,
+    contentData: Object.keys(contentData).length > 0 ? contentData : undefined
+  })
+
+  // Ingest messages into semantic memory (fire-and-forget)
+  if (qdrantMemoryService.getStatus() === 'ready') {
+    const projectId = conv?.projectId ?? null
+    qdrantMemoryService.ingest({
+      id: nanoid(),
       conversationId,
+      projectId,
+      role: 'user',
+      content,
+      modelId: null,
+      createdAt: new Date()
+    }).catch(() => {})
+    qdrantMemoryService.ingest({
+      id: savedMessage.id,
+      conversationId,
+      projectId,
       role: 'assistant',
       content: fullText,
       modelId,
-      providerId,
-      tokensIn,
-      tokensOut,
-      cost,
-      responseTimeMs,
-      contentData: Object.keys(contentData).length > 0 ? contentData : undefined
-    })
+      createdAt: new Date()
+    }).catch(() => {})
+  }
 
-    // Ingest messages into semantic memory (fire-and-forget)
-    if (qdrantMemoryService.getStatus() === 'ready') {
-      const projectId = conv?.projectId ?? null
-      qdrantMemoryService.ingest({
-        id: nanoid(),
-        conversationId,
-        projectId,
-        role: 'user',
-        content,
-        modelId: null,
-        createdAt: new Date()
-      }).catch(() => {})
-      qdrantMemoryService.ingest({
-        id: savedMessage.id,
-        conversationId,
-        projectId,
-        role: 'assistant',
-        content: fullText,
-        modelId,
-        createdAt: new Date()
-      }).catch(() => {})
-    }
+  win.webContents.send('chat:chunk', {
+    type: 'finish',
+    content: fullText,
+    messageId: savedMessage.id,
+    usage: {
+      promptTokens: tokensIn,
+      completionTokens: tokensOut,
+      totalTokens: tokensIn + tokensOut
+    },
+    cost,
+    responseTimeMs,
+    fileOperations: fileOps.length > 0 ? fileOps.map(op => ({ ...op, status: 'pending' })) : undefined,
+    toolCalls: accumulatedToolCalls.length > 0 ? accumulatedToolCalls.map(tc => ({
+      ...tc,
+      status: tc.status === 'running' ? 'success' : tc.status
+    })) : undefined,
+    searchSources: accumulatedSearchSources.length > 0 ? accumulatedSearchSources : undefined,
+    semanticRecallCount: qdrantMemoryService.getLastRecallCount() || undefined,
+    librarySourcesCount: librarySourcesForMessage.length > 0 ? librarySourcesForMessage.length : undefined
+  })
+}
 
-    win.webContents.send('chat:chunk', {
-      type: 'finish',
-      content: fullText,
-      messageId: savedMessage.id,
-      usage: {
-        promptTokens: tokensIn,
-        completionTokens: tokensOut,
-        totalTokens: tokensIn + tokensOut
-      },
-      cost,
-      responseTimeMs,
-      fileOperations: fileOps.length > 0 ? fileOps.map(op => ({ ...op, status: 'pending' })) : undefined,
-      toolCalls: accumulatedToolCalls.length > 0 ? accumulatedToolCalls.map(tc => ({
-        ...tc,
-        status: tc.status === 'running' ? 'success' : tc.status
-      })) : undefined,
-      searchSources: accumulatedSearchSources.length > 0 ? accumulatedSearchSources : undefined,
-      semanticRecallCount: qdrantMemoryService.getLastRecallCount() || undefined,
-      librarySourcesCount: librarySourcesForMessage.length > 0 ? librarySourcesForMessage.length : undefined
-    })
+// ── Orchestrator ─────────────────────────────────────────
 
+export async function handleChatMessage(params: HandleChatMessageParams): Promise<void> {
+  const win = params.window
+
+  // Abort any existing stream
+  if (currentAbortController) {
+    currentAbortController.abort()
+  }
+  currentAbortController = new AbortController()
+
+  try {
+    const prepared = await prepareChat(params, win)
+    const streamResult = await streamChat(prepared, win, currentAbortController.signal)
+    await finalizeChat(prepared, streamResult, win)
     currentAbortController = null
-
   } catch (error: unknown) {
     currentAbortController = null
 
-    // Stop batch timer on error/abort (discard unflushed buffer — stream ended)
-    stopBatchTimer()
+    const isRemoteConnected = telegramBotService.getStatus() === 'connected'
+    const isWsConnected = remoteServerService.getStatus() === 'running'
+      && remoteServerService.getConnectedClients().length > 0
 
     // End Telegram streaming on error
     if (isRemoteConnected) {
