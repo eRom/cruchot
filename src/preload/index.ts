@@ -538,6 +538,13 @@ const api: ElectronAPI = {
   approveToolCall: (approvalId: string, decision: 'allow' | 'deny' | 'allow-session'): Promise<void> =>
     ipcRenderer.invoke('chat:approve-tool', { approvalId, decision }),
 
+  // ── YOLO Mode (per-conversation, owned by main process) ──
+  setYoloMode: (conversationId: string, enabled: boolean): Promise<void> =>
+    ipcRenderer.invoke('chat:set-yolo-mode', { conversationId, enabled }),
+
+  getYoloMode: (conversationId: string): Promise<boolean> =>
+    ipcRenderer.invoke('chat:get-yolo-mode', { conversationId }),
+
   // ── Settings ──────────────────────────────────────────
   getSetting: (key: string): Promise<string | null> =>
     ipcRenderer.invoke('settings:get', key),

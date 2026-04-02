@@ -134,53 +134,53 @@ const TOOL_DEFAULTS: Record<string, PermissionDecision> = {
   WebFetchTool: 'ask',
 }
 
-// ── Session approvals (in-memory, reset on restart) ───────────────────────────
+// ── Session approvals (in-memory, reset on restart, scoped per conversation) ──
 
-const sessionApprovals: Set<string> = new Set()
+const sessionApprovals = new Map<string, Set<string>>()
 
-/**
- * Builds a cache key for a given tool call.
- * Examples: `bash::npm test`, `WebFetchTool::https://...`, `writeFile::/src/foo.ts`
- */
 function buildSessionKey(toolName: string, toolArgs: Record<string, unknown>): string {
   let value = ''
-
   if (toolName === 'bash') {
     value = (toolArgs.command as string | undefined) ?? ''
   } else if (
-    toolName === 'writeFile' ||
-    toolName === 'FileEdit' ||
-    toolName === 'readFile' ||
-    toolName === 'listFiles' ||
-    toolName === 'GrepTool' ||
-    toolName === 'GlobTool'
+    toolName === 'writeFile' || toolName === 'FileEdit' ||
+    toolName === 'readFile' || toolName === 'listFiles' ||
+    toolName === 'GrepTool' || toolName === 'GlobTool'
   ) {
-    value =
-      (toolArgs.file_path as string | undefined) ??
+    value = (toolArgs.file_path as string | undefined) ??
       (toolArgs.path as string | undefined) ??
-      (toolArgs.pattern as string | undefined) ??
-      ''
+      (toolArgs.pattern as string | undefined) ?? ''
   } else if (toolName === 'WebFetchTool') {
     value = (toolArgs.url as string | undefined) ?? ''
   }
-
   return `${toolName}::${value}`
 }
 
-export function addSessionApproval(key: string): void {
-  sessionApprovals.add(key)
+export function addSessionApproval(conversationId: string, key: string): void {
+  let convSet = sessionApprovals.get(conversationId)
+  if (!convSet) {
+    convSet = new Set()
+    sessionApprovals.set(conversationId, convSet)
+  }
+  convSet.add(key)
 }
 
 export function hasSessionApproval(
+  conversationId: string,
   toolName: string,
   toolArgs: Record<string, unknown>
 ): boolean {
-  const key = buildSessionKey(toolName, toolArgs)
-  return sessionApprovals.has(key)
+  const convSet = sessionApprovals.get(conversationId)
+  if (!convSet) return false
+  return convSet.has(buildSessionKey(toolName, toolArgs))
 }
 
-export function clearSessionApprovals(): void {
-  sessionApprovals.clear()
+export function clearSessionApprovals(conversationId?: string): void {
+  if (conversationId) {
+    sessionApprovals.delete(conversationId)
+  } else {
+    sessionApprovals.clear()
+  }
 }
 
 // ── Rule matching ─────────────────────────────────────────────────────────────
@@ -262,11 +262,11 @@ export function getToolDefault(toolName: string): PermissionDecision {
  * 5. Tool default fallback
  */
 export function evaluatePermission(
-  context: PermissionContext,
+  context: PermissionContext & { conversationId?: string },
   rules: PermissionRule[]
 ): PermissionDecision {
   // 1. Session approvals
-  if (hasSessionApproval(context.toolName, context.toolArgs)) {
+  if (context.conversationId && hasSessionApproval(context.conversationId, context.toolName, context.toolArgs)) {
     return 'allow'
   }
 

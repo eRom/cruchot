@@ -27,7 +27,6 @@ export interface SendMessagePayload {
   libraryId?: string
   skillName?: string
   skillArgs?: string
-  yoloMode?: boolean
 }
 
 export interface FileNode {
@@ -1075,6 +1074,10 @@ export interface ElectronAPI {
 
   // Tool Approval
   approveToolCall: (approvalId: string, decision: 'allow' | 'deny' | 'allow-session') => Promise<void>
+
+  // YOLO Mode (per-conversation, owned by main process)
+  setYoloMode: (conversationId: string, enabled: boolean) => Promise<void>
+  getYoloMode: (conversationId: string) => Promise<boolean>
 
   // Settings
   getSetting: (key: string) => Promise<string | null>

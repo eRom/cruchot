@@ -55,7 +55,6 @@ const sendMessageSchema = z.object({
   libraryId: z.string().optional(),
   skillName: z.string().max(200).optional(),
   skillArgs: z.string().max(10_000).optional(),
-  yoloMode: z.boolean().optional()
 })
 
 let currentAbortController: AbortController | null = null
@@ -65,6 +64,9 @@ const pendingApprovals = new Map<string, {
   resolve: (decision: 'allow' | 'deny' | 'allow-session') => void
   timeout: NodeJS.Timeout
 }>()
+
+// YOLO mode state — main process owns this, not renderer
+const yoloModeByConversation = new Map<string, boolean>()
 
 const APPROVAL_TIMEOUT_MS = 60_000 // 60 seconds
 
@@ -178,7 +180,6 @@ export interface HandleChatMessageParams {
   searchEnabled?: boolean
   skillName?: string
   skillArgs?: string
-  yoloMode?: boolean
   source: 'desktop' | 'telegram' | 'websocket'
   window: BrowserWindow
 }
@@ -190,7 +191,7 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
     conversationId, content, modelId, providerId, systemPrompt,
     temperature, maxTokens, topP, thinkingEffort, roleId,
     attachments: attachmentRefs, fileContexts,
-    searchEnabled, skillName, skillArgs, yoloMode, source
+    searchEnabled, skillName, skillArgs, source
   } = params
 
   const isRemoteConnected = telegramBotService.getStatus() === 'connected'
@@ -473,9 +474,10 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
   const rules = getAllPermissionRules()
   const workspaceTools = buildConversationTools(resolvedWorkspacePath, {
     rules,
+    conversationId,
     onAskApproval: async (request) => {
       // YOLO mode: auto-accept all tool approvals without prompting
-      if (yoloMode) return 'allow'
+      if (yoloModeByConversation.get(conversationId)) return 'allow'
 
       const approvalId = crypto.randomUUID()
 
@@ -1005,6 +1007,21 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
 // ── IPC Registration ──────────────────────────────────────
 
 export function registerChatIpc(): void {
+  ipcMain.handle('chat:set-yolo-mode', async (_event, payload: unknown) => {
+    const parsed = z.object({
+      conversationId: z.string().min(1),
+      enabled: z.boolean()
+    }).safeParse(payload)
+    if (!parsed.success) throw new Error('Payload invalide')
+    yoloModeByConversation.set(parsed.data.conversationId, parsed.data.enabled)
+  })
+
+  ipcMain.handle('chat:get-yolo-mode', async (_event, payload: unknown) => {
+    const parsed = z.object({ conversationId: z.string().min(1) }).safeParse(payload)
+    if (!parsed.success) throw new Error('Payload invalide')
+    return yoloModeByConversation.get(parsed.data.conversationId) ?? false
+  })
+
   ipcMain.handle('chat:send', async (event, payload) => {
     const parsed = sendMessageSchema.safeParse(payload)
     if (!parsed.success) {

@@ -13,6 +13,7 @@ export { buildWorkspaceContextBlock, WORKSPACE_TOOLS_PROMPT } from './context'
 
 export interface ToolPipelineOptions {
   rules: PermissionRule[]
+  conversationId?: string
   onAskApproval: (request: { toolName: string; toolArgs: Record<string, unknown> }) => Promise<'allow' | 'deny' | 'allow-session'>
 }
 
@@ -53,7 +54,7 @@ export function buildConversationTools(
 
         // 2. Permission evaluation
         const decision = evaluatePermission(
-          { toolName: name, toolArgs: args, workspacePath },
+          { toolName: name, toolArgs: args, workspacePath, conversationId: options.conversationId },
           rules
         )
 
@@ -68,7 +69,7 @@ export function buildConversationTools(
           }
           if (result === 'allow-session') {
             const sessionKey = `${name}::${args.command ?? args.file_path ?? args.path ?? args.pattern ?? args.url ?? ''}`
-            addSessionApproval(sessionKey)
+            addSessionApproval(options.conversationId ?? '', sessionKey)
           }
         }
 
