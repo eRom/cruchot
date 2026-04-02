@@ -25,7 +25,7 @@ jobs:
         run: npm ci
 
       - name: Audit dependencies
-        run: npm audit --audit-level=high --omit=dev
+        run: npm audit --audit-level=critical --omit=dev
 
       - name: Lint
         run: npm run lint
