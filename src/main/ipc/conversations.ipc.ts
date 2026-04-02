@@ -92,9 +92,13 @@ export function registerConversationsIpc(): void {
     return toggleFavorite(parsed.id, parsed.isFavorite)
   })
 
-  ipcMain.handle('conversations:fork', async (_event, id: string) => {
-    idSchema.parse(id)
-    return forkConversation(id)
+  ipcMain.handle('conversations:fork', async (_event, payload: unknown) => {
+    const schema = z.object({
+      id: idSchema,
+      upToMessageId: idSchema.optional()
+    })
+    const parsed = schema.parse(payload)
+    return forkConversation(parsed.id, parsed.upToMessageId)
   })
 
   ipcMain.handle('conversations:setWorkspacePath', async (_event, payload: unknown) => {
