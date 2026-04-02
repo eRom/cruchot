@@ -710,6 +710,94 @@
                 transition-delay: 0.3s;
             }
 
+            /* ---- Chat tools section ---- */
+            .tools-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
+                margin-top: 48px;
+            }
+            .tool-card {
+                position: relative;
+                display: flex;
+                align-items: flex-start;
+                gap: 20px;
+                padding: 28px 28px 28px 32px;
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                border-left: 3px solid var(--tool-accent);
+                border-radius: var(--radius);
+                transition: all 0.3s;
+                overflow: hidden;
+            }
+            .tool-card:hover {
+                border-color: var(--border-hover);
+                border-left-color: var(--tool-accent);
+                background: var(--bg-card-hover);
+                transform: translateY(-2px);
+                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+            }
+            .tool-card .tool-number-bg {
+                position: absolute;
+                top: -8px;
+                right: 12px;
+                font-size: 72px;
+                font-weight: 900;
+                color: var(--tool-accent);
+                opacity: 0.06;
+                line-height: 1;
+                pointer-events: none;
+                user-select: none;
+            }
+            .tool-card .tool-icon {
+                width: 48px;
+                height: 48px;
+                border-radius: var(--radius-sm);
+                background: color-mix(in oklch, var(--tool-accent) 12%, transparent);
+                color: var(--tool-accent);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            .tool-card-content {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                min-width: 0;
+            }
+            .tool-card-content h3 {
+                font-size: 16px;
+                font-weight: 700;
+                letter-spacing: -0.01em;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .tool-card-content p {
+                font-size: 13px;
+                color: var(--fg-muted);
+                line-height: 1.6;
+            }
+            .tool-tag {
+                display: inline-flex;
+                align-items: center;
+                font-size: 10px;
+                font-weight: 600;
+                color: var(--tool-accent);
+                background: color-mix(in oklch, var(--tool-accent) 10%, transparent);
+                border: 1px solid color-mix(in oklch, var(--tool-accent) 20%, transparent);
+                padding: 2px 8px;
+                border-radius: 100px;
+                white-space: nowrap;
+            }
+
+            @media (max-width: 640px) {
+                .tools-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+
             /* ---- Lightbox ---- */
             .lightbox {
                 position: fixed;
@@ -1396,8 +1484,124 @@
             </div>
         </section>
 
+        <!-- ======== Chat Tools ======== -->
+        <section id="chat-tools">
+            <div class="section-inner" style="text-align: center">
+                <div
+                    class="section-label reveal"
+                    style="color: var(--violet); justify-content: center"
+                >
+                    <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
+                    </svg>
+                    Outils de chat
+                </div>
+                <h2
+                    class="section-title reveal"
+                    style="margin-left: auto; margin-right: auto"
+                >
+                    4 outils integres pour<br />accelerer chaque conversation
+                </h2>
+                <p
+                    class="section-desc reveal"
+                    style="margin-left: auto; margin-right: auto"
+                >
+                    Prompts reutilisables, resume instantane, optimisation
+                    automatique et fork de conversations. Tout est a portee
+                    d'un clic dans le panneau lateral.
+                </p>
+
+                <div class="tools-grid">
+                    <!-- Tool 1 — Prompts -->
+                    <div class="tool-card reveal" style="--tool-accent: var(--violet)">
+                        <span class="tool-number-bg">01</span>
+                        <div class="tool-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 7V4h16v3" /><path d="M9 20h6" /><path d="M12 4v16" />
+                            </svg>
+                        </div>
+                        <div class="tool-card-content">
+                            <h3>Bibliotheque de prompts <span class="tool-tag">Variabilise</span></h3>
+                            <p>
+                                Sauvegardez vos meilleurs prompts et reutilisez-les
+                                en un clic. Systeme de variables <code>{{nom}}</code>
+                                pour personnaliser a la volee.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Tool 2 — Resume -->
+                    <div class="tool-card reveal reveal-delay-1" style="--tool-accent: var(--emerald)">
+                        <span class="tool-number-bg">02</span>
+                        <div class="tool-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" />
+                            </svg>
+                        </div>
+                        <div class="tool-card-content">
+                            <h3>Resume instantane <span class="tool-tag">One-shot</span></h3>
+                            <p>
+                                Generez un resume structure de n'importe quelle
+                                conversation en un clic. Parfait pour garder
+                                le fil apres de longues sessions.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Tool 3 — Prompt optimizer -->
+                    <div class="tool-card reveal reveal-delay-2" style="--tool-accent: var(--amber)">
+                        <span class="tool-number-bg">03</span>
+                        <div class="tool-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                            </svg>
+                        </div>
+                        <div class="tool-card-content">
+                            <h3>Amelioration de prompt <span class="tool-tag">AI-powered</span></h3>
+                            <p>
+                                Le LLM reecrit et optimise votre prompt avant
+                                de l'envoyer. Plus precis, plus structure,
+                                meilleurs resultats.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Tool 4 — Fork -->
+                    <div class="tool-card reveal reveal-delay-3" style="--tool-accent: var(--pink)">
+                        <span class="tool-number-bg">04</span>
+                        <div class="tool-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><circle cx="18" cy="6" r="3" /><path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" /><path d="M12 12v3" />
+                            </svg>
+                        </div>
+                        <div class="tool-card-content">
+                            <h3>Fork de conversation <span class="tool-tag">Branchement</span></h3>
+                            <p>
+                                Dupliquez une conversation entiere ou bifurquez
+                                depuis n'importe quel message. Explorez des
+                                pistes alternatives sans perdre l'original.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- ======== Feature cards grid ======== -->
-        <section>
+        <section
+            style="
+                background: var(--bg-elevated);
+                border-top: 1px solid var(--border);
+                border-bottom: 1px solid var(--border);
+            "
+        >
             <div class="section-inner" style="text-align: center">
                 <div
                     class="section-label reveal"
@@ -1567,13 +1771,7 @@
         </section>
 
         <!-- ======== Screenshots: Stats + Remote + Tasks ======== -->
-        <section
-            style="
-                background: var(--bg-elevated);
-                border-top: 1px solid var(--border);
-                border-bottom: 1px solid var(--border);
-            "
-        >
+        <section>
             <div class="section-inner">
                 <div
                     class="showcase-grid"
