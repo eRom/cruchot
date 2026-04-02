@@ -712,7 +712,7 @@ export interface ElectronAPI {
   renameConversation: (id: string, title: string) => Promise<void>
   setConversationProject: (id: string, projectId: string | null) => Promise<void>
   toggleConversationFavorite: (id: string, isFavorite: boolean) => Promise<ConversationInfo>
-  forkConversation: (id: string) => Promise<ConversationInfo>
+  forkConversation: (id: string, upToMessageId?: string) => Promise<ConversationInfo>
   getMessages: (conversationId: string) => Promise<MessageInfo[]>
   getMessagesPage: (payload: {
     conversationId: string
