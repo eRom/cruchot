@@ -17,35 +17,27 @@ export function setSyncStatus(params: {
   const db = getDatabase()
   const now = new Date()
 
-  const existing = db.select()
-    .from(vectorSyncState)
-    .where(eq(vectorSyncState.messageId, params.messageId))
-    .get()
-
-  if (existing) {
-    db.update(vectorSyncState)
-      .set({
+  db.insert(vectorSyncState)
+    .values({
+      id: nanoid(),
+      messageId: params.messageId,
+      conversationId: params.conversationId,
+      status: params.status,
+      pointId: params.pointId ?? null,
+      errorMessage: params.errorMessage ?? null,
+      createdAt: now,
+      indexedAt: params.status === 'indexed' ? now : null
+    })
+    .onConflictDoUpdate({
+      target: vectorSyncState.messageId,
+      set: {
         status: params.status,
-        pointId: params.pointId ?? existing.pointId,
+        pointId: params.pointId ?? sql`point_id`,
         errorMessage: params.errorMessage ?? null,
-        indexedAt: params.status === 'indexed' ? now : existing.indexedAt
-      })
-      .where(eq(vectorSyncState.messageId, params.messageId))
-      .run()
-  } else {
-    db.insert(vectorSyncState)
-      .values({
-        id: nanoid(),
-        messageId: params.messageId,
-        conversationId: params.conversationId,
-        status: params.status,
-        pointId: params.pointId ?? null,
-        errorMessage: params.errorMessage ?? null,
-        createdAt: now,
-        indexedAt: params.status === 'indexed' ? now : null
-      })
-      .run()
-  }
+        indexedAt: params.status === 'indexed' ? now : sql`indexed_at`
+      }
+    })
+    .run()
 }
 
 export function getSyncStatus(messageId: string): { status: string; pointId: string | null } | null {

@@ -31,18 +31,24 @@ export function createConversation(title?: string, projectId?: string) {
     }
   }
 
-  db.insert(conversations)
-    .values({
-      id,
-      title: title || 'Nouvelle conversation',
-      projectId: projectId ?? null,
-      workspacePath,
-      createdAt: now,
-      updatedAt: now
-    })
-    .run()
+  const row = {
+    id,
+    title: title || 'Nouvelle conversation',
+    projectId: projectId ?? null,
+    workspacePath,
+    createdAt: now,
+    updatedAt: now,
+    modelId: null,
+    roleId: null,
+    activeLibraryId: null,
+    isFavorite: false,
+    isArena: false,
+    isScheduledTask: false
+  }
 
-  return getConversation(id)!
+  db.insert(conversations).values(row).run()
+
+  return row
 }
 
 export function getConversationsByProject(projectId: string | null) {

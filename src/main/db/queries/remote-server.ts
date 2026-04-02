@@ -68,20 +68,29 @@ export function createWebSocketSession(data: {
   const id = nanoid()
   const now = new Date()
 
-  db.insert(remoteSessions)
-    .values({
-      id,
-      sessionType: 'websocket',
-      isActive: true,
-      conversationId: data.conversationId ?? null,
-      wsClientFingerprint: data.wsClientFingerprint ?? null,
-      wsSessionToken: data.wsSessionToken ?? null,
-      wsIpAddress: data.wsIpAddress ?? null,
-      createdAt: now
-    })
-    .run()
+  const row = {
+    id,
+    sessionType: 'websocket' as const,
+    isActive: true,
+    conversationId: data.conversationId ?? null,
+    wsClientFingerprint: data.wsClientFingerprint ?? null,
+    wsSessionToken: data.wsSessionToken ?? null,
+    wsIpAddress: data.wsIpAddress ?? null,
+    telegramChatId: null,
+    botUsername: null,
+    pairedAt: null,
+    lastActivity: null,
+    autoApproveRead: true,
+    autoApproveWrite: false,
+    autoApproveBash: false,
+    autoApproveList: true,
+    autoApproveMcp: false,
+    createdAt: now
+  }
 
-  return db.select().from(remoteSessions).where(eq(remoteSessions.id, id)).get()!
+  db.insert(remoteSessions).values(row).run()
+
+  return row
 }
 
 export function updateWebSocketSession(

@@ -24,16 +24,29 @@ export function createSession(data: {
   const id = nanoid()
   const now = new Date()
 
-  db.insert(remoteSessions)
-    .values({
-      id,
-      botUsername: data.botUsername ?? null,
-      isActive: true,
-      createdAt: now
-    })
-    .run()
+  const row = {
+    id,
+    botUsername: data.botUsername ?? null,
+    isActive: true,
+    sessionType: 'telegram' as const,
+    telegramChatId: null,
+    pairedAt: null,
+    lastActivity: null,
+    conversationId: null,
+    autoApproveRead: true,
+    autoApproveWrite: false,
+    autoApproveBash: false,
+    autoApproveList: true,
+    autoApproveMcp: false,
+    wsClientFingerprint: null,
+    wsSessionToken: null,
+    wsIpAddress: null,
+    createdAt: now
+  }
 
-  return getSession(id)!
+  db.insert(remoteSessions).values(row).run()
+
+  return row
 }
 
 export function updateSession(

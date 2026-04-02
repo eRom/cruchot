@@ -59,21 +59,21 @@ export function createPrompt(data: {
   const id = nanoid()
   const now = new Date()
 
-  db.insert(prompts)
-    .values({
-      id,
-      title: data.title,
-      content: data.content,
-      category: data.category ?? null,
-      tags: data.tags ?? null,
-      type: data.type,
-      variables: data.variables ?? null,
-      createdAt: now,
-      updatedAt: now
-    })
-    .run()
+  const row = {
+    id,
+    title: data.title,
+    content: data.content,
+    category: data.category ?? null,
+    tags: data.tags ?? null,
+    type: data.type,
+    variables: data.variables ?? null,
+    createdAt: now,
+    updatedAt: now
+  }
 
-  return getPrompt(id)!
+  db.insert(prompts).values(row).run()
+
+  return row
 }
 
 export function updatePrompt(
