@@ -27,6 +27,7 @@ interface SettingsState {
   userAvatarPath: string
   searchEnabled: boolean
   semanticMemoryEnabled: boolean
+  yoloMode: boolean
 
   setDefaultModelId: (modelId: string) => void
   setTheme: (theme: ThemeMode) => void
@@ -49,6 +50,7 @@ interface SettingsState {
   setUserAvatarPath: (path: string) => void
   setSearchEnabled: (value: boolean) => void
   setSemanticMemoryEnabled: (value: boolean) => void
+  setYoloMode: (value: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -82,6 +84,7 @@ Format : sections avec titres, bullet points. Sois concis mais complet.`,
       userAvatarPath: '',
       searchEnabled: false,
       semanticMemoryEnabled: true,
+      yoloMode: false,
 
       setDefaultModelId: (modelId) => {
         set({ defaultModelId: modelId })
@@ -168,6 +171,7 @@ Format : sections avec titres, bullet points. Sois concis mais complet.`,
         window.api.setSetting('multi-llm:semantic-memory-enabled', String(value)).catch(() => {})
         window.api.semanticMemoryToggle({ enabled: value }).catch(() => {})
       },
+      setYoloMode: (value) => set({ yoloMode: value }),
       toggleFavoriteModel: (modelId) =>
         set((state) => {
           const updated = state.favoriteModelIds.includes(modelId)

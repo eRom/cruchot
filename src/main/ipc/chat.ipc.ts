@@ -52,7 +52,8 @@ const sendMessageSchema = z.object({
   searchEnabled: z.boolean().optional(),
   libraryId: z.string().optional(),
   skillName: z.string().max(200).optional(),
-  skillArgs: z.string().max(10_000).optional()
+  skillArgs: z.string().max(10_000).optional(),
+  yoloMode: z.boolean().optional()
 })
 
 let currentAbortController: AbortController | null = null
@@ -126,6 +127,7 @@ export interface HandleChatMessageParams {
   searchEnabled?: boolean
   skillName?: string
   skillArgs?: string
+  yoloMode?: boolean
   source: 'desktop' | 'telegram' | 'websocket'
   window: BrowserWindow
 }
@@ -135,7 +137,7 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
     conversationId, content, modelId, providerId, systemPrompt,
     temperature, maxTokens, topP, thinkingEffort, roleId,
     attachments: attachmentRefs, fileContexts,
-    searchEnabled, skillName, skillArgs, source, window: win
+    searchEnabled, skillName, skillArgs, yoloMode, source, window: win
   } = params
 
   // Abort any existing stream
@@ -419,6 +421,9 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
     const workspaceTools = buildConversationTools(resolvedWorkspacePath, {
       rules,
       onAskApproval: async (request) => {
+        // YOLO mode: auto-accept all tool approvals without prompting
+        if (yoloMode) return 'allow'
+
         const approvalId = crypto.randomUUID()
 
         return new Promise<'allow' | 'deny' | 'allow-session'>((resolve) => {

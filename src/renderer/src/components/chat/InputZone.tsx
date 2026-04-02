@@ -115,6 +115,7 @@ export function InputZone({
   const settingsMaxTokens = useSettingsStore((s) => s.maxTokens)
   const topP = useSettingsStore((s) => s.topP)
   const thinkingEffort = useSettingsStore((s) => s.thinkingEffort)
+  const yoloMode = useSettingsStore((s) => s.yoloMode)
   const activeRoleId = useRolesStore((s) => s.activeRoleId)
   const activeSystemPrompt = useRolesStore((s) => s.activeSystemPrompt)
   const workspaceRootPath = useWorkspaceStore((s) => s.rootPath)
@@ -620,7 +621,8 @@ export function InputZone({
               thinkingEffort: selectedModel?.supportsThinking ? thinkingEffort : undefined,
               roleId: activeRoleId && activeRoleId !== '__project__' ? activeRoleId : undefined,
               skillName: resolved.commandName,
-              skillArgs: resolved.prompt
+              skillArgs: resolved.prompt,
+              yoloMode: yoloMode || undefined
             })
           } catch {
             // Error handled by stream handler in main
@@ -731,7 +733,8 @@ export function InputZone({
         attachments: attachmentRefsForIpc.length > 0 ? attachmentRefsForIpc : undefined,
         fileContexts: fileContexts && fileContexts.length > 0 ? fileContexts : undefined,
         searchEnabled: searchEnabled || undefined,
-        libraryId: activeLibraryId || undefined
+        libraryId: activeLibraryId || undefined,
+        yoloMode: yoloMode || undefined
       })
     } catch {
       // Erreur geree par le stream handler dans le main

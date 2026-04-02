@@ -27,6 +27,7 @@ export interface SendMessagePayload {
   libraryId?: string
   skillName?: string
   skillArgs?: string
+  yoloMode?: boolean
 }
 
 export interface FileNode {

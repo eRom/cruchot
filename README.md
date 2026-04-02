@@ -12,11 +12,20 @@ App desktop locale de chat multi-LLM construite avec Electron. 11 providers, gen
 
 ## Updates
 
+- 02/04/2026
+  - **Seatbelt rewrite** : profil sandbox reecrit (allow default + deny cible) — corrige stdout/stderr muets, CWD garanti via cd explicite dans wrapCommand
+  - **Bash security** : 3 faux positifs corriges (checks #3, #6, #7) — les scripts Python multi-lignes et backticks dans les strings passent desormais
+  - **Permission engine** : `READONLY_COMMANDS` built-in (~60 commandes auto-allow sans regle DB), pipeline deny → readonly → allow → ask
+  - **Mode YOLO** : switch dans le panel Dossier de travail — bypass les prompts d'approbation (les security checks hard restent actifs)
+  - **Tool limit** : 50 → 200 tool calls par message (skills complexes)
+  - **Slash picker** : navigation clavier connectee au visuel (selectedIndex en prop)
+  - **Skill message** : optimistic update du message user (etait invisible)
+
 - 01/04/2026
   - **Skills** : systeme de packs autonomes installables (GitHub, dossier local, Barda) au format Markdown + frontmatter YAML (compatible Claude Code). Scan de securite Maton integre (scanner Python + analyse contextuelle LLM). Invocation via `/skill-name` dans les conversations, injection dans le system prompt, execution de blocs shell via Seatbelt. UI complete dans Personnaliser > Skills.
 
 - 22/03/2026
-  - **Mode YOLO (Sandbox)** : execution autonome sandboxee — le LLM ecrit et execute du code dans un environnement confine (Seatbelt macOS), 5 outils (bash, createFile, readFile, listFiles, openPreview), reseau complet, confinement fichiers strict
+  - **Conversation Tools** : pipeline securite 4 etages, 8 outils LLM (bash, readFile, writeFile, FileEdit, listFiles, GrepTool, GlobTool, WebFetchTool), permission engine (deny > allow > ask > fallback), Seatbelt macOS, 22 security checks
 
 - 21/03/2026
   - **Bardas (Gestion de Brigade)** : systeme de packs thematiques importables au format Markdown (.md) — roles, commandes, prompts, fragments, referentiels, MCP regroupes sous un namespace unique
@@ -139,7 +148,11 @@ src/
 
 ### Workspace Co-Work
 - Arborescence de fichiers interactive avec indicateurs Git (M/A/D/?)
-- 4 outils IA : bash (terminal sandbox), readFile, writeFile, listFiles
+- **8 outils IA** : bash, readFile, writeFile, FileEdit, listFiles, GrepTool, GlobTool, WebFetchTool
+- **Pipeline securite 4 etages** : security checks → permission rules → approval → execution
+- **Seatbelt macOS** : confinement sandbox (allow default + deny cible), stdout/stderr fonctionnels
+- **Mode YOLO** : bypass les prompts d'approbation (security checks hard restent actifs)
+- **READONLY_COMMANDS** : ~60 commandes auto-allow sans approbation (ls, grep, cat, head, etc.)
 - Detection de changements en temps reel (Chokidar)
 - `@mention` de fichiers inline dans le textarea (autocomplete + overlay cyan)
 - **Drag & drop de fichiers** depuis le Finder directement dans la zone de saisie (texte, code, documents)
@@ -235,7 +248,7 @@ L'architecture de securite repose sur l'isolation stricte des 3 couches Electron
 ### Main (Node.js)
 - **Cles API** : chiffrees via `safeStorage` (Keychain macOS), jamais exposees au renderer
 - **IPC** : validation Zod sur tous les handlers, settings proteges par whitelist (`ALLOWED_SETTING_KEYS`)
-- **Bash tool** : env minimal isole (PATH restreint, HOME=workspace), blocklist ~36 patterns (dont anti-evasion shell), timeout 30s
+- **Bash tool** : 22 security checks hard, Seatbelt macOS (allow default + deny file-write cible), env minimal (PATH restreint), READONLY_COMMANDS auto-allow, timeout 30s
 - **Fichiers** : `isPathAllowed()` (confinement userData + workspace), `SENSITIVE_PATTERNS`, extension blocklist, `fs.realpathSync()` anti-symlink
 - **Git** : env immutable `GIT_BASE_ENV` (Readonly), `GIT_CONFIG_NOSYSTEM=1`, `validateGitPaths()` sur toutes les operations
 - **MCP** : env minimal stdio (PATH/HOME/TMPDIR/LANG/SHELL/USER), env vars chiffrees
@@ -247,7 +260,7 @@ L'architecture de securite repose sur l'isolation stricte des 3 couches Electron
 - **Export .mlx** : AES-256-GCM, IV unique par export, token hors whitelist renderer
 
 ### Donnees
-- SQLite WAL + 26 tables Drizzle, donnees 100% locales
+- SQLite WAL + 27 tables Drizzle, donnees 100% locales
 - Qdrant vector DB embedded (127.0.0.1 uniquement)
 - Zero telemetrie, zero serveur backend
 
