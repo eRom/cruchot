@@ -26,6 +26,9 @@ export function initDatabase(dbPath: string): BetterSQLite3Database<typeof schem
   sqlite.pragma('journal_mode = WAL')
   sqlite.pragma('foreign_keys = ON')
   sqlite.pragma('busy_timeout = 5000')
+  sqlite.pragma('synchronous = NORMAL')  // Safe with WAL, faster than FULL
+  sqlite.pragma('cache_size = -20000')   // 20MB page cache (negative = KB)
+  sqlite.pragma('temp_store = MEMORY')   // Temp tables in memory
 
   // Creer l'instance Drizzle
   db = drizzle(sqlite, { schema })
@@ -59,6 +62,11 @@ export function getSqliteDatabase(): Database.Database {
  */
 export function closeDatabase(): void {
   if (sqlite) {
+    try {
+      sqlite.pragma('wal_checkpoint(TRUNCATE)')
+    } catch {
+      // Best-effort — DB may already be in error state
+    }
     sqlite.close()
     sqlite = null
     db = null
