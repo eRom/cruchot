@@ -7,15 +7,11 @@ import { runMigrations } from './db/migrate'
 import { getDbPath } from './utils/paths'
 import { initAutoUpdater, stopAutoUpdater } from './services/updater.service'
 import { schedulerService } from './services/scheduler.service'
-import { mcpManagerService } from './services/mcp-manager.service'
-import { telegramBotService } from './services/telegram-bot.service'
-import { remoteServerService } from './services/remote-server.service'
 import { seedBuiltinCommands } from './db/queries/slash-commands'
 import { BUILTIN_COMMANDS } from './commands/builtin'
-import { qdrantMemoryService } from './services/qdrant-memory.service'
-import { stopEmbedding } from './services/embedding.service'
 import { ensureInstanceToken } from './services/instance-token.service'
 import { skillService } from './services/skill.service'
+import { serviceRegistry } from './services/registry'
 import { listSkills, createSkill, deleteSkill } from './db/queries/skills'
 
 import { pathToFileURL } from 'node:url'
@@ -37,6 +33,59 @@ let isQuitting = false
 protocol.registerSchemesAsPrivileged([
   { scheme: 'local-image', privileges: { supportFetchAPI: true, stream: true, secure: true } }
 ])
+
+async function lazyInitServices(mainWindow: BrowserWindow): Promise<void> {
+  // MCP — only if servers are configured
+  try {
+    const { getEnabledMcpServers } = await import('./db/queries/mcp-servers')
+    const enabledServers = getEnabledMcpServers()
+    if (enabledServers.length > 0) {
+      const { mcpManagerService } = await import('./services/mcp-manager.service')
+      await mcpManagerService.init(mainWindow)
+    }
+  } catch (err) {
+    console.error('[MCP] Lazy init failed:', err)
+  }
+
+  // Telegram — only if active session exists
+  try {
+    const { getActiveSession } = await import('./db/queries/remote-sessions')
+    const session = getActiveSession()
+    if (session) {
+      const { telegramBotService } = await import('./services/telegram-bot.service')
+      await telegramBotService.init(mainWindow)
+    }
+  } catch (err) {
+    console.error('[Telegram] Lazy init failed:', err)
+  }
+
+  // Remote WebSocket — only if was enabled
+  try {
+    const { getServerConfig } = await import('./db/queries/remote-server')
+    const config = getServerConfig()
+    if (config['ws_enabled'] === 'true') {
+      const { remoteServerService } = await import('./services/remote-server.service')
+      await remoteServerService.init(mainWindow)
+    }
+  } catch (err) {
+    console.error('[RemoteServer] Lazy init failed:', err)
+  }
+
+  // Qdrant semantic memory — only if enabled (default: true)
+  try {
+    const db = (await import('./db')).getDatabase()
+    const { settings } = await import('./db/schema')
+    const { eq } = await import('drizzle-orm')
+    const row = db.select().from(settings).where(eq(settings.key, 'multi-llm:semantic-memory-enabled')).get()
+    const isEnabled = !row || row.value !== 'false' // default true
+    if (isEnabled) {
+      const { qdrantMemoryService } = await import('./services/qdrant-memory.service')
+      await qdrantMemoryService.init()
+    }
+  } catch (err) {
+    console.error('[QdrantMemory] Lazy init failed:', err)
+  }
+}
 
 app.whenReady().then(() => {
   // Allowed directories for local-image:// protocol
@@ -122,27 +171,12 @@ app.whenReady().then(() => {
   ensureInstanceToken()
   seedBuiltinCommands(BUILTIN_COMMANDS)
 
-  // Scheduler — start timers for enabled scheduled tasks
+  // Scheduler — always active (lightweight)
   schedulerService.init(mainWindow)
 
-  // MCP — start enabled MCP servers
-  mcpManagerService.init(mainWindow).catch((err) => {
-    console.error('[MCP] Init failed:', err)
-  })
-
-  // Telegram Remote — restore active session if any
-  telegramBotService.init(mainWindow).catch((err) => {
-    console.error('[Telegram] Init failed:', err)
-  })
-
-  // WebSocket Remote Server — auto-start if was enabled
-  remoteServerService.init(mainWindow).catch((err) => {
-    console.error('[RemoteServer] Init failed:', err)
-  })
-
-  // Qdrant semantic memory — start if enabled (default: true)
-  qdrantMemoryService.init().catch((err) => {
-    console.error('[QdrantMemory] Init failed:', err)
+  // Lazy-load non-critical services
+  lazyInitServices(mainWindow).catch((err) => {
+    console.error('[LazyInit] Unexpected error:', err)
   })
 
   // Auto-updater — only in packaged builds
@@ -171,20 +205,11 @@ app.on('before-quit', async (event) => {
   console.log('[App] Graceful shutdown starting...')
 
   try {
-    // Stop consumers first (parallel — they're independent)
-    await Promise.allSettled([
-      stopEmbedding(),
-      telegramBotService.destroy(),
-      remoteServerService.destroy(),
-      mcpManagerService.stopAll(),
-    ])
+    // Stop all registered services in LIFO order
+    await serviceRegistry.stopAll()
 
-    // Synchronous stops
-    schedulerService.stopAll()
+    // Synchronous stops (not in registry)
     stopAutoUpdater()
-
-    // Qdrant after embedding worker (which may still write)
-    await qdrantMemoryService.stop().catch(() => {})
 
     // DB last — everything must be stopped
     closeDatabase()
