@@ -22,7 +22,8 @@ import {
   libraries,
   arenaMatches,
   bardas,
-  skills
+  skills,
+  permissionRules
 } from '../schema'
 
 /**
@@ -36,22 +37,14 @@ export function deleteConversationsProjectsImages(): { imagePaths: string[] } {
   const imageRows = db.select({ path: images.path }).from(images).all()
   const imagePaths = imageRows.map((r) => r.path)
 
-  // Ordre FK : enfants d'abord
+  // Ordre FK : enfants d'abord — UNIQUEMENT donnees conversationnelles
   db.delete(attachments).run()
   db.delete(images).run()
   db.delete(arenaMatches).run()
   db.delete(remoteSessions).run()
   db.delete(vectorSyncState).run()
   db.delete(messages).run()
-  db.delete(bardas).run()
-  db.delete(skills).run()
   db.delete(scheduledTasks).run()
-  db.delete(mcpServers).run()
-  db.delete(slashCommands).run()
-  // Libraries (chunks → sources → libraries)
-  db.delete(libraryChunks).run()
-  db.delete(librarySources).run()
-  db.delete(libraries).run()
   db.delete(conversations).run()
   db.delete(projects).run()
 
@@ -93,6 +86,7 @@ export function factoryResetDatabase(): { imagePaths: string[] } {
   db.delete(statistics).run()
   db.delete(ttsUsage).run()
   db.delete(settings).run()
+  db.delete(permissionRules).run()
 
   return { imagePaths }
 }

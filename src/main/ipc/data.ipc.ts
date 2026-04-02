@@ -29,7 +29,7 @@ export function registerDataIpc(): void {
         cancelId: 0,
         title: 'Nettoyage des donnees',
         message: 'Conversations, projets et images seront supprimes.',
-        detail: 'Les roles, prompts, memoire, parametres et cles API seront conserves.'
+        detail: 'Les roles, prompts, memoire, parametres, cles API, bardas, skills, serveurs MCP, commandes et referentiels seront conserves.'
       })
       if (response !== 1) return { success: false, cancelled: true }
     }
