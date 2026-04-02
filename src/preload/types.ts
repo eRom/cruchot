@@ -715,6 +715,15 @@ export interface ElectronAPI {
   toggleConversationFavorite: (id: string, isFavorite: boolean) => Promise<ConversationInfo>
   forkConversation: (id: string) => Promise<ConversationInfo>
   getMessages: (conversationId: string) => Promise<MessageInfo[]>
+  getMessagesPage: (payload: {
+    conversationId: string
+    limit?: number
+    beforeDate?: string
+  }) => Promise<{
+    messages: MessageInfo[]
+    totalCount: number
+    hasMore: boolean
+  }>
 
   // Providers
   getProviders: () => Promise<ProviderInfo[]>

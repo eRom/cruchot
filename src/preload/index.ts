@@ -46,6 +46,13 @@ const api: ElectronAPI = {
   getMessages: (conversationId: string): Promise<ReturnType<ElectronAPI['getMessages']>> =>
     ipcRenderer.invoke('conversations:messages', conversationId),
 
+  getMessagesPage: (payload: {
+    conversationId: string
+    limit?: number
+    beforeDate?: string
+  }): Promise<ReturnType<ElectronAPI['getMessagesPage']>> =>
+    ipcRenderer.invoke('conversations:messagesPage', payload),
+
   // ── Providers ─────────────────────────────────────────
   getProviders: (): Promise<ReturnType<ElectronAPI['getProviders']>> =>
     ipcRenderer.invoke('providers:list'),
