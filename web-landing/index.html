@@ -1,0 +1,1915 @@
+<!doctype html>
+<html lang="fr" class="dark">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>
+            Cruchot — Client Desktop Multi-LLM | 100% Local, Zero Serveur
+        </title>
+        <meta
+            name="description"
+            content="Cruchot est un client desktop multi-LLM gratuit et open source. 10 providers IA, memoire semantique, outils de conversation, Arena mode, tout fonctionne localement sur votre machine. Zero tracking, zero serveur."
+        />
+        <meta
+            name="keywords"
+            content="LLM, desktop, client, ChatGPT, Claude, Gemini, multi-provider, local, open source, Electron, IA, intelligence artificielle, RAG, memoire semantique"
+        />
+        <meta name="author" content="Romain Music" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://renaud-dekode.fr/cruchot" />
+
+        <!-- Open Graph -->
+        <meta property="og:type" content="website" />
+        <meta
+            property="og:title"
+            content="Cruchot — Client Desktop Multi-LLM"
+        />
+        <meta
+            property="og:description"
+            content="10 providers IA dans une seule app desktop. Memoire semantique, outils de conversation, Arena mode. 100% local, zero tracking."
+        />
+        <meta property="og:image" content="logo-cruchot-v2.png" />
+        <meta property="og:url" content="https://renaud-dekode.fr/cruchot" />
+        <meta property="og:locale" content="fr_FR" />
+        <meta property="og:site_name" content="Cruchot" />
+
+        <!-- Twitter Card -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta
+            name="twitter:title"
+            content="Cruchot — Client Desktop Multi-LLM"
+        />
+        <meta
+            name="twitter:description"
+            content="10 providers IA, memoire semantique, Arena mode. 100% local."
+        />
+        <meta name="twitter:image" content="logo-cruchot-v2.png" />
+
+        <!-- Favicon -->
+        <link rel="icon" type="image/png" href="logo-cruchot-icon.png" />
+
+        <!-- JSON-LD Structured Data -->
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@type": "SoftwareApplication",
+                "name": "Cruchot",
+                "description": "Client desktop multi-LLM gratuit et open source. 10 providers IA, memoire semantique, outils de conversation, Arena mode. 100% local.",
+                "applicationCategory": "DeveloperApplication",
+                "operatingSystem": "macOS",
+                "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "EUR"
+                },
+                "author": { "@type": "Person", "name": "Romain Music" },
+                "license": "https://opensource.org/licenses/MIT",
+                "url": "https://github.com/eRom/cruchot"
+            }
+        </script>
+
+        <style>
+            /* ========================================
+       erom-design — Cruchot Landing Page
+       Dark-first, OKLCH colors, brand orange
+       ======================================== */
+
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            :root {
+                --brand: #ffaf5f;
+                --brand-rgb: 255, 175, 95;
+                --brand-soft: rgba(255, 175, 95, 0.12);
+                --brand-glow: rgba(255, 175, 95, 0.25);
+                --brand-foreground: #1a1a1a;
+
+                --bg: #1a1a1e;
+                --bg-elevated: #222226;
+                --bg-card: #2a2a2e;
+                --bg-card-hover: #303035;
+                --fg: #fafafa;
+                --fg-muted: #a0a0a8;
+                --fg-dim: #6b6b73;
+                --border: rgba(255, 255, 255, 0.08);
+                --border-hover: rgba(255, 255, 255, 0.15);
+
+                --blue: #3b82f6;
+                --emerald: #10b981;
+                --amber: #f59e0b;
+                --violet: #8b5cf6;
+                --pink: #ec4899;
+                --cyan: #06b6d4;
+
+                --radius: 12px;
+                --radius-sm: 8px;
+                --radius-xs: 6px;
+
+                --max-w: 1120px;
+                --section-py: 100px;
+            }
+
+            html {
+                scroll-behavior: smooth;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+            }
+
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+                    sans-serif;
+                background: var(--bg);
+                color: var(--fg);
+                font-size: 16px;
+                line-height: 1.6;
+                overflow-x: hidden;
+            }
+
+            ::selection {
+                background: var(--brand);
+                color: var(--brand-foreground);
+            }
+
+            ::-webkit-scrollbar {
+                width: 6px;
+            }
+            ::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: var(--fg-dim);
+                border-radius: 3px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: var(--fg-muted);
+            }
+
+            img {
+                display: block;
+                max-width: 100%;
+                height: auto;
+            }
+            a {
+                color: var(--brand);
+                text-decoration: none;
+                transition: opacity 0.2s;
+            }
+            a:hover {
+                opacity: 0.85;
+            }
+
+            /* ---- Nav ---- */
+            nav {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 100;
+                background: rgba(26, 26, 30, 0.85);
+                backdrop-filter: blur(20px) saturate(180%);
+                -webkit-backdrop-filter: blur(20px) saturate(180%);
+                border-bottom: 1px solid var(--border);
+                transition: box-shadow 0.3s;
+            }
+            nav.scrolled {
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            }
+            .nav-inner {
+                max-width: var(--max-w);
+                margin: 0 auto;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 24px;
+                height: 60px;
+            }
+            .nav-logo {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .nav-logo img {
+                width: 32px;
+                height: 32px;
+                border-radius: 6px;
+            }
+            .nav-logo span {
+                font-weight: 700;
+                font-size: 18px;
+                letter-spacing: -0.02em;
+            }
+            .nav-links {
+                display: flex;
+                align-items: center;
+                gap: 28px;
+            }
+            .nav-links a {
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--fg-muted);
+                transition: color 0.2s;
+            }
+            .nav-links a:hover {
+                color: var(--fg);
+                opacity: 1;
+            }
+            .nav-cta {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                background: var(--brand);
+                color: var(--brand-foreground);
+                font-size: 13px;
+                font-weight: 600;
+                padding: 8px 16px;
+                border-radius: var(--radius-xs);
+                transition: all 0.2s;
+            }
+            .nav-cta:hover {
+                opacity: 0.9;
+                transform: translateY(-1px);
+            }
+
+            /* ---- Hero ---- */
+            .hero {
+                padding: 140px 24px 80px;
+                text-align: center;
+                position: relative;
+                overflow: hidden;
+            }
+            .hero::before {
+                content: "";
+                position: absolute;
+                top: -200px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 800px;
+                height: 800px;
+                background: radial-gradient(
+                    ellipse,
+                    var(--brand-glow) 0%,
+                    transparent 70%
+                );
+                pointer-events: none;
+            }
+            .hero-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                background: var(--brand-soft);
+                border: 1px solid rgba(255, 175, 95, 0.2);
+                border-radius: 100px;
+                padding: 6px 16px 6px 8px;
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--brand);
+                margin-bottom: 28px;
+            }
+            .hero-badge .dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--brand);
+                animation: pulse 2s ease-in-out infinite;
+            }
+            @keyframes pulse {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.4;
+                }
+            }
+            .hero h1 {
+                font-size: clamp(40px, 6vw, 68px);
+                font-weight: 800;
+                letter-spacing: -0.03em;
+                line-height: 1.08;
+                margin-bottom: 20px;
+                position: relative;
+            }
+            .hero h1 .accent {
+                color: var(--brand);
+            }
+            .hero .subtitle {
+                font-size: clamp(17px, 2vw, 20px);
+                color: var(--fg-muted);
+                max-width: 560px;
+                margin: 0 auto 40px;
+                line-height: 1.5;
+            }
+            .hero-cta-group {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 14px;
+                margin-bottom: 60px;
+            }
+            .btn-primary {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                background: var(--brand);
+                color: var(--brand-foreground);
+                font-size: 15px;
+                font-weight: 600;
+                padding: 14px 28px;
+                border-radius: var(--radius-sm);
+                border: none;
+                cursor: pointer;
+                transition: all 0.2s;
+                text-decoration: none;
+            }
+            .btn-primary:hover {
+                opacity: 0.9;
+                transform: translateY(-2px);
+                box-shadow: 0 8px 30px var(--brand-glow);
+            }
+            .btn-secondary {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                background: var(--bg-card);
+                color: var(--fg);
+                font-size: 15px;
+                font-weight: 500;
+                padding: 14px 28px;
+                border-radius: var(--radius-sm);
+                border: 1px solid var(--border);
+                cursor: pointer;
+                transition: all 0.2s;
+                text-decoration: none;
+            }
+            .btn-secondary:hover {
+                border-color: var(--border-hover);
+                background: var(--bg-card-hover);
+            }
+            .hero-screenshot {
+                max-width: 960px;
+                margin: 0 auto;
+                border-radius: var(--radius);
+                overflow: hidden;
+                border: 1px solid var(--border);
+                box-shadow:
+                    0 25px 80px rgba(0, 0, 0, 0.5),
+                    0 0 0 1px rgba(255, 255, 255, 0.05);
+                position: relative;
+            }
+            .hero-screenshot img {
+                width: 100%;
+            }
+
+            /* ---- Stats bar ---- */
+            .stats-bar {
+                padding: 50px 24px;
+                border-top: 1px solid var(--border);
+                border-bottom: 1px solid var(--border);
+                background: var(--bg-elevated);
+            }
+            .stats-grid {
+                max-width: var(--max-w);
+                margin: 0 auto;
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 24px;
+                text-align: center;
+            }
+            .stat-item .stat-number {
+                font-size: 36px;
+                font-weight: 800;
+                letter-spacing: -0.02em;
+                color: var(--brand);
+            }
+            .stat-item .stat-label {
+                font-size: 13px;
+                color: var(--fg-muted);
+                margin-top: 4px;
+                font-weight: 500;
+            }
+
+            /* ---- Sections ---- */
+            section {
+                padding: var(--section-py) 24px;
+            }
+            .section-inner {
+                max-width: var(--max-w);
+                margin: 0 auto;
+            }
+
+            .section-label {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 12px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                margin-bottom: 12px;
+            }
+            .section-title {
+                font-size: clamp(28px, 4vw, 40px);
+                font-weight: 800;
+                letter-spacing: -0.02em;
+                line-height: 1.15;
+                margin-bottom: 16px;
+            }
+            .section-desc {
+                font-size: 17px;
+                color: var(--fg-muted);
+                line-height: 1.6;
+                max-width: 520px;
+            }
+
+            /* Feature row — alternating */
+            .feature-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 60px;
+                align-items: center;
+            }
+            .feature-row.reverse .feature-text {
+                order: 2;
+            }
+            .feature-row.reverse .feature-media {
+                order: 1;
+            }
+            .feature-media {
+                border-radius: var(--radius);
+                overflow: hidden;
+                border: 1px solid var(--border);
+                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+                transition:
+                    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                    box-shadow 0.4s;
+            }
+            .feature-media:hover {
+                transform: translateY(-4px) scale(1.01);
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            }
+            .feature-media img {
+                width: 100%;
+            }
+
+            .feature-list {
+                list-style: none;
+                margin-top: 24px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .feature-list li {
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                font-size: 14px;
+                color: var(--fg-muted);
+                line-height: 1.5;
+            }
+            .feature-list .check {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: var(--brand-soft);
+                color: var(--brand);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                flex-shrink: 0;
+                margin-top: 1px;
+            }
+
+            /* ---- Feature cards grid ---- */
+            .cards-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+                margin-top: 48px;
+            }
+            .feature-card {
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                padding: 24px;
+                transition: all 0.3s;
+            }
+            .feature-card:hover {
+                border-color: var(--border-hover);
+                background: var(--bg-card-hover);
+                transform: translateY(-2px);
+            }
+            .feature-card .card-icon {
+                width: 40px;
+                height: 40px;
+                border-radius: var(--radius-xs);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                margin-bottom: 14px;
+            }
+            .feature-card h3 {
+                font-size: 16px;
+                font-weight: 700;
+                margin-bottom: 8px;
+            }
+            .feature-card p {
+                font-size: 13px;
+                color: var(--fg-muted);
+                line-height: 1.55;
+            }
+
+            /* Card icon color variants */
+            .icon-blue {
+                background: rgba(59, 130, 246, 0.12);
+                color: var(--blue);
+            }
+            .icon-emerald {
+                background: rgba(16, 185, 129, 0.12);
+                color: var(--emerald);
+            }
+            .icon-amber {
+                background: rgba(245, 158, 11, 0.12);
+                color: var(--amber);
+            }
+            .icon-violet {
+                background: rgba(139, 92, 246, 0.12);
+                color: var(--violet);
+            }
+            .icon-pink {
+                background: rgba(236, 72, 153, 0.12);
+                color: var(--pink);
+            }
+            .icon-cyan {
+                background: rgba(6, 182, 212, 0.12);
+                color: var(--cyan);
+            }
+
+            /* ---- Showcase gallery ---- */
+            .showcase-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+                margin-top: 48px;
+            }
+            .showcase-item {
+                border-radius: var(--radius);
+                overflow: hidden;
+                border: 1px solid var(--border);
+                transition: all 0.3s;
+                position: relative;
+            }
+            .showcase-item:hover {
+                border-color: var(--border-hover);
+                transform: translateY(-3px);
+                box-shadow: 0 15px 50px rgba(0, 0, 0, 0.35);
+            }
+            .showcase-item img {
+                width: 100%;
+                display: block;
+            }
+            .showcase-caption {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: linear-gradient(
+                    transparent,
+                    rgba(26, 26, 30, 0.95)
+                );
+                padding: 40px 20px 16px;
+                font-size: 13px;
+                font-weight: 600;
+            }
+
+            /* ---- Privacy section ---- */
+            .privacy-section {
+                background: var(--bg-elevated);
+                border-top: 1px solid var(--border);
+                border-bottom: 1px solid var(--border);
+            }
+            .privacy-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 24px;
+                margin-top: 48px;
+            }
+            .privacy-card {
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                padding: 28px;
+                text-align: center;
+            }
+            .privacy-card .privacy-icon {
+                font-size: 32px;
+                margin-bottom: 16px;
+            }
+            .privacy-card h3 {
+                font-size: 16px;
+                font-weight: 700;
+                margin-bottom: 8px;
+            }
+            .privacy-card p {
+                font-size: 13px;
+                color: var(--fg-muted);
+                line-height: 1.55;
+            }
+
+            /* ---- Tech stack ---- */
+            .tech-badges {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: center;
+                margin-top: 32px;
+            }
+            .tech-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                border-radius: 100px;
+                padding: 6px 14px;
+                font-size: 12px;
+                font-weight: 500;
+                color: var(--fg-muted);
+                transition: border-color 0.2s;
+            }
+            .tech-badge:hover {
+                border-color: var(--border-hover);
+            }
+
+            /* ---- CTA final ---- */
+            .cta-section {
+                text-align: center;
+                position: relative;
+                overflow: hidden;
+            }
+            .cta-section::before {
+                content: "";
+                position: absolute;
+                bottom: -100px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 600px;
+                height: 600px;
+                background: radial-gradient(
+                    ellipse,
+                    var(--brand-glow) 0%,
+                    transparent 70%
+                );
+                pointer-events: none;
+                opacity: 0.5;
+            }
+
+            /* ---- Footer ---- */
+            footer {
+                padding: 40px 24px;
+                border-top: 1px solid var(--border);
+                text-align: center;
+            }
+            footer p {
+                font-size: 13px;
+                color: var(--fg-dim);
+            }
+            footer a {
+                color: var(--fg-muted);
+            }
+            footer a:hover {
+                color: var(--brand);
+            }
+
+            /* ---- Scroll animations ---- */
+            .reveal {
+                opacity: 0;
+                transform: translateY(30px);
+                transition:
+                    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+                    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            .reveal.visible {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            .reveal-delay-1 {
+                transition-delay: 0.1s;
+            }
+            .reveal-delay-2 {
+                transition-delay: 0.2s;
+            }
+            .reveal-delay-3 {
+                transition-delay: 0.3s;
+            }
+
+            /* ---- Lightbox ---- */
+            .lightbox {
+                position: fixed;
+                inset: 0;
+                z-index: 200;
+                background: rgba(0, 0, 0, 0.85);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.3s ease;
+            }
+            .lightbox.active {
+                opacity: 1;
+                pointer-events: auto;
+            }
+            .lightbox img {
+                max-width: 80%;
+                max-height: 80vh;
+                border-radius: var(--radius);
+                box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+                transform: scale(0.92);
+                transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            .lightbox.active img {
+                transform: scale(1);
+            }
+            .lightbox-close {
+                position: absolute;
+                top: 24px;
+                right: 24px;
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                border: 1px solid var(--border-hover);
+                background: var(--bg-card);
+                color: var(--fg);
+                font-size: 20px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+            }
+            .lightbox-close:hover {
+                background: var(--bg-card-hover);
+                border-color: var(--brand);
+            }
+            .screenshot-clickable {
+                cursor: zoom-in;
+            }
+
+            /* ---- Mobile nav ---- */
+            .nav-toggle {
+                display: none;
+                background: none;
+                border: none;
+                color: var(--fg);
+                cursor: pointer;
+                padding: 8px;
+            }
+            .nav-toggle svg {
+                width: 24px;
+                height: 24px;
+            }
+
+            /* ---- Responsive ---- */
+            @media (max-width: 900px) {
+                .feature-row {
+                    grid-template-columns: 1fr;
+                    gap: 40px;
+                }
+                .feature-row.reverse .feature-text {
+                    order: 1;
+                }
+                .feature-row.reverse .feature-media {
+                    order: 2;
+                }
+                .cards-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                .stats-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 32px;
+                }
+                .privacy-grid {
+                    grid-template-columns: 1fr;
+                }
+                .showcase-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+            @media (max-width: 640px) {
+                :root {
+                    --section-py: 64px;
+                }
+                .nav-links {
+                    display: none;
+                }
+                .nav-toggle {
+                    display: block;
+                }
+                .nav-links.open {
+                    display: flex;
+                    flex-direction: column;
+                    position: absolute;
+                    top: 60px;
+                    left: 0;
+                    right: 0;
+                    background: var(--bg);
+                    border-bottom: 1px solid var(--border);
+                    padding: 16px 24px;
+                    gap: 16px;
+                }
+                .cards-grid {
+                    grid-template-columns: 1fr;
+                }
+                .stats-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                .hero-cta-group {
+                    flex-direction: column;
+                }
+                .hero {
+                    padding: 120px 20px 60px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <!-- ======== Navigation ======== -->
+        <nav id="navbar">
+            <div class="nav-inner">
+                <a href="#" class="nav-logo">
+                    <img
+                        src="logo-cruchot-icon.png"
+                        alt="Cruchot logo"
+                        width="32"
+                        height="32"
+                    />
+                    <span>Cruchot</span>
+                </a>
+                <button
+                    class="nav-toggle"
+                    onclick="
+                        document
+                            .querySelector('.nav-links')
+                            .classList.toggle('open')
+                    "
+                    aria-label="Menu"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path d="M3 12h18M3 6h18M3 18h18" />
+                    </svg>
+                </button>
+                <div class="nav-links">
+                    <a href="#features">Fonctionnalites</a>
+                    <a href="#arena">Arena</a>
+                    <a href="#outils">Outils</a>
+                    <a href="#personnalisation">Personnalisation</a>
+                    <a href="#confidentialite">Confidentialite</a>
+                    <a
+                        class="nav-cta"
+                        href="https://github.com/eRom/cruchot"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"
+                            />
+                        </svg>
+                        GitHub
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- ======== Hero ======== -->
+        <header class="hero">
+            <div class="hero-badge reveal">
+                <span class="dot"></span>
+                <span id="version-hero">v0.6.*</span> — Open Source
+            </div>
+            <h1 class="reveal reveal-delay-1">
+                Le client desktop multi-LLM<br />
+                qui <span class="accent">respecte ta vie privee</span>
+            </h1>
+            <p class="subtitle reveal reveal-delay-2">
+                10 providers IA dans une seule app. Memoire semantique, outils
+                de conversation, Arena mode. Tout tourne sur ta machine &mdash;
+                zero serveur, zero tracking.
+            </p>
+            <div class="hero-cta-group reveal reveal-delay-3">
+                <a
+                    href="https://github.com/eRom/cruchot"
+                    class="btn-primary"
+                    target="_blank"
+                    rel="noopener"
+                >
+                    <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Telecharger pour macOS
+                </a>
+                <a href="#features" class="btn-secondary">
+                    Decouvrir les fonctionnalites
+                    <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path d="M6 9l6 6 6-6" />
+                    </svg>
+                </a>
+            </div>
+            <div class="hero-screenshot reveal">
+                <img
+                    src="screenshots/CleanShot 2026-04-01 at 17.55.48@2x.png"
+                    alt="Cruchot - Vue complete de l'application avec sidebar, chat, et right panel"
+                    width="1920"
+                    height="1080"
+                    loading="eager"
+                />
+            </div>
+        </header>
+
+        <!-- ======== Stats bar ======== -->
+        <div class="stats-bar">
+            <div class="stats-grid">
+                <div class="stat-item reveal">
+                    <div class="stat-number">10</div>
+                    <div class="stat-label">Providers IA</div>
+                </div>
+                <div class="stat-item reveal reveal-delay-1">
+                    <div class="stat-number">8</div>
+                    <div class="stat-label">Outils de conversation</div>
+                </div>
+                <div class="stat-item reveal reveal-delay-2">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Local & prive</div>
+                </div>
+                <div class="stat-item reveal reveal-delay-3">
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">Serveur requis</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======== Feature: Multi-LLM ======== -->
+        <section id="features">
+            <div class="section-inner">
+                <div class="feature-row reveal">
+                    <div class="feature-text">
+                        <div class="section-label" style="color: var(--blue)">
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <circle cx="12" cy="12" r="3" />
+                                <path
+                                    d="M12 1v4m0 14v4m-9.7-5.3l2.8-2.8m11.8-3.8l2.8-2.8M1 12h4m14 0h4M4.3 4.3l2.8 2.8m11.8 3.8l2.8 2.8"
+                                />
+                            </svg>
+                            Multi-LLM
+                        </div>
+                        <h2 class="section-title">
+                            10 providers IA,<br />une seule interface
+                        </h2>
+                        <p class="section-desc">
+                            Anthropic, OpenAI, Google, Mistral, xAI, DeepSeek,
+                            Alibaba Qwen, Perplexity, OpenRouter — et meme tes
+                            modeles locaux via LM Studio ou Ollama.
+                        </p>
+                        <ul class="feature-list">
+                            <li>
+                                <span class="check">&#10003;</span> Switch de
+                                modele en un clic
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Cles API
+                                chiffrees (Keychain macOS)
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Mode
+                                Thinking/Reasoning par provider
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Modeles
+                                locaux sans connexion
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="feature-media">
+                        <img
+                            src="screenshots/CleanShot 2026-04-01 at 17.58.24@2x.png"
+                            alt="Configuration des 10 providers IA dans Cruchot"
+                            width="1920"
+                            height="1080"
+                            loading="lazy"
+                        />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======== Feature: Chat ======== -->
+        <section
+            style="
+                background: var(--bg-elevated);
+                border-top: 1px solid var(--border);
+                border-bottom: 1px solid var(--border);
+            "
+        >
+            <div class="section-inner">
+                <div class="feature-row reverse reveal">
+                    <div class="feature-text">
+                        <div
+                            class="section-label"
+                            style="color: var(--emerald)"
+                        >
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+                                />
+                            </svg>
+                            Chat intelligent
+                        </div>
+                        <h2 class="section-title">
+                            Conversations riches,<br />rendu impeccable
+                        </h2>
+                        <p class="section-desc">
+                            Markdown, coloration syntaxique, LaTeX, diagrammes
+                            Mermaid, blocs de code copiables. Chaque reponse est
+                            formatee pour etre lisible et actionnable.
+                        </p>
+                        <ul class="feature-list">
+                            <li>
+                                <span class="check">&#10003;</span> Streaming en
+                                temps reel
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> @mention de
+                                fichiers dans le prompt
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Slash
+                                commands personnalisables
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Drag &amp;
+                                drop d'images et documents
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="feature-media">
+                        <img
+                            src="screenshots/CleanShot 2026-04-01 at 17.56.50@2x.png"
+                            alt="Conversation avec rendu Markdown riche dans Cruchot"
+                            width="1920"
+                            height="1080"
+                            loading="lazy"
+                        />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======== Feature: Arena ======== -->
+        <section id="arena">
+            <div class="section-inner">
+                <div class="feature-row reveal">
+                    <div class="feature-text">
+                        <div class="section-label" style="color: var(--pink)">
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path d="M14.5 17.5L3 6V3h3l11.5 11.5" />
+                                <path d="M13 19l6-6" />
+                                <path d="M16 16l4 4" />
+                                <path d="M19 21l2-2" />
+                            </svg>
+                            Arena
+                        </div>
+                        <h2 class="section-title">
+                            LLM vs LLM,<br />que le meilleur gagne
+                        </h2>
+                        <p class="section-desc">
+                            Fais s'affronter deux modeles sur le meme prompt.
+                            Streaming simultane, vote pour le meilleur,
+                            statistiques par modele. Le comparateur de LLM
+                            ultime, directement sur ton desktop.
+                        </p>
+                        <ul class="feature-list">
+                            <li>
+                                <span class="check">&#10003;</span> Dual
+                                streaming cote a cote
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Vote et
+                                classement par modele
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Tous les
+                                providers supportes
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Multi-rounds
+                                avec archivage
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="feature-media">
+                        <img
+                            src="screenshots/CleanShot 2026-04-01 at 18.04.01@2x.png"
+                            alt="Arena mode - Claude Sonnet vs Gemini Pro cote a cote"
+                            width="1920"
+                            height="1080"
+                            loading="lazy"
+                        />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======== Feature: Tools ======== -->
+        <section
+            id="outils"
+            style="
+                background: var(--bg-elevated);
+                border-top: 1px solid var(--border);
+                border-bottom: 1px solid var(--border);
+            "
+        >
+            <div class="section-inner">
+                <div class="feature-row reverse reveal">
+                    <div class="feature-text">
+                        <div class="section-label" style="color: var(--amber)">
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <rect
+                                    x="2"
+                                    y="3"
+                                    width="20"
+                                    height="14"
+                                    rx="2"
+                                />
+                                <line x1="8" y1="21" x2="16" y2="21" />
+                                <line x1="12" y1="17" x2="12" y2="21" />
+                            </svg>
+                            Outils de conversation
+                        </div>
+                        <h2 class="section-title">
+                            8 outils pour agir<br />depuis le chat
+                        </h2>
+                        <p class="section-desc">
+                            Le LLM peut executer des commandes, lire et modifier
+                            des fichiers, chercher dans le code, et fetcher le
+                            web. Le tout dans un sandbox securise avec un
+                            systeme de permissions granulaire.
+                        </p>
+                        <ul class="feature-list">
+                            <li>
+                                <span class="check">&#10003;</span> Bash, File
+                                Read/Write/Edit, Grep, Glob, Web Fetch
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Sandbox
+                                Seatbelt macOS
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> 23 controles
+                                de securite bash
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Permissions
+                                allow / deny / ask
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="feature-media">
+                        <img
+                            src="screenshots/CleanShot 2026-04-01 at 17.57.21@2x.png"
+                            alt="Outil de recherche Grep en action dans une conversation"
+                            width="1920"
+                            height="1080"
+                            loading="lazy"
+                        />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======== Feature: Memory & RAG ======== -->
+        <section>
+            <div class="section-inner">
+                <div class="feature-row reveal">
+                    <div class="feature-text">
+                        <div class="section-label" style="color: var(--violet)">
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    d="M12 2a7 7 0 017 7c0 5-7 13-7 13S5 14 5 9a7 7 0 017-7z"
+                                />
+                                <circle cx="12" cy="9" r="2.5" />
+                            </svg>
+                            Memoire &amp; RAG
+                        </div>
+                        <h2 class="section-title">
+                            Il se souvient<br />de tout
+                        </h2>
+                        <p class="section-desc">
+                            Memoire semantique via Qdrant en local : le LLM se
+                            souvient de vos conversations passees. Ajoutez vos
+                            propres referentiels de documents pour un RAG 100%
+                            prive.
+                        </p>
+                        <ul class="feature-list">
+                            <li>
+                                <span class="check">&#10003;</span> Memoire
+                                semantique automatique (Qdrant)
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Referentiels
+                                RAG custom (PDF, DOCX, TXT)
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Embeddings
+                                locaux (all-MiniLM) ou Google
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Fragments de
+                                memoire manuels
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="feature-media">
+                        <img
+                            src="screenshots/CleanShot 2026-04-01 at 18.00.46@2x.png"
+                            alt="Memoire semantique et fragments dans Cruchot"
+                            width="1920"
+                            height="1080"
+                            loading="lazy"
+                        />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======== Gallery: Personnalisation ======== -->
+        <section
+            id="personnalisation"
+            style="
+                background: var(--bg-elevated);
+                border-top: 1px solid var(--border);
+                border-bottom: 1px solid var(--border);
+            "
+        >
+            <div class="section-inner" style="text-align: center">
+                <div
+                    class="section-label reveal"
+                    style="color: var(--cyan); justify-content: center"
+                >
+                    <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <circle cx="12" cy="12" r="3" />
+                        <path
+                            d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"
+                        />
+                    </svg>
+                    Personnalisation totale
+                </div>
+                <h2
+                    class="section-title reveal"
+                    style="margin-left: auto; margin-right: auto"
+                >
+                    Slash commands, Skills, Bardas,<br />referentiels — tout est
+                    configurable
+                </h2>
+                <p
+                    class="section-desc reveal"
+                    style="margin-left: auto; margin-right: auto"
+                >
+                    Creez vos propres commandes, installez des skills, importez
+                    des packs thematiques (Bardas), et construisez vos
+                    referentiels documentaires. Cruchot s'adapte a votre
+                    workflow.
+                </p>
+                <div class="showcase-grid">
+                    <div class="showcase-item reveal">
+                        <img
+                            src="screenshots/CleanShot 2026-04-01 at 18.02.16@2x.png"
+                            alt="Commandes slash personnalisables"
+                            loading="lazy"
+                        />
+                        <div class="showcase-caption">Slash Commands</div>
+                    </div>
+                    <div class="showcase-item reveal reveal-delay-1">
+                        <img
+                            src="screenshots/CleanShot 2026-04-01 at 18.01.18@2x.png"
+                            alt="Skills installables depuis Git ou local"
+                            loading="lazy"
+                        />
+                        <div class="showcase-caption">Skills</div>
+                    </div>
+                    <div class="showcase-item reveal reveal-delay-2">
+                        <img
+                            src="screenshots/CleanShot 2026-04-01 at 18.01.56@2x.png"
+                            alt="Bardas - packs thematiques importables"
+                            loading="lazy"
+                        />
+                        <div class="showcase-caption">Bardas</div>
+                    </div>
+                    <div class="showcase-item reveal reveal-delay-3">
+                        <img
+                            src="screenshots/CleanShot 2026-04-01 at 18.01.09@2x.png"
+                            alt="Referentiels RAG custom avec embeddings"
+                            loading="lazy"
+                        />
+                        <div class="showcase-caption">Referentiels RAG</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======== Feature cards grid ======== -->
+        <section>
+            <div class="section-inner" style="text-align: center">
+                <div
+                    class="section-label reveal"
+                    style="color: var(--brand); justify-content: center"
+                >
+                    <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <rect x="3" y="3" width="7" height="7" />
+                        <rect x="14" y="3" width="7" height="7" />
+                        <rect x="3" y="14" width="7" height="7" />
+                        <rect x="14" y="14" width="7" height="7" />
+                    </svg>
+                    Et aussi
+                </div>
+                <h2
+                    class="section-title reveal"
+                    style="margin-left: auto; margin-right: auto"
+                >
+                    Tout ce qu'il faut<br />pour travailler avec l'IA
+                </h2>
+                <div class="cards-grid">
+                    <div class="feature-card reveal">
+                        <div class="card-icon icon-blue">
+                            <svg
+                                width="22"
+                                height="22"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                            </svg>
+                        </div>
+                        <h3>Statistiques</h3>
+                        <p>
+                            Dashboard complet : couts, tokens, temps de reponse,
+                            repartition par provider et par projet. Suivez votre
+                            consommation en temps reel.
+                        </p>
+                    </div>
+                    <div class="feature-card reveal reveal-delay-1">
+                        <div class="card-icon icon-emerald">
+                            <svg
+                                width="22"
+                                height="22"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8"
+                                />
+                                <path d="M21 3v5h-5" />
+                            </svg>
+                        </div>
+                        <h3>Remote Control</h3>
+                        <p>
+                            Controlez Cruchot depuis Telegram ou un navigateur
+                            web. L'intelligence reste sur votre machine, vous y
+                            accedez de partout.
+                        </p>
+                    </div>
+                    <div class="feature-card reveal reveal-delay-2">
+                        <div class="card-icon icon-amber">
+                            <svg
+                                width="22"
+                                height="22"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                        </div>
+                        <h3>Taches planifiees</h3>
+                        <p>
+                            Programmez des taches recurrentes qui s'executent
+                            automatiquement. Cron integre, sans serveur externe.
+                        </p>
+                    </div>
+                    <div class="feature-card reveal">
+                        <div class="card-icon icon-violet">
+                            <svg
+                                width="22"
+                                height="22"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                                <path d="M2 17l10 5 10-5" />
+                                <path d="M2 12l10 5 10-5" />
+                            </svg>
+                        </div>
+                        <h3>Serveurs MCP</h3>
+                        <p>
+                            Connectez des outils externes via le protocole MCP.
+                            Base de donnees, APIs, services — etendez les
+                            capacites du LLM a l'infini.
+                        </p>
+                    </div>
+                    <div class="feature-card reveal reveal-delay-1">
+                        <div class="card-icon icon-pink">
+                            <svg
+                                width="22"
+                                height="22"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <rect
+                                    x="3"
+                                    y="3"
+                                    width="18"
+                                    height="18"
+                                    rx="2"
+                                />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <path d="M21 15l-5-5L5 21" />
+                            </svg>
+                        </div>
+                        <h3>Generation d'images</h3>
+                        <p>
+                            Generez des images directement depuis le chat avec
+                            les modeles Gemini. Galerie integree avec
+                            historique.
+                        </p>
+                    </div>
+                    <div class="feature-card reveal reveal-delay-2">
+                        <div class="card-icon icon-cyan">
+                            <svg
+                                width="22"
+                                height="22"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"
+                                />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                        </div>
+                        <h3>Export / Import</h3>
+                        <p>
+                            Exportez toutes vos donnees en .mlx chiffre
+                            (AES-256). Migrez entre machines en un clic. Vos
+                            donnees vous appartiennent.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======== Screenshots: Stats + Remote + Tasks ======== -->
+        <section
+            style="
+                background: var(--bg-elevated);
+                border-top: 1px solid var(--border);
+                border-bottom: 1px solid var(--border);
+            "
+        >
+            <div class="section-inner">
+                <div
+                    class="showcase-grid"
+                    style="grid-template-columns: repeat(3, 1fr)"
+                >
+                    <div class="showcase-item reveal">
+                        <img
+                            src="screenshots/CleanShot 2026-04-01 at 17.57.52@2x.png"
+                            alt="Dashboard de statistiques"
+                            loading="lazy"
+                        />
+                        <div class="showcase-caption">Statistiques</div>
+                    </div>
+                    <div class="showcase-item reveal reveal-delay-1">
+                        <img
+                            src="screenshots/CleanShot 2026-04-01 at 17.59.46@2x.png"
+                            alt="Remote control Telegram et Web"
+                            loading="lazy"
+                        />
+                        <div class="showcase-caption">Remote Control</div>
+                    </div>
+                    <div class="showcase-item reveal reveal-delay-2">
+                        <img
+                            src="screenshots/CleanShot 2026-04-01 at 18.02.37@2x.png"
+                            alt="Taches planifiees avec scheduler"
+                            loading="lazy"
+                        />
+                        <div class="showcase-caption">Taches planifiees</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======== Privacy ======== -->
+        <section id="confidentialite" class="privacy-section">
+            <div class="section-inner" style="text-align: center">
+                <div
+                    class="section-label reveal"
+                    style="color: var(--emerald); justify-content: center"
+                >
+                    <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <rect x="3" y="11" width="18" height="11" rx="2" />
+                        <path d="M7 11V7a5 5 0 0110 0v4" />
+                    </svg>
+                    Confidentialite
+                </div>
+                <h2
+                    class="section-title reveal"
+                    style="margin-left: auto; margin-right: auto"
+                >
+                    Vos donnees restent<br />sur votre machine
+                </h2>
+                <p
+                    class="section-desc reveal"
+                    style="margin-left: auto; margin-right: auto"
+                >
+                    Cruchot est une app locale. Pas de serveur intermediaire,
+                    pas de telemetrie, pas de tracking. Les appels API vont
+                    directement de votre machine au provider.
+                </p>
+                <div class="privacy-grid">
+                    <div class="privacy-card reveal">
+                        <div class="privacy-icon">&#128274;</div>
+                        <h3>Cles chiffrees</h3>
+                        <p>
+                            Vos cles API sont chiffrees via le Keychain macOS
+                            (safeStorage). Jamais stockees en clair, jamais
+                            accessibles au renderer.
+                        </p>
+                    </div>
+                    <div class="privacy-card reveal reveal-delay-1">
+                        <div class="privacy-icon">&#128187;</div>
+                        <h3>SQLite local</h3>
+                        <p>
+                            Base de donnees SQLite sur votre disque. Pas de
+                            cloud, pas de sync. Exportable et importable a tout
+                            moment.
+                        </p>
+                    </div>
+                    <div class="privacy-card reveal reveal-delay-2">
+                        <div class="privacy-icon">&#128737;</div>
+                        <h3>Sandbox Seatbelt</h3>
+                        <p>
+                            Les commandes executees par le LLM tournent dans un
+                            sandbox macOS. Acces restreint, permissions
+                            granulaires, blocklist de repertoires sensibles.
+                        </p>
+                    </div>
+                </div>
+                <div class="showcase-grid reveal" style="margin-top: 40px">
+                    <div class="showcase-item">
+                        <img
+                            src="screenshots/CleanShot 2026-04-01 at 17.59.05@2x.png"
+                            alt="Page Confidentialite avec badges provider"
+                            loading="lazy"
+                        />
+                        <div class="showcase-caption">
+                            Confidentialite par provider
+                        </div>
+                    </div>
+                    <div class="showcase-item">
+                        <img
+                            src="screenshots/CleanShot 2026-04-01 at 17.58.45@2x.png"
+                            alt="Regles de permissions des outils"
+                            loading="lazy"
+                        />
+                        <div class="showcase-caption">
+                            Permissions granulaires
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======== Tech Stack ======== -->
+        <section style="text-align: center">
+            <div class="section-inner">
+                <div
+                    class="section-label reveal"
+                    style="color: var(--fg-muted); justify-content: center"
+                >
+                    Stack technique
+                </div>
+                <h2
+                    class="section-title reveal"
+                    style="margin-left: auto; margin-right: auto"
+                >
+                    Construit avec des technologies modernes
+                </h2>
+                <div class="tech-badges reveal">
+                    <span class="tech-badge">Electron 35</span>
+                    <span class="tech-badge">React 19</span>
+                    <span class="tech-badge">TypeScript 5.7</span>
+                    <span class="tech-badge">Tailwind CSS 4</span>
+                    <span class="tech-badge">Vercel AI SDK 6</span>
+                    <span class="tech-badge">SQLite (WAL)</span>
+                    <span class="tech-badge">Drizzle ORM</span>
+                    <span class="tech-badge">Qdrant</span>
+                    <span class="tech-badge">Zustand</span>
+                    <span class="tech-badge">shadcn/ui</span>
+                    <span class="tech-badge">Vite</span>
+                    <span class="tech-badge">HuggingFace Transformers</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======== CTA Final ======== -->
+        <section class="cta-section">
+            <div class="section-inner">
+                <h2
+                    class="section-title reveal"
+                    style="
+                        text-align: center;
+                        margin-left: auto;
+                        margin-right: auto;
+                    "
+                >
+                    Pret a reprendre le controle<br />de vos conversations IA ?
+                </h2>
+                <p
+                    class="section-desc reveal"
+                    style="
+                        text-align: center;
+                        margin-left: auto;
+                        margin-right: auto;
+                        margin-bottom: 32px;
+                    "
+                >
+                    Cruchot est gratuit, open source, et ne necessite aucune
+                    inscription. Apportez vos propres cles API et commencez.
+                </p>
+                <div class="hero-cta-group reveal">
+                    <a
+                        href="https://github.com/eRom/cruchot"
+                        class="btn-primary"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"
+                            />
+                        </svg>
+                        Voir sur GitHub
+                    </a>
+                    <a
+                        href="https://github.com/eRom/cruchot/releases"
+                        class="btn-secondary"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        Telecharger la derniere version
+                        <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======== Footer ======== -->
+        <footer>
+            <p>
+                <strong>Cruchot</strong> <span id="version-footer">v0.6.*</span> &mdash; Fait avec passion par
+                <a
+                    href="https://www.romain-ecarnot.com"
+                    target="_blank"
+                    rel="noopener"
+                    >Romain Ecarnot</a
+                >
+                &mdash;
+                <a
+                    href="https://github.com/eRom/cruchot"
+                    target="_blank"
+                    rel="noopener"
+                    >GitHub</a
+                >
+            </p>
+        </footer>
+
+        <!-- ======== Lightbox ======== -->
+        <div class="lightbox" id="lightbox">
+            <button
+                class="lightbox-close"
+                id="lightbox-close"
+                aria-label="Fermer"
+            >
+                &times;
+            </button>
+            <img id="lightbox-img" src="" alt="" />
+        </div>
+
+        <!-- ======== Scroll reveal script ======== -->
+        <script>
+            // Nav scroll effect
+            const nav = document.getElementById("navbar");
+            window.addEventListener(
+                "scroll",
+                () => {
+                    nav.classList.toggle("scrolled", window.scrollY > 20);
+                },
+                { passive: true },
+            );
+
+            // Intersection Observer for reveal animations
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add("visible");
+                        }
+                    });
+                },
+                { threshold: 0.1, rootMargin: "0px 0px -40px 0px" },
+            );
+
+            document
+                .querySelectorAll(".reveal")
+                .forEach((el) => observer.observe(el));
+
+            // Lightbox
+            const lightbox = document.getElementById("lightbox");
+            const lightboxImg = document.getElementById("lightbox-img");
+            const lightboxClose = document.getElementById("lightbox-close");
+
+            document
+                .querySelectorAll('img[src^="screenshots/"]')
+                .forEach((img) => {
+                    img.classList.add("screenshot-clickable");
+                    img.addEventListener("click", () => {
+                        lightboxImg.src = img.src;
+                        lightboxImg.alt = img.alt;
+                        lightbox.classList.add("active");
+                    });
+                });
+
+            lightboxClose.addEventListener("click", () => {
+                lightbox.classList.remove("active");
+            });
+
+            lightbox.addEventListener("click", (e) => {
+                if (e.target === lightbox) {
+                    lightbox.classList.remove("active");
+                }
+            });
+
+            document.addEventListener("keydown", (e) => {
+                if (
+                    e.key === "Escape" &&
+                    lightbox.classList.contains("active")
+                ) {
+                    lightbox.classList.remove("active");
+                }
+            });
+
+            // Fetch latest release from GitHub
+            fetch("https://api.github.com/repos/eRom/cruchot/releases/latest")
+                .then((r) => r.ok ? r.json() : null)
+                .then((data) => {
+                    if (data && data.tag_name) {
+                        const v = data.tag_name.startsWith("v") ? data.tag_name : "v" + data.tag_name;
+                        document.getElementById("version-hero").textContent = v;
+                        document.getElementById("version-footer").textContent = v;
+                    }
+                })
+                .catch(() => {});
+
+            // Mobile nav close on link click
+            document.querySelectorAll(".nav-links a").forEach((link) => {
+                link.addEventListener("click", () => {
+                    document
+                        .querySelector(".nav-links")
+                        .classList.remove("open");
+                });
+            });
+        </script>
+    </body>
+</html>
