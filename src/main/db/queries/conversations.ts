@@ -155,10 +155,18 @@ export function deleteAllConversations() {
   db.delete(conversations).run()
 }
 
-export function forkConversation(sourceId: string) {
+export function forkConversation(sourceId: string, upToMessageId?: string) {
   const db = getDatabase()
   const source = db.select().from(conversations).where(eq(conversations.id, sourceId)).get()
   if (!source) throw new Error('Conversation not found')
+
+  // If upToMessageId provided, find the cutoff timestamp
+  let cutoffDate: Date | undefined
+  if (upToMessageId) {
+    const cutoffMsg = db.select().from(messages).where(eq(messages.id, upToMessageId)).get()
+    if (!cutoffMsg) throw new Error('Message not found')
+    cutoffDate = cutoffMsg.createdAt
+  }
 
   const newId = nanoid()
   const now = new Date()
@@ -183,13 +191,17 @@ export function forkConversation(sourceId: string) {
       })
       .run()
 
-    // 2. Copy all messages with remapped IDs
+    // 2. Copy messages (all or up to cutoff)
     const sourceMessages = db
       .select()
       .from(messages)
       .where(eq(messages.conversationId, sourceId))
       .orderBy(asc(messages.createdAt))
       .all()
+      .filter((msg) => {
+        if (!cutoffDate) return true
+        return msg.createdAt <= cutoffDate
+      })
 
     const idMap = new Map<string, string>()
 
