@@ -30,6 +30,7 @@ export function getMessagesForConversation(conversationId: string) {
 export function createMessage(params: CreateMessageParams) {
   const db = getDatabase()
   const id = nanoid()
+  const createdAt = new Date()
 
   db.insert(messages)
     .values({
@@ -37,19 +38,33 @@ export function createMessage(params: CreateMessageParams) {
       conversationId: params.conversationId,
       role: params.role,
       content: params.content,
-      parentMessageId: params.parentMessageId,
-      modelId: params.modelId,
-      providerId: params.providerId,
-      tokensIn: params.tokensIn,
-      tokensOut: params.tokensOut,
-      cost: params.cost,
-      responseTimeMs: params.responseTimeMs,
-      contentData: params.contentData,
-      createdAt: new Date()
+      parentMessageId: params.parentMessageId ?? null,
+      modelId: params.modelId ?? null,
+      providerId: params.providerId ?? null,
+      tokensIn: params.tokensIn ?? null,
+      tokensOut: params.tokensOut ?? null,
+      cost: params.cost ?? null,
+      responseTimeMs: params.responseTimeMs ?? null,
+      contentData: params.contentData ?? null,
+      createdAt
     })
     .run()
 
-  return db.select().from(messages).where(eq(messages.id, id)).get()!
+  return {
+    id,
+    conversationId: params.conversationId,
+    role: params.role,
+    content: params.content,
+    parentMessageId: params.parentMessageId ?? null,
+    modelId: params.modelId ?? null,
+    providerId: params.providerId ?? null,
+    tokensIn: params.tokensIn ?? null,
+    tokensOut: params.tokensOut ?? null,
+    cost: params.cost ?? null,
+    responseTimeMs: params.responseTimeMs ?? null,
+    contentData: params.contentData ?? null,
+    createdAt
+  }
 }
 
 export function updateMessage(id: string, updates: Partial<CreateMessageParams> & { content?: string }) {
