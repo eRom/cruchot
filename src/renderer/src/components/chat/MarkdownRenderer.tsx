@@ -3,39 +3,78 @@ import ReactMarkdown, { type Components } from 'react-markdown'
 import { remarkGfm, remarkMath, rehypeKatex } from '@/lib/markdown'
 import { cn } from '@/lib/utils'
 import { Check, Copy } from 'lucide-react'
-import { createHighlighter, type Highlighter } from 'shiki'
+import { createHighlighterCore } from 'shiki/core'
+import { createOnigurumaEngine } from 'shiki/engine/oniguruma'
+import type { HighlighterCore } from 'shiki/core'
 import DOMPurify from 'dompurify'
 import MermaidBlock from './MermaidBlock'
 import 'katex/dist/katex.min.css'
 
-// ── Shiki singleton ────────────────────────────────────────────
+// ── Shiki singleton (core API — only 12 langs bundled) ─────────
 
-let highlighterPromise: Promise<Highlighter> | null = null
-let highlighterInstance: Highlighter | null = null
+let highlighterPromise: Promise<HighlighterCore> | null = null
+let highlighterInstance: HighlighterCore | null = null
 
-function getHighlighter(): Promise<Highlighter> {
+function getHighlighter(): Promise<HighlighterCore> {
   if (highlighterInstance) return Promise.resolve(highlighterInstance)
   if (!highlighterPromise) {
-    highlighterPromise = createHighlighter({
-      themes: ['github-dark', 'github-light'],
-      langs: [
-        'javascript',
-        'typescript',
-        'python',
-        'rust',
-        'go',
-        'java',
-        'html',
-        'css',
-        'json',
-        'bash',
-        'sql',
-        'markdown',
-      ],
-    }).then((hl) => {
+    highlighterPromise = (async () => {
+      const [
+        engine,
+        themeDark,
+        themeLight,
+        langJs,
+        langTs,
+        langPy,
+        langRust,
+        langGo,
+        langJava,
+        langHtml,
+        langCss,
+        langJson,
+        langBash,
+        langSql,
+        langMarkdown,
+      ] = await Promise.all([
+        createOnigurumaEngine(import('shiki/wasm')),
+        import('shiki/dist/themes/github-dark.mjs'),
+        import('shiki/dist/themes/github-light.mjs'),
+        import('shiki/dist/langs/javascript.mjs'),
+        import('shiki/dist/langs/typescript.mjs'),
+        import('shiki/dist/langs/python.mjs'),
+        import('shiki/dist/langs/rust.mjs'),
+        import('shiki/dist/langs/go.mjs'),
+        import('shiki/dist/langs/java.mjs'),
+        import('shiki/dist/langs/html.mjs'),
+        import('shiki/dist/langs/css.mjs'),
+        import('shiki/dist/langs/json.mjs'),
+        import('shiki/dist/langs/bash.mjs'),
+        import('shiki/dist/langs/sql.mjs'),
+        import('shiki/dist/langs/markdown.mjs'),
+      ])
+
+      const hl = await createHighlighterCore({
+        engine,
+        themes: [themeDark.default, themeLight.default],
+        langs: [
+          langJs.default,
+          langTs.default,
+          langPy.default,
+          langRust.default,
+          langGo.default,
+          langJava.default,
+          langHtml.default,
+          langCss.default,
+          langJson.default,
+          langBash.default,
+          langSql.default,
+          langMarkdown.default,
+        ],
+      })
+
       highlighterInstance = hl
       return hl
-    })
+    })()
   }
   return highlighterPromise
 }
@@ -48,6 +87,7 @@ getHighlighter()
 interface MarkdownRendererProps {
   content: string
   className?: string
+  isStreaming?: boolean
 }
 
 // ── CopyCodeButton ─────────────────────────────────────────────
@@ -93,10 +133,14 @@ function CopyCodeButton({ code }: { code: string }) {
 
 // ── ShikiCodeBlock ─────────────────────────────────────────────
 
-function ShikiCodeBlock({ code, language }: { code: string; language: string }) {
+function ShikiCodeBlock({ code, language, isStreaming }: { code: string; language: string; isStreaming?: boolean }) {
   const [html, setHtml] = useState<string | null>(null)
 
   useEffect(() => {
+    if (isStreaming) {
+      setHtml(null)
+      return
+    }
     let cancelled = false
     getHighlighter().then((hl) => {
       if (cancelled) return
@@ -114,7 +158,7 @@ function ShikiCodeBlock({ code, language }: { code: string; language: string }) 
     return () => {
       cancelled = true
     }
-  }, [code, language])
+  }, [code, language, isStreaming])
 
   if (html) {
     return (
@@ -128,7 +172,7 @@ function ShikiCodeBlock({ code, language }: { code: string; language: string }) 
     )
   }
 
-  // Fallback — plain text
+  // Fallback — plain text (also used during streaming)
   return (
     <div className="group relative">
       <CopyCodeButton code={code} />
@@ -139,104 +183,106 @@ function ShikiCodeBlock({ code, language }: { code: string; language: string }) 
   )
 }
 
-// ── Markdown components ────────────────────────────────────────
+// ── Markdown components factory ────────────────────────────────
 
-/** Custom react-markdown components with polished styling. */
-const components: Partial<Components> = {
-  h1: ({ children }) => (
-    <h1 className="mt-6 mb-3 text-xl font-semibold tracking-tight first:mt-0">
-      {children}
-    </h1>
-  ),
-  h2: ({ children }) => (
-    <h2 className="mt-5 mb-2.5 text-lg font-semibold tracking-tight first:mt-0">
-      {children}
-    </h2>
-  ),
-  h3: ({ children }) => (
-    <h3 className="mt-4 mb-2 text-base font-semibold first:mt-0">{children}</h3>
-  ),
-  p: ({ children }) => (
-    <p className="mb-3 leading-relaxed last:mb-0">{children}</p>
-  ),
-  ul: ({ children }) => (
-    <ul className="mb-3 ml-1 list-inside list-disc space-y-1.5 last:mb-0 [&_ul]:mb-0 [&_ul]:mt-1.5">
-      {children}
-    </ul>
-  ),
-  ol: ({ children }) => (
-    <ol className="mb-3 ml-1 list-inside list-decimal space-y-1.5 last:mb-0 [&_ol]:mb-0 [&_ol]:mt-1.5">
-      {children}
-    </ol>
-  ),
-  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-  a: ({ href, children }) => {
-    const safeHref = href && /^(https?:\/\/|mailto:|#)/.test(href) ? href : undefined
-    return (
-      <a
-        href={safeHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="font-medium text-primary underline underline-offset-2 transition-colors hover:text-primary/80"
-      >
+/** Build react-markdown components with isStreaming context. */
+function buildComponents(isStreaming: boolean): Partial<Components> {
+  return {
+    h1: ({ children }) => (
+      <h1 className="mt-6 mb-3 text-xl font-semibold tracking-tight first:mt-0">
         {children}
-      </a>
-    )
-  },
-  blockquote: ({ children }) => (
-    <blockquote className="my-3 border-l-2 border-primary/30 pl-4 italic text-muted-foreground">
-      {children}
-    </blockquote>
-  ),
-  strong: ({ children }) => (
-    <strong className="font-semibold">{children}</strong>
-  ),
-  em: ({ children }) => <em className="italic">{children}</em>,
-  hr: () => <hr className="my-5 border-border" />,
-  // Code — inline and block
-  code: ({ children, className }) => {
-    const isBlock = typeof className === 'string' && className.includes('language-')
-    if (isBlock) {
-      const language = className?.replace('language-', '') ?? ''
-      const codeStr = String(children).replace(/\n$/, '')
+      </h1>
+    ),
+    h2: ({ children }) => (
+      <h2 className="mt-5 mb-2.5 text-lg font-semibold tracking-tight first:mt-0">
+        {children}
+      </h2>
+    ),
+    h3: ({ children }) => (
+      <h3 className="mt-4 mb-2 text-base font-semibold first:mt-0">{children}</h3>
+    ),
+    p: ({ children }) => (
+      <p className="mb-3 leading-relaxed last:mb-0">{children}</p>
+    ),
+    ul: ({ children }) => (
+      <ul className="mb-3 ml-1 list-inside list-disc space-y-1.5 last:mb-0 [&_ul]:mb-0 [&_ul]:mt-1.5">
+        {children}
+      </ul>
+    ),
+    ol: ({ children }) => (
+      <ol className="mb-3 ml-1 list-inside list-decimal space-y-1.5 last:mb-0 [&_ol]:mb-0 [&_ol]:mt-1.5">
+        {children}
+      </ol>
+    ),
+    li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+    a: ({ href, children }) => {
+      const safeHref = href && /^(https?:\/\/|mailto:|#)/.test(href) ? href : undefined
+      return (
+        <a
+          href={safeHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-primary underline underline-offset-2 transition-colors hover:text-primary/80"
+        >
+          {children}
+        </a>
+      )
+    },
+    blockquote: ({ children }) => (
+      <blockquote className="my-3 border-l-2 border-primary/30 pl-4 italic text-muted-foreground">
+        {children}
+      </blockquote>
+    ),
+    strong: ({ children }) => (
+      <strong className="font-semibold">{children}</strong>
+    ),
+    em: ({ children }) => <em className="italic">{children}</em>,
+    hr: () => <hr className="my-5 border-border" />,
+    // Code — inline and block
+    code: ({ children, className }) => {
+      const isBlock = typeof className === 'string' && className.includes('language-')
+      if (isBlock) {
+        const language = className?.replace('language-', '') ?? ''
+        const codeStr = String(children).replace(/\n$/, '')
 
-      // Mermaid diagrams
-      if (language === 'mermaid') {
-        return <MermaidBlock code={codeStr} />
+        // Mermaid diagrams
+        if (language === 'mermaid') {
+          return <MermaidBlock code={codeStr} />
+        }
+
+        return <ShikiCodeBlock code={codeStr} language={language} isStreaming={isStreaming} />
       }
-
-      return <ShikiCodeBlock code={codeStr} language={language} />
-    }
-    // Inline code
-    return (
-      <code className="rounded-[5px] bg-primary/8 px-1.5 py-0.5 text-[0.875em] font-mono dark:bg-white/10">
+      // Inline code
+      return (
+        <code className="rounded-[5px] bg-primary/8 px-1.5 py-0.5 text-[0.875em] font-mono dark:bg-white/10">
+          {children}
+        </code>
+      )
+    },
+    // Code blocks (pre wrapping code)
+    pre: ({ children }) => (
+      <pre className="my-3 overflow-hidden rounded-xl bg-[#1e1e2e] p-4 text-[13px] leading-6 text-[#cdd6f4] shadow-sm last:mb-0 dark:bg-[#11111b] [&_code]:bg-transparent [&_code]:p-0 [&_code]:text-inherit">
         {children}
-      </code>
-    )
-  },
-  // Code blocks (pre wrapping code)
-  pre: ({ children }) => (
-    <pre className="my-3 overflow-hidden rounded-xl bg-[#1e1e2e] p-4 text-[13px] leading-6 text-[#cdd6f4] shadow-sm last:mb-0 dark:bg-[#11111b] [&_code]:bg-transparent [&_code]:p-0 [&_code]:text-inherit">
-      {children}
-    </pre>
-  ),
-  // Tables
-  table: ({ children }) => (
-    <div className="my-3 overflow-x-auto rounded-lg border border-border">
-      <table className="w-full text-sm">{children}</table>
-    </div>
-  ),
-  thead: ({ children }) => (
-    <thead className="bg-muted/50">{children}</thead>
-  ),
-  th: ({ children }) => (
-    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-      {children}
-    </th>
-  ),
-  td: ({ children }) => (
-    <td className="border-t border-border px-3 py-2">{children}</td>
-  ),
+      </pre>
+    ),
+    // Tables
+    table: ({ children }) => (
+      <div className="my-3 overflow-x-auto rounded-lg border border-border">
+        <table className="w-full text-sm">{children}</table>
+      </div>
+    ),
+    thead: ({ children }) => (
+      <thead className="bg-muted/50">{children}</thead>
+    ),
+    th: ({ children }) => (
+      <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {children}
+      </th>
+    ),
+    td: ({ children }) => (
+      <td className="border-t border-border px-3 py-2">{children}</td>
+    ),
+  }
 }
 
 // ── Main component ─────────────────────────────────────────────
@@ -244,10 +290,13 @@ const components: Partial<Components> = {
 /**
  * Renders Markdown content with styled components.
  * Supports GFM, LaTeX (KaTeX), syntax highlighting (Shiki), and Mermaid diagrams.
+ * When isStreaming is true, Shiki highlighting is skipped (plain text fallback)
+ * to avoid re-highlighting on every token during streaming.
  */
-function MarkdownRenderer({ content, className }: MarkdownRendererProps): React.JSX.Element {
+function MarkdownRenderer({ content, className, isStreaming = false }: MarkdownRendererProps): React.JSX.Element {
   const remarkPlugins = useMemo(() => [remarkGfm, remarkMath], [])
   const rehypePlugins = useMemo(() => [rehypeKatex], [])
+  const components = useMemo(() => buildComponents(isStreaming), [isStreaming])
 
   return (
     <div className={cn('markdown-body text-[14.5px]', className)}>

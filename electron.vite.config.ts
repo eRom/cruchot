@@ -77,7 +77,9 @@ export default defineConfig({
             if (id.includes('node_modules')) {
               if (id.includes('react-dom') || id.includes('react/jsx-runtime') || (id.includes('/react/') && !id.includes('react-'))) return 'vendor-react'
               if (id.includes('lucide-react')) return 'vendor-icons'
-              if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts'
+              if (id.includes('shiki') || id.includes('oniguruma')) return 'vendor-shiki'
+              if (id.includes('mermaid') || id.includes('cytoscape') || id.includes('elkjs')) return 'vendor-mermaid'
+              if (id.includes('recharts')) return 'vendor-charts'
               if (id.includes('react-markdown') || id.includes('remark-') || id.includes('rehype-') || id.includes('katex') || id.includes('unified') || id.includes('mdast') || id.includes('hast') || id.includes('micromark')) return 'vendor-markdown'
               if (id.includes('@radix-ui')) return 'vendor-radix'
             }

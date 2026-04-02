@@ -4,6 +4,7 @@ import MarkdownRenderer from './MarkdownRenderer'
 interface MessageContentProps {
   content: string
   role: 'user' | 'assistant' | 'system'
+  isStreaming?: boolean
 }
 
 /**
@@ -11,7 +12,7 @@ interface MessageContentProps {
  * Uses MarkdownRenderer for assistant messages (richer formatting),
  * and a simpler rendering for user messages (preserves line breaks).
  */
-export function MessageContent({ content, role }: MessageContentProps): React.JSX.Element {
+export function MessageContent({ content, role, isStreaming }: MessageContentProps): React.JSX.Element {
   if (role === 'user') {
     return (
       <div className="whitespace-pre-wrap break-words text-[14.5px] leading-relaxed">
@@ -22,7 +23,7 @@ export function MessageContent({ content, role }: MessageContentProps): React.JS
 
   return (
     <div className="text-[14.5px]">
-      <MarkdownRenderer content={content} />
+      <MarkdownRenderer content={content} isStreaming={isStreaming} />
     </div>
   )
 }

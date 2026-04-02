@@ -525,7 +525,7 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
             <p className="text-xs text-muted-foreground/70 italic">{message.content}</p>
           </div>
         ) : message.content ? (
-          <MessageContent content={message.content} role={message.role} />
+          <MessageContent content={message.content} role={message.role} isStreaming={isStreaming} />
         ) : null}
 
         {/* Attached files on user messages */}
