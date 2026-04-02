@@ -32,3 +32,6 @@ vendor/models/
 
 # Presentation sources
 specs/presentation/sources/*
+
+# Audit improvement (local only)
+improvement/
