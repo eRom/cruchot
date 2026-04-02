@@ -160,14 +160,6 @@ export function forkConversation(sourceId: string, upToMessageId?: string) {
   const source = db.select().from(conversations).where(eq(conversations.id, sourceId)).get()
   if (!source) throw new Error('Conversation not found')
 
-  // If upToMessageId provided, find the cutoff timestamp
-  let cutoffDate: Date | undefined
-  if (upToMessageId) {
-    const cutoffMsg = db.select().from(messages).where(eq(messages.id, upToMessageId)).get()
-    if (!cutoffMsg) throw new Error('Message not found')
-    cutoffDate = cutoffMsg.createdAt
-  }
-
   const newId = nanoid()
   const now = new Date()
 
@@ -185,23 +177,27 @@ export function forkConversation(sourceId: string, upToMessageId?: string) {
         activeLibraryId: source.activeLibraryId,
         isFavorite: false,
         isArena: false,
+        isScheduledTask: false,
 
         createdAt: now,
         updatedAt: now
       })
       .run()
 
-    // 2. Copy messages (all or up to cutoff)
-    const sourceMessages = db
+    // 2. Copy messages (all or up to cutoff by position)
+    const allMessages = db
       .select()
       .from(messages)
       .where(eq(messages.conversationId, sourceId))
       .orderBy(asc(messages.createdAt))
       .all()
-      .filter((msg) => {
-        if (!cutoffDate) return true
-        return msg.createdAt <= cutoffDate
-      })
+
+    let sourceMessages = allMessages
+    if (upToMessageId) {
+      const cutoffIndex = allMessages.findIndex((m) => m.id === upToMessageId)
+      if (cutoffIndex === -1) throw new Error('Message not found in conversation')
+      sourceMessages = allMessages.slice(0, cutoffIndex + 1)
+    }
 
     const idMap = new Map<string, string>()
 

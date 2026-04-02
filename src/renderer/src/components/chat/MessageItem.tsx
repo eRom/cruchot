@@ -458,20 +458,17 @@ function MessageItem({ message, isStreaming = false, conversationId }: MessageIt
     setTimeout(() => setCopied(false), 1800)
   }, [message.content])
 
-  const addConversation = useConversationsStore((s) => s.addConversation)
-  const setActiveConversation = useConversationsStore((s) => s.setActiveConversation)
-
   const handleFork = useCallback(async () => {
     if (!conversationId) return
     try {
       const forked = await window.api.forkConversation(conversationId, message.id)
-      addConversation(forked)
-      setActiveConversation(forked.id)
+      useConversationsStore.getState().addConversation(forked)
+      useConversationsStore.getState().setActiveConversation(forked.id)
       toast.success('Conversation forkee')
     } catch {
       toast.error('Erreur fork')
     }
-  }, [conversationId, message.id, addConversation, setActiveConversation])
+  }, [conversationId, message.id])
 
   const label = providerLabel(message.providerId, message.modelId)
   const tokens = formatTokens(message.tokensIn, message.tokensOut)
