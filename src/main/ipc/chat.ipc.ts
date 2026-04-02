@@ -8,6 +8,7 @@ import { classifyError } from '../llm/errors'
 import { buildThinkingProviderOptions } from '../llm/thinking'
 import { validateAttachment, processAttachments, buildContentParts, MAX_FILES_PER_MESSAGE, type AttachmentRef } from '../llm/attachments'
 import { parseFileOperations } from '../llm/file-operations'
+import { ThinkTagParser } from '../llm/think-tag-parser'
 import { buildConversationTools, buildWorkspaceContextBlock, WORKSPACE_TOOLS_PROMPT } from '../llm/tools'
 import { getAllPermissionRules } from '../db/queries/permissions'
 import { mcpManagerService } from '../services/mcp-manager.service'
@@ -584,81 +585,8 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
       flushBatch()
     }
 
-    // State machine for parsing <think> tags from open-source models (LM Studio, Ollama, etc.)
-    // These models emit reasoning inside <think>...</think> as plain text-delta chunks.
-    let insideThinkTag = false
-    let pendingBuffer = '' // Buffer for partial tag detection
-
-    function emitTextOrThinking(text: string) {
-      let remaining = text
-
-      while (remaining.length > 0) {
-        if (!insideThinkTag) {
-          // Look for <think> opening tag
-          const openIdx = remaining.indexOf('<think>')
-          if (openIdx === -1) {
-            // Check for partial tag at the end (e.g. "<thi")
-            const partialIdx = remaining.lastIndexOf('<')
-            if (partialIdx !== -1 && partialIdx > remaining.length - 8 && '<think>'.startsWith(remaining.slice(partialIdx))) {
-              // Buffer the potential partial tag
-              const safeText = remaining.slice(0, partialIdx)
-              if (safeText) {
-                accumulatedText += safeText
-                batchBuffer += safeText
-                startBatchTimer()
-              }
-              pendingBuffer = remaining.slice(partialIdx)
-              return
-            }
-            // No tag at all — emit as text (batched)
-            accumulatedText += remaining
-            batchBuffer += remaining
-            startBatchTimer()
-            return
-          }
-          // Emit text before the tag (batched)
-          if (openIdx > 0) {
-            const before = remaining.slice(0, openIdx)
-            accumulatedText += before
-            batchBuffer += before
-            startBatchTimer()
-          }
-          insideThinkTag = true
-          remaining = remaining.slice(openIdx + 7) // skip "<think>"
-        } else {
-          // Inside <think> — look for </think> closing tag
-          const closeIdx = remaining.indexOf('</think>')
-          if (closeIdx === -1) {
-            // Check for partial closing tag
-            const partialIdx = remaining.lastIndexOf('<')
-            if (partialIdx !== -1 && partialIdx > remaining.length - 9 && '</think>'.startsWith(remaining.slice(partialIdx))) {
-              const safeText = remaining.slice(0, partialIdx)
-              if (safeText) {
-                accumulatedReasoning += safeText
-                win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: safeText })
-                if (isWsConnected) remoteServerService.pushReasoningChunk(safeText)
-              }
-              pendingBuffer = remaining.slice(partialIdx)
-              return
-            }
-            // All reasoning content
-            accumulatedReasoning += remaining
-            win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: remaining })
-            if (isWsConnected) remoteServerService.pushReasoningChunk(remaining)
-            return
-          }
-          // Emit reasoning before the close tag
-          if (closeIdx > 0) {
-            const reasoning = remaining.slice(0, closeIdx)
-            accumulatedReasoning += reasoning
-            win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: reasoning })
-            if (isWsConnected) remoteServerService.pushReasoningChunk(reasoning)
-          }
-          insideThinkTag = false
-          remaining = remaining.slice(closeIdx + 8) // skip "</think>"
-        }
-      }
-    }
+    // Parser for <think>...</think> tags from open-source models (LM Studio, Ollama, etc.)
+    const thinkParser = new ThinkTagParser()
 
     const result = streamText({
       model,
@@ -671,10 +599,19 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
       ...(hasTools ? { tools, maxSteps: 200, stopWhen: stepCountIs(200) } : {}),
       onChunk({ chunk }) {
         if (chunk.type === 'text-delta') {
-          // Prepend any buffered partial tag content
-          const text = pendingBuffer + chunk.text
-          pendingBuffer = ''
-          emitTextOrThinking(text)
+          const segments = thinkParser.parse(chunk.text)
+          for (const seg of segments) {
+            if (seg.type === 'text') {
+              accumulatedText += seg.content
+              batchBuffer += seg.content
+              startBatchTimer()
+            } else {
+              flushBatch()
+              accumulatedReasoning += seg.content
+              win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: seg.content })
+              if (isWsConnected) remoteServerService.pushReasoningChunk(seg.content)
+            }
+          }
         } else if (chunk.type === 'reasoning-delta') {
           flushBatch() // Flush text buffer before non-text chunk
           accumulatedReasoning += chunk.text
@@ -764,16 +701,16 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
     try {
       await result.text
       // Flush any remaining buffered content (e.g. partial <think> tag that never completed)
-      if (pendingBuffer) {
-        if (insideThinkTag) {
-          accumulatedReasoning += pendingBuffer
-          win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: pendingBuffer })
-          if (isWsConnected) remoteServerService.pushReasoningChunk(pendingBuffer)
+      const remaining = thinkParser.flush()
+      for (const seg of remaining) {
+        if (seg.type === 'text') {
+          accumulatedText += seg.content
+          batchBuffer += seg.content
         } else {
-          accumulatedText += pendingBuffer
-          batchBuffer += pendingBuffer
+          accumulatedReasoning += seg.content
+          win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: seg.content })
+          if (isWsConnected) remoteServerService.pushReasoningChunk(seg.content)
         }
-        pendingBuffer = ''
       }
       // Stop batch timer and flush any remaining batched text
       stopBatchTimer()
