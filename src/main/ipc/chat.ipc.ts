@@ -227,85 +227,75 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       remoteServerService.startStreaming()
     }
 
-    // Process attachments (extract text, encode images)
-    let processedAttachments: Awaited<ReturnType<typeof processAttachments>> = []
-    if (validatedRefs.length > 0) {
-      processedAttachments = await processAttachments(validatedRefs)
-    }
-    const { imageParts, inlineText } = buildContentParts(processedAttachments)
+    // ── Parallel pre-flight enrichments (M1) ─────────────────
+    // All 4 operations are independent — run them concurrently to minimise TTFT.
+    const [attachResult, recallResult, libraryResult, skillResult] = await Promise.allSettled([
 
-    // Load conversation history from DB
-    const dbMessages = getMessagesForConversation(conversationId)
-    const aiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<{ type: string; text?: string; image?: string; mimeType?: string }> }> = []
+      // 1. Attachment processing (extract text, encode images)
+      (async (): Promise<Awaited<ReturnType<typeof processAttachments>>> => {
+        if (validatedRefs.length === 0) return []
+        return processAttachments(validatedRefs)
+      })(),
 
-    // Semantic memory recall (if enabled)
-    let semanticMemoryBlock = ''
-    if (qdrantMemoryService.getStatus() === 'ready') {
-      try {
+      // 2. Semantic memory recall (Qdrant)
+      (async (): Promise<{ block: string }> => {
+        if (qdrantMemoryService.getStatus() !== 'ready') return { block: '' }
         const recalls = await qdrantMemoryService.recall(content, {
           topK: 5,
           scoreThreshold: 0.35,
           projectId: conv?.projectId ?? null,
           conversationId
         })
-        if (recalls.length > 0) {
-          semanticMemoryBlock = buildSemanticMemoryBlock(recalls)
-        }
-      } catch (err) {
-        console.warn('[Chat] Semantic memory recall failed:', err)
-      }
-    }
+        return { block: recalls.length > 0 ? buildSemanticMemoryBlock(recalls) : '' }
+      })(),
 
-    // Library retrieval (RAG — if a library is attached to the conversation, sticky)
-    let libraryContextBlock = ''
-    let librarySourcesForMessage: LibraryChunkForPrompt[] = []
-    const activeLibraryId = getConversationLibraryId(conversationId)
-    if (activeLibraryId) {
-      const lib = getLibrary(activeLibraryId)
-      const libName = lib?.name ?? 'Referentiel'
-      const toolCallId = `library-retrieval-${Date.now()}`
+      // 3. Library retrieval (RAG)
+      (async (): Promise<{ block: string; sources: LibraryChunkForPrompt[] }> => {
+        const activeLibraryId = getConversationLibraryId(conversationId)
+        if (!activeLibraryId) return { block: '', sources: [] }
 
-      // Send synthetic tool-call chunk to renderer (shows "Recherche referentiel" in ToolCallBlock)
-      win.webContents.send('chat:chunk', {
-        type: 'tool-call',
-        toolName: 'librarySearch',
-        toolArgs: { query: content.slice(0, 120), library: libName },
-        toolCallId
-      })
+        const lib = getLibrary(activeLibraryId)
+        const libName = lib?.name ?? 'Referentiel'
+        const toolCallId = `library-retrieval-${Date.now()}`
 
-      try {
-        const chunks = await libraryService.retrieveForChat(activeLibraryId, content)
-        if (chunks.length > 0) {
-          libraryContextBlock = buildLibraryContextBlock(chunks, libName)
-          librarySourcesForMessage = chunks
-        }
-        // Send synthetic tool-result (success)
         win.webContents.send('chat:chunk', {
-          type: 'tool-result',
+          type: 'tool-call',
           toolName: 'librarySearch',
-          toolCallId,
-          toolIsError: false
+          toolArgs: { query: content.slice(0, 120), library: libName },
+          toolCallId
         })
-      } catch (err) {
-        console.warn('[Chat] Library retrieval failed:', err)
-        // Send synthetic tool-result (error)
-        win.webContents.send('chat:chunk', {
-          type: 'tool-result',
-          toolName: 'librarySearch',
-          toolCallId,
-          toolIsError: true
-        })
-      }
-    }
 
-    // Skill injection (if invoked via /skill-name)
-    let skillContextBlock = ''
-    if (skillName) {
-      const dbSkill = getSkillByName(skillName)
-      if (dbSkill && dbSkill.enabled) {
+        try {
+          const chunks = await libraryService.retrieveForChat(activeLibraryId, content)
+          win.webContents.send('chat:chunk', {
+            type: 'tool-result',
+            toolName: 'librarySearch',
+            toolCallId,
+            toolIsError: false
+          })
+          if (chunks.length > 0) {
+            return { block: buildLibraryContextBlock(chunks, libName), sources: chunks }
+          }
+          return { block: '', sources: [] }
+        } catch (err) {
+          console.warn('[Chat] Library retrieval failed:', err)
+          win.webContents.send('chat:chunk', {
+            type: 'tool-result',
+            toolName: 'librarySearch',
+            toolCallId,
+            toolIsError: true
+          })
+          return { block: '', sources: [] }
+        }
+      })(),
+
+      // 4. Skill context build
+      (async (): Promise<{ block: string }> => {
+        if (!skillName) return { block: '' }
+        const dbSkill = getSkillByName(skillName)
+        if (!dbSkill || !dbSkill.enabled) return { block: '' }
+
         const toolCallId = `skill-invoke-${Date.now()}`
-
-        // Send synthetic tool-call chunk
         win.webContents.send('chat:chunk', {
           type: 'tool-call',
           toolName: 'skill',
@@ -319,15 +309,13 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
             skillArgs ?? '',
             resolvedWorkspacePath
           )
-          if (result) {
-            skillContextBlock = result.block
-          }
           win.webContents.send('chat:chunk', {
             type: 'tool-result',
             toolName: 'skill',
             toolCallId,
             toolIsError: false
           })
+          return { block: result?.block ?? '' }
         } catch (err) {
           console.warn('[Chat] Skill execution failed:', err)
           win.webContents.send('chat:chunk', {
@@ -336,9 +324,28 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
             toolCallId,
             toolIsError: true
           })
+          return { block: '' }
         }
-      }
+      })()
+    ])
+
+    // Log any rejected enrichments (should not happen — each IIFE handles its own errors)
+    for (const r of [attachResult, recallResult, libraryResult, skillResult]) {
+      if (r.status === 'rejected') console.error('[Chat] Enrichment failed:', r.reason)
     }
+
+    // Extract results with graceful fallbacks
+    const processedAttachments = attachResult.status === 'fulfilled' ? attachResult.value : []
+    const semanticMemoryBlock = recallResult.status === 'fulfilled' ? recallResult.value.block : ''
+    const libraryContextBlock = libraryResult.status === 'fulfilled' ? libraryResult.value.block : ''
+    const librarySourcesForMessage: LibraryChunkForPrompt[] = libraryResult.status === 'fulfilled' ? libraryResult.value.sources : []
+    const skillContextBlock = skillResult.status === 'fulfilled' ? skillResult.value.block : ''
+
+    const { imageParts, inlineText } = buildContentParts(processedAttachments)
+
+    // Load conversation history from DB
+    const dbMessages = getMessagesForConversation(conversationId)
+    const aiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<{ type: string; text?: string; image?: string; mimeType?: string }> }> = []
 
     // Build combined system prompt: base + library-context + semantic memory + memory fragments + role prompt
     const memoryBlock = buildMemoryBlock()
