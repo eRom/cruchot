@@ -549,6 +549,34 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
     const accumulatedSearchSources: Array<{ title: string; url: string; snippet?: string }> = []
     const toolStartTimes = new Map<string, number>() // toolCallId → Date.now()
 
+    // Token batching — accumulate text-delta chunks, flush every 50ms
+    let batchBuffer = ''
+    let batchTimer: ReturnType<typeof setInterval> | null = null
+    const BATCH_INTERVAL_MS = 50
+
+    function flushBatch() {
+      if (batchBuffer.length > 0) {
+        win.webContents.send('chat:chunk', { type: 'text-delta', content: batchBuffer })
+        if (isRemoteConnected) telegramBotService.pushChunk(batchBuffer)
+        if (isWsConnected) remoteServerService.pushChunk(batchBuffer)
+        batchBuffer = ''
+      }
+    }
+
+    function startBatchTimer() {
+      if (!batchTimer) {
+        batchTimer = setInterval(flushBatch, BATCH_INTERVAL_MS)
+      }
+    }
+
+    function stopBatchTimer() {
+      if (batchTimer) {
+        clearInterval(batchTimer)
+        batchTimer = null
+      }
+      flushBatch()
+    }
+
     // State machine for parsing <think> tags from open-source models (LM Studio, Ollama, etc.)
     // These models emit reasoning inside <think>...</think> as plain text-delta chunks.
     let insideThinkTag = false
@@ -569,29 +597,24 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
               const safeText = remaining.slice(0, partialIdx)
               if (safeText) {
                 accumulatedText += safeText
-                win.webContents.send('chat:chunk', { type: 'text-delta', content: safeText })
-                // Tri-forward to Telegram + WebSocket
-                if (isRemoteConnected) telegramBotService.pushChunk(safeText)
-                if (isWsConnected) remoteServerService.pushChunk(safeText)
+                batchBuffer += safeText
+                startBatchTimer()
               }
               pendingBuffer = remaining.slice(partialIdx)
               return
             }
-            // No tag at all — emit as text
+            // No tag at all — emit as text (batched)
             accumulatedText += remaining
-            win.webContents.send('chat:chunk', { type: 'text-delta', content: remaining })
-            // Tri-forward to Telegram + WebSocket
-            if (isRemoteConnected) telegramBotService.pushChunk(remaining)
-            if (isWsConnected) remoteServerService.pushChunk(remaining)
+            batchBuffer += remaining
+            startBatchTimer()
             return
           }
-          // Emit text before the tag
+          // Emit text before the tag (batched)
           if (openIdx > 0) {
             const before = remaining.slice(0, openIdx)
             accumulatedText += before
-            win.webContents.send('chat:chunk', { type: 'text-delta', content: before })
-            if (isRemoteConnected) telegramBotService.pushChunk(before)
-            if (isWsConnected) remoteServerService.pushChunk(before)
+            batchBuffer += before
+            startBatchTimer()
           }
           insideThinkTag = true
           remaining = remaining.slice(openIdx + 7) // skip "<think>"
@@ -646,6 +669,7 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
           pendingBuffer = ''
           emitTextOrThinking(text)
         } else if (chunk.type === 'reasoning-delta') {
+          flushBatch() // Flush text buffer before non-text chunk
           accumulatedReasoning += chunk.text
           win.webContents.send('chat:chunk', {
             type: 'reasoning-delta',
@@ -653,6 +677,7 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
           })
           if (isWsConnected) remoteServerService.pushReasoningChunk(chunk.text)
         } else if (chunk.type === 'tool-call') {
+          flushBatch() // Flush text buffer before non-text chunk
           // Track tool call as running + record start time
           toolStartTimes.set(chunk.toolCallId, Date.now())
           accumulatedToolCalls.push({
@@ -707,6 +732,7 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
             tc.result = toolResultText
             tc.resultMeta = Object.keys(resultMeta).length > 0 ? resultMeta : undefined
           }
+          flushBatch() // Flush text buffer before non-text chunk
           win.webContents.send('chat:chunk', {
             type: 'tool-result',
             toolName: toolResult.toolName,
@@ -738,12 +764,12 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
           if (isWsConnected) remoteServerService.pushReasoningChunk(pendingBuffer)
         } else {
           accumulatedText += pendingBuffer
-          win.webContents.send('chat:chunk', { type: 'text-delta', content: pendingBuffer })
-          if (isRemoteConnected) telegramBotService.pushChunk(pendingBuffer)
-          if (isWsConnected) remoteServerService.pushChunk(pendingBuffer)
+          batchBuffer += pendingBuffer
         }
         pendingBuffer = ''
       }
+      // Stop batch timer and flush any remaining batched text
+      stopBatchTimer()
       fullText = accumulatedText
     } catch (e) {
       if (e instanceof NoOutputGeneratedError) {
@@ -870,6 +896,9 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
 
   } catch (error: unknown) {
     currentAbortController = null
+
+    // Stop batch timer on error/abort (discard unflushed buffer — stream ended)
+    stopBatchTimer()
 
     // End Telegram streaming on error
     if (isRemoteConnected) {
