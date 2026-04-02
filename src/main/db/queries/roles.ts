@@ -31,23 +31,23 @@ export function createRole(data: {
   const id = nanoid()
   const now = new Date()
 
-  db.insert(roles)
-    .values({
-      id,
-      name: data.name,
-      description: data.description ?? null,
-      systemPrompt: data.systemPrompt ?? null,
-      icon: data.icon ?? null,
-      isBuiltin: data.isBuiltin ?? false,
-      category: data.category ?? null,
-      tags: data.tags ?? null,
-      variables: data.variables ?? null,
-      createdAt: now,
-      updatedAt: now
-    })
-    .run()
+  const row = {
+    id,
+    name: data.name,
+    description: data.description ?? null,
+    systemPrompt: data.systemPrompt ?? null,
+    icon: data.icon ?? null,
+    isBuiltin: data.isBuiltin ?? false,
+    category: data.category ?? null,
+    tags: data.tags ?? null,
+    variables: data.variables ?? null,
+    createdAt: now,
+    updatedAt: now
+  }
 
-  return getRole(id)!
+  db.insert(roles).values(row).run()
+
+  return row
 }
 
 export function updateRole(

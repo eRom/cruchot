@@ -49,22 +49,22 @@ export function createSlashCommand(data: {
   const id = nanoid()
   const now = new Date()
 
-  db.insert(slashCommands)
-    .values({
-      id,
-      name: data.name,
-      description: data.description,
-      prompt: data.prompt,
-      category: data.category ?? null,
-      projectId: data.projectId ?? null,
-      isBuiltin: data.isBuiltin ?? false,
-      sortOrder: data.sortOrder ?? 0,
-      createdAt: now,
-      updatedAt: now
-    })
-    .run()
+  const row = {
+    id,
+    name: data.name,
+    description: data.description,
+    prompt: data.prompt,
+    category: data.category ?? null,
+    projectId: data.projectId ?? null,
+    isBuiltin: data.isBuiltin ?? false,
+    sortOrder: data.sortOrder ?? 0,
+    createdAt: now,
+    updatedAt: now
+  }
 
-  return getSlashCommand(id)!
+  db.insert(slashCommands).values(row).run()
+
+  return row
 }
 
 export function updateSlashCommand(

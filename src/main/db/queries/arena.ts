@@ -17,20 +17,24 @@ export function createArenaMatch(params: CreateArenaMatchParams) {
   const id = nanoid()
   const now = new Date()
 
-  db.insert(arenaMatches)
-    .values({
-      id,
-      conversationId: params.conversationId,
-      userMessageId: params.userMessageId,
-      leftProviderId: params.leftProviderId,
-      leftModelId: params.leftModelId,
-      rightProviderId: params.rightProviderId,
-      rightModelId: params.rightModelId,
-      createdAt: now
-    })
-    .run()
+  const row = {
+    id,
+    conversationId: params.conversationId,
+    userMessageId: params.userMessageId,
+    leftMessageId: null,
+    rightMessageId: null,
+    leftProviderId: params.leftProviderId,
+    leftModelId: params.leftModelId,
+    rightProviderId: params.rightProviderId,
+    rightModelId: params.rightModelId,
+    vote: null,
+    votedAt: null,
+    createdAt: now
+  }
 
-  return db.select().from(arenaMatches).where(eq(arenaMatches.id, id)).get()!
+  db.insert(arenaMatches).values(row).run()
+
+  return row
 }
 
 export function updateArenaMatchMessageId(id: string, side: 'left' | 'right', messageId: string) {
