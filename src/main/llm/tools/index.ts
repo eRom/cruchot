@@ -81,3 +81,39 @@ export function buildConversationTools(
 
   return wrapped as typeof rawTools
 }
+
+/**
+ * Wraps an external tool (MCP, search, etc.) with the permission pipeline.
+ * Security checks + deny/allow/ask evaluation, same as built-in tools.
+ */
+export function wrapExternalTool(
+  name: string,
+  toolDef: any,
+  workspacePath: string,
+  options: ToolPipelineOptions
+): any {
+  const { rules, onAskApproval, conversationId } = options
+  return {
+    ...toolDef,
+    execute: async (args: Record<string, unknown>) => {
+      const decision = evaluatePermission(
+        { toolName: name, toolArgs: args, workspacePath, conversationId },
+        rules
+      )
+      if (decision === 'deny') {
+        return { error: 'Action MCP refusee par les permissions' }
+      }
+      if (decision === 'ask') {
+        const result = await onAskApproval({ toolName: name, toolArgs: args })
+        if (result === 'deny') {
+          return { error: 'Action MCP refusee par l\'utilisateur' }
+        }
+        if (result === 'allow-session') {
+          const sessionKey = `${name}::${JSON.stringify(args).slice(0, 200)}`
+          addSessionApproval(conversationId ?? '', sessionKey)
+        }
+      }
+      return toolDef.execute(args)
+    }
+  }
+}
