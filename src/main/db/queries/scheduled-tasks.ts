@@ -1,4 +1,4 @@
-import { eq, desc } from 'drizzle-orm'
+import { eq, desc, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { getDatabase } from '../index'
 import { scheduledTasks } from '../schema'
@@ -71,7 +71,27 @@ export function createScheduledTask(data: {
     })
     .run()
 
-  return getScheduledTask(id)!
+  return {
+    id,
+    name: data.name,
+    description: data.description,
+    prompt: data.prompt,
+    modelId: data.modelId,
+    roleId: data.roleId ?? null,
+    projectId: data.projectId ?? null,
+    scheduleType: data.scheduleType,
+    scheduleConfig: data.scheduleConfig ?? null,
+    useMemory: data.useMemory ?? true,
+    isEnabled: true,
+    nextRunAt,
+    runCount: 0,
+    lastRunAt: null,
+    lastRunStatus: null,
+    lastRunError: null,
+    lastConversationId: null,
+    createdAt: now,
+    updatedAt: now
+  }
 }
 
 export function updateScheduledTask(
@@ -144,13 +164,7 @@ export function updateTaskRunStatus(
 
 export function incrementRunCount(id: string) {
   const db = getDatabase()
-  const task = getScheduledTask(id)
-  if (!task) return
-
-  db.update(scheduledTasks)
-    .set({ runCount: task.runCount + 1 })
-    .where(eq(scheduledTasks.id, id))
-    .run()
+  db.run(sql`UPDATE scheduled_tasks SET run_count = run_count + 1 WHERE id = ${id}`)
 }
 
 export function updateTaskNextRunAt(id: string, nextRunAt: Date | null) {
