@@ -1,94 +1,126 @@
 /**
- * Embedding service — local ONNX via @huggingface/transformers.
- * Modele : all-MiniLM-L6-v2 (384 dimensions, ~23 MB quantized).
- * WASM backend pour portabilite cross-platform.
+ * Embedding service — delegue au Worker thread.
+ * L'inference ONNX tourne off-thread pour ne pas bloquer le main process.
+ * API publique identique : embed(), embedBatch(), initEmbedding(), isEmbeddingReady().
  */
+import { Worker } from 'node:worker_threads'
 import path from 'node:path'
 import { app } from 'electron'
 
-const MODEL_NAME = 'Xenova/all-MiniLM-L6-v2'
 const EMBEDDING_DIM = 384
+const WORKER_TIMEOUT_MS = 30_000
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let extractor: any = null
+let worker: Worker | null = null
+let ready = false
+let requestId = 0
+
+// Pending requests — resolved by worker responses
+const pending = new Map<number, {
+  resolve: (data: unknown) => void
+  reject: (err: Error) => void
+  timer: ReturnType<typeof setTimeout>
+}>()
+
+function getWorkerPath(): string {
+  // electron-vite outputs worker to same directory as main bundle
+  return path.join(__dirname, 'embedding.worker.js')
+}
+
+function sendToWorker(type: string, payload?: Record<string, unknown>): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    if (!worker) {
+      reject(new Error('Embedding worker not started'))
+      return
+    }
+
+    const id = ++requestId
+    const timer = setTimeout(() => {
+      pending.delete(id)
+      reject(new Error(`Embedding worker timeout (${WORKER_TIMEOUT_MS}ms) for ${type}`))
+    }, WORKER_TIMEOUT_MS)
+
+    pending.set(id, { resolve, reject, timer })
+    worker.postMessage({ type, id, payload })
+  })
+}
 
 export async function initEmbedding(): Promise<void> {
-  console.log('[Embedding] Starting init...')
+  if (ready) return
 
-  // Step 1: Dynamic import of transformers
-  let transformers: typeof import('@huggingface/transformers')
-  try {
-    transformers = await import('@huggingface/transformers')
-    console.log('[Embedding] @huggingface/transformers imported OK')
-  } catch (err) {
-    console.error('[Embedding] Failed to import @huggingface/transformers:', err)
-    throw err
-  }
+  console.log('[Embedding] Starting worker thread...')
 
-  const { pipeline, env } = transformers
+  worker = new Worker(getWorkerPath())
 
-  // Step 2: ONNX backend — in Node.js/Electron, onnxruntime-node with CPU is used
-  // (WASM is only available in browser environments)
+  worker.on('message', (msg: { type: string; id: number; data?: unknown; error?: string }) => {
+    const req = pending.get(msg.id)
+    if (!req) return
+    pending.delete(msg.id)
+    clearTimeout(req.timer)
 
-  // Step 3: Configure model path
-  if (app.isPackaged) {
-    env.localModelPath = path.join(process.resourcesPath, 'models')
-    env.allowRemoteModels = false
-    console.log('[Embedding] Packaged mode — local model path:', env.localModelPath)
-  } else {
-    env.allowRemoteModels = true
-    console.log('[Embedding] Dev mode — remote models allowed')
-  }
-
-  // Step 4: Load pipeline
-  console.log('[Embedding] Loading model:', MODEL_NAME, '...')
-  try {
-    extractor = await pipeline('feature-extraction', MODEL_NAME, {
-      quantized: true,
-      dtype: 'fp32',
-      device: 'cpu'
-    })
-    console.log('[Embedding] Pipeline created')
-  } catch (err) {
-    console.error('[Embedding] Pipeline creation failed:', err)
-    throw err
-  }
-
-  // Step 5: Verify with test
-  try {
-    const testOutput = await extractor('test', { pooling: 'mean', normalize: true })
-    if (!testOutput.data || testOutput.data.length < EMBEDDING_DIM) {
-      throw new Error(`Embedding test: got ${testOutput.data?.length ?? 0} dims, expected ${EMBEDDING_DIM}`)
+    if (msg.type === 'error') {
+      req.reject(new Error(msg.error ?? 'Unknown worker error'))
+    } else {
+      req.resolve(msg.data)
     }
-    console.log('[Embedding] Model loaded and verified:', MODEL_NAME, `(${EMBEDDING_DIM}d)`)
-  } catch (err) {
-    console.error('[Embedding] Model verification failed:', err)
-    extractor = null
-    throw err
-  }
+  })
+
+  worker.on('error', (err) => {
+    console.error('[Embedding] Worker error:', err)
+    for (const [id, req] of pending) {
+      clearTimeout(req.timer)
+      req.reject(new Error('Worker crashed: ' + err.message))
+      pending.delete(id)
+    }
+    ready = false
+  })
+
+  worker.on('exit', (code) => {
+    console.log('[Embedding] Worker exited with code', code)
+    worker = null
+    ready = false
+    for (const [id, req] of pending) {
+      clearTimeout(req.timer)
+      req.reject(new Error('Worker exited'))
+      pending.delete(id)
+    }
+  })
+
+  // Init model in worker
+  await sendToWorker('init', {
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath
+  })
+
+  ready = true
+  console.log('[Embedding] Worker ready (off-thread ONNX)')
 }
 
 export async function embed(text: string): Promise<number[]> {
-  if (!extractor) throw new Error('Embedding model not loaded')
-  const output = await extractor(text, { pooling: 'mean', normalize: true })
-  return Array.from(output.data as Float32Array).slice(0, EMBEDDING_DIM)
+  if (!ready) throw new Error('Embedding model not loaded')
+  const result = await sendToWorker('embed', { text })
+  return result as number[]
 }
 
 export async function embedBatch(texts: string[]): Promise<number[][]> {
-  if (!extractor) throw new Error('Embedding model not loaded')
+  if (!ready) throw new Error('Embedding model not loaded')
   if (texts.length === 0) return []
-
-  const output = await extractor(texts, { pooling: 'mean', normalize: true })
-  const data = output.data as Float32Array
-  const vectors: number[][] = []
-  for (let i = 0; i < texts.length; i++) {
-    vectors.push(Array.from(data.slice(i * EMBEDDING_DIM, (i + 1) * EMBEDDING_DIM)))
-  }
-  return vectors
+  const result = await sendToWorker('embedBatch', { texts })
+  return result as number[][]
 }
 
 export function isEmbeddingReady(): boolean {
-  return extractor !== null
+  return ready
+}
+
+export async function stopEmbedding(): Promise<void> {
+  if (!worker) return
+  try {
+    await sendToWorker('shutdown')
+  } catch {
+    // Best effort
+  }
+  worker = null
+  ready = false
 }
 
 export { EMBEDDING_DIM }
