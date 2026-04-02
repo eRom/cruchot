@@ -3,7 +3,6 @@ import { FolderOpen, FolderOpenDot, Zap } from 'lucide-react'
 import { CollapsibleSection } from './CollapsibleSection'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
-import { useSettingsStore } from '@/stores/settings.store'
 import { useUiStore } from '@/stores/ui.store'
 import { cn } from '@/lib/utils'
 
@@ -13,10 +12,14 @@ export function WorkspaceSection() {
   const isStreaming = useUiStore((s) => s.isStreaming)
   const activeConversationId = useConversationsStore((s) => s.activeConversationId)
   const rootPath = useWorkspaceStore((s) => s.rootPath)
-  const yoloMode = useSettingsStore((s) => s.yoloMode)
-  const setYoloMode = useSettingsStore((s) => s.setYoloMode)
+  const [yoloMode, setYoloLocal] = useState(false)
 
   const [workspacePath, setWorkspacePath] = useState(rootPath || DEFAULT_SANDBOX)
+
+  useEffect(() => {
+    if (!activeConversationId) return
+    window.api.getYoloMode(activeConversationId).then(setYoloLocal).catch(() => {})
+  }, [activeConversationId])
 
   useEffect(() => {
     if (rootPath) setWorkspacePath(rootPath)
@@ -42,6 +45,13 @@ export function WorkspaceSection() {
       await window.api.workspaceOpenInFinder(workspacePath)
     } catch { /* silent */ }
   }, [workspacePath])
+
+  const handleYoloToggle = useCallback(async () => {
+    if (!activeConversationId) return
+    const newValue = !yoloMode
+    setYoloLocal(newValue)
+    await window.api.setYoloMode(activeConversationId, newValue)
+  }, [activeConversationId, yoloMode])
 
   const displayPath = workspacePath === DEFAULT_SANDBOX
     ? 'Sandbox (defaut)'
@@ -77,7 +87,7 @@ export function WorkspaceSection() {
 
         {/* YOLO Mode toggle */}
         <button
-          onClick={() => setYoloMode(!yoloMode)}
+          onClick={handleYoloToggle}
           className={cn(
             'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-colors',
             yoloMode

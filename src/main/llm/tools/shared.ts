@@ -91,12 +91,23 @@ export function isReadableFile(filePath: string): { allowed: boolean; reason?: s
 }
 
 export function validatePath(filePath: string, workspacePath: string): { valid: boolean; resolved: string; reason?: string } {
-  const fullPath = join(workspacePath, filePath)
+  // Block absolute paths — only relative paths allowed
+  if (filePath.startsWith('/') || filePath.startsWith('\\')) {
+    return { valid: false, resolved: filePath, reason: 'Les chemins absolus ne sont pas autorises — utiliser un chemin relatif au dossier de travail' }
+  }
+
+  // Normalize to collapse ../ sequences, then check for traversal
+  const normalized = normalize(filePath)
+  if (normalized.startsWith('..') || normalized.startsWith(sep + '..')) {
+    return { valid: false, resolved: filePath, reason: 'Traversee de repertoire detectee (..)' }
+  }
+
+  const fullPath = join(workspacePath, normalized)
+
   try {
-    // Ensure parent exists for the check (file may not exist yet for write)
     const dirToCheck = existsSync(fullPath) ? fullPath : dirname(fullPath)
     if (!existsSync(dirToCheck)) {
-      return { valid: true, resolved: fullPath } // Parent doesn't exist — will be created by write
+      return { valid: true, resolved: fullPath }
     }
     const resolved = realpathSync(existsSync(fullPath) ? fullPath : dirToCheck)
     const resolvedWorkspace = realpathSync(workspacePath)
@@ -105,7 +116,6 @@ export function validatePath(filePath: string, workspacePath: string): { valid: 
     }
     return { valid: true, resolved: fullPath }
   } catch (err) {
-    // Only allow if the error is about non-existent path (for write operations)
     if (err && typeof err === 'object' && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
       return { valid: true, resolved: fullPath }
     }

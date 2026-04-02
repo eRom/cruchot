@@ -13,6 +13,7 @@ export { buildWorkspaceContextBlock, WORKSPACE_TOOLS_PROMPT } from './context'
 
 export interface ToolPipelineOptions {
   rules: PermissionRule[]
+  conversationId?: string
   onAskApproval: (request: { toolName: string; toolArgs: Record<string, unknown> }) => Promise<'allow' | 'deny' | 'allow-session'>
 }
 
@@ -53,7 +54,7 @@ export function buildConversationTools(
 
         // 2. Permission evaluation
         const decision = evaluatePermission(
-          { toolName: name, toolArgs: args, workspacePath },
+          { toolName: name, toolArgs: args, workspacePath, conversationId: options.conversationId },
           rules
         )
 
@@ -68,7 +69,7 @@ export function buildConversationTools(
           }
           if (result === 'allow-session') {
             const sessionKey = `${name}::${args.command ?? args.file_path ?? args.path ?? args.pattern ?? args.url ?? ''}`
-            addSessionApproval(sessionKey)
+            addSessionApproval(options.conversationId ?? '', sessionKey)
           }
         }
 
@@ -79,4 +80,40 @@ export function buildConversationTools(
   }
 
   return wrapped as typeof rawTools
+}
+
+/**
+ * Wraps an external tool (MCP, search, etc.) with the permission pipeline.
+ * Security checks + deny/allow/ask evaluation, same as built-in tools.
+ */
+export function wrapExternalTool(
+  name: string,
+  toolDef: any,
+  workspacePath: string,
+  options: ToolPipelineOptions
+): any {
+  const { rules, onAskApproval, conversationId } = options
+  return {
+    ...toolDef,
+    execute: async (args: Record<string, unknown>) => {
+      const decision = evaluatePermission(
+        { toolName: name, toolArgs: args, workspacePath, conversationId },
+        rules
+      )
+      if (decision === 'deny') {
+        return { error: 'Action MCP refusee par les permissions' }
+      }
+      if (decision === 'ask') {
+        const result = await onAskApproval({ toolName: name, toolArgs: args })
+        if (result === 'deny') {
+          return { error: 'Action MCP refusee par l\'utilisateur' }
+        }
+        if (result === 'allow-session') {
+          const sessionKey = `${name}::${JSON.stringify(args).slice(0, 200)}`
+          addSessionApproval(conversationId ?? '', sessionKey)
+        }
+      }
+      return toolDef.execute(args)
+    }
+  }
 }

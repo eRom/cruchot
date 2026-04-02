@@ -46,12 +46,64 @@ const READONLY_COMMANDS: Set<string> = new Set([
 ])
 
 /**
- * Returns true if the command starts with a known read-only command.
+ * Splits a shell command on unquoted operators (&&, ||, ;, |).
+ * Respects single and double quotes — operators inside quotes are ignored.
+ */
+function splitOnUnquotedOperators(command: string): string[] {
+  const parts: string[] = []
+  let current = ''
+  let inSingle = false
+  let inDouble = false
+  let i = 0
+
+  while (i < command.length) {
+    const ch = command[i]
+
+    // Track quote state
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle
+      current += ch
+      i++
+      continue
+    }
+    if (ch === '"' && !inSingle) {
+      inDouble = !inDouble
+      current += ch
+      i++
+      continue
+    }
+
+    // Only split on operators when outside quotes
+    if (!inSingle && !inDouble) {
+      if ((ch === '&' && command[i + 1] === '&') || (ch === '|' && command[i + 1] === '|')) {
+        parts.push(current.trim())
+        current = ''
+        i += 2
+        continue
+      }
+      if (ch === ';' || ch === '|') {
+        parts.push(current.trim())
+        current = ''
+        i++
+        continue
+      }
+    }
+
+    current += ch
+    i++
+  }
+
+  if (current.trim()) parts.push(current.trim())
+  return parts.filter(Boolean)
+}
+
+/**
+ * Returns true if the command only uses known read-only commands.
  * For compound commands (&&, ||, ;, |), checks EACH subcommand.
+ * Respects quoted strings — operators inside quotes don't split.
  */
 export function isReadOnlyCommand(command: string): boolean {
-  // Split on shell operators (&&, ||, ;, |) — simplified, doesn't handle quotes
-  const subcommands = command.split(/\s*(?:&&|\|\||[;|])\s*/).filter(Boolean)
+  const subcommands = splitOnUnquotedOperators(command)
   if (subcommands.length === 0) return false
 
   for (const sub of subcommands) {
@@ -82,53 +134,53 @@ const TOOL_DEFAULTS: Record<string, PermissionDecision> = {
   WebFetchTool: 'ask',
 }
 
-// ── Session approvals (in-memory, reset on restart) ───────────────────────────
+// ── Session approvals (in-memory, reset on restart, scoped per conversation) ──
 
-const sessionApprovals: Set<string> = new Set()
+const sessionApprovals = new Map<string, Set<string>>()
 
-/**
- * Builds a cache key for a given tool call.
- * Examples: `bash::npm test`, `WebFetchTool::https://...`, `writeFile::/src/foo.ts`
- */
 function buildSessionKey(toolName: string, toolArgs: Record<string, unknown>): string {
   let value = ''
-
   if (toolName === 'bash') {
     value = (toolArgs.command as string | undefined) ?? ''
   } else if (
-    toolName === 'writeFile' ||
-    toolName === 'FileEdit' ||
-    toolName === 'readFile' ||
-    toolName === 'listFiles' ||
-    toolName === 'GrepTool' ||
-    toolName === 'GlobTool'
+    toolName === 'writeFile' || toolName === 'FileEdit' ||
+    toolName === 'readFile' || toolName === 'listFiles' ||
+    toolName === 'GrepTool' || toolName === 'GlobTool'
   ) {
-    value =
-      (toolArgs.file_path as string | undefined) ??
+    value = (toolArgs.file_path as string | undefined) ??
       (toolArgs.path as string | undefined) ??
-      (toolArgs.pattern as string | undefined) ??
-      ''
+      (toolArgs.pattern as string | undefined) ?? ''
   } else if (toolName === 'WebFetchTool') {
     value = (toolArgs.url as string | undefined) ?? ''
   }
-
   return `${toolName}::${value}`
 }
 
-export function addSessionApproval(key: string): void {
-  sessionApprovals.add(key)
+export function addSessionApproval(conversationId: string, key: string): void {
+  let convSet = sessionApprovals.get(conversationId)
+  if (!convSet) {
+    convSet = new Set()
+    sessionApprovals.set(conversationId, convSet)
+  }
+  convSet.add(key)
 }
 
 export function hasSessionApproval(
+  conversationId: string,
   toolName: string,
   toolArgs: Record<string, unknown>
 ): boolean {
-  const key = buildSessionKey(toolName, toolArgs)
-  return sessionApprovals.has(key)
+  const convSet = sessionApprovals.get(conversationId)
+  if (!convSet) return false
+  return convSet.has(buildSessionKey(toolName, toolArgs))
 }
 
-export function clearSessionApprovals(): void {
-  sessionApprovals.clear()
+export function clearSessionApprovals(conversationId?: string): void {
+  if (conversationId) {
+    sessionApprovals.delete(conversationId)
+  } else {
+    sessionApprovals.clear()
+  }
 }
 
 // ── Rule matching ─────────────────────────────────────────────────────────────
@@ -210,11 +262,11 @@ export function getToolDefault(toolName: string): PermissionDecision {
  * 5. Tool default fallback
  */
 export function evaluatePermission(
-  context: PermissionContext,
+  context: PermissionContext & { conversationId?: string },
   rules: PermissionRule[]
 ): PermissionDecision {
   // 1. Session approvals
-  if (hasSessionApproval(context.toolName, context.toolArgs)) {
+  if (context.conversationId && hasSessionApproval(context.conversationId, context.toolName, context.toolArgs)) {
     return 'allow'
   }
 

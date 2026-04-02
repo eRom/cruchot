@@ -11,6 +11,7 @@ import {
   isEncryptionAvailable
 } from '../services/credential.service'
 import { PROVIDERS, MODELS } from '../llm/registry'
+import { invalidateProviderCache } from '../llm/providers'
 import { customModels } from '../db/schema'
 import {
   detectLocalProviders,
@@ -88,52 +89,36 @@ export function registerProvidersIpc(): void {
       allModels = [...allModels, ...mapped]
     }
 
-    // Attempt to fetch LM Studio models (non-blocking, silent fail)
-    if (!providerId || providerId === 'lmstudio') {
-      try {
-        const lmModels = await getLMStudioModels()
-        const dynamicModels = lmModels.map(m => ({
-          id: m.id,
-          providerId: 'lmstudio',
-          name: m.id,
-          displayName: m.id,
-          type: 'text' as const,
-          contextWindow: 0,
-          inputPrice: 0,
-          outputPrice: 0,
-          supportsImages: false,
-          supportsStreaming: true,
-          supportsThinking: false,
+    // Fetch local provider models in parallel (non-blocking, silent fail)
+    const localFetches: Promise<typeof allModels>[] = []
 
-        }))
-        allModels = [...allModels, ...dynamicModels]
-      } catch {
-        // LM Studio offline — skip
-      }
+    if (!providerId || providerId === 'lmstudio') {
+      localFetches.push(
+        getLMStudioModels()
+          .then(models => models.map(m => ({
+            id: m.id, providerId: 'lmstudio', name: m.id, displayName: m.id,
+            type: 'text' as const, contextWindow: 0, inputPrice: 0, outputPrice: 0,
+            supportsImages: false, supportsStreaming: true, supportsThinking: false,
+          })))
+          .catch(() => [])
+      )
     }
 
-    // Attempt to fetch Ollama models (non-blocking, silent fail)
     if (!providerId || providerId === 'ollama') {
-      try {
-        const ollamaModels = await getOllamaModels()
-        const dynamicModels = ollamaModels.map(m => ({
-          id: m.name,
-          providerId: 'ollama',
-          name: m.name,
-          displayName: m.name,
-          type: 'text' as const,
-          contextWindow: 0,
-          inputPrice: 0,
-          outputPrice: 0,
-          supportsImages: false,
-          supportsStreaming: true,
-          supportsThinking: false,
+      localFetches.push(
+        getOllamaModels()
+          .then(models => models.map(m => ({
+            id: m.name, providerId: 'ollama', name: m.name, displayName: m.name,
+            type: 'text' as const, contextWindow: 0, inputPrice: 0, outputPrice: 0,
+            supportsImages: false, supportsStreaming: true, supportsThinking: false,
+          })))
+          .catch(() => [])
+      )
+    }
 
-        }))
-        allModels = [...allModels, ...dynamicModels]
-      } catch {
-        // Ollama offline — skip
-      }
+    const localResults = await Promise.all(localFetches)
+    for (const models of localResults) {
+      allModels = [...allModels, ...models]
     }
 
     return allModels
@@ -159,6 +144,8 @@ export function registerProvidersIpc(): void {
         set: { value: encrypted, updatedAt: new Date() }
       })
       .run()
+
+    invalidateProviderCache(parsed.data.providerId)
   })
 
   ipcMain.handle('providers:validateApiKey', async (_event, providerId: string, apiKey: string) => {

@@ -9,7 +9,7 @@ import { buildThinkingProviderOptions } from '../llm/thinking'
 import { validateAttachment, processAttachments, buildContentParts, MAX_FILES_PER_MESSAGE, type AttachmentRef } from '../llm/attachments'
 import { parseFileOperations } from '../llm/file-operations'
 import { ThinkTagParser } from '../llm/think-tag-parser'
-import { buildConversationTools, buildWorkspaceContextBlock, WORKSPACE_TOOLS_PROMPT } from '../llm/tools'
+import { buildConversationTools, buildWorkspaceContextBlock, WORKSPACE_TOOLS_PROMPT, wrapExternalTool } from '../llm/tools'
 import { getAllPermissionRules } from '../db/queries/permissions'
 import { mcpManagerService } from '../services/mcp-manager.service'
 import { telegramBotService } from '../services/telegram-bot.service'
@@ -55,7 +55,6 @@ const sendMessageSchema = z.object({
   libraryId: z.string().optional(),
   skillName: z.string().max(200).optional(),
   skillArgs: z.string().max(10_000).optional(),
-  yoloMode: z.boolean().optional()
 })
 
 let currentAbortController: AbortController | null = null
@@ -65,6 +64,9 @@ const pendingApprovals = new Map<string, {
   resolve: (decision: 'allow' | 'deny' | 'allow-session') => void
   timeout: NodeJS.Timeout
 }>()
+
+// YOLO mode state — main process owns this, not renderer
+const yoloModeByConversation = new Map<string, boolean>()
 
 const APPROVAL_TIMEOUT_MS = 60_000 // 60 seconds
 
@@ -178,7 +180,6 @@ export interface HandleChatMessageParams {
   searchEnabled?: boolean
   skillName?: string
   skillArgs?: string
-  yoloMode?: boolean
   source: 'desktop' | 'telegram' | 'websocket'
   window: BrowserWindow
 }
@@ -190,7 +191,7 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
     conversationId, content, modelId, providerId, systemPrompt,
     temperature, maxTokens, topP, thinkingEffort, roleId,
     attachments: attachmentRefs, fileContexts,
-    searchEnabled, skillName, skillArgs, yoloMode, source
+    searchEnabled, skillName, skillArgs, source
   } = params
 
   const isRemoteConnected = telegramBotService.getStatus() === 'connected'
@@ -471,63 +472,75 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
 
   // Build conversation tools with permission pipeline
   const rules = getAllPermissionRules()
+
+  // Shared approval callback — used by both workspace tools and MCP tools
+  const onAskApproval = async (request: { toolName: string; toolArgs: Record<string, unknown> }): Promise<'allow' | 'deny' | 'allow-session'> => {
+    // YOLO mode: auto-accept all tool approvals without prompting
+    if (yoloModeByConversation.get(conversationId)) return 'allow'
+
+    const approvalId = crypto.randomUUID()
+
+    return new Promise<'allow' | 'deny' | 'allow-session'>((resolve) => {
+      const timeout = setTimeout(() => {
+        pendingApprovals.delete(approvalId)
+        resolve('deny')
+        win.webContents.send('chat:chunk', {
+          type: 'tool-approval-resolved',
+          approvalId,
+          decision: 'deny'
+        })
+      }, APPROVAL_TIMEOUT_MS)
+
+      pendingApprovals.set(approvalId, { resolve, timeout })
+
+      // Route approval request based on source
+      if (source === 'telegram' && isRemoteConnected) {
+        telegramBotService.requestApproval(approvalId, request.toolName, request.toolArgs)
+          .then(approved => {
+            clearTimeout(timeout)
+            pendingApprovals.delete(approvalId)
+            resolve(approved ? 'allow' : 'deny')
+          })
+          .catch(() => {
+            clearTimeout(timeout)
+            pendingApprovals.delete(approvalId)
+            resolve('deny')
+          })
+      } else if (source === 'websocket' && isWsConnected) {
+        // WebSocket remote — similar pattern
+        // For now, deny by default (WebSocket approval not yet wired)
+        clearTimeout(timeout)
+        pendingApprovals.delete(approvalId)
+        resolve('deny')
+      } else {
+        // Desktop: send approval request via IPC chunk
+        win.webContents.send('chat:chunk', {
+          type: 'tool-approval',
+          approvalId,
+          toolName: request.toolName,
+          toolArgs: request.toolArgs
+        })
+      }
+    })
+  }
+
   const workspaceTools = buildConversationTools(resolvedWorkspacePath, {
     rules,
-    onAskApproval: async (request) => {
-      // YOLO mode: auto-accept all tool approvals without prompting
-      if (yoloMode) return 'allow'
-
-      const approvalId = crypto.randomUUID()
-
-      return new Promise<'allow' | 'deny' | 'allow-session'>((resolve) => {
-        const timeout = setTimeout(() => {
-          pendingApprovals.delete(approvalId)
-          resolve('deny')
-          win.webContents.send('chat:chunk', {
-            type: 'tool-approval-resolved',
-            approvalId,
-            decision: 'deny'
-          })
-        }, APPROVAL_TIMEOUT_MS)
-
-        pendingApprovals.set(approvalId, { resolve, timeout })
-
-        // Route approval request based on source
-        if (source === 'telegram' && isRemoteConnected) {
-          telegramBotService.requestApproval(approvalId, request.toolName, request.toolArgs)
-            .then(approved => {
-              clearTimeout(timeout)
-              pendingApprovals.delete(approvalId)
-              resolve(approved ? 'allow' : 'deny')
-            })
-            .catch(() => {
-              clearTimeout(timeout)
-              pendingApprovals.delete(approvalId)
-              resolve('deny')
-            })
-        } else if (source === 'websocket' && isWsConnected) {
-          // WebSocket remote — similar pattern
-          // For now, deny by default (WebSocket approval not yet wired)
-          clearTimeout(timeout)
-          pendingApprovals.delete(approvalId)
-          resolve('deny')
-        } else {
-          // Desktop: send approval request via IPC chunk
-          win.webContents.send('chat:chunk', {
-            type: 'tool-approval',
-            approvalId,
-            toolName: request.toolName,
-            toolArgs: request.toolArgs
-          })
-        }
-      })
-    }
+    conversationId,
+    onAskApproval
   })
 
-  // Build MCP tools (from connected MCP servers, scoped to project)
+  // Build MCP tools — wrapped with same permission pipeline as workspace tools
   let mcpTools: Record<string, unknown> = {}
   try {
-    mcpTools = await mcpManagerService.getToolsForChat(conv?.projectId)
+    const rawMcpTools = await mcpManagerService.getToolsForChat(conv?.projectId)
+    for (const [name, tool] of Object.entries(rawMcpTools)) {
+      mcpTools[name] = wrapExternalTool(name, tool, resolvedWorkspacePath, {
+        rules,
+        conversationId,
+        onAskApproval
+      })
+    }
   } catch (err) {
     console.warn('[Chat] Failed to get MCP tools:', err)
   }
@@ -539,7 +552,8 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
       const perplexityApiKey = getApiKeyForProvider('perplexity')
       if (perplexityApiKey) {
         const { perplexitySearch } = await import('@perplexity-ai/ai-sdk')
-        mcpTools = { ...mcpTools, search: perplexitySearch({ apiKey: perplexityApiKey }) }
+        const rawSearchTool = perplexitySearch({ apiKey: perplexityApiKey })
+        mcpTools = { ...mcpTools, search: wrapExternalTool('search', rawSearchTool, resolvedWorkspacePath, { rules, conversationId, onAskApproval }) }
       }
     } catch (err) {
       console.warn('[Chat] Failed to inject Perplexity Search tool:', err)
@@ -1005,6 +1019,21 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
 // ── IPC Registration ──────────────────────────────────────
 
 export function registerChatIpc(): void {
+  ipcMain.handle('chat:set-yolo-mode', async (_event, payload: unknown) => {
+    const parsed = z.object({
+      conversationId: z.string().min(1),
+      enabled: z.boolean()
+    }).safeParse(payload)
+    if (!parsed.success) throw new Error('Payload invalide')
+    yoloModeByConversation.set(parsed.data.conversationId, parsed.data.enabled)
+  })
+
+  ipcMain.handle('chat:get-yolo-mode', async (_event, payload: unknown) => {
+    const parsed = z.object({ conversationId: z.string().min(1) }).safeParse(payload)
+    if (!parsed.success) throw new Error('Payload invalide')
+    return yoloModeByConversation.get(parsed.data.conversationId) ?? false
+  })
+
   ipcMain.handle('chat:send', async (event, payload) => {
     const parsed = sendMessageSchema.safeParse(payload)
     if (!parsed.success) {
