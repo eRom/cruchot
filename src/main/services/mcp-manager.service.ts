@@ -18,6 +18,23 @@ interface McpServerState {
   toolCount: number
 }
 
+const MCP_ALLOWED_COMMANDS = new Set([
+  'npx', 'node', 'python3', 'python', 'uvx', 'docker', 'deno', 'bun'
+])
+
+const MCP_SHELL_METACHARACTERS = /[;|&`$(){}]/
+
+function validateMcpCommand(command: string): { valid: boolean; reason?: string } {
+  const basename = command.split('/').pop() ?? command
+  if (!MCP_ALLOWED_COMMANDS.has(basename)) {
+    return { valid: false, reason: `Commande MCP non autorisee: ${basename}. Autorisees: ${[...MCP_ALLOWED_COMMANDS].join(', ')}` }
+  }
+  if (MCP_SHELL_METACHARACTERS.test(command)) {
+    return { valid: false, reason: 'Metacaracteres shell detectes dans la commande MCP' }
+  }
+  return { valid: true }
+}
+
 class McpManagerService {
   private servers = new Map<string, McpServerState>()
   private mainWindow: BrowserWindow | null = null
@@ -59,6 +76,12 @@ class McpManagerService {
 
       if (serverConfig.transportType === 'stdio') {
         if (!serverConfig.command) throw new Error('Command is required for stdio transport')
+
+        const validation = validateMcpCommand(serverConfig.command)
+        if (!validation.valid) {
+          console.error(`[MCP] ${validation.reason}`)
+          throw new Error(validation.reason)
+        }
 
         const { Experimental_StdioMCPTransport } = await import('@ai-sdk/mcp/mcp-stdio')
 

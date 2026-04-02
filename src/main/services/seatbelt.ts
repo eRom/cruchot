@@ -1,6 +1,7 @@
 import { spawn, type ExecOptions } from 'child_process'
 import { existsSync, writeFileSync, unlinkSync } from 'fs'
 import { join } from 'path'
+import { app } from 'electron'
 import { buildSafeEnv, wrapCommand } from '../llm/bash-security'
 
 const SANDBOX_EXEC_PATH = '/usr/bin/sandbox-exec'
@@ -8,12 +9,16 @@ const SANDBOX_EXEC_PATH = '/usr/bin/sandbox-exec'
 export const SEATBELT_DENIED_PATHS = [
   '.ssh', '.aws', '.gnupg', '.gpg', '.config/gcloud', '.azure',
   '.kube', '.docker', '.credentials', '.password-store',
-  'Library/Keychains'
+  'Library/Keychains',
+  '.config',
+  'Library/Application Support',
+  'Library/Preferences',
 ]
 
 export const SEATBELT_DENIED_FILES = [
   '.netrc', '.npmrc', '.pypirc', '.env',
-  '.bash_history', '.zsh_history'
+  '.bash_history', '.zsh_history',
+  '.gitconfig',
 ]
 
 export function isSeatbeltAvailable(): boolean {
@@ -22,6 +27,7 @@ export function isSeatbeltAvailable(): boolean {
 
 function generateSeatbeltProfile(sandboxDir: string): string {
   const home = process.env.HOME || '/Users/unknown'
+  const userDataDir = app.getPath('userData')
 
   const denyPathRules = SEATBELT_DENIED_PATHS
     .map(p => `(deny file-read* (subpath "${home}/${p}"))`)
@@ -49,6 +55,16 @@ function generateSeatbeltProfile(sandboxDir: string): string {
     (require-not (subpath "${home}/.nvm"))
   )
 )
+
+;; Restrict network: only localhost and HTTPS
+(deny network*)
+(allow network-outbound (remote tcp "localhost:*"))
+(allow network-outbound (remote tcp "127.0.0.1:*"))
+(allow network-outbound (remote tcp "*:443"))
+(allow network-inbound)
+
+;; Deny access to app userData (SQLite DB, credentials)
+(deny file-read* (subpath "${userDataDir}"))
 
 ;; Deny sensitive paths and files in home
 ${denyPathRules}
