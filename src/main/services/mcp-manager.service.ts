@@ -16,6 +16,8 @@ interface McpServerState {
   status: McpServerStatus
   error?: string
   toolCount: number
+  cachedTools?: Record<string, Tool>
+  toolsCachedAt?: number
 }
 
 const MCP_ALLOWED_COMMANDS = new Set([
@@ -42,21 +44,18 @@ class McpManagerService {
   async init(mainWindow: BrowserWindow): Promise<void> {
     this.mainWindow = mainWindow
 
-    // Start all enabled servers
     const enabledServers = getEnabledMcpServers()
-    for (const server of enabledServers) {
-      try {
-        await this.startServer(server.id)
-      } catch (err) {
-        console.error(`[MCP] Failed to start server "${server.name}":`, err)
-      }
-    }
+    if (enabledServers.length === 0) return
 
-    if (enabledServers.length > 0) {
-      console.log(`[MCP] Initialized ${this.servers.size}/${enabledServers.length} servers`)
-    }
+    const results = await Promise.allSettled(
+      enabledServers.map(server => this.startServer(server.id))
+    )
+
+    const succeeded = results.filter(r => r.status === 'fulfilled').length
+    console.log(`[MCP] Initialized ${succeeded}/${enabledServers.length} servers`)
   }
 
+  private static readonly TOOLS_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
   private static readonly SPAWN_RETRY_DELAY = 1000 // 1s
   private static readonly SPAWN_MAX_RETRIES = 2
 
@@ -209,7 +208,15 @@ class McpManagerService {
       if (!serverConfig) continue
 
       try {
-        const tools = await state.client.tools()
+        let tools: Record<string, Tool>
+        if (state.cachedTools && state.toolsCachedAt && Date.now() - state.toolsCachedAt < McpManagerService.TOOLS_CACHE_TTL) {
+          tools = state.cachedTools
+        } else {
+          tools = await state.client.tools()
+          state.cachedTools = tools
+          state.toolsCachedAt = Date.now()
+          state.toolCount = Object.keys(tools).length
+        }
         // Prefix tool names with server name to avoid collisions
         const prefix = serverConfig.name.toLowerCase().replace(/[^a-z0-9]/g, '_')
         for (const [name, tool] of Object.entries(tools)) {
@@ -219,6 +226,8 @@ class McpManagerService {
         console.warn(`[MCP] Failed to get tools from "${serverConfig.name}":`, err)
         state.status = 'error'
         state.error = err instanceof Error ? err.message : String(err)
+        state.cachedTools = undefined
+        state.toolsCachedAt = undefined
         this.notifyStatusChange(serverId, 'error', state.error)
       }
     }
