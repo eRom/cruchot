@@ -30,8 +30,8 @@ vendor/qdrant/win32-*/
 vendor/models/
 .qdrant-initialized
 
-# Presentation sources
-specs/presentation/sources/*
+# Specs (local only)
+specs/
 
 # Audit improvement (local only)
 improvement/
