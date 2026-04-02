@@ -156,4 +156,34 @@ describe('isReadOnlyCommand', () => {
       expect(isReadOnlyCommand('rg pattern src/')).toBe(true)
     })
   })
+
+  describe('quoted strings containing operators', () => {
+    it('accepts echo "a && b" (operators inside double quotes)', () => {
+      expect(isReadOnlyCommand('echo "a && b"')).toBe(true)
+    })
+
+    it('accepts echo "hello | world"', () => {
+      expect(isReadOnlyCommand('echo "hello | world"')).toBe(true)
+    })
+
+    it("accepts echo 'a; b; c' (operators inside single quotes)", () => {
+      expect(isReadOnlyCommand("echo 'a; b; c'")).toBe(true)
+    })
+
+    it('accepts grep "pattern || other" file.txt', () => {
+      expect(isReadOnlyCommand('grep "pattern || other" file.txt')).toBe(true)
+    })
+
+    it('rejects echo "safe" && rm file (unquoted operator still splits)', () => {
+      expect(isReadOnlyCommand('echo "safe" && rm file')).toBe(false)
+    })
+
+    it('accepts cat file.txt | grep "a && b" | wc -l', () => {
+      expect(isReadOnlyCommand('cat file.txt | grep "a && b" | wc -l')).toBe(true)
+    })
+
+    it('accepts echo "nested \'quotes\' here"', () => {
+      expect(isReadOnlyCommand('echo "nested \'quotes\' here"')).toBe(true)
+    })
+  })
 })

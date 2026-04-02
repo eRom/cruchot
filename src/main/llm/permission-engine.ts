@@ -46,12 +46,64 @@ const READONLY_COMMANDS: Set<string> = new Set([
 ])
 
 /**
- * Returns true if the command starts with a known read-only command.
+ * Splits a shell command on unquoted operators (&&, ||, ;, |).
+ * Respects single and double quotes — operators inside quotes are ignored.
+ */
+function splitOnUnquotedOperators(command: string): string[] {
+  const parts: string[] = []
+  let current = ''
+  let inSingle = false
+  let inDouble = false
+  let i = 0
+
+  while (i < command.length) {
+    const ch = command[i]
+
+    // Track quote state
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle
+      current += ch
+      i++
+      continue
+    }
+    if (ch === '"' && !inSingle) {
+      inDouble = !inDouble
+      current += ch
+      i++
+      continue
+    }
+
+    // Only split on operators when outside quotes
+    if (!inSingle && !inDouble) {
+      if ((ch === '&' && command[i + 1] === '&') || (ch === '|' && command[i + 1] === '|')) {
+        parts.push(current.trim())
+        current = ''
+        i += 2
+        continue
+      }
+      if (ch === ';' || ch === '|') {
+        parts.push(current.trim())
+        current = ''
+        i++
+        continue
+      }
+    }
+
+    current += ch
+    i++
+  }
+
+  if (current.trim()) parts.push(current.trim())
+  return parts.filter(Boolean)
+}
+
+/**
+ * Returns true if the command only uses known read-only commands.
  * For compound commands (&&, ||, ;, |), checks EACH subcommand.
+ * Respects quoted strings — operators inside quotes don't split.
  */
 export function isReadOnlyCommand(command: string): boolean {
-  // Split on shell operators (&&, ||, ;, |) — simplified, doesn't handle quotes
-  const subcommands = command.split(/\s*(?:&&|\|\||[;|])\s*/).filter(Boolean)
+  const subcommands = splitOnUnquotedOperators(command)
   if (subcommands.length === 0) return false
 
   for (const sub of subcommands) {
