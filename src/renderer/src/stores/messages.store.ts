@@ -46,7 +46,14 @@ interface MessagesState {
   messages: Message[]
   streamingMessageId: string | null
 
+  // Pagination
+  hasOlderMessages: boolean
+  isLoadingOlder: boolean
+  totalCount: number
+
   setMessages: (messages: Message[]) => void
+  setMessagesPage: (messages: Message[], totalCount: number, hasMore: boolean) => void
+  prependMessages: (olderMessages: Message[], hasMore: boolean) => void
   addMessage: (message: Message) => void
   updateMessage: (id: string, updates: Partial<Message>) => void
   appendToMessage: (id: string, content: string) => void
@@ -64,7 +71,22 @@ export const useMessagesStore = create<MessagesState>((set, get) => ({
   messages: [],
   streamingMessageId: null,
 
+  // Pagination
+  hasOlderMessages: false,
+  isLoadingOlder: false,
+  totalCount: 0,
+
   setMessages: (messages) => set({ messages }),
+
+  setMessagesPage: (messages, totalCount, hasMore) =>
+    set({ messages, totalCount, hasOlderMessages: hasMore }),
+
+  prependMessages: (olderMessages, hasMore) =>
+    set((state) => ({
+      messages: [...olderMessages, ...state.messages],
+      hasOlderMessages: hasMore,
+      isLoadingOlder: false
+    })),
 
   addMessage: (message) =>
     set((state) => ({
@@ -135,7 +157,13 @@ export const useMessagesStore = create<MessagesState>((set, get) => ({
       messages: state.messages.filter((m) => m.id !== id)
     })),
 
-  clearMessages: () => set({ messages: [], streamingMessageId: null }),
+  clearMessages: () => set({
+    messages: [],
+    streamingMessageId: null,
+    hasOlderMessages: false,
+    isLoadingOlder: false,
+    totalCount: 0
+  }),
 
   setStreamingMessageId: (id) => set({ streamingMessageId: id }),
 
