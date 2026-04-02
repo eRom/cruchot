@@ -18,6 +18,7 @@ import { qdrantMemoryService } from '../services/qdrant-memory.service'
 import { buildSemanticMemoryBlock } from '../llm/memory-prompt'
 import { buildLibraryContextBlock, type LibraryChunkForPrompt } from '../llm/library-prompt'
 import { buildSkillContextBlock } from '../llm/skill-prompt'
+import { DEFAULT_SYSTEM_PROMPT } from '../llm/system-prompt'
 import { getSkillByName } from '../db/queries/skills'
 import { libraryService } from '../services/library.service'
 import { getConversationLibraryId, getLibrary } from '../db/queries/libraries'
@@ -339,9 +340,9 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
       }
     }
 
-    // Build combined system prompt: library-context + semantic memory + memory fragments + role prompt
+    // Build combined system prompt: base + library-context + semantic memory + memory fragments + role prompt
     const memoryBlock = buildMemoryBlock()
-    let combinedSystemPrompt = ''
+    let combinedSystemPrompt = DEFAULT_SYSTEM_PROMPT
 
     if (libraryContextBlock) {
       if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'

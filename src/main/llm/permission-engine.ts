@@ -29,8 +29,8 @@ const READONLY_COMMANDS: Set<string> = new Set([
   'ls', 'file', 'stat', 'du', 'df', 'wc', 'md5', 'shasum', 'cksum',
   // Search
   'find', 'grep', 'rg', 'ag', 'fd', 'locate',
-  // Text processing (read-only piped usage)
-  'sort', 'uniq', 'diff', 'cut', 'tr', 'awk', 'sed', 'tee', 'xargs',
+  // Text processing (strictly read-only — no tee/xargs/sed/awk which can write or execute)
+  'sort', 'uniq', 'diff', 'cut', 'tr',
   'jq', 'yq', 'column', 'paste', 'fold', 'fmt', 'rev', 'nl',
   // Path / info
   'pwd', 'realpath', 'readlink', 'basename', 'dirname',
