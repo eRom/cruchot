@@ -15,6 +15,72 @@ const turndown = new TurndownService({
   codeBlockStyle: 'fenced'
 })
 
+const FETCH_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (compatible; Cruchot/1.0)',
+  'Accept': 'text/html,application/xhtml+xml,text/plain,application/json'
+}
+
+function isPrivateOrReservedHost(hostname: string): boolean {
+  if (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1' ||
+    hostname === '0.0.0.0' ||
+    hostname.startsWith('169.254.') ||
+    hostname.startsWith('10.') ||
+    hostname.startsWith('192.168.') ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
+    hostname.endsWith('.local') ||
+    hostname.endsWith('.internal')
+  ) {
+    return true
+  }
+  return false
+}
+
+async function processResponse(
+  response: Response,
+  url: string,
+  prompt?: string
+): Promise<Record<string, unknown>> {
+  if (!response.ok) {
+    return { error: `HTTP ${response.status}: ${response.statusText}` }
+  }
+
+  const contentType = response.headers.get('content-type') ?? ''
+  const text = await response.text()
+
+  if (text.length > MAX_RESPONSE_SIZE) {
+    return { error: `Reponse trop volumineuse (${(text.length / 1024 / 1024).toFixed(1)} MB, max 2 MB)` }
+  }
+
+  let markdown: string
+
+  if (contentType.includes('text/html') || contentType.includes('application/xhtml')) {
+    markdown = turndown.turndown(text)
+  } else if (contentType.includes('application/json')) {
+    try {
+      markdown = '```json\n' + JSON.stringify(JSON.parse(text), null, 2) + '\n```'
+    } catch {
+      markdown = '```\n' + text + '\n```'
+    }
+  } else {
+    markdown = text
+  }
+
+  if (markdown.length > MAX_MARKDOWN_LENGTH) {
+    markdown = markdown.slice(0, MAX_MARKDOWN_LENGTH) + '\n\n... (contenu tronque)'
+  }
+
+  return {
+    url,
+    content: markdown,
+    contentType,
+    size: text.length,
+    ...(prompt ? { prompt } : {})
+  }
+}
+
 export function buildWebFetchTool() {
   return tool({
     description: `Recupere le contenu d'une URL web et le retourne en markdown. Lecture seule.
@@ -31,11 +97,14 @@ Usage :
       prompt: z.string().optional().describe('Optional instruction for what to extract from the page')
     }),
     execute: async ({ url, prompt }) => {
-      // Validate protocol
+      // Validate protocol and host
       try {
         const parsed = new URL(url)
         if (parsed.protocol !== 'https:') {
           return { error: 'Seules les URLs HTTPS sont autorisees' }
+        }
+        if (isPrivateOrReservedHost(parsed.hostname)) {
+          return { error: 'Acces aux adresses internes/privees interdit' }
         }
       } catch {
         return { error: 'URL invalide' }
@@ -47,50 +116,48 @@ Usage :
 
         const response = await fetch(url, {
           signal: controller.signal,
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; Cruchot/1.0)',
-            'Accept': 'text/html,application/xhtml+xml,text/plain,application/json'
-          }
+          redirect: 'manual',
+          headers: FETCH_HEADERS
         })
 
         clearTimeout(timeout)
 
-        if (!response.ok) {
-          return { error: `HTTP ${response.status}: ${response.statusText}` }
-        }
-
-        const contentType = response.headers.get('content-type') ?? ''
-        const text = await response.text()
-
-        if (text.length > MAX_RESPONSE_SIZE) {
-          return { error: `Reponse trop volumineuse (${(text.length / 1024 / 1024).toFixed(1)} MB, max 2 MB)` }
-        }
-
-        let markdown: string
-
-        if (contentType.includes('text/html') || contentType.includes('application/xhtml')) {
-          markdown = turndown.turndown(text)
-        } else if (contentType.includes('application/json')) {
-          try {
-            markdown = '```json\n' + JSON.stringify(JSON.parse(text), null, 2) + '\n```'
-          } catch {
-            markdown = '```\n' + text + '\n```'
+        // Handle redirects manually — validate target is still HTTPS + not private
+        if (response.status >= 300 && response.status < 400) {
+          const location = response.headers.get('location')
+          if (!location) {
+            return { error: `Redirect ${response.status} sans header Location` }
           }
-        } else {
-          markdown = text
+          try {
+            const redirectUrl = new URL(location, url)
+            if (redirectUrl.protocol !== 'https:') {
+              return { error: `Redirect vers protocole non-HTTPS bloque: ${redirectUrl.protocol}` }
+            }
+            if (isPrivateOrReservedHost(redirectUrl.hostname)) {
+              return { error: 'Redirect vers adresse interne/privee bloque' }
+            }
+            // Follow one redirect max
+            const controller2 = new AbortController()
+            const timeout2 = setTimeout(() => controller2.abort(), FETCH_TIMEOUT_MS)
+            const redirectResponse = await fetch(redirectUrl.href, {
+              signal: controller2.signal,
+              redirect: 'manual',
+              headers: FETCH_HEADERS
+            })
+            clearTimeout(timeout2)
+            if (redirectResponse.status >= 300 && redirectResponse.status < 400) {
+              return { error: 'Trop de redirections (max 1)' }
+            }
+            return processResponse(redirectResponse, url, prompt)
+          } catch (e) {
+            if (e instanceof Error && e.name === 'AbortError') {
+              return { error: `Timeout apres ${FETCH_TIMEOUT_MS / 1000}s` }
+            }
+            return { error: `Redirect invalide: ${location}` }
+          }
         }
 
-        if (markdown.length > MAX_MARKDOWN_LENGTH) {
-          markdown = markdown.slice(0, MAX_MARKDOWN_LENGTH) + '\n\n... (contenu tronque)'
-        }
-
-        return {
-          url,
-          content: markdown,
-          contentType,
-          size: text.length,
-          ...(prompt ? { prompt } : {})
-        }
+        return processResponse(response, url, prompt)
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           return { error: `Timeout apres ${FETCH_TIMEOUT_MS / 1000}s` }
