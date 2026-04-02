@@ -107,14 +107,22 @@ export default function ChatView() {
 
     async function loadMessages() {
       try {
-        const msgs = await window.api.getMessages(activeConversationId!)
-        const loadedMessages = msgs.map((m): Message => ({
+        const PAGE_SIZE = 50
+        const result = await window.api.getMessagesPage({
+          conversationId: activeConversationId!,
+          limit: PAGE_SIZE
+        })
+        const loadedMessages = result.messages.map((m): Message => ({
           ...m,
           isStreaming: false,
           reasoning: (m.contentData?.reasoning as string) || undefined,
           toolCalls: (m.contentData?.toolCalls as Message['toolCalls']) || undefined
         }))
-        setMessages(loadedMessages)
+        useMessagesStore.getState().setMessagesPage(
+          loadedMessages,
+          result.totalCount,
+          result.hasMore
+        )
 
         if (loadedMessages.length > 0 && useUiStore.getState().openPanel === 'right') {
           useUiStore.getState().setOpenPanel(null)
