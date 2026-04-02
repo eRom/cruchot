@@ -1,4 +1,4 @@
-import { eq, asc } from 'drizzle-orm'
+import { eq, asc, desc, and, lt, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { getDatabase } from '../index'
 import { messages } from '../schema'
@@ -73,4 +73,56 @@ export function deleteMessagesForConversation(conversationId: string) {
 export function deleteAllMessages() {
   const db = getDatabase()
   db.delete(messages).run()
+}
+
+// ── Pagination ────────────────────────────────────────────
+
+export function getMessageCount(conversationId: string): number {
+  const db = getDatabase()
+  const result = db
+    .select({ count: sql<number>`count(*)` })
+    .from(messages)
+    .where(eq(messages.conversationId, conversationId))
+    .get()
+  return result?.count ?? 0
+}
+
+export interface MessagesPageResult {
+  messages: ReturnType<typeof getMessagesForConversation>
+  totalCount: number
+  hasMore: boolean
+}
+
+export function getMessagesPage(
+  conversationId: string,
+  limit: number = 50,
+  beforeDate?: Date
+): MessagesPageResult {
+  const db = getDatabase()
+  const totalCount = getMessageCount(conversationId)
+
+  const conditions = beforeDate
+    ? and(
+        eq(messages.conversationId, conversationId),
+        lt(messages.createdAt, beforeDate)
+      )
+    : eq(messages.conversationId, conversationId)
+
+  // Query newest-first with LIMIT, then reverse for chronological order
+  const rows = db
+    .select()
+    .from(messages)
+    .where(conditions)
+    .orderBy(desc(messages.createdAt))
+    .limit(limit)
+    .all()
+    .reverse()
+
+  return {
+    messages: rows,
+    totalCount,
+    hasMore: beforeDate
+      ? rows.length === limit
+      : totalCount > limit
+  }
 }
