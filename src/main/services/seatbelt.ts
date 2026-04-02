@@ -56,12 +56,11 @@ function generateSeatbeltProfile(sandboxDir: string): string {
   )
 )
 
-;; Restrict network: only localhost and HTTPS
+;; Restrict network: only localhost and HTTPS outbound
 (deny network*)
 (allow network-outbound (remote tcp "localhost:*"))
 (allow network-outbound (remote tcp "127.0.0.1:*"))
 (allow network-outbound (remote tcp "*:443"))
-(allow network-inbound)
 
 ;; Deny access to app userData (SQLite DB, credentials)
 (deny file-read* (subpath "${userDataDir}"))

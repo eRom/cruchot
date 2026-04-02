@@ -331,47 +331,60 @@ export function runMigrations(): void {
   `)
 
   // ── FTS5 — content-sync with messages table ──────────────
-  // Drop and recreate to ensure existing installs get the content-sync version
-  // (old installs had a standalone table with no triggers — always empty)
-  sqlite.exec(`DROP TABLE IF EXISTS messages_fts`)
-  sqlite.exec(`
-    CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
-      content,
-      content=messages,
-      content_rowid=rowid
-    )
-  `)
-
-  sqlite.exec(`DROP TRIGGER IF EXISTS messages_fts_ai`)
-  sqlite.exec(`DROP TRIGGER IF EXISTS messages_fts_ad`)
-  sqlite.exec(`DROP TRIGGER IF EXISTS messages_fts_au`)
-
-  sqlite.exec(`
-    CREATE TRIGGER messages_fts_ai AFTER INSERT ON messages BEGIN
-      INSERT INTO messages_fts(rowid, content) VALUES (new.rowid, new.content);
-    END
-  `)
-  sqlite.exec(`
-    CREATE TRIGGER messages_fts_ad AFTER DELETE ON messages BEGIN
-      INSERT INTO messages_fts(messages_fts, rowid, content) VALUES ('delete', old.rowid, old.content);
-    END
-  `)
-  sqlite.exec(`
-    CREATE TRIGGER messages_fts_au AFTER UPDATE ON messages BEGIN
-      INSERT INTO messages_fts(messages_fts, rowid, content) VALUES ('delete', old.rowid, old.content);
-      INSERT INTO messages_fts(rowid, content) VALUES (new.rowid, new.content);
-    END
-  `)
-
-  // Backfill existing messages into FTS5
-  try {
-    const count = (sqlite.prepare('SELECT COUNT(*) as c FROM messages').get() as { c: number }).c
-    if (count > 0) {
-      sqlite.exec(`INSERT INTO messages_fts(rowid, content) SELECT rowid, content FROM messages`)
-      console.log(`[FTS5] Backfilled ${count} messages`)
+  // Guard: only run the full migration if the trigger doesn't exist yet.
+  // This avoids DROP + recreate + backfill on every startup for existing installs.
+  const needsFtsMigration = (() => {
+    try {
+      // If the sync trigger exists, migration is already done
+      const trigger = sqlite.prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name='messages_fts_ai'").get()
+      return !trigger
+    } catch {
+      return true  // Table doesn't exist or is broken
     }
-  } catch (err) {
-    console.error('[FTS5] Backfill error:', err)
+  })()
+
+  if (needsFtsMigration) {
+    sqlite.exec(`DROP TABLE IF EXISTS messages_fts`)
+    sqlite.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
+        content,
+        content=messages,
+        content_rowid=rowid
+      )
+    `)
+
+    sqlite.exec(`DROP TRIGGER IF EXISTS messages_fts_ai`)
+    sqlite.exec(`DROP TRIGGER IF EXISTS messages_fts_ad`)
+    sqlite.exec(`DROP TRIGGER IF EXISTS messages_fts_au`)
+
+    sqlite.exec(`
+      CREATE TRIGGER messages_fts_ai AFTER INSERT ON messages BEGIN
+        INSERT INTO messages_fts(rowid, content) VALUES (new.rowid, new.content);
+      END
+    `)
+    sqlite.exec(`
+      CREATE TRIGGER messages_fts_ad AFTER DELETE ON messages BEGIN
+        INSERT INTO messages_fts(messages_fts, rowid, content) VALUES ('delete', old.rowid, old.content);
+      END
+    `)
+    sqlite.exec(`
+      CREATE TRIGGER messages_fts_au AFTER UPDATE ON messages BEGIN
+        INSERT INTO messages_fts(messages_fts, rowid, content) VALUES ('delete', old.rowid, old.content);
+        INSERT INTO messages_fts(rowid, content) VALUES (new.rowid, new.content);
+      END
+    `)
+
+    // Backfill existing messages into FTS5
+    try {
+      const count = (sqlite.prepare('SELECT COUNT(*) as c FROM messages').get() as { c: number }).c
+      if (count > 0) {
+        sqlite.exec(`INSERT INTO messages_fts(rowid, content) SELECT rowid, content FROM messages`)
+        console.log(`[FTS5] Backfilled ${count} messages`)
+      }
+    } catch (err) {
+      console.error('[FTS5] Backfill error:', err)
+    }
+    console.log('[FTS5] Migration applied')
   }
 
   // ── FK cascade delete triggers ────────────────────────────────────

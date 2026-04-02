@@ -285,6 +285,12 @@ function buildComponents(isStreaming: boolean): Partial<Components> {
   }
 }
 
+// ── Pre-built static component objects ─────────────────────────
+// Built once at module scope — guarantees referential stability and
+// avoids React remounts caused by new object identity on each render.
+const COMPONENTS_STATIC = buildComponents(false)
+const COMPONENTS_STREAMING = buildComponents(true)
+
 // ── Main component ─────────────────────────────────────────────
 
 /**
@@ -296,7 +302,7 @@ function buildComponents(isStreaming: boolean): Partial<Components> {
 function MarkdownRenderer({ content, className, isStreaming = false }: MarkdownRendererProps): React.JSX.Element {
   const remarkPlugins = useMemo(() => [remarkGfm, remarkMath], [])
   const rehypePlugins = useMemo(() => [rehypeKatex], [])
-  const components = useMemo(() => buildComponents(isStreaming), [isStreaming])
+  const components = isStreaming ? COMPONENTS_STREAMING : COMPONENTS_STATIC
 
   return (
     <div className={cn('markdown-body text-[14.5px]', className)}>
