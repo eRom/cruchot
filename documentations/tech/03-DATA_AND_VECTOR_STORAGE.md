@@ -4,7 +4,7 @@ Cruchot est une application "Local-First". Toutes les données utilisateurs (con
 
 ## 1. La Base de Données Relationnelle (SQLite + Drizzle)
 
-La base de données principale est gérée par **Better-SQLite3** et l'ORM **Drizzle**. Le fichier de base de données est stocké dans le profil utilisateur (`~/.cruchot/db/main.db`).
+La base de données principale est gérée par **Better-SQLite3** et l'ORM **Drizzle**. Le fichier de base de données est stocké dans le profil utilisateur Electron (`app.getPath('userData')/db/main.db`, soit `~/Library/Application Support/cruchot/db/main.db` sur macOS).
 
 ### 1.1 Le Schéma (`schema.ts`)
 Le schéma est complet et gère toutes les entités de l'application :
@@ -12,11 +12,13 @@ Le schéma est complet et gère toutes les entités de l'application :
 - **Chat** : `projects`, `conversations`, `messages`, `attachments`, `images`.
 - **IA & Context** : `roles`, `prompts`, `memoryFragments`, `slashCommands`.
 - **RAG & Librairies** : `libraries`, `librarySources`, `libraryChunks`.
-- **Outils & Extension** : `mcpServers`, `skills`, `permissionRules`, `bardas`.
+- **Outils & Extension** : `mcpServers`, `skills`, `permissionRules`, `bardas`, `customModels`.
 - **Opérations** : `scheduledTasks`, `statistics`, `ttsUsage`, `arenaMatches`, `remoteSessions`.
 
+Le schéma totalise **27 tables** Drizzle.
+
 ### 1.2 Migrations et Évolutivité
-Les migrations de schéma sont générées par `drizzle-kit` et exécutées automatiquement au lancement de l'application via `runMigrations()`. Cela garantit que la base de données locale de l'utilisateur est toujours à jour avec la version de l'application.
+Les migrations sont gérées par des instructions SQL manuelles dans `migrate.ts` (pattern `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE ... ADD COLUMN` avec gestion d'idempotence). Elles sont exécutées automatiquement au lancement de l'application via `runMigrations()`. Cela garantit que la base de données locale de l'utilisateur est toujours à jour avec la version de l'application.
 
 ## 2. Base Vectorielle et Mémoire Sémantique (Qdrant)
 
@@ -41,5 +43,9 @@ Pour transformer le texte en vecteurs (embeddings) à stocker dans Qdrant sans e
 ### 3.1 Exécution Off-Thread (`embedding.service.ts`)
 L'inférence d'embeddings via des modèles ONNX (via `@huggingface/transformers`) est intensive en CPU. Pour ne pas bloquer le processus principal d'Electron (Main thread), le service d'embedding tourne dans un **Worker Thread** Node.js séparé (`embedding.worker.js`).
 
-### 3.2 Dimensions et Modèle
-Par défaut, le modèle local génère des vecteurs de dimension 384 (`EMBEDDING_DIM`). La base Qdrant est configurée pour accepter exactement cette dimension lors de la création de la collection.
+### 3.2 Dimensions et Modèles
+Deux modèles d'embeddings sont supportés :
+- **Local** : `all-MiniLM-L6-v2` via ONNX, générant des vecteurs de dimension **384**. Utilisé par défaut pour la mémoire sémantique des conversations.
+- **Google** : `gemini-embedding-2-preview` via `@ai-sdk/google`, générant des vecteurs de dimension **768**. Sélectionnable par bibliothèque RAG pour une meilleure qualité de recherche.
+
+Chaque collection Qdrant est configurée pour la dimension du modèle choisi (`conversations_memory` = 384d, `library_{id}` = 384d ou 768d selon le modèle de la bibliothèque).

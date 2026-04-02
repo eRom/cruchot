@@ -11,7 +11,7 @@ Voici les solutions aux problèmes les plus courants que vous pourriez rencontre
 ## Qdrant (Base de données vectorielle / Bibliothèques) ne démarre pas
 Cruchot utilise un binaire Qdrant en arrière-plan pour le RAG.
 - **Port occupé** : Qdrant utilise les ports 6333 et 6334 par défaut. Assurez-vous qu'aucune autre application n'utilise ces ports.
-- **Dossier corrompu** : Si Qdrant crash au démarrage, vous pouvez essayer de supprimer le dossier `~/.cruchot/qdrant_storage/` (Attention: vous devrez recréer et ré-indexer vos bibliothèques).
+- **Dossier corrompu** : Si Qdrant crash au démarrage, vous pouvez essayer de supprimer le dossier `qdrant-storage/` dans le dossier de données de l'application (`~/Library/Application Support/cruchot/qdrant-storage/` sur macOS). Attention : vous devrez recréer et ré-indexer vos bibliothèques.
 
 ## Le Bot Telegram ne reçoit pas mes messages
 - **Erreur de Token** : Avez-vous collé le bon Token de BotFather ?
@@ -20,7 +20,7 @@ Cruchot utilise un binaire Qdrant en arrière-plan pour le RAG.
 
 ## L'IA refuse de modifier un fichier (Permission Denied)
 - C'est un comportement de sécurité normal de Cruchot.
-- **Vérifiez le dossier de travail** : L'IA ne peut modifier que des fichiers situés dans le dossier sélectionné dans le **Panneau de Droite > Options**. Si elle essaie de toucher un fichier en dehors, le système OS l'en empêchera.
+- **Vérifiez le dossier de travail** : L'IA ne peut modifier que des fichiers situés dans le dossier sélectionné dans le **Panneau de Droite > Dossier de travail**. Si elle essaie de toucher un fichier en dehors, le sandbox OS (Seatbelt sur macOS) l'en empêchera.
 - **Mode Ask** : Si une boîte de dialogue s'affiche, vous devez explicitement cliquer sur "Approuver" pour que l'outil s'exécute.
 
 ## Un serveur MCP (stdio) s'affiche en erreur

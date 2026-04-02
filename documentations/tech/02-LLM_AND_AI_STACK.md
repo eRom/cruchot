@@ -14,7 +14,7 @@ Dans Cruchot, le flux est le suivant :
 ## 2. Les Fournisseurs (Providers)
 
 La configuration des providers se trouve dans `src/main/llm/providers.ts`.
-Les clés d'API ne sont **jamais mises en cache** en mémoire de manière persistante ou dans le code frontend. Elles sont récupérées à la volée depuis le trousseau sécurisé du système (`safeStorage` d'Electron) au moment de l'instanciation du modèle.
+Les clés d'API ne sont **jamais** dans le code frontend. Elles sont récupérées depuis le trousseau sécurisé du système (`safeStorage` d'Electron) et les instances de providers sont mises en cache 5 minutes (`providerCache`) pour éviter des appels répétés au trousseau système. Le cache est invalidé automatiquement lorsque l'utilisateur modifie une clé.
 
 ### 2.1 Fournisseurs Cloud Intégrés
 Cruchot intègre nativement les packages officiels du Vercel AI SDK pour :
@@ -25,10 +25,8 @@ Cruchot intègre nativement les packages officiels du Vercel AI SDK pour :
 - **xAI / Grok** (`@ai-sdk/xai`)
 - **DeepSeek** (`@ai-sdk/deepseek`)
 
-### 2.2 Fournisseurs Cloud Compatibles (OpenAI-Compatible)
-Pour certains fournisseurs n'ayant pas de SDK officiel, Cruchot utilise le mode "OpenAI-Compatible" (`@ai-sdk/openai-compatible`) :
-- **Qwen** (via l'API Alibaba)
-- **Perplexity**
+### 2.2 Fournisseurs avec SDK dédié
+- **Perplexity** (`@perplexity-ai/ai-sdk`) : SDK officiel avec support de la recherche web intégrée.
 
 ### 2.3 Routeurs et Gateways
 - **OpenRouter** (`@openrouter/ai-sdk-provider`) : Permet l'accès à des centaines de modèles via une seule clé API.
@@ -48,8 +46,10 @@ Cruchot n'envoie pas les messages de l'utilisateur tels quels. Un pipeline de pr
 
 1.  **Le Rôle Actuel** : Instructions globales de la personnalité choisie.
 2.  **Les Instructions de Compétences (Skills)** : Injectées si des skills natifs ou MCP sont actifs, expliquant au modèle comment utiliser ces outils.
-3.  **Fragments de Mémoire** : Injection des règles globales mémorisées par l'utilisateur (via `qdrantMemoryService` ou mémoires épinglées).
-4.  **Contexte de la Bibliothèque (RAG)** : Informations spécifiques issues de la recherche vectorielle liées à la conversation en cours.
+3.  **Mémoire Sémantique** : Rappel automatique des anciens messages pertinents via `qdrantMemoryService` (RAG local).
+4.  **Fragments de Mémoire** : Règles globales épinglées par l'utilisateur (memory fragments).
+5.  **Contexte de la Bibliothèque (RAG)** : Informations spécifiques issues de la recherche vectorielle liées à la conversation en cours.
+6.  **Contexte Workspace** : Lecture automatique de `CLAUDE.md` et `README.md` du dossier de travail.
 
 ## 5. Tracking de Coûts et Usage
 

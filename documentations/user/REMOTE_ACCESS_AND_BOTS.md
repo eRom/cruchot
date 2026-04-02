@@ -21,18 +21,18 @@ Vous pouvez contrôler Cruchot via la messagerie Telegram.
 Une fois configuré, vous devez "appairer" une conversation.
 
 1. Ouvrez une conversation sur votre ordinateur.
-2. Ouvrez le **Panneau de Droite**, section **Remote**.
-3. Cliquez sur **Générer un code de Pairing**. Cruchot affiche un code à 6 chiffres (valable 5 minutes).
+2. Ouvrez le **Panneau de Droite** (`Opt+Cmd+B`), section **Remote**.
+3. Activez le **switch Telegram**. Cruchot génère automatiquement un code de pairing (valable 5 minutes) et l'affiche dans un toast.
 4. Ouvrez Telegram sur votre téléphone et allez sur la conversation avec votre bot.
-5. Envoyez le message : `/pair XXXXXX` (remplacez par le code).
+5. Envoyez le message : `/pair XXXXXX` (remplacez par le code affiché).
 
 C'est fait ! Ce que vous tapez sur Telegram est envoyé à Cruchot sur votre Mac/PC, qui l'envoie au modèle d'IA, et la réponse vous revient en temps réel sur Telegram.
 
-## 3. Accès Distant Web (PWA)
+## 3. Accès Distant Web
 
-Cruchot dispose également d'une interface Web permettant d'accéder au chat complet depuis un navigateur (sans Telegram).
+Cruchot intègre un serveur WebSocket local avec support optionnel de **Cloudflare Tunnel** pour un accès depuis n'importe où.
 
-1. L'application Web (`remote-web`) doit être déployée sur Vercel (voir documentation de déploiement).
-2. Dans les paramètres de Cruchot Desktop, activez le **Serveur WebSocket Distant**.
-3. Rendez-vous sur l'URL de votre PWA Vercel, entrez l'adresse IP locale de votre Mac/PC (ou utilisez un tunnel comme Ngrok si vous n'êtes pas sur le même réseau WiFi).
-4. Entrez le code PIN de session pour vous connecter de manière sécurisée.
+1. Dans les **Parametres** > onglet **Remote**, activez le **Serveur WebSocket**.
+2. Si `cloudflared` est installé sur votre machine, Cruchot lance automatiquement un tunnel et affiche l'URL publique (ex: `https://xxx.trycloudflare.com`).
+3. Sans tunnel, seul `localhost` est accessible (utile sur le même réseau WiFi).
+4. Ouvrez l'URL dans un navigateur et entrez le code PIN de session affiché dans Cruchot pour vous connecter.

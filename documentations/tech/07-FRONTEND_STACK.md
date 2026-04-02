@@ -33,4 +33,4 @@ Le cœur de la valeur de Cruchot réside dans sa capacité à afficher correctem
 
 ## 5. Internationalisation (i18n)
 
-- **i18next / react-i18next** : L'interface est conçue pour être multilingue dès le départ, avec les fichiers de traduction centralisés dans `src/renderer/src/locales/`.
+- **i18next / react-i18next** : L'infrastructure i18n est en place avec les fichiers de traduction dans `src/renderer/src/locales/`. En pratique, l'interface est principalement en français avec un support anglais partiel. L'utilisation de `useTranslation()` dans les composants reste limitée — la majorité des textes UI sont codés en dur en français.

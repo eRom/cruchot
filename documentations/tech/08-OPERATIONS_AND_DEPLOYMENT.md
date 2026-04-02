@@ -8,7 +8,7 @@ Le packaging de l'application desktop est géré par **`electron-builder`**, con
 
 ### 1.1 Cibles de Build
 Cruchot est une application multi-plateformes :
-- **macOS** : Cible `.dmg` et `.zip` avec compilation universelle (Universal Binary supportant `arm64` pour Apple Silicon et `x64` pour Intel).
+- **macOS** : Cible `.dmg` et `.zip`, builds séparés par architecture (`arm64` pour Apple Silicon, `x64` pour Intel). Le build Universal Binary n'est pas utilisé car `test_extension.node` (better-sqlite3) échoue en mode universal.
 - **Windows** : Cible `.exe` via un installeur NSIS (permettant de choisir le dossier d'installation).
 - **Linux** : Cibles `.AppImage` (portable) et `.deb` (Debian/Ubuntu).
 
@@ -18,8 +18,8 @@ L'application dépend de binaires externes qui ne peuvent pas être bundlés par
 - **Qdrant Binaries** (`vendor/qdrant/`) : Les exécutables Qdrant natifs (macOS, Windows, Linux) filtrés par OS/Architecture.
 - **Modèles Locaux** (`vendor/models/`) : Modèles d'embeddings ONNX si présents.
 
-### 1.3 Dépendances Natives Exclues
-Dans `electron.vite.config.ts`, les dépendances Node.js comportant des extensions natives (comme `better-sqlite3`, `onnxruntime-node`, `fsevents`) ou complexes à bundler (comme le Vercel AI SDK ou `@ai-sdk/mcp`) sont "externalisées" pour éviter des crashs à l'exécution.
+### 1.3 Dépendances Natives Externalisées
+Dans `electron.vite.config.ts`, les dépendances Node.js comportant des extensions natives (comme `better-sqlite3`, `onnxruntime-node`, `fsevents`) ou complexes à bundler (comme `@ai-sdk/mcp`, `chokidar`) sont "externalisées" pour éviter des crashs à l'exécution. Le reste (AI SDK, Drizzle, Zod, etc.) est bundlé via une liste `exclude` dans `externalizeDepsPlugin`.
 
 ## 2. Intégration et Déploiement Continus (CI/CD)
 

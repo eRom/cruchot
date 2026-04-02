@@ -8,10 +8,11 @@ Chaque conversation dans Cruchot est associée à un dossier spécifique sur vot
 
 ### Changer de Dossier
 1. Ouvrez une conversation.
-2. Ouvrez le **Panneau de Droite** (`Cmd+Option+B` ou `Ctrl+Alt+B`).
-3. Dans la section **Options**, repérez le champ **Dossier de Travail**.
-4. Cliquez dessus pour sélectionner un autre dossier sur votre disque dur.
-5. L'IA ne pourra lire, écrire ou exécuter des commandes **que** dans ce dossier (et ses sous-dossiers).
+2. Ouvrez le **Panneau de Droite** (`Opt+Cmd+B`).
+3. Dans la section **Dossier de travail**, cliquez sur le chemin affiché pour sélectionner un autre dossier.
+4. L'IA ne pourra lire, écrire ou exécuter des commandes **que** dans ce dossier (et ses sous-dossiers).
+
+> **Mode YOLO** : Un switch (icone eclair) dans cette section permet de bypasser les demandes d'approbation pour les outils. Les vérifications de sécurité (bash checks, deny rules) restent actives. Utilisez avec précaution.
 
 *Note macOS : Le confinement est strict. L'IA ne peut physiquement pas sortir de ce dossier, même en cas de bug.*
 
@@ -20,7 +21,7 @@ Chaque conversation dans Cruchot est associée à un dossier spécifique sur vot
 Les bibliothèques permettent à l'IA de lire des centaines de documents en quelques secondes pour répondre à des questions précises sur vos données, sans avoir à tout envoyer dans la conversation.
 
 ### Créer une Bibliothèque
-1. Allez dans l'onglet **Bibliothèques** (Libraries) dans le menu principal.
+1. Allez dans **Personnaliser** (`Cmd+U`) > onglet **Referentiels**.
 2. Cliquez sur **Créer une Bibliothèque**.
 3. Donnez-lui un nom (ex: "Documentation Projet XYZ").
 4. Glissez-déposez des fichiers (`.txt`, `.md`, `.pdf`, `.docx`) ou sélectionnez un dossier complet.

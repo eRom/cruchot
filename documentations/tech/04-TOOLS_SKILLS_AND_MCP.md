@@ -6,13 +6,28 @@ Cruchot ne se contente pas de discuter avec des LLMs, il leur donne des bras et 
 
 Les outils natifs sont codés en dur dans l'application (TypeScript). Ils fournissent les capacités de base au LLM pour interagir avec le système de l'utilisateur.
 
-### 1.1 Opérations Système
-- Exécution de commandes Bash confinées.
-- Opérations sur les fichiers : lecture (`readFile`), écriture (`writeFile`), listage (`listFiles`).
-Ces opérations sont sécurisées et toujours confinées au dossier de travail (`workspacePath`) de la conversation en cours.
+### 1.1 Les 8 Tools AI SDK
+Cruchot fournit **8 outils** au LLM via le Vercel AI SDK :
+- **`bash`** : Exécution de commandes shell confinées via Seatbelt (macOS).
+- **`readFile`** : Lecture de fichiers avec protection TOCTOU (vérification mtime).
+- **`writeFile`** : Écriture de fichiers dans le workspace.
+- **`FileEdit`** : Modification partielle de fichiers (remplacement de chaînes, vérification TOCTOU).
+- **`listFiles`** : Exploration récursive de l'arborescence du workspace.
+- **`GrepTool`** : Recherche par regex dans les fichiers du workspace.
+- **`GlobTool`** : Recherche de fichiers par pattern (minimatch).
+- **`WebFetchTool`** : Requêtes HTTPS vers des URLs externes (HTML converti en Markdown via turndown, limite 2 MB).
 
-### 1.2 Le Moteur de Permissions (`permission-engine.ts`)
-Chaque appel d'outil natif passe par un moteur de règles. L'utilisateur peut définir des règles (`allow`, `deny`, `ask`) par outil. S'il n'y a pas de règle `allow` explicite, une boîte de dialogue de confirmation apparaît dans l'interface pour autoriser l'exécution de l'outil.
+Les 7 premiers outils sont confinés au dossier de travail (`workspacePath`). `WebFetchTool` est restreint au protocole HTTPS avec blocage des IPs privées.
+
+### 1.2 Pipeline de Sécurité (5 étages)
+Chaque appel d'outil passe par un pipeline de sécurité à 5 étages :
+1.  **Security Checks** (bash uniquement) : 21 vérifications statiques de la commande (hard block, non contournable).
+2.  **Deny Rules** : Si une règle d'interdiction utilisateur matche, l'outil est rejeté.
+3.  **READONLY_COMMANDS** : ~70 commandes passives (`ls`, `grep`, `cat`, `head`, etc.) auto-approuvées sans règle DB.
+4.  **Allow Rules** : Si une règle d'autorisation utilisateur matche, l'outil est exécuté.
+5.  **Ask (défaut)** : L'exécution est suspendue et une bannière de confirmation apparaît dans l'UI (timeout 60s).
+
+Le **Mode YOLO** (activable par conversation dans le panneau de droite) bypasse uniquement l'étape 5 (Ask) — les security checks et deny rules restent actifs. Le flag YOLO est géré côté main process (`Map<conversationId, boolean>`), pas dans le payload IPC.
 
 ## 2. Les Skills (Compétences Locales)
 
@@ -36,10 +51,10 @@ Cruchot supporte les deux modes de transport majeurs de MCP :
 - **HTTP / SSE** : Connexion à un serveur MCP distant via Server-Sent Events.
 
 ### 3.2 Sécurité et Isolation de l'Environnement (STDIO)
-Lorsqu'un serveur MCP est lancé en local (stdio), Cruchot applique des règles strictes :
-- **Whitelist de commandes** : Seules certaines commandes de base sont autorisées à spawner des serveurs MCP (`node`, `npx`, `python`, `uvx`, `docker`, `deno`, `bun`).
-- **Prévention de l'Injection Shell** : Les métacaractères shell (`|`, `;`, `&`, `$`, etc.) sont bloqués au moment de la validation de la commande.
+Lorsqu'un serveur MCP est lancé en local (stdio), Cruchot applique les mesures suivantes :
 - **Environnement minimal** : Le processus ne reçoit *pas* le `process.env` complet de Cruchot (qui pourrait contenir des clés API). Seules les variables de base (PATH, HOME, USER) et les variables personnalisées (chiffrées en base de données via `envEncrypted`) sont transmises au serveur MCP.
+
+> **Note** : La commande de spawn MCP n'est actuellement pas validée avant exécution (pas de whitelist ni de filtrage des métacaractères shell). Les outils MCP ne passent pas non plus par le moteur de permissions. Ces deux points sont identifiés comme pistes d'amélioration sécurité.
 
 ### 3.3 Cycle de Vie des Serveurs MCP
 Les serveurs activés sont lancés automatiquement au démarrage. Leurs `Tools` sont récupérés, mis en cache avec un préfixe unique (pour éviter les collisions de noms entre serveurs), et fournis au Vercel AI SDK lors des requêtes au LLM, si ce dernier supporte l'utilisation d'outils.

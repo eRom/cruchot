@@ -14,7 +14,7 @@ Le profil Seatbelt généré dynamiquement pour chaque exécution autorise le fo
 - **Dossiers sensibles** : La lecture est explicitement interdite pour les dossiers `.ssh`, `.aws`, `.gnupg`, `.docker`, le Keychain macOS, etc.
 - **Fichiers sensibles** : La lecture est interdite pour `.env`, `.npmrc`, `.zsh_history`, etc.
 - **Base de données Cruchot** : Le sandbox empêche le LLM d'aller lire ou modifier la base SQLite de l'application.
-- **Réseau** : Les connexions sortantes sont restreintes à localhost (pour les serveurs de dev) et au port 443 (HTTPS pour télécharger des paquets).
+- **Réseau** : Les connexions sortantes sont restreintes à `localhost` (nécessaire pour Ollama, LM Studio et les serveurs MCP locaux) et au port 443 (HTTPS pour télécharger des paquets). Toute autre connexion réseau est bloquée.
 
 ## 2. Nettoyage de l'Environnement et Analyse Bash
 
@@ -24,8 +24,8 @@ Avant même de confiner le processus, la commande générée par le LLM est insp
 - Le `process.env` complet de Cruchot (qui contient les clés API de l'utilisateur) n'est **jamais** passé au shell.
 - Un environnement minimal est construit (PATH restreint, HOME forcé sur le `workspacePath`).
 
-### 2.2 Analyse Statique (22 points de contrôle)
-Toute commande Bash passe par un crible de vérifications par expressions régulières pour bloquer les comportements suspects, avant même de demander l'autorisation à l'utilisateur :
+### 2.2 Analyse Statique (21 points de contrôle actifs)
+Toute commande Bash passe par un crible de vérifications par expressions régulières (checks #1 à #23, avec #6 supprimé car les commandes multi-lignes sont légitimes pour les LLM) pour bloquer les comportements suspects, avant même de demander l'autorisation à l'utilisateur :
 - **Substitution de commandes** (`$(...)`, `` `...` ``)
 - **Redéfinition de variables dangereuses** (`LD_PRELOAD`, `PATH`, `IFS`)
 - **Obfuscation** (backslash en milieu de mot, commentaires cachés `#`)
@@ -40,7 +40,7 @@ Les commandes sont enveloppées (`wrapCommand`) pour forcer le bon répertoire d
 La dernière couche de défense implique directement l'utilisateur.
 
 ### 3.1 Commandes Read-Only (Auto-Allow)
-Une liste blanche d'une quarantaine de commandes strictement passives (`ls`, `cat`, `grep`, `pwd`, `date`, `whoami`) est définie. Si une commande est composée exclusivement de ces outils, elle est exécutée sans confirmation, car le risque de modification est nul.
+Une liste blanche de **~70 commandes** strictement passives (`ls`, `cat`, `grep`, `head`, `tail`, `find`, `pwd`, `date`, `whoami`, `jq`, `diff`, etc.) est définie dans `READONLY_COMMANDS`. Si une commande (y compris les commandes chaînées via `&&`, `||`, `;`, `|`) est composée exclusivement de ces outils, elle est exécutée sans confirmation, car le risque de modification est nul.
 
 ### 3.2 Règles Utilisateur (Allow / Deny / Ask)
 Pour les autres commandes ou outils (writeFile, serveurs MCP), le moteur évalue les règles configurées par l'utilisateur (stockées en base de données) :
