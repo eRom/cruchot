@@ -13,7 +13,7 @@ import {
   forkConversation,
   setWorkspacePath
 } from '../db/queries/conversations'
-import { getMessagesForConversation, deleteMessagesForConversation, deleteAllMessages } from '../db/queries/messages'
+import { getMessagesForConversation, getMessagesPage, deleteMessagesForConversation, deleteAllMessages } from '../db/queries/messages'
 
 const idSchema = z.string().min(1).max(100)
 const titleSchema = z.string().min(1).max(500)
@@ -56,6 +56,20 @@ export function registerConversationsIpc(): void {
   ipcMain.handle('conversations:messages', async (_event, conversationId: string) => {
     idSchema.parse(conversationId)
     return getMessagesForConversation(conversationId)
+  })
+
+  ipcMain.handle('conversations:messagesPage', async (_event, payload: unknown) => {
+    const schema = z.object({
+      conversationId: idSchema,
+      limit: z.number().int().min(1).max(500).default(50),
+      beforeDate: z.string().optional()
+    })
+    const parsed = schema.parse(payload)
+    return getMessagesPage(
+      parsed.conversationId,
+      parsed.limit,
+      parsed.beforeDate ? new Date(parsed.beforeDate) : undefined
+    )
   })
 
   ipcMain.handle('conversations:deleteAll', async () => {
