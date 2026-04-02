@@ -159,6 +159,7 @@ function MessageList({ messages, streamingMessageId }: MessageListProps) {
               <MessageItem
                 message={message}
                 isStreaming={message.id === streamingMessageId}
+                conversationId={activeConversationId ?? undefined}
               />
             </div>
           )

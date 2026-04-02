@@ -2,8 +2,10 @@ import { FileOperationCard } from '@/components/workspace/FileOperationCard'
 import { cn } from '@/lib/utils'
 import type { Message, ToolCallDisplay, ToolCallResultMeta } from '@/stores/messages.store'
 import { useMessagesStore } from '@/stores/messages.store'
-import { BookOpen, Brain, Check, CheckCircle2, ChevronDown, ChevronRight, Copy, File as FileIcon, FileText, FolderSearch, Image as ImageIcon, Loader2, Network, Pencil, Search, Sparkles, Terminal, Wrench, XCircle } from 'lucide-react'
+import { BookOpen, Brain, Check, CheckCircle2, ChevronDown, ChevronRight, Copy, File as FileIcon, FileText, FolderSearch, GitFork, Image as ImageIcon, Loader2, Network, Pencil, Search, Sparkles, Terminal, Wrench, XCircle } from 'lucide-react'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { useConversationsStore } from '@/stores/conversations.store'
 import type { FileOperation } from '../../../../preload/types'
 import { AudioPlayer } from './AudioPlayer'
 import { MessageContent } from './MessageContent'
@@ -14,6 +16,7 @@ import type { LibrarySourceForMessage } from '../../../../preload/types'
 interface MessageItemProps {
   message: Message
   isStreaming?: boolean
+  conversationId?: string
 }
 
 /** Format response time for display */
@@ -435,7 +438,7 @@ function MessageAttachments({ attachments }: { attachments: Array<{ path: string
  * with a soft blue accent. Assistant messages sit left with a subtle card
  * background, an AI avatar, and metadata underneath.
  */
-function MessageItem({ message, isStreaming = false }: MessageItemProps) {
+function MessageItem({ message, isStreaming = false, conversationId }: MessageItemProps) {
   const [copied, setCopied] = useState(false)
   const isUser = message.role === 'user'
 
@@ -454,6 +457,21 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
     setCopied(true)
     setTimeout(() => setCopied(false), 1800)
   }, [message.content])
+
+  const addConversation = useConversationsStore((s) => s.addConversation)
+  const setActiveConversation = useConversationsStore((s) => s.setActiveConversation)
+
+  const handleFork = useCallback(async () => {
+    if (!conversationId) return
+    try {
+      const forked = await window.api.forkConversation(conversationId, message.id)
+      addConversation(forked)
+      setActiveConversation(forked.id)
+      toast.success('Conversation forkee')
+    } catch {
+      toast.error('Erreur fork')
+    }
+  }, [conversationId, message.id, addConversation, setActiveConversation])
 
   const label = providerLabel(message.providerId, message.modelId)
   const tokens = formatTokens(message.tokensIn, message.tokensOut)
@@ -630,6 +648,20 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
                   <Copy className="size-3.5" />
                 )}
               </button>
+              {conversationId && (
+                <button
+                  onClick={handleFork}
+                  title="Forker depuis ce message"
+                  className={cn(
+                    'flex size-6 items-center justify-center rounded-md',
+                    'text-muted-foreground/60 hover:bg-accent hover:text-accent-foreground',
+                    'transition-colors'
+                  )}
+                  aria-label="Forker la conversation depuis ce message"
+                >
+                  <GitFork className="size-3.5" />
+                </button>
+              )}
             </div>
 
             {/* Right — model info + cost */}
