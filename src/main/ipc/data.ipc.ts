@@ -2,6 +2,7 @@ import { ipcMain, app, dialog, BrowserWindow } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import { deleteConversationsProjectsImages, factoryResetDatabase } from '../db/queries/cleanup'
+import { serviceRegistry } from '../services/registry'
 
 async function trashPaths(paths: string[]): Promise<void> {
   const trash = (await import('trash')).default
@@ -54,50 +55,33 @@ export function registerDataIpc(): void {
         cancelId: 0,
         title: 'Factory Reset',
         message: 'Toutes les donnees seront supprimees de facon irreversible.',
-        detail: 'Conversations, projets, roles, prompts, memoire, parametres, cles API — tout sera efface.'
+        detail: 'Conversations, projets, roles, prompts, memoire, parametres, cles API, bardas, skills, serveurs MCP, commandes et referentiels — tout sera efface.'
       })
       if (response !== 1) return { success: false, cancelled: true }
     }
-    // 1. Stop services actifs
-    try {
-      const { schedulerService } = await import('../services/scheduler.service')
-      schedulerService.stopAll()
-    } catch { /* service pas demarre */ }
-
-    try {
-      const { mcpManagerService } = await import('../services/mcp-manager.service')
-      mcpManagerService.stopAll()
-    } catch { /* service pas demarre */ }
-
-    try {
-      const { telegramBotService } = await import('../services/telegram-bot.service')
-      await telegramBotService.destroy()
-    } catch { /* service pas demarre */ }
-
-    try {
-      const { remoteServerService } = await import('../services/remote-server.service')
-      remoteServerService.stop()
-    } catch { /* service pas demarre */ }
-
+    // 1. Wipe Qdrant data (if loaded)
     try {
       const { qdrantMemoryService } = await import('../services/qdrant-memory.service')
       await qdrantMemoryService.forgetAll()
-    } catch { /* service pas demarre */ }
+    } catch { /* service not loaded */ }
 
-    // 2. Reset DB
+    // 2. Stop all registered services
+    await serviceRegistry.stopAll()
+
+    // 3. Reset DB
     const { imagePaths } = factoryResetDatabase()
 
-    // 3. Trash fichiers images
+    // 4. Trash fichiers images
     await trashPaths(imagePaths)
 
-    // 4. Trash contenu du dossier attachments
+    // 5. Trash contenu du dossier attachments
     const attachmentsDir = path.join(app.getPath('userData'), 'attachments')
     if (fs.existsSync(attachmentsDir)) {
       const files = fs.readdirSync(attachmentsDir)
       await trashPaths(files.map((f) => path.join(attachmentsDir, f)))
     }
 
-    // 5. Trash avatar
+    // 6. Trash avatar
     const avatarDir = path.join(app.getPath('userData'), 'avatars')
     if (fs.existsSync(avatarDir)) {
       const files = fs.readdirSync(avatarDir)
