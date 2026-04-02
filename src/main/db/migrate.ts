@@ -437,6 +437,8 @@ export function runMigrations(): void {
     CREATE INDEX IF NOT EXISTS idx_slash_commands_project ON slash_commands(project_id);
     CREATE INDEX IF NOT EXISTS idx_mcp_servers_project ON mcp_servers(project_id);
     CREATE INDEX IF NOT EXISTS idx_arena_matches_conversation ON arena_matches(conversation_id);
+    CREATE INDEX IF NOT EXISTS idx_mcp_servers_is_enabled ON mcp_servers(is_enabled);
+    CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_is_enabled ON scheduled_tasks(is_enabled);
   `)
 
   // ── Incremental migrations (idempotent) ────────────────
