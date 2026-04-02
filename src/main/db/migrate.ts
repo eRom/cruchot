@@ -520,29 +520,34 @@ export function runMigrations(): void {
     CREATE INDEX IF NOT EXISTS idx_permission_rules_tool ON permission_rules(tool_name);
   `)
 
+  // Seed minimal deny rules on first boot (table empty).
+  // Full rule set is seeded by resetPermissionRules() in db/queries/permissions.ts.
   const existingRules = sqlite.prepare('SELECT COUNT(*) as count FROM permission_rules').get() as { count: number }
   if (existingRules.count === 0) {
     const now = Math.floor(Date.now() / 1000)
     const seedRules = [
-      { tool: 'bash', content: 'npm *', behavior: 'allow' },
-      { tool: 'bash', content: 'npx *', behavior: 'allow' },
-      { tool: 'bash', content: 'git *', behavior: 'allow' },
-      { tool: 'bash', content: 'node *', behavior: 'allow' },
-      { tool: 'bash', content: 'cat *', behavior: 'allow' },
-      { tool: 'bash', content: 'ls *', behavior: 'allow' },
-      { tool: 'bash', content: 'find *', behavior: 'allow' },
-      { tool: 'bash', content: 'grep *', behavior: 'allow' },
-      { tool: 'bash', content: 'echo *', behavior: 'allow' },
-      { tool: 'bash', content: 'pwd', behavior: 'allow' },
-      { tool: 'bash', content: 'which *', behavior: 'allow' },
       { tool: 'bash', content: 'rm -rf *', behavior: 'deny' },
       { tool: 'bash', content: 'sudo *', behavior: 'deny' },
       { tool: 'bash', content: 'chmod *', behavior: 'deny' },
       { tool: 'bash', content: 'chown *', behavior: 'deny' },
+      { tool: 'bash', content: 'npm *', behavior: 'allow' },
+      { tool: 'bash', content: 'npx *', behavior: 'allow' },
+      { tool: 'bash', content: 'git *', behavior: 'allow' },
+      { tool: 'bash', content: 'node *', behavior: 'allow' },
+      { tool: 'bash', content: 'python3 *', behavior: 'allow' },
+      { tool: 'bash', content: 'python *', behavior: 'allow' },
+      { tool: 'bash', content: 'pip3 *', behavior: 'allow' },
+      { tool: 'bash', content: 'pip *', behavior: 'allow' },
+      { tool: 'bash', content: 'mkdir *', behavior: 'allow' },
+      { tool: 'bash', content: 'touch *', behavior: 'allow' },
+      { tool: 'bash', content: 'cp *', behavior: 'allow' },
+      { tool: 'bash', content: 'mv *', behavior: 'allow' },
+      { tool: 'bash', content: 'rm *', behavior: 'allow' },
+      { tool: 'bash', content: 'curl *', behavior: 'allow' },
       { tool: 'WebFetchTool', content: '*.github.com', behavior: 'allow' },
       { tool: 'WebFetchTool', content: '*.npmjs.com', behavior: 'allow' },
-      { tool: 'WebFetchTool', content: '*.mozilla.org', behavior: 'allow' },
       { tool: 'WebFetchTool', content: '*.stackoverflow.com', behavior: 'allow' },
+      { tool: 'WebFetchTool', content: '*.pypi.org', behavior: 'allow' },
     ]
     const insert = sqlite.prepare(
       'INSERT INTO permission_rules (id, tool_name, rule_content, behavior, created_at) VALUES (?, ?, ?, ?, ?)'

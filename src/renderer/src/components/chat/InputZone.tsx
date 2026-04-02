@@ -590,6 +590,16 @@ export function InputZone({
         // Skill commands — send with skillName/skillArgs, main process handles injection
         if (resolved.isSkill) {
           const skillContent = `/${resolved.commandName}${resolved.prompt ? ' ' + resolved.prompt : ''}`
+
+          // Optimistic update — add user message to store so it's visible immediately
+          addMessage({
+            id: crypto.randomUUID(),
+            conversationId,
+            role: 'user',
+            content: skillContent,
+            createdAt: new Date()
+          })
+
           setContent('')
           requestAnimationFrame(() => {
             if (textareaRef.current) {
@@ -1000,6 +1010,8 @@ export function InputZone({
           {/* Slash command autocomplete picker */}
           <SlashCommandPicker
             matches={slashMatches}
+            selectedIndex={slashSelectedIndex}
+            onSelectedIndexChange={setSlashSelectedIndex}
             onSelect={handleSlashSelect}
             onClose={() => setSlashPickerOpen(false)}
             visible={slashPickerOpen}

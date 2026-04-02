@@ -6,8 +6,15 @@ import { validatePath, fileReadTimestamps } from './shared'
 
 export function buildFileEditTool(workspacePath: string) {
   return tool({
-    description:
-      'Edit an existing file by replacing a specific string. The old_string must be unique in the file (unless replace_all is true). You MUST read the file first with readFile before editing it.',
+    description: `Modifie un fichier existant en remplacant une chaine de texte precise.
+
+Usage :
+- Tu DOIS lire le fichier avec readFile() avant de l'editer. L'outil refusera sinon.
+- old_string doit etre une copie exacte du texte a remplacer (indentation incluse).
+- L'edition ECHOUERA si old_string n'est pas unique dans le fichier — fournis plus de contexte ou utilise replace_all: true.
+- Utilise replace_all: true pour renommer une variable ou remplacer toutes les occurrences.
+- Prefere cet outil a writeFile pour les modifications — il ne touche que le diff.
+- Prefere cet outil a bash sed/awk — c'est plus precis et securise.`,
     inputSchema: z.object({
       file_path: z.string().describe('Relative file path to edit'),
       old_string: z.string().describe('The exact string to find and replace'),

@@ -10,8 +10,16 @@ const MAX_TOTAL_LINES = 500
 
 export function buildGrepTool(workspacePath: string) {
   return tool({
-    description:
-      'Search for a regex pattern in files within the workspace. Returns matching lines with file path and line number. Read-only, cannot modify files.',
+    description: `Recherche un pattern regex dans les fichiers textuels du workspace. Retourne les lignes correspondantes avec chemin et numero de ligne. Lecture seule.
+
+Usage :
+- TOUJOURS utiliser GrepTool pour les recherches de contenu. NE PAS utiliser bash grep ou rg.
+- Supporte la syntaxe regex complete (ex: "function\\s+\\w+", "import.*from").
+- Utilise le parametre glob pour filtrer les fichiers (ex: "*.ts", "src/**/*.tsx").
+- Utilise include_context pour voir les lignes autour du match.
+- Utilise case_insensitive: true pour les recherches insensibles a la casse.
+- Limite : 100 fichiers et 500 lignes max par recherche.
+- Les dossiers bloques (node_modules, .git, dist, etc.) sont ignores automatiquement.`,
     inputSchema: z.object({
       pattern: z.string().describe('Regex pattern to search for'),
       path: z.string().optional().describe('Subdirectory to search in (default: workspace root)'),

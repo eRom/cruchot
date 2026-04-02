@@ -18,6 +18,57 @@ export interface PermissionContext {
   workspacePath: string
 }
 
+// ── Read-only commands (auto-allowed, no rule needed) ─────────────────────────
+// These commands are safe to run without user approval because they only READ
+// data. The seatbelt sandbox provides the actual write confinement.
+// Checked AFTER deny rules (so `rm -rf` deny still wins).
+const READONLY_COMMANDS: Set<string> = new Set([
+  // File viewing
+  'cat', 'head', 'tail', 'less', 'more', 'bat',
+  // File info
+  'ls', 'file', 'stat', 'du', 'df', 'wc', 'md5', 'shasum', 'cksum',
+  // Search
+  'find', 'grep', 'rg', 'ag', 'fd', 'locate',
+  // Text processing (read-only piped usage)
+  'sort', 'uniq', 'diff', 'cut', 'tr', 'awk', 'sed', 'tee', 'xargs',
+  'jq', 'yq', 'column', 'paste', 'fold', 'fmt', 'rev', 'nl',
+  // Path / info
+  'pwd', 'realpath', 'readlink', 'basename', 'dirname',
+  'which', 'type', 'command', 'whereis',
+  // System info
+  'uname', 'whoami', 'id', 'env', 'printenv', 'date', 'uptime', 'sw_vers',
+  'hostname', 'arch', 'nproc', 'getconf',
+  // Hashing
+  'md5sum', 'sha256sum', 'sha1sum', 'b2sum',
+  // Misc safe
+  'echo', 'printf', 'true', 'false', 'test', 'expr', 'seq', 'yes',
+  'sleep', 'wait', 'time',
+])
+
+/**
+ * Returns true if the command starts with a known read-only command.
+ * For compound commands (&&, ||, ;, |), checks EACH subcommand.
+ */
+function isReadOnlyCommand(command: string): boolean {
+  // Split on shell operators (&&, ||, ;, |) — simplified, doesn't handle quotes
+  const subcommands = command.split(/\s*(?:&&|\|\||[;|])\s*/).filter(Boolean)
+  if (subcommands.length === 0) return false
+
+  for (const sub of subcommands) {
+    // Strip leading env vars (FOO=bar cmd → cmd)
+    const stripped = sub.replace(/^(?:[A-Za-z_][A-Za-z0-9_]*=[^\s]*\s+)*/, '')
+    // Extract first token (the command name)
+    const firstToken = stripped.trim().split(/\s+/)[0] ?? ''
+    // Strip path prefix (/usr/bin/ls → ls)
+    const basename = firstToken.split('/').pop() ?? firstToken
+
+    if (!READONLY_COMMANDS.has(basename)) {
+      return false
+    }
+  }
+  return true
+}
+
 // ── Tool defaults (when no rule matches) ─────────────────────────────────────
 
 const TOOL_DEFAULTS: Record<string, PermissionDecision> = {
@@ -179,7 +230,15 @@ export function evaluatePermission(
     }
   }
 
-  // 4. Allow rules
+  // 4. Built-in read-only commands (auto-allow without needing a rule)
+  if (context.toolName === 'bash') {
+    const command = (context.toolArgs.command as string | undefined) ?? ''
+    if (isReadOnlyCommand(command)) {
+      return 'allow'
+    }
+  }
+
+  // 5. Allow rules
   for (const rule of applicable) {
     if (rule.behavior === 'allow' && matchesRule(rule, context)) {
       return 'allow'

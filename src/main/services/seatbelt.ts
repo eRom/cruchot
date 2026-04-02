@@ -32,46 +32,27 @@ function generateSeatbeltProfile(sandboxDir: string): string {
     .join('\n')
 
   return `(version 1)
-(deny default)
-(allow process*)
-(allow signal)
-(allow sysctl*)
-(allow mach*)
-(allow ipc*)
-(allow network*)
-(allow system*)
+;; Allow-default approach: allow everything, then deny specific writes and reads.
+;; (deny default) blocks anonymous pipe FDs (stdout/stderr) which cannot be
+;; allowed via path-based rules. This inverted approach keeps stdio working.
+(allow default)
 
-;; Allow read/write in sandbox directory
-(allow file-read* file-write* (subpath "${sandboxDir}"))
+;; Restrict file writes: only sandbox dir, tmp, dev, and specific home dirs
+(deny file-write*
+  (require-all
+    (require-not (subpath "${sandboxDir}"))
+    (require-not (subpath "/tmp"))
+    (require-not (subpath "/private/tmp"))
+    (require-not (subpath "/dev"))
+    (require-not (subpath "${home}/.npm"))
+    (require-not (subpath "${home}/.cache"))
+    (require-not (subpath "${home}/.nvm"))
+  )
+)
 
-;; Allow read/write in temp
-(allow file-read* file-write* (subpath "/tmp"))
-(allow file-read* file-write* (subpath "/private/tmp"))
-
-;; Allow read system-wide
-(allow file-read* (subpath "/usr"))
-(allow file-read* (subpath "/bin"))
-(allow file-read* (subpath "/sbin"))
-(allow file-read* (subpath "/opt"))
-(allow file-read* (subpath "/Library"))
-(allow file-read* (subpath "/System"))
-(allow file-read* (subpath "/dev"))
-(allow file-read* (subpath "/private/var"))
-(allow file-read* (subpath "/private/etc"))
-(allow file-read* (subpath "/etc"))
-(allow file-read* (subpath "/var"))
-
-;; Deny sensitive paths and files in home (must come before the broad allow below)
+;; Deny sensitive paths and files in home
 ${denyPathRules}
 ${denyFileRules}
-
-;; Allow read home (for configs, nvm, etc.)
-(allow file-read* (subpath "${home}"))
-
-;; Allow write to home .npm, .cache, .nvm
-(allow file-write* (subpath "${home}/.npm"))
-(allow file-write* (subpath "${home}/.cache"))
-(allow file-write* (subpath "${home}/.nvm"))
 `
 }
 
@@ -114,7 +95,7 @@ export async function execSandboxed(
     const profilePath = join('/tmp', `cruchot-sb-${crypto.randomUUID()}.sb`)
     writeFileSync(profilePath, profile, 'utf-8')
 
-    const wrappedCmd = wrapCommand(command, 'bash')
+    const wrappedCmd = wrapCommand(command, 'bash', cwd)
     try {
       return await spawnAsync(
         SANDBOX_EXEC_PATH,
@@ -129,7 +110,7 @@ export async function execSandboxed(
     if (process.platform === 'win32') {
       return spawnAsync('cmd.exe', ['/c', command], execOptions)
     }
-    const wrappedCmd = wrapCommand(command, 'bash')
+    const wrappedCmd = wrapCommand(command, 'bash', cwd)
     return spawnAsync('/bin/bash', ['-c', wrappedCmd], execOptions)
   }
 }

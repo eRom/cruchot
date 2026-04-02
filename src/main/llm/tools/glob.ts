@@ -9,8 +9,14 @@ const MAX_GLOB_RESULTS = 200
 
 export function buildGlobTool(workspacePath: string) {
   return tool({
-    description:
-      'Find files matching a glob pattern in the workspace. Returns file paths sorted by modification time (newest first). Read-only.',
+    description: `Trouve les fichiers correspondant a un pattern glob dans le workspace. Retourne les chemins tries par date de modification (plus recent en premier). Lecture seule.
+
+Usage :
+- Supporte les patterns glob classiques : "**/*.tsx", "src/**/*.test.ts", "*.{js,ts}".
+- TOUJOURS utiliser GlobTool pour trouver des fichiers par nom. NE PAS utiliser bash find ou ls.
+- Utilise le parametre path pour restreindre la recherche a un sous-dossier.
+- Les dossiers bloques (node_modules, .git, dist, etc.) sont ignores automatiquement.
+- Limite : 200 resultats max par recherche.`,
     inputSchema: z.object({
       pattern: z.string().describe('Glob pattern (e.g. "**/*.tsx", "src/**/*.test.ts")'),
       path: z.string().optional().describe('Subdirectory to search in (default: workspace root)')

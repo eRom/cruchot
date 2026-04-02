@@ -9,8 +9,14 @@ import { validatePath, BLOCKED_PATH_SEGMENTS, MAX_LIST_ENTRIES } from './shared'
  */
 export function buildListFilesTool(workspacePath: string) {
   return tool({
-    description:
-      'List files and directories in the workspace. Without argument, lists the root. With a path, lists that directory.',
+    description: `Liste les fichiers et dossiers dans le workspace. Sans argument, liste la racine.
+
+Usage :
+- Le path est optionnel et relatif a la racine du workspace.
+- Utilise recursive: true pour lister tout l'arbre (limite a 500 entrees).
+- Les dossiers bloques (node_modules, .git, dist, build, etc.) sont ignores automatiquement.
+- Pour trouver des fichiers par pattern, prefere GlobTool (ex: "**/*.tsx").
+- Utile pour verifier qu'un dossier existe avant d'y creer un fichier.`,
     inputSchema: z.object({
       path: z.string().optional().describe('Relative directory path to list (optional, root by default)'),
       recursive: z.boolean().optional().describe('List recursively (default false)')

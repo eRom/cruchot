@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, type KeyboardEvent } from 'react'
 import { cn } from '@/lib/utils'
 import type { SlashCommand } from '@/stores/slash-commands.store'
 
@@ -9,19 +9,15 @@ interface SlashCommandMatch {
 
 interface SlashCommandPickerProps {
   matches: SlashCommandMatch[]
+  selectedIndex: number
+  onSelectedIndexChange: (index: number) => void
   onSelect: (commandName: string) => void
   onClose: () => void
   visible: boolean
 }
 
-export function SlashCommandPicker({ matches, onSelect, onClose, visible }: SlashCommandPickerProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0)
+export function SlashCommandPicker({ matches, selectedIndex, onSelectedIndexChange, onSelect, onClose, visible }: SlashCommandPickerProps) {
   const listRef = useRef<HTMLDivElement>(null)
-
-  // Reset selection when matches change
-  useEffect(() => {
-    setSelectedIndex(0)
-  }, [matches])
 
   // Scroll selected into view
   useEffect(() => {
@@ -52,7 +48,7 @@ export function SlashCommandPicker({ matches, onSelect, onClose, visible }: Slas
               : 'text-foreground hover:bg-accent/50'
           )}
           onClick={() => onSelect(command.name)}
-          onMouseEnter={() => setSelectedIndex(index)}
+          onMouseEnter={() => onSelectedIndexChange(index)}
         >
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">

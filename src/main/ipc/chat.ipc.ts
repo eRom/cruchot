@@ -632,7 +632,7 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
       maxTokens,
       topP,
       providerOptions,
-      ...(hasTools ? { tools, maxSteps: 50, stopWhen: stepCountIs(50) } : {}),
+      ...(hasTools ? { tools, maxSteps: 200, stopWhen: stepCountIs(200) } : {}),
       onChunk({ chunk }) {
         if (chunk.type === 'text-delta') {
           // Prepend any buffered partial tag content

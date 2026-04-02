@@ -10,8 +10,16 @@ import { isReadableFile, validatePath, MAX_FILE_SIZE, fileReadTimestamps } from 
  */
 export function buildReadFileTool(workspacePath: string) {
   return tool({
-    description:
-      'Read the contents of a TEXT file in the workspace. Only works on textual files (code, config, docs). Cannot read binary files, .env files, or files inside node_modules/.git.',
+    description: `Lit le contenu d'un fichier texte dans le workspace. Retourne le contenu avec le langage detecte et la taille.
+
+Usage :
+- Le path doit etre relatif a la racine du workspace (ex: "src/index.ts").
+- Fonctionne sur les fichiers textuels (code, config, docs, scripts). Ne lit PAS les binaires.
+- Fichiers bloques : .env, cles privees (.pem, .key), node_modules/, .git/.
+- Limite de taille : 5 MB max par fichier.
+- Tu DOIS lire un fichier avec cet outil avant de le modifier avec FileEdit.
+- Les fichiers de contexte (README, CLAUDE.md, etc.) sont deja dans <workspace-context>. NE PAS les relire.
+- Prefere cet outil a bash cat/head/tail — c'est plus rapide et securise.`,
     inputSchema: z.object({
       path: z.string().describe('Relative file path from workspace root (e.g. "src/index.ts")')
     }),

@@ -17,8 +17,15 @@ const turndown = new TurndownService({
 
 export function buildWebFetchTool() {
   return tool({
-    description:
-      'Fetch a web URL and return its content as markdown. Only HTTPS URLs are allowed. Useful for reading documentation, checking endpoints, or fetching reference material.',
+    description: `Recupere le contenu d'une URL web et le retourne en markdown. Lecture seule.
+
+Usage :
+- Seules les URLs HTTPS sont autorisees. Les URLs HTTP seront refusees.
+- Le HTML est automatiquement converti en markdown. Le JSON est formate.
+- Utile pour : lire de la documentation, verifier une API, recuperer du materiel de reference.
+- Timeout : 15 secondes. Taille max : 2 MB (reponse), 100 KB (markdown).
+- Le parametre prompt est optionnel — il indique ce qu'on cherche dans la page.
+- Pour les URLs GitHub, prefere bash avec gh CLI (gh pr view, gh issue view, etc.).`,
     inputSchema: z.object({
       url: z.string().url().describe('The HTTPS URL to fetch'),
       prompt: z.string().optional().describe('Optional instruction for what to extract from the page')

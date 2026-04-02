@@ -145,11 +145,12 @@ function hasUnclosedQuotes(command: string): boolean {
 // ── Security Checks ───────────────────────────────────────
 
 /**
- * Run 23 security checks against a bash command.
+ * Run 22 security checks against a bash command.
  * Returns { pass: true } if all checks pass.
  * Returns { pass: false, failedCheck, reason } at the first failure.
  *
  * These are hard blocks — never overridable by permission rules.
+ * Note: check #6 (newline block) was removed — multi-line commands are legitimate.
  */
 export function runBashSecurityChecks(command: string): SecurityCheckResult {
   // Check 1: Unclosed quotes
@@ -170,9 +171,11 @@ export function runBashSecurityChecks(command: string): SecurityCheckResult {
     }
   }
 
-  // Check 3: Obfuscated flags — backslash inside command names
+  // Check 3: Obfuscated flags — backslash inside command names (outside quotes)
   // Detects patterns like r\m, c\hmod, etc.
-  if (/[a-zA-Z]\\[a-zA-Z]/.test(command)) {
+  // Strip quoted strings first to avoid false positives on escape sequences (e.g. "a\nb")
+  const strippedForBackslash = command.replace(/'[^']*'|"(?:[^"\\]|\\.)*"/g, '')
+  if (/[a-zA-Z]\\[a-zA-Z]/.test(strippedForBackslash)) {
     return {
       pass: false,
       failedCheck: 3,
@@ -180,9 +183,9 @@ export function runBashSecurityChecks(command: string): SecurityCheckResult {
     }
   }
 
-  // Check 4: Semicolons followed by dangerous commands
+  // Check 4: Semicolons or newlines followed by dangerous commands
   const strippedForChaining = command.replace(/'[^']*'|"[^"]*"/g, '') // Remove quoted strings
-  if (/;\s*(rm|chmod|chown|sudo|kill|shutdown|reboot|mkfs)\b/.test(strippedForChaining)) {
+  if (/[;\n\r]\s*(rm|chmod|chown|sudo|kill|shutdown|reboot|mkfs)\b/.test(strippedForChaining)) {
     return { pass: false, failedCheck: 4, reason: 'Commande dangereuse chainee detectee' }
   }
 
@@ -200,18 +203,15 @@ export function runBashSecurityChecks(command: string): SecurityCheckResult {
     }
   }
 
-  // Check 6: Newlines in command (injection multi-ligne)
-  if (/[\n\r]/.test(command)) {
-    return {
-      pass: false,
-      failedCheck: 6,
-      reason: 'Newline detecte dans la commande (injection possible)',
-    }
-  }
+  // Check 6: (removed — multi-line commands are legitimate for LLM tool use)
+  // wrapCommand() wraps in eval '...' which safely handles newlines.
+  // Dangerous command chaining after newlines is caught by check #4.
 
-  // Check 7: Command substitution patterns
+  // Check 7: Command substitution patterns (outside quoted strings)
+  // Strip quoted content to avoid false positives on backticks in Python/shell strings
+  const strippedForSubstitution = command.replace(/'[^']*'|"(?:[^"\\]|\\.)*"/g, '')
   for (const pattern of COMMAND_SUBSTITUTION_PATTERNS) {
-    if (command.includes(pattern)) {
+    if (strippedForSubstitution.includes(pattern)) {
       return {
         pass: false,
         failedCheck: 7,
@@ -418,19 +418,25 @@ export function buildSafeEnv(workspacePath: string): Record<string, string> {
 /**
  * Wrap a command to:
  * 1. Disable extended globs (prevents glob-based attacks)
- * 2. Redirect stdin from /dev/null (prevents interactive prompts / heredoc injection)
- * 3. Evaluate the command in a single-quoted context (safe quoting)
+ * 2. cd to workspace (ensures CWD even through sandbox-exec)
+ * 3. Redirect stdin from /dev/null (prevents interactive prompts / heredoc injection)
+ * 4. Evaluate the command in a single-quoted context (safe quoting)
  */
-export function wrapCommand(command: string, shell: 'bash' | 'zsh'): string {
+export function wrapCommand(command: string, shell: 'bash' | 'zsh', workdir?: string): string {
   // Disable extended globs for the shell
   const disableGlobs =
     shell === 'bash'
       ? "shopt -u extglob 2>/dev/null;"
       : "setopt NO_EXTENDED_GLOB 2>/dev/null;"
 
+  // Explicit cd to ensure CWD propagates through sandbox-exec
+  const cdPrefix = workdir
+    ? `cd '${workdir.replace(/'/g, "'\\''")}' &&`
+    : ''
+
   // Escape single quotes in the command: ' -> '\''
   const escaped = command.replace(/'/g, "'\\''")
 
-  // Wrap: disable globs + eval '<escaped_command>' < /dev/null
-  return `${disableGlobs} eval '${escaped}' < /dev/null`
+  // Wrap: disable globs + cd + eval '<escaped_command>' < /dev/null
+  return `${disableGlobs} ${cdPrefix} eval '${escaped}' < /dev/null`
 }

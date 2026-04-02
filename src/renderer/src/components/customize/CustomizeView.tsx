@@ -1,7 +1,7 @@
 import React, { Suspense, useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useUiStore, type CustomizeTab } from '@/stores/ui.store'
-import { ArrowLeft, BookOpen, Brain, Library, Network, Shield, Sparkles, TerminalSquare, UserCircle } from 'lucide-react'
+import { ArrowLeft, BookOpen, Brain, Dumbbell, Library, Network, Shield, TerminalSquare, UserCircle } from 'lucide-react'
 
 const PromptsView = React.lazy(() => import('@/components/prompts/PromptsView').then(m => ({ default: m.PromptsView })))
 const RolesView = React.lazy(() => import('@/components/roles/RolesView').then(m => ({ default: m.RolesView })))
@@ -24,7 +24,7 @@ const TABS: TabItem[] = [
   { type: 'tab', id: 'memory', label: 'Memoire', icon: <Brain className="size-4" /> },
   { type: 'tab', id: 'libraries', label: 'Referentiels', icon: <Library className="size-4" /> },
   { type: 'separator' },
-  { type: 'tab', id: 'skills' as CustomizeTab, label: 'Skills', icon: <Sparkles className="size-4" /> },
+  { type: 'tab', id: 'skills' as CustomizeTab, label: 'Skills', icon: <Dumbbell className="size-4" /> },
   { type: 'tab', id: 'mcp', label: 'MCP', icon: <Network className="size-4" /> },
   { type: 'tab', id: 'brigade', label: 'Brigade', icon: <Shield className="size-4" /> },
 ]

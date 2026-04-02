@@ -158,7 +158,10 @@ export function Sidebar(): React.JSX.Element {
                   variant="ghost"
                   size="icon"
                   onClick={handleNewConversation}
-                  className="size-8 shrink-0 text-sidebar-foreground/50 hover:text-sidebar-primary hover:bg-sidebar-accent/60"
+                  className={cn(
+                    'size-8 shrink-0 text-sidebar-foreground/50 hover:text-sidebar-primary hover:bg-sidebar-accent/60',
+                    currentView === 'chat' && 'text-sidebar-primary bg-sidebar-accent/60'
+                  )}
                 >
                   <Plus className="size-4" />
                 </Button>
@@ -173,7 +176,7 @@ export function Sidebar(): React.JSX.Element {
                   onClick={() => { setCurrentView('tasks'); }}
                   className={cn(
                     'size-8 shrink-0 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/60',
-                    currentView === 'tasks' && 'text-sidebar-primary'
+                    currentView === 'tasks' && 'text-sidebar-primary bg-sidebar-accent/60'
                   )}
                 >
                   <Clock className="size-4" />
@@ -189,7 +192,7 @@ export function Sidebar(): React.JSX.Element {
                   onClick={() => { setCurrentView('arena'); }}
                   className={cn(
                     'size-8 shrink-0 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/60',
-                    currentView === 'arena' && 'text-sidebar-primary'
+                    currentView === 'arena' && 'text-sidebar-primary bg-sidebar-accent/60'
                   )}
                 >
                   <Swords className="size-4" />
@@ -206,7 +209,8 @@ export function Sidebar(): React.JSX.Element {
                 'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5',
                 'text-[13px] font-medium text-sidebar-foreground/70',
                 'transition-colors duration-150',
-                'hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
+                'hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
+                currentView === 'chat' && 'text-sidebar-primary bg-sidebar-accent/60'
               )}
             >
               <MessageSquarePlus className="size-4 shrink-0" />
@@ -219,7 +223,7 @@ export function Sidebar(): React.JSX.Element {
                 'text-[13px] font-medium text-sidebar-foreground/70',
                 'transition-colors duration-150',
                 'hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
-                currentView === 'tasks' && 'text-sidebar-primary'
+                currentView === 'tasks' && 'text-sidebar-primary bg-sidebar-accent/60'
               )}
             >
               <Clock className="size-4 shrink-0" />
@@ -232,7 +236,7 @@ export function Sidebar(): React.JSX.Element {
                 'text-[13px] font-medium text-sidebar-foreground/70',
                 'transition-colors duration-150',
                 'hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
-                currentView === 'arena' && 'text-sidebar-primary'
+                currentView === 'arena' && 'text-sidebar-primary bg-sidebar-accent/60'
               )}
             >
               <Swords className="size-4 shrink-0" />

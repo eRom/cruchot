@@ -9,8 +9,15 @@ import { validatePath, MAX_FILE_SIZE } from './shared'
  */
 export function buildWriteFileTool(workspacePath: string) {
   return tool({
-    description:
-      'Create or overwrite a file in the workspace. Parent directories are created automatically. Use for creating new files, modifying existing ones, or generating code.',
+    description: `Cree ou ecrase un fichier dans le workspace. Les dossiers parents sont crees automatiquement.
+
+Usage :
+- Le path doit etre relatif a la racine du workspace.
+- Ecrase le fichier s'il existe deja — tout le contenu est remplace.
+- Prefere FileEdit pour modifier un fichier existant — c'est plus precis et evite d'ecraser le contenu complet.
+- Utilise writeFile uniquement pour creer de nouveaux fichiers ou pour des reecritures completes.
+- Limite : 5 MB max par fichier.
+- Prefere cet outil a bash echo >/cat <<EOF.`,
     inputSchema: z.object({
       path: z.string().describe('Relative file path to write (e.g. "src/components/Button.tsx")'),
       content: z.string().max(MAX_FILE_SIZE).describe('Full content to write to the file (max 5MB)')
