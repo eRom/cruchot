@@ -1,4 +1,5 @@
 import { ipcMain, BrowserWindow } from 'electron'
+import os from 'node:os'
 import { z } from 'zod'
 import { streamText, tool, NoOutputGeneratedError, stepCountIs } from 'ai'
 import { nanoid } from 'nanoid'
@@ -205,7 +206,7 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
   const workspacePath = conv?.workspacePath ?? '~/.cruchot/sandbox/'
   // Resolve ~ to home dir
   const resolvedWorkspacePath = workspacePath.startsWith('~/')
-    ? workspacePath.replace('~/', `${process.env.HOME ?? '/tmp'}/`)
+    ? workspacePath.replace('~/', `${os.homedir()}/`)
     : workspacePath
 
   // Re-validate attachments (extension, size, existence, path confinement) in the main process

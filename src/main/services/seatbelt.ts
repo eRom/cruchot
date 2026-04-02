@@ -1,6 +1,7 @@
 import { spawn, type ExecOptions } from 'child_process'
 import { existsSync, writeFileSync, unlinkSync } from 'fs'
 import { join } from 'path'
+import os from 'node:os'
 import { app } from 'electron'
 import { buildSafeEnv, wrapCommand } from '../llm/bash-security'
 
@@ -26,7 +27,7 @@ export function isSeatbeltAvailable(): boolean {
 }
 
 function generateSeatbeltProfile(sandboxDir: string): string {
-  const home = process.env.HOME || '/Users/unknown'
+  const home = os.homedir()
   const userDataDir = app.getPath('userData')
 
   const denyPathRules = SEATBELT_DENIED_PATHS
