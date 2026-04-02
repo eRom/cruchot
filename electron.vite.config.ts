@@ -38,7 +38,6 @@ export default defineConfig({
         ]
       })
     ],
-    ...(isProd ? { esbuild: { drop: ['console'] } } : {}),
     build: {
       outDir: 'out/main',
       sourcemap: false,

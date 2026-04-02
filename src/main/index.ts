@@ -22,6 +22,14 @@ import { pathToFileURL } from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
 
+process.on('unhandledRejection', (reason) => {
+  console.error('[UnhandledRejection]', reason)
+})
+
+process.on('uncaughtException', (error) => {
+  console.error('[UncaughtException]', error)
+})
+
 let mainWindow: BrowserWindow | null = null
 
 // Register custom protocol for serving local images (no bypassCSP — use img-src in CSP instead)
