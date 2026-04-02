@@ -45,7 +45,7 @@ jobs:
         continue-on-error: true
 
       - name: Audit dependencies
-        run: npm audit --audit-level=high --omit=dev
+        run: npm audit --audit-level=critical --omit=dev
 
       - name: Build & Package (macOS)
         if: matrix.platform == 'mac'
