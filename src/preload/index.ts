@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { ElectronAPI, SendMessagePayload, StreamChunk, PermissionRuleInfo } from './types'
+import type { ElectronAPI, SendMessagePayload, StreamChunk, PermissionRuleInfo, RecordingState } from './types'
 
 // Expose une API securisee au renderer — JAMAIS ipcRenderer directement
 const api: ElectronAPI = {
@@ -560,7 +560,24 @@ const api: ElectronAPI = {
     ipcRenderer.invoke('settings:get', key),
 
   setSetting: (key: string, value: string): Promise<void> =>
-    ipcRenderer.invoke('settings:set', key, value)
+    ipcRenderer.invoke('settings:set', key, value),
+
+  // ── VCR Recording ─────────────────────────────────────
+  vcrStart: (payload: { conversationId: string; fullCapture?: boolean; modelId?: string; providerId?: string; workspacePath?: string; roleId?: string }) =>
+    ipcRenderer.invoke('vcr:start', payload),
+  vcrStop: () => ipcRenderer.invoke('vcr:stop'),
+  vcrStatus: () => ipcRenderer.invoke('vcr:status'),
+  vcrList: () => ipcRenderer.invoke('vcr:list'),
+  vcrGet: (recordingId: string) => ipcRenderer.invoke('vcr:get', { recordingId }),
+  vcrDelete: (recordingId: string) => ipcRenderer.invoke('vcr:delete', { recordingId }),
+  vcrExportHtml: (recordingId: string, anonymize?: boolean) =>
+    ipcRenderer.invoke('vcr:export-html', { recordingId, anonymize }),
+  vcrExportVcr: (recordingId: string) =>
+    ipcRenderer.invoke('vcr:export-vcr', { recordingId }),
+  onVcrRecordingState: (cb: (state: RecordingState) => void) => {
+    ipcRenderer.on('vcr:recording-state', (_e: Electron.IpcRendererEvent, state: RecordingState) => cb(state))
+  },
+  offVcrRecordingState: () => ipcRenderer.removeAllListeners('vcr:recording-state')
 }
 
 contextBridge.exposeInMainWorld('api', api)

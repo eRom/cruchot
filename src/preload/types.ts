@@ -1185,6 +1185,18 @@ export interface ElectronAPI {
   approvePlan: (payload: { conversationId: string; messageId: string; decision: 'approved' | 'cancelled'; steps: { id: number; label: string; tools?: string[]; status: string; enabled: boolean }[] }) => Promise<void>
   setPlanMode: (payload: { conversationId: string; forced: boolean }) => Promise<void>
   updatePlanStep: (payload: { conversationId: string; messageId: string; stepIndex: number; action: 'retry' | 'skip' | 'abort' }) => Promise<void>
+
+  // VCR Recording
+  vcrStart: (payload: { conversationId: string; fullCapture?: boolean; modelId?: string; providerId?: string; workspacePath?: string; roleId?: string }) => Promise<{ recordingId: string }>
+  vcrStop: () => Promise<{ recordingId: string; duration: number; eventCount: number }>
+  vcrStatus: () => Promise<RecordingState>
+  vcrList: () => Promise<VcrRecordingHeader[]>
+  vcrGet: (recordingId: string) => Promise<VcrRecording>
+  vcrDelete: (recordingId: string) => Promise<void>
+  vcrExportHtml: (recordingId: string, anonymize?: boolean) => Promise<{ path: string | null }>
+  vcrExportVcr: (recordingId: string) => Promise<{ path: string | null }>
+  onVcrRecordingState: (cb: (state: RecordingState) => void) => void
+  offVcrRecordingState: () => void
 }
 
 // ---------------------------------------------------------------------------

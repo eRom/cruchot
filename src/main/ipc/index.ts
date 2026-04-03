@@ -37,6 +37,7 @@ import { registerArenaIpc } from './arena.ipc'
 import { registerBardaHandlers } from './barda.ipc'
 import { registerSkillsIpc } from './skills.ipc'
 import { registerPermissionsIpc } from './permissions.ipc'
+import { registerVcrIpc } from './vcr.ipc'
 
 
 /**
@@ -146,6 +147,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Permissions (tool access control) ──────────────
   registerPermissionsIpc()
+
+  // ── VCR Recording ──────────────────────────────────────────
+  registerVcrIpc()
 
   // ── Settings ────────────────────────────────────────
   const ALLOWED_SETTING_KEYS = new Set([
