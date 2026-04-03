@@ -130,9 +130,8 @@ describe('OcrService', () => {
       }
     })
 
-    it('uploads file and calls OCR on success', async () => {
+    it('sends base64 data URL and calls OCR on success', async () => {
       mockGetApiKey.mockReturnValue('sk-test')
-      mockFileUpload.mockResolvedValue({ id: 'file-123' })
       mockOcrProcess.mockResolvedValue({
         pages: [
           { index: 0, markdown: '# Page 1\n\nHello world', header: 'Header', footer: 'Page 1' }
@@ -142,10 +141,15 @@ describe('OcrService', () => {
 
       const result = await ocrService.processFile('/test.pdf')
 
-      expect(mockFileUpload).toHaveBeenCalledWith({
-        file: { fileName: 'test.pdf', content: expect.any(Buffer) },
-        purpose: 'ocr'
-      })
+      // Should send as base64 data URL, not file ID
+      expect(mockOcrProcess).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document: expect.objectContaining({
+            type: 'document_url',
+            documentUrl: expect.stringContaining('data:application/pdf;base64,')
+          })
+        })
+      )
       expect(result.text).toContain('Hello world')
       expect(result.pagesProcessed).toBe(1)
       expect(result.pages).toHaveLength(1)
@@ -154,7 +158,6 @@ describe('OcrService', () => {
 
     it('passes tableFormat option to OCR', async () => {
       mockGetApiKey.mockReturnValue('sk-test')
-      mockFileUpload.mockResolvedValue({ id: 'file-123' })
       mockOcrProcess.mockResolvedValue({ pages: [], usageInfo: { pagesProcessed: 0 } })
 
       await ocrService.processFile('/test.pdf', { tableFormat: 'html' })
@@ -201,7 +204,6 @@ describe('OcrService', () => {
   describe('error handling', () => {
     it('wraps rate limit errors as RATE_LIMIT', async () => {
       mockGetApiKey.mockReturnValue('sk-test')
-      mockFileUpload.mockResolvedValue({ id: 'file-123' })
       mockOcrProcess.mockRejectedValue(new Error('429 rate limit exceeded'))
 
       try {
@@ -215,7 +217,6 @@ describe('OcrService', () => {
 
     it('wraps generic errors as API_ERROR', async () => {
       mockGetApiKey.mockReturnValue('sk-test')
-      mockFileUpload.mockResolvedValue({ id: 'file-123' })
       mockOcrProcess.mockRejectedValue(new Error('Internal server error'))
 
       try {

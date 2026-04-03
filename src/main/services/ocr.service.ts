@@ -92,7 +92,7 @@ class OcrService {
 
   /**
    * OCR a local file (PDF, DOCX, PPTX).
-   * Uploads via Mistral Files API, then calls /v1/ocr.
+   * Sends as base64 data URL — the Files API upload ID is NOT accepted by /v1/ocr.
    */
   async processFile(filePath: string, options?: OcrOptions): Promise<OcrResult> {
     const stat = fs.statSync(filePath)
@@ -102,18 +102,19 @@ class OcrService {
 
     const client = await this.getClient()
 
-    // Upload file to Mistral Files API
-    const fileName = path.basename(filePath)
+    // Send as base64 data URL (the OCR endpoint does not accept file IDs)
     const content = fs.readFileSync(filePath)
-    const upload = await client.files.upload({
-      file: { fileName, content },
-      purpose: 'ocr'
-    })
+    const ext = path.extname(filePath).toLowerCase()
+    const mimeType = ext === '.pdf' ? 'application/pdf'
+      : ext === '.docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      : ext === '.pptx' ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+      : 'application/octet-stream'
+    const base64 = content.toString('base64')
+    const dataUrl = `data:${mimeType};base64,${base64}`
 
-    // Call OCR
     return this.callOcr(client, {
       type: 'document_url',
-      documentUrl: upload.id
+      documentUrl: dataUrl
     }, options)
   }
 
