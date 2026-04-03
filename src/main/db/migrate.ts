@@ -645,4 +645,28 @@ export function runMigrations(): void {
       insert.run(crypto.randomUUID(), rule.tool, rule.content, rule.behavior, now)
     }
   }
+
+  // --- Episodic memory (S55) ---
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS episodes (
+      id TEXT PRIMARY KEY,
+      content TEXT NOT NULL,
+      category TEXT NOT NULL CHECK(category IN ('preference', 'behavior', 'context', 'skill', 'style')),
+      confidence REAL NOT NULL DEFAULT 0.5,
+      occurrences INTEGER NOT NULL DEFAULT 1,
+      project_id TEXT,
+      source_conversation_id TEXT NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_episodes_active_project ON episodes(is_active, project_id);
+  `)
+
+  // Add last_episode_message_id to conversations
+  try {
+    sqlite.exec('ALTER TABLE conversations ADD COLUMN last_episode_message_id TEXT')
+  } catch {
+    // Column already exists — ignore
+  }
 }

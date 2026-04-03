@@ -77,6 +77,7 @@ export const conversations = sqliteTable('conversations', {
   isFavorite: integer('is_favorite', { mode: 'boolean' }).default(false),
   isArena: integer('is_arena', { mode: 'boolean' }).default(false),
   isScheduledTask: integer('is_scheduled_task', { mode: 'boolean' }).default(false),
+  lastEpisodeMessageId: text('last_episode_message_id'),
 
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
@@ -260,6 +261,22 @@ export const memoryFragments = sqliteTable('memory_fragments', {
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   sortOrder: integer('sort_order').notNull(),
   namespace: text('namespace'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+})
+
+// ---------------------------------------------------------------------------
+// Episodes (episodic memory — auto-extracted behavioral facts)
+// ---------------------------------------------------------------------------
+export const episodes = sqliteTable('episodes', {
+  id: text('id').primaryKey(),
+  content: text('content').notNull(),
+  category: text('category', { enum: ['preference', 'behavior', 'context', 'skill', 'style'] }).notNull(),
+  confidence: real('confidence').notNull().default(0.5),
+  occurrences: integer('occurrences').notNull().default(1),
+  projectId: text('project_id'),
+  sourceConversationId: text('source_conversation_id').notNull(),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
