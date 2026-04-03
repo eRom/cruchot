@@ -47,7 +47,7 @@ export default defineConfig({
           index: resolve(__dirname, 'src/main/index.ts'),
           'embedding.worker': resolve(__dirname, 'src/main/workers/embedding.worker.ts')
         },
-        external: ['fsevents', 'chokidar', '@ai-sdk/mcp', '@ai-sdk/mcp/mcp-stdio', '@perplexity-ai/ai-sdk', '@huggingface/transformers', 'onnxruntime-node', 'onnxruntime-web', 'onnxruntime-common', 'sharp', 'bufferutil', 'utf-8-validate']
+        external: ['fsevents', 'chokidar', '@ai-sdk/mcp', '@ai-sdk/mcp/mcp-stdio', '@perplexity-ai/ai-sdk', '@huggingface/transformers', 'onnxruntime-node', 'onnxruntime-web', 'onnxruntime-common', 'sharp', 'bufferutil', 'utf-8-validate', '@mistralai/mistralai']
       }
     }
   },

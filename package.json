@@ -36,6 +36,7 @@
     "@ai-sdk/openai-compatible": "^2.0.35",
     "@ai-sdk/xai": "^3.0.67",
     "@huggingface/transformers": "^3.8.1",
+    "@mistralai/mistralai": "^2.1.2",
     "@openrouter/ai-sdk-provider": "^2.3.1",
     "@perplexity-ai/ai-sdk": "^0.1.2",
     "@qdrant/js-client-rest": "^1.17.0",
