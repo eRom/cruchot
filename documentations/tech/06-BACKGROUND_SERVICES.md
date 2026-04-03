@@ -41,6 +41,50 @@ Le planificateur (`SchedulerService`) n'utilise pas Cron, mais les timers natifs
 ### 2.2 Exécution (`task-executor.ts`)
 Lorsqu'un timer se déclenche, le `TaskExecutor` crée une conversation invisible (ou reprend la précédente), injecte le prompt de la tâche et déclenche le routeur LLM. Si des outils (MCP ou Bash) sont configurés en auto-approve, la tâche peut interagir avec le système de fichiers ou des APIs pendant la nuit, et l'utilisateur retrouvera le résultat au matin dans l'interface.
 
+## 4. VCR Recording (`vcr-recorder.service.ts`, `vcr-anonymizer.service.ts`, `vcr-html-exporter.service.ts`)
+
+Le système VCR (Video Cassette Recorder) permet d'enregistrer une session de chat complète — messages, streaming LLM, appels d'outils, décisions de permissions, étapes de Plan Mode — et de l'exporter en deux formats partageables.
+
+### 4.1 Architecture du pipeline
+
+Le pipeline VCR se compose de 4 couches :
+
+1. **EventBus (`vcr-event-bus.ts`)** : `TypedEventEmitter` centralisé. Les points d'émission sont instrumentés dans `chat.ipc.ts` (`onChunk`, `onFinish`, appels d'outils, décisions de permissions, étapes de plan).
+2. **Recorder (`vcr-recorder.service.ts`)** : singleton `vcrRecorderService`. À l'`startRecording()`, il souscrit à 14 types d'événements et écrit chaque événement en NDJSON dans un fichier `.vcr` temporaire (`~/.cruchot/recordings/<id>.vcr`) via un `WriteStream`. Format de chaque ligne : `[offsetMs, type, data]`.
+3. **Anonymizer (`vcr-anonymizer.service.ts`)** : appliqué au stop. Masque les chemins home utilisateur, adresses IP, emails, numéros de téléphone, tokens Bearer, API keys (>32 chars) et URL secrets. Les images attachées sont supprimées.
+4. **Exporter (`vcr-html-exporter.service.ts` + `vcr-html-template.ts`)** : génère un fichier HTML standalone (~640 lignes de template) avec player intégré, timeline, liste d'événements et affichage des diffs de fichiers. Le template est stocké dans `~/.cruchot/vcr-template.html` (copié au premier appel).
+
+### 4.2 Flux stop → export
+
+```
+vcr:stop IPC
+  → vcrRecorderService.stopRecording()   # flush WriteStream
+  → vcrRecorderService.parseRecordingFile()  # relire le .vcr
+  → vcrAnonymizerService.anonymizeEvents()   # masquage PII
+  → dialog.showSaveDialog()              # choix du dossier/nom
+  → writeFile(.ndjson)                   # export NDJSON anonymisé
+  → vcrHtmlExporterService.generateHtml()  # inject data dans template
+  → writeFile(.html)                     # export HTML standalone
+  → trash(.vcr)                          # supprime le fichier temp
+```
+
+### 4.3 Format NDJSON (.vcr / .ndjson)
+
+- **Ligne 0** : header JSON (`VcrRecordingHeader`) — `recordingId`, `conversationId`, `modelId`, `providerId`, `workspacePath`, `fullCapture`, `startedAt`, `metadata.appVersion`.
+- **Lignes 1+** : `[offsetMs: number, type: VcrEventType, data: object]`.
+
+Types d'événements capturés : `session-start`, `session-stop`, `user-message`, `text-delta`, `reasoning-delta`, `tool-call`, `tool-result`, `permission-decision`, `permission-response`, `plan-proposed`, `plan-approved`, `plan-step`, `file-diff`, `finish`.
+
+### 4.4 IPC (`vcr.ipc.ts`)
+
+| Handler | Rôle |
+|---------|------|
+| `vcr:start` | Démarre l'enregistrement (validation Zod) |
+| `vcr:stop` | Stoppe, anonymise, ouvre dialog save, exporte |
+| `vcr:status` | Retourne l'état courant (`RecordingState`) |
+
+L'état est pushé au renderer via `vcr:recording-state` event après start/stop.
+
 ## 3. Synthèse Vocale (Text-to-Speech) (`tts.service.ts`)
 
 Cruchot intègre des capacités de lecture vocale des messages via les APIs cloud d'OpenAI et de Google (Gemini).

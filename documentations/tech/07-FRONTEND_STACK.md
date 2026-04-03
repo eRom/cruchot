@@ -60,6 +60,22 @@ La **SearchView** est une vue dédiée à la recherche plein texte dans toutes l
 - **Navigation** : clic sur un résultat → bascule sur `'chat'` et sélectionne la conversation.
 - L'état du filtre et de la query **persiste** lors des allers-retours entre vues (state dans le composant).
 
-## 7. Internationalisation (i18n)
+## 7. VCR Recording — UI
+
+La section **VCR** est la 7e section du Right Panel (`chat/right-panel/VcrSection.tsx`). Elle permet de démarrer/arrêter un enregistrement de session depuis l'interface.
+
+### Composants
+
+- **`VcrSection`** : section collapsible dans RightPanel. Affiche un bouton `Record` (rouge) à l'arrêt, ou un tableau de bord en cours d'enregistrement (durée MM:SS, compteur d'événements, compteur d'appels d'outils) + bouton `Stop Recording`.
+- **`VcrBadge`** : badge `REC` rouge clignotant affiché dans `ContextWindowIndicator` quand un enregistrement est actif.
+- **`vcr.store.ts`** : Zustand store exposant `isRecording`, `activeRecording` (`ActiveRecordingInfo`), `startRecording()`, `stopRecording()`, `refreshStatus()`. Polling toutes les 2s pendant l'enregistrement pour mettre à jour les compteurs.
+
+### Comportement
+
+- `startRecording()` extrait le `modelId` et `providerId` depuis `providersStore.getSelectedModelId()` (format `provider::modelId`).
+- `stopRecording()` déclenche le handler IPC `vcr:stop` qui ouvre une `dialog.showSaveDialog()` côté main process — l'utilisateur choisit le dossier et le nom du fichier. Les exports `.ndjson` + `.html` sont écrits en parallèle.
+- Le timer local (intervalle 1s) calcule la durée d'enregistrement côté renderer à partir de `activeRecording.startedAt`.
+
+## 8. Internationalisation (i18n)
 
 - **i18next / react-i18next** : L'infrastructure i18n est en place avec les fichiers de traduction dans `src/renderer/src/locales/`. En pratique, l'interface est principalement en français avec un support anglais partiel. L'utilisation de `useTranslation()` dans les composants reste limitée — la majorité des textes UI sont codés en dur en français.
