@@ -73,23 +73,30 @@ describe('parsePlanMarkers', () => {
 
 describe('parseStepMarker', () => {
   it('parses step start', () => {
-    expect(parseStepMarker('[STEP:3:start]')).toEqual({ index: 3, status: 'running' })
+    expect(parseStepMarker('[STEP:3:start]')).toEqual([{ index: 3, status: 'running' }])
   })
 
   it('parses step done', () => {
-    expect(parseStepMarker('[STEP:1:done]')).toEqual({ index: 1, status: 'done' })
+    expect(parseStepMarker('[STEP:1:done]')).toEqual([{ index: 1, status: 'done' }])
   })
 
   it('parses step failed', () => {
-    expect(parseStepMarker('[STEP:2:failed]')).toEqual({ index: 2, status: 'failed' })
+    expect(parseStepMarker('[STEP:2:failed]')).toEqual([{ index: 2, status: 'failed' }])
   })
 
-  it('returns null for non-step text', () => {
-    expect(parseStepMarker('hello world')).toBeNull()
+  it('returns empty array for non-step text', () => {
+    expect(parseStepMarker('hello world')).toEqual([])
   })
 
-  it('returns null for out-of-range step', () => {
-    expect(parseStepMarker('[STEP:0:start]')).toBeNull()
+  it('returns empty array for out-of-range step', () => {
+    expect(parseStepMarker('[STEP:0:start]')).toEqual([])
+  })
+
+  it('parses multiple step markers in one string', () => {
+    expect(parseStepMarker('[STEP:1:done][STEP:2:start]')).toEqual([
+      { index: 1, status: 'done' },
+      { index: 2, status: 'running' }
+    ])
   })
 })
 
@@ -114,11 +121,11 @@ describe('parsePlanMarkers edge cases', () => {
 
 describe('parseStepMarker edge cases', () => {
   it('parses step skipped', () => {
-    expect(parseStepMarker('[STEP:4:skipped]')).toEqual({ index: 4, status: 'skipped' })
+    expect(parseStepMarker('[STEP:4:skipped]')).toEqual([{ index: 4, status: 'skipped' }])
   })
 
   it('handles step marker embedded in text', () => {
-    expect(parseStepMarker('some text [STEP:2:done] more text')).toEqual({ index: 2, status: 'done' })
+    expect(parseStepMarker('some text [STEP:2:done] more text')).toEqual([{ index: 2, status: 'done' }])
   })
 })
 

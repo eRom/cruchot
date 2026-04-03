@@ -185,6 +185,20 @@ export function PlanMessage({ plan, messageId, conversationId, isStreaming }: Pl
           </button>
         </div>
       )}
+
+      {/* Approved confirmation */}
+      {plan.status === 'approved' && (
+        <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
+          Plan accepte{plan.approvedAt ? ` a ${new Date(plan.approvedAt * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : ''}
+        </div>
+      )}
+
+      {/* Cancelled */}
+      {plan.status === 'cancelled' && (
+        <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
+          Plan annule
+        </div>
+      )}
     </div>
   )
 }

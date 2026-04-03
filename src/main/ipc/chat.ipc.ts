@@ -686,7 +686,6 @@ async function streamChat(
 
   // Plan mode state for this stream
   let planEmitted = false
-  let planStartEmitted = false   // Bug 1: visual indicator when plan generation begins
   let inPlanBlock = false         // Bug 4: buffer plan text to avoid marker leaking
   let approvedPlanData: PlanData | null = null
 
@@ -702,9 +701,22 @@ async function streamChat(
 
   function flushBatch() {
     if (batchBuffer.length > 0) {
-      win.webContents.send('chat:chunk', { type: 'text-delta', content: batchBuffer })
-      if (isRemoteConnected) telegramBotService.pushChunk(batchBuffer)
-      if (isWsConnected) remoteServerService.pushChunk(batchBuffer)
+      // Parse step markers from the batch BEFORE stripping (50ms buffer captures complete markers)
+      const stepResults = parseStepMarker(batchBuffer)
+      for (const sr of stepResults) {
+        win.webContents.send('chat:chunk', {
+          type: 'plan-step',
+          stepIndex: sr.index,
+          stepStatus: sr.status
+        })
+      }
+      // Strip ALL plan/step markers from visible text
+      const cleaned = stripPlanMarkers(batchBuffer)
+      if (cleaned.length > 0) {
+        win.webContents.send('chat:chunk', { type: 'text-delta', content: cleaned })
+        if (isRemoteConnected) telegramBotService.pushChunk(cleaned)
+        if (isWsConnected) remoteServerService.pushChunk(cleaned)
+      }
       batchBuffer = ''
     }
   }
@@ -744,27 +756,13 @@ async function streamChat(
               // Keep raw text for plan block detection
               accumulatedText += seg.content
 
-              // Bug 1: Emit a visual indicator when plan generation starts
-              if (!planStartEmitted && accumulatedText.includes('[PLAN:start')) {
-                planStartEmitted = true
-                inPlanBlock = true // Bug 4: start buffering plan text
-                // Flush any text accumulated before the plan block
+              // Detect plan block start — buffer markers instead of sending to renderer
+              if (!inPlanBlock && accumulatedText.includes('[PLAN:start')) {
+                inPlanBlock = true
                 flushBatch()
-                win.webContents.send('chat:chunk', { type: 'text-delta', content: '\u{1F4CB} Planification en cours...\n\n' })
               }
 
-              // Check for step execution markers (e.g. [STEP:1:start], [STEP:2:done])
-              const stepResult = parseStepMarker(seg.content)
-              if (stepResult) {
-                flushBatch()
-                win.webContents.send('chat:chunk', {
-                  type: 'plan-step',
-                  stepIndex: stepResult.index,
-                  stepStatus: stepResult.status
-                })
-              }
-
-              // Check for complete plan block
+              // Check for complete plan block (step markers are parsed in flushBatch)
               if (!planEmitted && accumulatedText.includes('[PLAN:end]')) {
                 const planData = parsePlanMarkers(accumulatedText)
                 if (planData) {
@@ -781,17 +779,11 @@ async function streamChat(
                 }
               }
 
-              // Bug 4: When inside a plan block, don't send marker text to renderer.
-              // The plan-proposed chunk replaces the plan block text visually.
-              if (inPlanBlock) {
-                // Swallow — plan markers are being buffered in accumulatedText only
-              } else {
-                // Normal text or post-plan text — strip any stray markers and send
-                const cleanText = stripPlanMarkers(seg.content)
-                if (cleanText.length > 0) {
-                  batchBuffer += cleanText
-                  startBatchTimer()
-                }
+              // When inside a plan block, don't send marker text to renderer.
+              if (!inPlanBlock) {
+                // Add raw text to buffer — flushBatch() handles marker stripping
+                batchBuffer += seg.content
+                startBatchTimer()
               }
             } else {
               flushBatch()
@@ -917,10 +909,7 @@ async function streamChat(
         if (seg.type === 'text') {
           accumulatedText += seg.content
           if (!inPlanBlock) {
-            const cleanRemainder = stripPlanMarkers(seg.content)
-            if (cleanRemainder.length > 0) {
-              batchBuffer += cleanRemainder
-            }
+            batchBuffer += seg.content
           }
         } else {
           accumulatedReasoning += seg.content
@@ -980,11 +969,16 @@ async function streamChat(
 
           if (approvalResult.decision === 'cancelled') {
             planData.status = 'cancelled'
+            // Notify renderer of cancellation
+            win.webContents.send('chat:chunk', { type: 'plan-proposed', plan: { ...planData } })
           } else {
             planData.status = 'approved'
             planData.approvedAt = Math.floor(Date.now() / 1000)
             planData.steps = approvalResult.steps.length > 0 ? approvalResult.steps : planData.steps
             approvedPlanData = planData
+
+            // Notify renderer that plan was approved (hides Valider/Annuler buttons)
+            win.webContents.send('chat:chunk', { type: 'plan-proposed', plan: { ...planData } })
 
             // C2: Launch execution phase — second streamText with write tools unlocked
             const executionPrompt = buildPlanPromptBlock('execution', planData)
@@ -1020,8 +1014,9 @@ async function streamChat(
               const execTools = { ...execWorkspaceTools, ...execMcpTools }
               const execHasTools = Object.keys(execTools).length > 0
 
-              // Update plan status to running
+              // Update plan status to running and notify renderer
               planData.status = 'running'
+              win.webContents.send('chat:chunk', { type: 'plan-proposed', plan: { ...planData } })
               win.webContents.send('chat:chunk', {
                 type: 'plan-step',
                 stepIndex: planData.steps.filter(s => s.enabled)[0]?.id ?? 1,
@@ -1056,23 +1051,9 @@ async function streamChat(
                       if (seg.type === 'text') {
                         accumulatedText += seg.content
 
-                        // Parse step execution markers
-                        const stepResult = parseStepMarker(seg.content)
-                        if (stepResult) {
-                          flushBatch()
-                          win.webContents.send('chat:chunk', {
-                            type: 'plan-step',
-                            stepIndex: stepResult.index,
-                            stepStatus: stepResult.status
-                          })
-                        }
-
-                        // Strip markers from visible text
-                        const cleanText = stripPlanMarkers(seg.content)
-                        if (cleanText.length > 0) {
-                          batchBuffer += cleanText
-                          startBatchTimer()
-                        }
+                        // Add raw text to buffer — flushBatch() handles marker parsing + stripping
+                        batchBuffer += seg.content
+                        startBatchTimer()
                       } else {
                         flushBatch()
                         accumulatedReasoning += seg.content
@@ -1138,10 +1119,7 @@ async function streamChat(
                 for (const seg of remaining) {
                   if (seg.type === 'text') {
                     accumulatedText += seg.content
-                    const cleanRemainder = stripPlanMarkers(seg.content)
-                    if (cleanRemainder.length > 0) {
-                      batchBuffer += cleanRemainder
-                    }
+                    batchBuffer += seg.content
                   } else {
                     accumulatedReasoning += seg.content
                     win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: seg.content })

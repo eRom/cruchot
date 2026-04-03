@@ -2,8 +2,6 @@ import type { PlanData, PlanStep } from '../../preload/types'
 
 const PLAN_BLOCK_RE = /\[PLAN:start(?::(\w+))?\](.*?)\[PLAN:title\](.*?)\[PLAN:end\]/s
 const STEP_TOOLS_RE = /\[STEP:tools:([^\]]+)\]/
-const STEP_EXEC_RE = /\[STEP:(\d+):(start|done|failed|skipped)\]/
-const ALL_MARKERS_RE = /\[(?:PLAN|STEP):[^\]]*\]/g
 
 export function parsePlanMarkers(text: string): PlanData | null {
   const match = PLAN_BLOCK_RE.exec(text)
@@ -46,23 +44,28 @@ export function parsePlanMarkers(text: string): PlanData | null {
 
 export function parseStepMarker(
   text: string
-): { index: number; status: 'running' | 'done' | 'failed' | 'skipped' } | null {
-  const match = STEP_EXEC_RE.exec(text)
-  if (!match) return null
-
-  const index = parseInt(match[1], 10)
-  if (index < 1) return null
-
-  const rawStatus = match[2]
-  const status = (rawStatus === 'start' ? 'running' : rawStatus) as
-    | 'running'
-    | 'done'
-    | 'failed'
-    | 'skipped'
-
-  return { index, status }
+): { index: number; status: 'running' | 'done' | 'failed' | 'skipped' }[] {
+  // Use a fresh regex each call to avoid lastIndex state issues
+  const re = /\[STEP:(\d+):(start|done|failed|skipped)\]/g
+  const results: { index: number; status: 'running' | 'done' | 'failed' | 'skipped' }[] = []
+  let match: RegExpExecArray | null
+  while ((match = re.exec(text)) !== null) {
+    const index = parseInt(match[1], 10)
+    if (index < 1) continue
+    const rawStatus = match[2]
+    const status = (rawStatus === 'start' ? 'running' : rawStatus) as
+      | 'running'
+      | 'done'
+      | 'failed'
+      | 'skipped'
+    results.push({ index, status })
+  }
+  return results
 }
 
 export function stripPlanMarkers(text: string): string {
-  return text.replace(PLAN_BLOCK_RE, '').replace(ALL_MARKERS_RE, '')
+  // Use inline regexes to avoid lastIndex state issues with module-level /g regexes
+  return text
+    .replace(/\[PLAN:start(?::(\w+))?\](.*?)\[PLAN:title\](.*?)\[PLAN:end\]/gs, '')
+    .replace(/\[(?:PLAN|STEP):[^\]]*\]/g, '')
 }
