@@ -10,35 +10,9 @@ App desktop locale de chat multi-LLM construite avec Electron. 11 providers, gen
   <img src="resources/infographie.png" alt="Infographie Cruchot" width="800" />
 </p>
 
-## Updates
+## Changelog
 
-- 02/04/2026
-  - **Message Fork** : forker une conversation depuis un message assistant specifique (bouton GitFork dans le footer message). Fork par position, pas par timestamp
-  - **Worker Embedding** : inference ONNX delegue a un Worker thread (plus de blocage main process)
-  - **Pagination messages** : chargement par page (50 derniers) + infinite scroll vers l'historique
-  - **ServiceRegistry** : lifecycle centralise des services, lazy-load, shutdown coordonne async
-  - **Train securite** : 7 fixes (SSRF WebFetch, validatePath, MCP pipeline, session approvals, Maton, quote-aware parsing)
-  - **Train perf** : IPC batching 50ms, Shiki skip streaming, provider/MCP cache TTL 5min, SQLite pragmas, SELECT superflu supprime
-  - **Tests** : 121 tests (5 suites) — vitest, bash-security, permission-engine, cost-calculator, errors, think-tag
-  - **Seatbelt rewrite** : profil sandbox (allow default + deny cible), CWD explicite, READONLY_COMMANDS, Mode YOLO, tool limit 200
-
-- 01/04/2026
-  - **Skills** : systeme de packs autonomes installables (GitHub, dossier local, Barda) au format Markdown + frontmatter YAML (compatible Claude Code). Scan de securite Maton integre (scanner Python + analyse contextuelle LLM). Invocation via `/skill-name` dans les conversations, injection dans le system prompt, execution de blocs shell via Seatbelt. UI complete dans Personnaliser > Skills.
-
-- 22/03/2026
-  - **Conversation Tools** : pipeline securite 4 etages, 8 outils LLM (bash, readFile, writeFile, FileEdit, listFiles, GrepTool, GlobTool, WebFetchTool), permission engine (deny > allow > ask > fallback), Seatbelt macOS, 22 security checks
-
-- 21/03/2026
-  - **Bardas (Gestion de Brigade)** : systeme de packs thematiques importables au format Markdown (.md) — roles, commandes, prompts, fragments, referentiels, MCP regroupes sous un namespace unique
-
-- 20/03/2026
-  - **Fork conversations** : dupliquer une conversation (historique et contexte)
-  - **UI fixes** : Arena mode, etc.
-
-- 15/03/2026
-  - **Conversations favorites** : pin/star pour garder les conversations importantes en haut de la sidebar
-  - **Prompt Optimizer** : amelioration automatique du prompt via LLM avant envoi (one-shot)
-  - **Arena** : mode comparatif cote a cote pour evaluer 2 LLMs sur le meme prompt (streaming parallele, vote, metriques comparees, design VS Street Fighter)
+Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet des versions.
 
 ## Stack
 
