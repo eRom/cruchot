@@ -242,10 +242,16 @@ export interface RoleInfo {
   updatedAt: Date
 }
 
+export interface SearchFilters {
+  role?: 'user' | 'assistant'
+  projectId?: string
+}
+
 export interface SearchResult {
   messageId: string
   conversationId: string
   conversationTitle: string
+  projectId: string | null
   role: string
   content: string
   createdAt: number
@@ -794,7 +800,7 @@ export interface ElectronAPI {
   setConversationRole: (id: string, roleId: string | null) => Promise<void>
 
   // Search
-  searchMessages: (query: string) => Promise<SearchResult[]>
+  searchMessages: (payload: { query: string; filters?: SearchFilters }) => Promise<SearchResult[]>
 
   // Export
   exportConversation: (data: { conversationId: string; format: 'md' | 'json' | 'txt' | 'html' }) => Promise<ExportResult>

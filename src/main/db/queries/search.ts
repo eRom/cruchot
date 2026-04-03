@@ -1,41 +1,54 @@
 import { getSqliteDatabase } from '../index'
 
+export interface SearchFilters {
+  role?: 'user' | 'assistant'
+  projectId?: string
+}
+
 export interface SearchResult {
   messageId: string
   conversationId: string
   conversationTitle: string
+  projectId: string | null
   role: string
   content: string
   createdAt: number
 }
 
-/**
- * Sanitize FTS5 query input to prevent query injection.
- * Strips FTS5 special operators and wraps terms in double quotes.
- */
 function sanitizeFtsQuery(query: string): string {
-  // Remove FTS5 special characters/operators that could inject syntax
-  // FTS5 special: AND, OR, NOT, NEAR, *, ^, column:, {, }, (, )
   const stripped = query
-    .replace(/[{}()*^"]/g, '')        // Remove structural chars
-    .replace(/\bAND\b/gi, '')         // Remove boolean operators
+    .replace(/[{}()*^"]/g, '')
+    .replace(/\bAND\b/gi, '')
     .replace(/\bOR\b/gi, '')
     .replace(/\bNOT\b/gi, '')
     .replace(/\bNEAR\b/gi, '')
-    .replace(/\w+\s*:/g, '')          // Remove column: prefix
+    .replace(/\w+\s*:/g, '')
     .trim()
 
   if (!stripped) return '""'
 
-  // Wrap each word in double quotes for literal matching
   const terms = stripped.split(/\s+/).filter(Boolean)
   return terms.map(t => `"${t}"`).join(' ')
 }
 
-export function searchMessages(query: string): SearchResult[] {
+export function searchMessages(query: string, filters?: SearchFilters): SearchResult[] {
   const sqlite = getSqliteDatabase()
-
   const sanitized = sanitizeFtsQuery(query)
+
+  const conditions: string[] = ['messages_fts MATCH ?']
+  const params: unknown[] = [sanitized]
+
+  if (filters?.role) {
+    conditions.push('m.role = ?')
+    params.push(filters.role)
+  }
+
+  if (filters?.projectId) {
+    conditions.push('c.project_id = ?')
+    params.push(filters.projectId)
+  }
+
+  const whereClause = conditions.join(' AND ')
 
   const results = sqlite
     .prepare(
@@ -44,18 +57,19 @@ export function searchMessages(query: string): SearchResult[] {
         m.id AS messageId,
         m.conversation_id AS conversationId,
         c.title AS conversationTitle,
+        c.project_id AS projectId,
         m.role,
         substr(m.content, 1, 500) AS content,
         m.created_at AS createdAt
       FROM messages_fts
       JOIN messages m ON messages_fts.rowid = m.rowid
       JOIN conversations c ON m.conversation_id = c.id
-      WHERE messages_fts MATCH ?
+      WHERE ${whereClause}
       ORDER BY rank
       LIMIT 50
     `
     )
-    .all(sanitized) as SearchResult[]
+    .all(...params) as SearchResult[]
 
   return results
 }

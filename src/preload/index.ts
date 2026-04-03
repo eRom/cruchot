@@ -136,7 +136,7 @@ const api: ElectronAPI = {
   setConversationRole: (id, roleId) => ipcRenderer.invoke('conversations:setRole', id, roleId),
 
   // ── Search ────────────────────────────────────────────
-  searchMessages: (query) => ipcRenderer.invoke('search:messages', query),
+  searchMessages: (payload) => ipcRenderer.invoke('search:messages', payload),
 
   // ── Export ────────────────────────────────────────────
   exportConversation: (data) => ipcRenderer.invoke('export:conversation', data),
