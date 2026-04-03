@@ -27,7 +27,9 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.txt', '.md', '.pdf', '.docx',
   '.ts', '.js', '.py', '.java', '.go', '.rs', '.c', '.cpp', '.rb', '.php', '.swift', '.kt',
   '.html', '.css', '.json', '.yaml', '.yml', '.xml', '.sql', '.sh',
-  '.csv'
+  '.csv',
+  // Images (requires Mistral OCR)
+  '.jpg', '.jpeg', '.png', '.tiff', '.bmp', '.webp'
 ])
 
 const MIME_MAP: Record<string, string> = {
@@ -36,6 +38,11 @@ const MIME_MAP: Record<string, string> = {
   '.csv': 'text/csv', '.html': 'text/html', '.css': 'text/css',
   '.json': 'application/json', '.yaml': 'text/yaml', '.yml': 'text/yaml',
   '.xml': 'application/xml', '.sql': 'text/x-sql', '.sh': 'text/x-shellscript'
+}
+
+const IMAGE_MIME_MAP: Record<string, string> = {
+  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+  '.tiff': 'image/tiff', '.bmp': 'image/bmp', '.webp': 'image/webp'
 }
 
 // ── Chunking configs ──────────────────────────────────
@@ -217,7 +224,7 @@ class LibraryService {
           continue
         }
 
-        const mimeType = MIME_MAP[ext] || `text/x-${ext.slice(1)}`
+        const mimeType = MIME_MAP[ext] || IMAGE_MIME_MAP[ext] || `text/x-${ext.slice(1)}`
         const storedFilename = `${Date.now()}-${filename}`
         const storedPath = path.join(sourceDir, storedFilename)
         fs.copyFileSync(filePath, storedPath)
@@ -529,18 +536,40 @@ class LibraryService {
 
   private async extractText(filePath: string, mimeType: string): Promise<string> {
     if (mimeType === 'application/pdf') {
-      // Import lib/pdf-parse directly to avoid index.js test code
-      // (pdf-parse v1.1.1 index.js runs a test file read when module.parent is null)
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const pdfParse = require('pdf-parse/lib/pdf-parse.js')
       const buffer = fs.readFileSync(filePath)
       const result = await pdfParse(buffer)
-      return result.text
+      const text = result.text?.trim() ?? ''
+
+      // Scanned PDF detection — fallback to OCR
+      if (text.length < 50) {
+        const { ocrService } = await import('./ocr.service')
+        if (ocrService.isAvailable()) {
+          const ocrResult = await ocrService.processFile(filePath, { tableFormat: 'html' })
+          return ocrResult.text
+        }
+        throw new Error('PDF scanne detecte — configurez une cle API Mistral pour l\'OCR')
+      }
+
+      return text
     }
 
     if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       const mammoth = await import('mammoth')
       const result = await mammoth.convertToMarkdown({ path: filePath })
       return result.value
+    }
+
+    // Image files — require OCR
+    if (mimeType.startsWith('image/')) {
+      const { ocrService } = await import('./ocr.service')
+      if (!ocrService.isAvailable()) {
+        throw new Error('L\'indexation d\'images necessite une cle API Mistral pour l\'OCR')
+      }
+      const buffer = fs.readFileSync(filePath)
+      const ocrResult = await ocrService.processImage(buffer, mimeType)
+      return ocrResult.text
     }
 
     // All other formats: read as text
@@ -552,6 +581,7 @@ class LibraryService {
   private getContentType(mimeType: string): string {
     if (mimeType === 'text/markdown') return 'markdown'
     if (mimeType === 'text/csv') return 'csv'
+    if (mimeType.startsWith('image/')) return 'markdown'  // OCR output is markdown
     if (mimeType.startsWith('text/x-') || ['application/json', 'application/xml'].includes(mimeType)) return 'code'
     return 'plaintext'
   }
