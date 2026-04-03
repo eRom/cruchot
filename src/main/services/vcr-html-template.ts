@@ -28,20 +28,22 @@ export const DEFAULT_VCR_HTML_TEMPLATE = `<!DOCTYPE html>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    /* Brand — change this to match your identity */
-    --brand: oklch(49.107% 0.24121 264.248);
-    --brand-soft: oklch(49.107% 0.24121 264.248 / 12%);
+    /* Brand — Cruchot orange dore #FFAF5F */
+    --brand: oklch(0.82 0.148 65);
+    --brand-soft: oklch(0.82 0.148 65 / 12%);
+    --brand-foreground: oklch(0.16 0.04 55);
 
-    /* Backgrounds */
-    --bg: oklch(0.16 0.005 285);
-    --bg-card: oklch(0.20 0.005 285);
-    --bg-elevated: oklch(0.24 0.005 285);
-    --bg-hover: oklch(0.22 0.005 285);
+    /* Backgrounds — neutral dark (no blue hue) */
+    --bg: oklch(0.236 0 0);
+    --bg-card: oklch(0.274 0.003 286);
+    --bg-elevated: oklch(0.31 0.003 286);
+    --bg-hover: oklch(0.30 0.003 286);
+    --bg-sidebar: oklch(0.269 0.005 90);
 
     /* Text */
-    --text: oklch(0.93 0 0);
-    --text-secondary: oklch(0.65 0.01 285);
-    --text-muted: oklch(0.50 0.01 285);
+    --text: oklch(0.985 0 0);
+    --text-secondary: oklch(0.705 0.015 286.067);
+    --text-muted: oklch(0.552 0.016 285.938);
 
     /* Borders */
     --border: oklch(1 0 0 / 8%);
@@ -55,7 +57,7 @@ export const DEFAULT_VCR_HTML_TEMPLATE = `<!DOCTYPE html>
     --purple: oklch(0.58 0.22 293);
     --cyan: oklch(0.68 0.12 215);
 
-    --radius: 0.5rem;
+    --radius: 0.625rem;
   }
 
   html, body {
@@ -123,8 +125,8 @@ export const DEFAULT_VCR_HTML_TEMPLATE = `<!DOCTYPE html>
     font-weight: 500;
   }
 
-  .pill-brand { background: var(--brand-soft); color: var(--brand); }
-  .pill-muted { background: oklch(1 0 0 / 6%); color: var(--text-secondary); }
+  .pill-brand { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+  .pill-muted { background: oklch(1 0 0 / 6%); color: var(--text-secondary); font-weight: 500; }
 
   .meta-text {
     font-size: 12px;
@@ -150,7 +152,7 @@ export const DEFAULT_VCR_HTML_TEMPLATE = `<!DOCTYPE html>
     display: flex;
     flex-direction: column;
     border-right: 1px solid var(--border);
-    background: var(--bg);
+    background: var(--bg-sidebar);
     overflow: hidden;
   }
 
@@ -351,7 +353,7 @@ export const DEFAULT_VCR_HTML_TEMPLATE = `<!DOCTYPE html>
   #vcr-branding a {
     color: var(--brand);
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600;
   }
 
   #vcr-branding a:hover { text-decoration: underline; }
