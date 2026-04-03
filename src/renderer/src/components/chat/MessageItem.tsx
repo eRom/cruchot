@@ -385,7 +385,7 @@ function ToolCallBlock({ toolCalls, isStreaming }: { toolCalls: ToolCallDisplay[
 const IMAGE_MIME_SET = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
 
 /** Display attachments on a user message */
-function MessageAttachments({ attachments }: { attachments: Array<{ path: string; name: string; size: number; type: string; mimeType: string }> }) {
+function MessageAttachments({ attachments }: { attachments: Array<{ path: string; name: string; size: number; type: string; mimeType: string; ocrProcessed?: boolean }> }) {
   if (!attachments || attachments.length === 0) return null
 
   return (
@@ -422,7 +422,14 @@ function MessageAttachments({ attachments }: { attachments: Array<{ path: string
               </div>
             )}
             <div className="flex min-w-0 flex-col">
-              <span className="truncate text-xs font-medium text-white/90 max-w-[120px]">{att.name}</span>
+              <div className="flex items-center gap-1">
+                <span className="truncate text-xs font-medium text-white/90 max-w-[120px]">{att.name}</span>
+                {att.ocrProcessed && (
+                  <span className="ml-1 text-[10px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400 font-medium">
+                    OCR
+                  </span>
+                )}
+              </div>
               <span className="text-[10px] text-white/50">{formatFileSize(att.size)}</span>
             </div>
           </div>
@@ -684,6 +691,11 @@ function MessageItem({ message, isStreaming = false, conversationId }: MessageIt
               )}
               {message.cost != null && message.cost > 0 && (
                 <span className="font-medium text-muted-foreground/60">{formatCost(message.cost)}</span>
+              )}
+              {message.contentData?.ocrCost && (
+                <span className="text-muted-foreground text-xs ml-1">
+                  (dont {formatCost(message.contentData.ocrCost as number)} OCR)
+                </span>
               )}
             </div>
           </div>
