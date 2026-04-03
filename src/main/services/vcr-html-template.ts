@@ -1,38 +1,29 @@
-import type { VcrRecording } from '../../preload/types'
-
-function formatDuration(ms: number): string {
-  const totalSec = Math.floor(ms / 1000)
-  const h = Math.floor(totalSec / 3600)
-  const m = Math.floor((totalSec % 3600) / 60)
-  const s = totalSec % 60
-  if (h > 0) return `${h}h ${m}m ${s}s`
-  if (m > 0) return `${m}m ${s}s`
-  return `${s}s`
-}
-
-function formatDate(ts: number): string {
-  return new Date(ts).toLocaleString('fr-FR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-export function generateVcrHtml(recording: VcrRecording): string {
-  const { header, events } = recording
-  const duration = header.duration ?? (events.length > 0 ? events[events.length - 1].offsetMs : 0)
-  const recordedAt = formatDate(header.startedAt)
-  const durationStr = formatDuration(duration)
-  const jsonData = JSON.stringify({ header, events })
-
-  return `<!DOCTYPE html>
+/**
+ * Default HTML template for VCR share files.
+ *
+ * This content is written to {userData}/template-vcr-share.html on first use.
+ * The user can customize this file freely.
+ *
+ * IMPORTANT: The markers <!-- VCR_DATA_START --> and <!-- VCR_DATA_END -->
+ * delimit the data injection zone. Do NOT remove or modify these markers.
+ * Everything between them will be replaced with actual recording data at export time.
+ *
+ * CUSTOMIZATION GUIDE:
+ * - "STYLE ZONE" (CSS): customize colors, fonts, layout freely
+ * - "LAYOUT ZONE" (HTML structure): customize the UI layout freely
+ * - "DATA ZONE" (between VCR_DATA markers): do NOT touch — auto-generated
+ * - "SCRIPT ZONE" (JavaScript): customize behavior, but keep the data parsing intact
+ */
+export const DEFAULT_VCR_HTML_TEMPLATE = `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VCR — ${header.recordingId}</title>
+<title>Cruchot VCR Recording</title>
+
+<!-- ============================================================ -->
+<!-- STYLE ZONE — Customize colors, fonts, layout freely          -->
+<!-- ============================================================ -->
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -62,39 +53,6 @@ export function generateVcrHtml(recording: VcrRecording): string {
   .meta span { display: flex; gap: 4px; align-items: center; }
   .badge { padding: 1px 6px; border-radius: 4px; background: var(--bg3); font-size: 10px; color: var(--text-muted); border: 1px solid var(--border); }
 
-  /* Progress bar */
-  #progress-bar-wrap {
-    flex-shrink: 0; padding: 8px 16px; background: var(--bg2); border-bottom: 1px solid var(--border);
-  }
-  #progress-track {
-    position: relative; height: 6px; background: var(--bg3); border-radius: 3px; cursor: pointer;
-  }
-  #progress-fill {
-    height: 100%; background: var(--accent); border-radius: 3px; width: 0%; transition: width 0.1s linear;
-    pointer-events: none;
-  }
-  .marker {
-    position: absolute; top: -3px; width: 3px; height: 12px; border-radius: 2px; transform: translateX(-50%);
-    pointer-events: none;
-  }
-
-  /* Controls */
-  #controls {
-    flex-shrink: 0; display: flex; align-items: center; gap: 10px;
-    padding: 8px 16px; background: var(--bg2); border-bottom: 1px solid var(--border);
-  }
-  button {
-    background: var(--bg3); border: 1px solid var(--border); color: var(--text);
-    padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit;
-  }
-  button:hover { background: var(--border); }
-  button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-  #time-display { font-size: 12px; color: var(--text-muted); margin-left: 4px; min-width: 80px; }
-  select {
-    background: var(--bg3); border: 1px solid var(--border); color: var(--text);
-    padding: 4px 8px; border-radius: 4px; font-size: 12px; font-family: inherit; cursor: pointer;
-  }
-
   /* Main content */
   #content { display: flex; flex: 1; overflow: hidden; }
 
@@ -112,7 +70,6 @@ export function generateVcrHtml(recording: VcrRecording): string {
   }
   .event-item:hover { background: var(--bg3); }
   .event-item.active { background: var(--bg3); border-left: 3px solid var(--accent); padding-left: 9px; }
-  .event-item.past { opacity: 0.5; }
   .event-type {
     font-size: 10px; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; margin-top: 1px;
     background: var(--bg3); border: 1px solid var(--border); color: var(--text-muted);
@@ -126,6 +83,7 @@ export function generateVcrHtml(recording: VcrRecording): string {
   .event-type.permission-decision { color: var(--amber); border-color: var(--amber); background: #2d2308; }
   .event-type.session-start, .event-type.session-stop { color: var(--text-muted); }
   .event-type.finish { color: var(--green); border-color: var(--green); background: #0d2618; }
+  .event-type.file-diff { color: var(--amber); border-color: var(--amber); background: #2d2308; }
   .event-summary { font-size: 11px; color: var(--text-muted); flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .event-time { font-size: 10px; color: var(--text-muted); flex-shrink: 0; margin-left: auto; }
   .event-batch { display: flex; flex-direction: column; }
@@ -168,42 +126,22 @@ export function generateVcrHtml(recording: VcrRecording): string {
 </style>
 </head>
 <body>
+
+<!-- ============================================================ -->
+<!-- LAYOUT ZONE — Customize the HTML structure freely            -->
+<!-- ============================================================ -->
 <div id="app">
 
   <div id="header">
     <div>
-      <h1>Cruchot VCR Player</h1>
+      <h1>Cruchot VCR</h1>
     </div>
-    <div class="meta">
-      <span><span class="badge">${header.providerId}</span><span class="badge">${header.modelId}</span></span>
-      <span>${recordedAt}</span>
-      <span>${durationStr}</span>
-      <span>${(header.eventCount ?? events.length)} events</span>
-    </div>
-  </div>
-
-  <div id="progress-bar-wrap">
-    <div id="progress-track">
-      <div id="progress-fill"></div>
-    </div>
-  </div>
-
-  <div id="controls">
-    <button id="btn-play">&#9654; Play</button>
-    <button id="btn-pause" style="display:none">&#9646;&#9646; Pause</button>
-    <button id="btn-stop">&#9632; Stop</button>
-    <span id="time-display">0:00 / ${durationStr}</span>
-    <select id="speed-select">
-      <option value="0.5">0.5x</option>
-      <option value="1" selected>1x</option>
-      <option value="2">2x</option>
-      <option value="4">4x</option>
-    </select>
+    <div class="meta" id="meta-info"></div>
   </div>
 
   <div id="content">
     <div id="sidebar">
-      <div id="sidebar-header">Events (${events.length})</div>
+      <div id="sidebar-header">Events</div>
       <div id="event-list"></div>
     </div>
     <div id="detail">
@@ -220,45 +158,28 @@ export function generateVcrHtml(recording: VcrRecording): string {
 
   <footer id="vcr-branding">
     Recorded with <a href="https://cruchot.romain-ecarnot.com" target="_blank">Cruchot</a>
-    <span class="dot">·</span>
-    ${recordedAt}
-    <span class="dot">·</span>
-    ${durationStr}
-    ${header.workspacePath ? `<span class="dot">·</span><span title="${header.workspacePath}" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${header.workspacePath}</span>` : ''}
   </footer>
 </div>
 
-<script type="application/json" id="vcr-data">${jsonData}</script>
+<!-- ============================================================ -->
+<!-- DATA ZONE — Do NOT modify between these markers              -->
+<!-- The recording data is injected here automatically            -->
+<!-- ============================================================ -->
+<!-- VCR_DATA_START -->
+<script type="application/json" id="vcr-data">{}</script>
+<!-- VCR_DATA_END -->
 
+<!-- ============================================================ -->
+<!-- SCRIPT ZONE — Customize behavior, keep data parsing intact   -->
+<!-- ============================================================ -->
 <script>
 (function() {
   // --- Data ---
   var raw = document.getElementById('vcr-data').textContent;
   var recording = JSON.parse(raw);
-  var events = recording.events;
-  var header = recording.header;
+  var events = recording.events || [];
+  var header = recording.header || {};
   var totalDuration = header.duration || (events.length > 0 ? events[events.length - 1].offsetMs : 0);
-
-  // --- State ---
-  var currentTime = 0;
-  var playing = false;
-  var speed = 1;
-  var lastRealTime = null;
-  var rafId = null;
-  var selectedIndex = -1;
-
-  // --- DOM ---
-  var btnPlay = document.getElementById('btn-play');
-  var btnPause = document.getElementById('btn-pause');
-  var btnStop = document.getElementById('btn-stop');
-  var progressFill = document.getElementById('progress-fill');
-  var progressTrack = document.getElementById('progress-track');
-  var timeDisplay = document.getElementById('time-display');
-  var speedSelect = document.getElementById('speed-select');
-  var eventList = document.getElementById('event-list');
-  var detailEmpty = document.getElementById('detail-empty');
-  var detailData = document.getElementById('detail-data');
-  var detailTypeBadge = document.getElementById('detail-type-badge');
 
   // --- Helpers ---
   function fmtMs(ms) {
@@ -266,6 +187,23 @@ export function generateVcrHtml(recording: VcrRecording): string {
     var m = Math.floor(s / 60);
     s = s % 60;
     return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function fmtDuration(ms) {
+    var totalSec = Math.floor(ms / 1000);
+    var h = Math.floor(totalSec / 3600);
+    var m = Math.floor((totalSec % 3600) / 60);
+    var s = totalSec % 60;
+    if (h > 0) return h + 'h ' + m + 'm ' + s + 's';
+    if (m > 0) return m + 'm ' + s + 's';
+    return s + 's';
+  }
+
+  function fmtDate(ts) {
+    return new Date(ts).toLocaleString('fr-FR', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
   }
 
   function escHtml(s) {
@@ -286,7 +224,7 @@ export function generateVcrHtml(recording: VcrRecording): string {
       case 'tool-result': return (d.toolName || d.name || '') + ' -> ' + JSON.stringify(d.result || '').slice(0, 40);
       case 'permission-decision': return (d.toolName || '') + ' [' + (d.decision || d.action || '') + ']';
       case 'file-diff': return (d.filePath || '');
-      case 'finish': return 'tokens: ' + ((d.usage && d.usage.totalTokens) || '?');
+      case 'finish': return 'tokens: ' + ((d.usage && d.usage.totalTokens) || (d.tokensIn || 0) + (d.tokensOut || 0) || '?');
       default: return JSON.stringify(d).slice(0, 60);
     }
   }
@@ -299,8 +237,23 @@ export function generateVcrHtml(recording: VcrRecording): string {
     return false;
   }
 
+  // --- Populate header meta ---
+  var metaEl = document.getElementById('meta-info');
+  metaEl.innerHTML =
+    '<span><span class="badge">' + escHtml(header.providerId || '') + '</span><span class="badge">' + escHtml(header.modelId || '') + '</span></span>' +
+    '<span>' + fmtDate(header.startedAt) + '</span>' +
+    '<span>' + fmtDuration(totalDuration) + '</span>' +
+    '<span>' + events.length + ' events</span>';
+
+  document.getElementById('sidebar-header').textContent = 'Events (' + events.length + ')';
+
   // --- Build sidebar ---
-  // Group consecutive text-delta events into batches
+  var eventList = document.getElementById('event-list');
+  var detailEmpty = document.getElementById('detail-empty');
+  var detailData = document.getElementById('detail-data');
+  var detailTypeBadge = document.getElementById('detail-type-badge');
+
+  // Group consecutive text-delta events
   var groups = [];
   var i = 0;
   while (i < events.length) {
@@ -337,14 +290,12 @@ export function generateVcrHtml(recording: VcrRecording): string {
       item.addEventListener('click', function() { selectEvent(parseInt(this.dataset.index)); });
       eventList.appendChild(item);
     } else {
-      // Batch of text-deltas
       var first = events[group.indices[0]];
       var last = events[group.indices[group.indices.length - 1]];
       var combinedText = group.indices.map(function(idx) { return events[idx].data.text || ''; }).join('');
 
       var batchEl = document.createElement('div');
       batchEl.className = 'event-batch';
-      batchEl.dataset.groupIndex = gi;
 
       var batchHeader = document.createElement('div');
       batchHeader.className = 'event-batch-header event-item';
@@ -356,7 +307,6 @@ export function generateVcrHtml(recording: VcrRecording): string {
 
       var batchItems = document.createElement('div');
       batchItems.className = 'event-batch-items';
-      batchItems.dataset.batchGroupIndex = gi;
 
       group.indices.forEach(function(idx) {
         var ev = events[idx];
@@ -383,28 +333,8 @@ export function generateVcrHtml(recording: VcrRecording): string {
     }
   });
 
-  // --- Progress markers ---
-  events.forEach(function(ev, idx) {
-    if (!totalDuration) return;
-    var pct = (ev.offsetMs / totalDuration) * 100;
-    var color = null;
-    if (ev.type === 'tool-result') color = isToolError(ev) ? 'var(--red)' : 'var(--green)';
-    if (ev.type === 'permission-decision') color = 'var(--amber)';
-    if (ev.type === 'tool-call') color = 'var(--amber)';
-    if (!color) return;
-    var marker = document.createElement('div');
-    marker.className = 'marker';
-    marker.style.left = pct + '%';
-    marker.style.background = color;
-    marker.title = ev.type + ' @ ' + fmtMs(ev.offsetMs);
-    marker.addEventListener('click', function(e) { e.stopPropagation(); seekTo(ev.offsetMs); });
-    progressTrack.appendChild(marker);
-  });
-
   // --- Event selection ---
   function selectEvent(idx) {
-    selectedIndex = idx;
-    // Update active class
     document.querySelectorAll('.event-item').forEach(function(el) {
       if (parseInt(el.dataset.index) === idx) {
         el.classList.add('active');
@@ -423,87 +353,7 @@ export function generateVcrHtml(recording: VcrRecording): string {
     html += '<div class="detail-field"><div class="detail-label">Data</div><pre>' + escHtml(JSON.stringify(ev.data, null, 2)) + '</pre></div>';
     detailData.innerHTML = html;
   }
-
-  // --- Playback ---
-  function seekTo(ms) {
-    currentTime = Math.max(0, Math.min(ms, totalDuration));
-    updateUI();
-  }
-
-  function updateUI() {
-    var pct = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0;
-    progressFill.style.width = pct + '%';
-    timeDisplay.textContent = fmtMs(currentTime) + ' / ' + fmtMs(totalDuration);
-
-    // Highlight events up to currentTime
-    document.querySelectorAll('.event-item[data-index]').forEach(function(el) {
-      var idx = parseInt(el.dataset.index);
-      var ev = events[idx];
-      if (ev.offsetMs <= currentTime) {
-        el.classList.remove('past');
-      } else {
-        el.classList.add('past');
-      }
-    });
-  }
-
-  function tick(realNow) {
-    if (!playing) return;
-    if (lastRealTime === null) {
-      lastRealTime = realNow;
-    }
-    var delta = (realNow - lastRealTime) * speed;
-    lastRealTime = realNow;
-    currentTime = Math.min(currentTime + delta, totalDuration);
-    updateUI();
-
-    if (currentTime >= totalDuration) {
-      playing = false;
-      btnPlay.style.display = '';
-      btnPause.style.display = 'none';
-      lastRealTime = null;
-      return;
-    }
-    rafId = requestAnimationFrame(tick);
-  }
-
-  function play() {
-    if (currentTime >= totalDuration) currentTime = 0;
-    playing = true;
-    lastRealTime = null;
-    btnPlay.style.display = 'none';
-    btnPause.style.display = '';
-    rafId = requestAnimationFrame(tick);
-  }
-
-  function pause() {
-    playing = false;
-    lastRealTime = null;
-    btnPlay.style.display = '';
-    btnPause.style.display = 'none';
-    if (rafId) cancelAnimationFrame(rafId);
-  }
-
-  function stop() {
-    pause();
-    currentTime = 0;
-    updateUI();
-  }
-
-  btnPlay.addEventListener('click', play);
-  btnPause.addEventListener('click', pause);
-  btnStop.addEventListener('click', stop);
-  speedSelect.addEventListener('change', function() { speed = parseFloat(this.value); });
-
-  progressTrack.addEventListener('click', function(e) {
-    var rect = progressTrack.getBoundingClientRect();
-    var pct = (e.clientX - rect.left) / rect.width;
-    seekTo(pct * totalDuration);
-  });
-
-  updateUI();
 })();
 </script>
 </body>
 </html>`
-}

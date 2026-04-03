@@ -12,6 +12,7 @@ import { BUILTIN_COMMANDS } from './commands/builtin'
 import { ensureInstanceToken } from './services/instance-token.service'
 import { skillService } from './services/skill.service'
 import { serviceRegistry } from './services/registry'
+import { vcrHtmlExporterService } from './services/vcr-html-exporter.service'
 import { listSkills, createSkill, deleteSkill } from './db/queries/skills'
 
 import { pathToFileURL } from 'node:url'
@@ -130,6 +131,13 @@ app.whenReady().then(() => {
   // Ensure default sandbox directory exists
   const sandboxDir = path.join(os.homedir(), '.cruchot', 'sandbox')
   fs.mkdirSync(sandboxDir, { recursive: true })
+
+  // ── VCR template ──────────────────────────────────────────
+  try {
+    vcrHtmlExporterService.ensureTemplate()
+  } catch (err) {
+    console.error('[VCR] Template init failed:', err)
+  }
 
   // ── Skills ────────────────────────────────────────────
   skillService.ensureSkillsDir()

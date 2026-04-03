@@ -17,8 +17,6 @@ import { useLibraryStore } from '@/stores/library.store'
 import { useVcrStore } from '@/stores/vcr.store'
 import { MessageSquare, Sparkles } from 'lucide-react'
 import { EVENTS } from '@/lib/utils'
-import { VcrPlayer } from './vcr/VcrPlayer'
-import { VcrRecordingsList } from './vcr/VcrRecordingsList'
 
 const RightPanel = React.lazy(() => import('./right-panel/RightPanel').then(m => ({ default: m.RightPanel })))
 
@@ -262,8 +260,6 @@ export default function ChatView() {
         </Suspense>
       )}
 
-      <VcrPlayer />
-      <VcrRecordingsList />
     </div>
   )
 }

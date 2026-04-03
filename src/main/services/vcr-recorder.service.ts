@@ -1,4 +1,4 @@
-import { createWriteStream, readdirSync, readFileSync, existsSync, copyFileSync, type WriteStream } from 'fs'
+import { createWriteStream, readFileSync, existsSync, type WriteStream } from 'fs'
 import { join } from 'path'
 import { nanoid } from 'nanoid'
 import { app } from 'electron'
@@ -35,6 +35,7 @@ const LISTENED_EVENTS: VcrEventName[] = [
 class VcrRecorderService {
   private active: ActiveRecording | null = null
   private listeners: Map<string, (data: unknown) => void> = new Map()
+  private lastRecordingFilePath: string | null = null
 
   startRecording(
     conversationId: string,
@@ -47,7 +48,8 @@ class VcrRecorderService {
     const timestamp = Date.now()
     const recordingId = `${conversationId}_${timestamp}_${nanoid(6)}`
     const filePath = join(getVcrRecordingsPath(), `${recordingId}.vcr`)
-    const fullCapture = options?.fullCapture ?? false
+    // Always fullCapture
+    const fullCapture = true
 
     const writeStream = createWriteStream(filePath, { flags: 'a', encoding: 'utf-8' })
 
@@ -101,10 +103,11 @@ class VcrRecorderService {
     }
     this.listeners.clear()
 
-    const { recordingId, startedAt, eventCount } = this.active
+    const { recordingId, startedAt, eventCount, filePath } = this.active
     const duration = Date.now() - startedAt
 
     this.active.writeStream.end()
+    this.lastRecordingFilePath = filePath
     this.active = null
 
     console.log(`[VCR] Recording stopped: ${recordingId} (${eventCount} events, ${duration}ms)`)
@@ -127,49 +130,24 @@ class VcrRecorderService {
     }
   }
 
-  listRecordings(): VcrRecordingHeader[] {
-    const dir = getVcrRecordingsPath()
-    if (!existsSync(dir)) return []
-
-    const files = readdirSync(dir).filter((f) => f.endsWith('.vcr'))
-    const headers: VcrRecordingHeader[] = []
-
-    for (const file of files) {
-      try {
-        const filePath = join(dir, file)
-        const allLines = readFileSync(filePath, 'utf-8').split('\n').filter(Boolean)
-        if (allLines.length === 0) continue
-        const header = JSON.parse(allLines[0]) as VcrRecordingHeader
-        header.eventCount = allLines.length - 1
-        if (allLines.length > 1) {
-          const lastEvent = JSON.parse(allLines[allLines.length - 1]) as [number, string, unknown]
-          header.duration = lastEvent[0]
-        }
-        header.toolCallCount = allLines.filter((line, i) => {
-          if (i === 0) return false
-          try {
-            const evt = JSON.parse(line) as [number, string, unknown]
-            return evt[1] === 'tool-call'
-          } catch { return false }
-        }).length
-        headers.push(header)
-      } catch {
-        // Skip corrupted files
-      }
-    }
-
-    return headers.sort((a, b) => b.startedAt - a.startedAt)
+  /**
+   * Returns the file path of the just-stopped recording.
+   */
+  getLastRecordingPath(): string | null {
+    return this.lastRecordingFilePath
   }
 
-  getRecording(recordingId: string): VcrRecording {
-    const filePath = join(getVcrRecordingsPath(), `${recordingId}.vcr`)
+  /**
+   * Parse a .vcr file into a VcrRecording object.
+   */
+  parseRecordingFile(filePath: string): VcrRecording {
     if (!existsSync(filePath)) {
-      throw new Error(`Recording not found: ${recordingId}`)
+      throw new Error(`Recording file not found: ${filePath}`)
     }
 
     const lines = readFileSync(filePath, 'utf-8').split('\n').filter(Boolean)
     if (lines.length === 0) {
-      throw new Error(`Empty recording: ${recordingId}`)
+      throw new Error(`Empty recording file: ${filePath}`)
     }
 
     const header = JSON.parse(lines[0]) as VcrRecordingHeader
@@ -191,23 +169,9 @@ class VcrRecorderService {
     return { header, events }
   }
 
-  async deleteRecording(recordingId: string): Promise<void> {
-    const filePath = join(getVcrRecordingsPath(), `${recordingId}.vcr`)
-    if (!existsSync(filePath)) return
-    const trash = (await import('trash')).default
-    await trash(filePath)
-    console.log(`[VCR] Recording deleted: ${recordingId}`)
-  }
-
-  exportVcr(recordingId: string, destPath: string): void {
-    const srcPath = join(getVcrRecordingsPath(), `${recordingId}.vcr`)
-    if (!existsSync(srcPath)) throw new Error(`Recording not found: ${recordingId}`)
-    copyFileSync(srcPath, destPath)
-  }
-
   private captureEvent(type: VcrEventType, data: Record<string, unknown>): void {
     if (!this.active) return
-    if (type === 'file-diff' && !this.active.fullCapture) return
+    // file-diff always captured (fullCapture is always true now)
 
     const offsetMs = Date.now() - this.active.startedAt
     const line = JSON.stringify([offsetMs, type, data])

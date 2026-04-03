@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Video, FolderOpen, Square } from 'lucide-react'
+import { Video, Square } from 'lucide-react'
 import { CollapsibleSection } from './CollapsibleSection'
 import { Button } from '@/components/ui/button'
 import { useVcrStore } from '@/stores/vcr.store'
@@ -17,9 +17,7 @@ export function VcrSection() {
   const startRecording = useVcrStore((s) => s.startRecording)
   const stopRecording = useVcrStore((s) => s.stopRecording)
   const refreshStatus = useVcrStore((s) => s.refreshStatus)
-  const openList = useVcrStore((s) => s.openList)
 
-  const [fullCapture, setFullCapture] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
   // Timer: update elapsed time every second when recording
@@ -69,7 +67,6 @@ export function VcrSection() {
       const [providerId, modelId] = fullModelId ? fullModelId.split('::') : [undefined, undefined]
 
       await startRecording(activeConversationId, {
-        fullCapture,
         modelId,
         providerId
       })
@@ -82,7 +79,7 @@ export function VcrSection() {
   const handleStop = async () => {
     try {
       await stopRecording()
-      toast.success('Enregistrement VCR termine')
+      toast.success('Enregistrement sauvegarde')
     } catch {
       toast.error('Erreur a l\'arret du VCR')
     }
@@ -94,41 +91,17 @@ export function VcrSection() {
     <CollapsibleSection title="VCR Recording" defaultOpen={false}>
       <div className="flex flex-col gap-3">
         {!isRecording ? (
-          <>
-            {/* Idle state: Record + Recordings buttons */}
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1 gap-1.5 text-red-500 border-red-500/30 hover:bg-red-500/10 hover:text-red-500"
-                disabled={isRecordDisabled}
-                onClick={handleRecord}
-              >
-                <Video className="size-3.5" />
-                Record
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1 gap-1.5"
-                onClick={() => openList()}
-              >
-                <FolderOpen className="size-3.5" />
-                Recordings
-              </Button>
-            </div>
-
-            {/* Full capture checkbox */}
-            <label className="flex items-center gap-2 px-1 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={fullCapture}
-                onChange={(e) => setFullCapture(e.target.checked)}
-                className="size-3.5 accent-primary cursor-pointer"
-              />
-              <span className="text-xs text-muted-foreground">Full capture (diffs fichiers)</span>
-            </label>
-          </>
+          /* Idle state: single Record button */
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-1.5 text-red-500 border-red-500/30 hover:bg-red-500/10 hover:text-red-500"
+            disabled={isRecordDisabled}
+            onClick={handleRecord}
+          >
+            <Video className="size-3.5" />
+            Record
+          </Button>
         ) : (
           <>
             {/* Recording state: stats card */}

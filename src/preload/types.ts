@@ -1188,13 +1188,8 @@ export interface ElectronAPI {
 
   // VCR Recording
   vcrStart: (payload: { conversationId: string; fullCapture?: boolean; modelId?: string; providerId?: string; workspacePath?: string; roleId?: string }) => Promise<{ recordingId: string }>
-  vcrStop: () => Promise<{ recordingId: string; duration: number; eventCount: number }>
+  vcrStop: () => Promise<{ saved: boolean; path?: string }>
   vcrStatus: () => Promise<RecordingState>
-  vcrList: () => Promise<VcrRecordingHeader[]>
-  vcrGet: (recordingId: string) => Promise<VcrRecording>
-  vcrDelete: (recordingId: string) => Promise<void>
-  vcrExportHtml: (recordingId: string, anonymize?: boolean) => Promise<{ path: string | null }>
-  vcrExportVcr: (recordingId: string) => Promise<{ path: string | null }>
   onVcrRecordingState: (cb: (state: RecordingState) => void) => void
   offVcrRecordingState: () => void
 }

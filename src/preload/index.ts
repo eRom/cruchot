@@ -567,13 +567,6 @@ const api: ElectronAPI = {
     ipcRenderer.invoke('vcr:start', payload),
   vcrStop: () => ipcRenderer.invoke('vcr:stop'),
   vcrStatus: () => ipcRenderer.invoke('vcr:status'),
-  vcrList: () => ipcRenderer.invoke('vcr:list'),
-  vcrGet: (recordingId: string) => ipcRenderer.invoke('vcr:get', { recordingId }),
-  vcrDelete: (recordingId: string) => ipcRenderer.invoke('vcr:delete', { recordingId }),
-  vcrExportHtml: (recordingId: string, anonymize?: boolean) =>
-    ipcRenderer.invoke('vcr:export-html', { recordingId, anonymize }),
-  vcrExportVcr: (recordingId: string) =>
-    ipcRenderer.invoke('vcr:export-vcr', { recordingId }),
   onVcrRecordingState: (cb: (state: RecordingState) => void) => {
     ipcRenderer.on('vcr:recording-state', (_e: Electron.IpcRendererEvent, state: RecordingState) => cb(state))
   },

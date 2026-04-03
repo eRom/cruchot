@@ -1,96 +1,44 @@
-import { existsSync, readFileSync } from 'fs'
-import { join } from 'path'
-import { app } from 'electron'
 import type { VcrEvent } from '../../preload/types'
 
-interface AnonymizeRule {
-  pattern: string
-  flags?: string
-  prefix: string
-}
+const MASK = '*********'
 
-const DEFAULT_RULES: AnonymizeRule[] = [
+// PII detection patterns — always active, always mask with *********
+const PII_PATTERNS: Array<{ regex: RegExp }> = [
   // IPv4 addresses
-  { pattern: '\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b', prefix: 'IP' },
+  { regex: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g },
   // Email addresses
-  { pattern: '[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}', prefix: 'EMAIL' },
+  { regex: /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g },
+  // Phone numbers (international & local formats)
+  { regex: /(?:\+\d{1,3}[\s.-]?)?\(?\d{2,4}\)?[\s.-]?\d{2,4}[\s.-]?\d{2,4}/g },
   // API keys — generic: long alphanumeric tokens (32+ chars)
-  { pattern: '\\b[A-Za-z0-9_\\-]{32,}\\b', prefix: 'TOKEN' },
+  { regex: /\b[A-Za-z0-9_\-]{32,}\b/g },
   // URL secrets: ?key=..., ?token=..., ?secret=..., ?password=...
-  {
-    pattern: '(?<=[?&](?:key|token|secret|password|api_key|apikey)=)[^&\\s"\']+',
-    flags: 'gi',
-    prefix: 'SECRET'
-  },
+  { regex: /(?<=[?&](?:key|token|secret|password|api_key|apikey)=)[^&\s"']+/gi },
   // Bearer tokens in headers
-  {
-    pattern: '(?<=Bearer\\s)[A-Za-z0-9._\\-]+',
-    flags: 'g',
-    prefix: 'BEARER'
-  }
+  { regex: /(?<=Bearer\s)[A-Za-z0-9._\-]+/g }
 ]
 
 class VcrAnonymizerService {
-  private mapping: Map<string, string> = new Map()
-  private counters: Map<string, number> = new Map()
-  private rules: Array<{ regex: RegExp; prefix: string }> = []
   private username: string | null = null
 
   constructor() {
     this.username = process.env.HOME?.split('/').pop() ?? process.env.USERPROFILE?.split('\\').pop() ?? null
-    this.loadRules()
-  }
-
-  private loadRules(): void {
-    const customRules: AnonymizeRule[] = []
-    try {
-      const rulesPath = join(app.getPath('userData'), 'vcr-anonymize-rules.json')
-      if (existsSync(rulesPath)) {
-        const raw = readFileSync(rulesPath, 'utf-8')
-        const parsed = JSON.parse(raw) as AnonymizeRule[]
-        if (Array.isArray(parsed)) {
-          customRules.push(...parsed)
-        }
-      }
-    } catch {
-      // Ignore — use defaults only
-    }
-
-    const allRules = [...DEFAULT_RULES, ...customRules]
-    this.rules = allRules.map((r) => ({
-      regex: new RegExp(r.pattern, r.flags ?? 'g'),
-      prefix: r.prefix
-    }))
-  }
-
-  private getReplacement(value: string, prefix: string): string {
-    const existing = this.mapping.get(value)
-    if (existing) return existing
-
-    const count = (this.counters.get(prefix) ?? 0) + 1
-    this.counters.set(prefix, count)
-    const replacement = `${prefix}-${String(count).padStart(3, '0')}`
-    this.mapping.set(value, replacement)
-    return replacement
   }
 
   private anonymizeString(text: string): string {
-    // First, anonymize user home paths (e.g. /Users/john/ → /Users/user1/)
+    // Anonymize user home paths
     if (this.username) {
       const homePattern = new RegExp(
         `(/Users/${this.username}/|/home/${this.username}/|C:\\\\Users\\\\${this.username}\\\\)`,
         'g'
       )
-      text = text.replace(homePattern, (match) => {
-        return this.getReplacement(match, 'PATH').replace(/PATH-\d+/, '/Users/user1/')
-      })
+      text = text.replace(homePattern, MASK)
     }
 
-    // Apply all regex rules
-    for (const { regex, prefix } of this.rules) {
-      // Reset lastIndex for global regexes
+    // Apply all PII patterns — replace with *********
+    for (const { regex } of PII_PATTERNS) {
       regex.lastIndex = 0
-      text = text.replace(regex, (match) => this.getReplacement(match, prefix))
+      text = text.replace(regex, MASK)
     }
 
     return text
@@ -120,6 +68,10 @@ class VcrAnonymizerService {
       case 'user-message': {
         if (typeof data['content'] === 'string') {
           data['content'] = this.anonymizeString(data['content'] as string)
+        }
+        // Strip image attachments
+        if (Array.isArray(data['attachments'])) {
+          data['attachments'] = []
         }
         break
       }
@@ -163,25 +115,21 @@ class VcrAnonymizerService {
 
   /**
    * Anonymize an array of VCR events. Returns new array with anonymized copies.
-   * The internal mapping accumulates across calls (same input → same replacement).
+   * All PII is replaced with *********.
    */
   anonymizeEvents(events: VcrEvent[]): VcrEvent[] {
     return events.map((event) => this.anonymizeEventData(event))
   }
 
   /**
-   * Returns the correspondence table built during anonymization.
+   * Anonymize a recording header (workspace paths, etc.)
    */
-  getMapping(): Map<string, string> {
-    return new Map(this.mapping)
-  }
-
-  /**
-   * Reset state (mapping + counters) — useful between exports.
-   */
-  reset(): void {
-    this.mapping.clear()
-    this.counters.clear()
+  anonymizeHeader(header: Record<string, unknown>): Record<string, unknown> {
+    const result = { ...header }
+    if (typeof result.workspacePath === 'string') {
+      result.workspacePath = this.anonymizeString(result.workspacePath as string)
+    }
+    return result
   }
 }
 
