@@ -1,4 +1,4 @@
-import { SlidersHorizontal, FolderOpen, Settings2, Wrench, Plug, Radio } from 'lucide-react'
+import { SlidersHorizontal, FolderOpen, Settings2, Wrench, Plug, Radio, Video } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useUiStore } from '@/stores/ui.store'
@@ -9,6 +9,8 @@ import { WorkspaceSection } from './WorkspaceSection'
 import { McpSection } from './McpSection'
 import { RemoteSection } from './RemoteSection'
 import { ToolsSection } from './ToolsSection'
+import { VcrSection } from './VcrSection'
+import { useVcrStore } from '@/stores/vcr.store'
 
 interface RightPanelProps {
   onPromptInsert: (text: string) => void
@@ -27,6 +29,7 @@ const SECTION_ICONS = [
 export function RightPanel({ onPromptInsert, onOptimizedPrompt }: RightPanelProps) {
   const openPanel = useUiStore((s) => s.openPanel)
   const expanded = openPanel === 'right'
+  const isVcrRecording = useVcrStore((s) => s.isRecording)
 
   return (
     <div
@@ -45,6 +48,7 @@ export function RightPanel({ onPromptInsert, onOptimizedPrompt }: RightPanelProp
           <ToolsSection onOptimizedPrompt={onOptimizedPrompt} onPromptInsert={onPromptInsert} />
           <McpSection />
           <RemoteSection />
+          <VcrSection />
         </div>
       )}
 
@@ -66,6 +70,25 @@ export function RightPanel({ onPromptInsert, onOptimizedPrompt }: RightPanelProp
               <TooltipContent side="left">{label}</TooltipContent>
             </Tooltip>
           ))}
+          {/* VCR icon — red + pulsing when recording */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => useUiStore.getState().setOpenPanel('right')}
+                className="size-8 shrink-0 text-muted-foreground/50 hover:text-foreground hover:bg-accent/60"
+              >
+                <Video
+                  className={cn(
+                    'size-4',
+                    isVcrRecording && 'text-red-500 animate-pulse'
+                  )}
+                />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">VCR Recording</TooltipContent>
+          </Tooltip>
         </div>
       )}
     </div>
