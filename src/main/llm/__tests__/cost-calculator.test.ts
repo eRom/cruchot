@@ -1,4 +1,4 @@
-import { formatCost, calculateMessageCost } from '../cost-calculator'
+import { formatCost, calculateMessageCost, calculateOcrCost } from '../cost-calculator'
 
 describe('formatCost', () => {
   it('returns $0.00 for zero cost', () => {
@@ -47,5 +47,27 @@ describe('calculateMessageCost', () => {
     const cost = calculateMessageCost('claude-3-5-sonnet-20241022', 1_000_000, 1_000_000)
     // Either it returns 0 (model not found) or a positive number (found)
     expect(cost).toBeGreaterThanOrEqual(0)
+  })
+})
+
+describe('calculateOcrCost', () => {
+  it('calculates OCR cost for 10 pages', () => {
+    expect(calculateOcrCost(10)).toBeCloseTo(0.02, 4)
+  })
+
+  it('calculates OCR cost for 1000 pages', () => {
+    expect(calculateOcrCost(1000)).toBeCloseTo(2.0, 2)
+  })
+
+  it('uses legacy pricing for OCR 2503', () => {
+    expect(calculateOcrCost(1000, 'mistral-ocr-2503')).toBeCloseTo(1.0, 2)
+  })
+
+  it('falls back to default pricing for unknown model', () => {
+    expect(calculateOcrCost(100, 'unknown-model')).toBeCloseTo(0.2, 4)
+  })
+
+  it('returns 0 for 0 pages', () => {
+    expect(calculateOcrCost(0)).toBe(0)
   })
 })

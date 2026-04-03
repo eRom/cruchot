@@ -10,6 +10,24 @@ const PRICING_OVERRIDE: Record<string, ModelPricing> = {
 }
 
 /**
+ * OCR pricing — USD per page.
+ */
+const OCR_PRICING: Record<string, number> = {
+  'mistral-ocr-latest': 0.002,    // $2/1000 pages
+  'mistral-ocr-2512': 0.002,      // OCR 3
+  'mistral-ocr-2503': 0.001       // OCR 2 (legacy)
+}
+
+/**
+ * Calculate OCR cost based on pages processed.
+ * Returns cost in USD.
+ */
+export function calculateOcrCost(pagesProcessed: number, model: string = 'mistral-ocr-latest'): number {
+  const pricePerPage = OCR_PRICING[model] ?? OCR_PRICING['mistral-ocr-latest']
+  return pagesProcessed * pricePerPage
+}
+
+/**
  * Get pricing for a model.
  * Looks up registry first, then override table.
  */
