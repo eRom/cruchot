@@ -93,6 +93,35 @@ describe('parseStepMarker', () => {
   })
 })
 
+describe('parsePlanMarkers edge cases', () => {
+  it('handles steps with special characters in labels', () => {
+    const text = '[PLAN:start:full]Test[PLAN:title][STEP:1]Creer le fichier src/auth.ts[STEP:tools:writeFile][PLAN:end]'
+    const result = parsePlanMarkers(text)
+    expect(result!.steps[0].label).toBe('Creer le fichier src/auth.ts')
+  })
+
+  it('handles many steps (10+)', () => {
+    let text = '[PLAN:start:full]Big plan[PLAN:title]'
+    for (let i = 1; i <= 10; i++) {
+      text += `[STEP:${i}]Step ${i}`
+    }
+    text += '[PLAN:end]'
+    const result = parsePlanMarkers(text)
+    expect(result!.steps).toHaveLength(10)
+    expect(result!.steps[9].id).toBe(10)
+  })
+})
+
+describe('parseStepMarker edge cases', () => {
+  it('parses step skipped', () => {
+    expect(parseStepMarker('[STEP:4:skipped]')).toEqual({ index: 4, status: 'skipped' })
+  })
+
+  it('handles step marker embedded in text', () => {
+    expect(parseStepMarker('some text [STEP:2:done] more text')).toEqual({ index: 2, status: 'done' })
+  })
+})
+
 describe('stripPlanMarkers', () => {
   it('removes all plan markers from text', () => {
     const text = 'Avant [PLAN:start:full]Titre[PLAN:title][STEP:1]Etape[PLAN:end] Apres'
