@@ -34,3 +34,13 @@ Cruchot va découper vos documents, les analyser localement (sans les envoyer su
 2. Ouvrez le **Panneau de Droite**.
 3. Dans la section **Options**, sous **Bibliothèque RAG**, sélectionnez la bibliothèque que vous venez de créer.
 4. Posez votre question. L'IA cherchera d'abord les informations pertinentes dans vos documents avant de vous répondre.
+
+### OCR sur les images et PDFs scannés
+
+Si vous avez une **clé API Mistral** configurée, Cruchot peut automatiquement extraire le texte de :
+- **Images** (JPEG, PNG, WebP…) ajoutées à une bibliothèque ou envoyées en pièce jointe dans le chat.
+- **PDFs scannés** (sans couche texte) : l'OCR reconstruit le contenu page par page avant indexation.
+
+Les PDFs natifs (avec texte sélectionnable) sont traités directement sans OCR.
+
+Un badge **OCR** est affiché sur les pièces jointes traitées pour indiquer que le texte a été extrait automatiquement. Le coût OCR est comptabilisé dans vos statistiques comme toute autre requête Mistral.

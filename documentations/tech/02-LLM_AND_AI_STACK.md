@@ -27,6 +27,7 @@ Cruchot intègre nativement les packages officiels du Vercel AI SDK pour :
 
 ### 2.2 Fournisseurs avec SDK dédié
 - **Perplexity** (`@perplexity-ai/ai-sdk`) : SDK officiel avec support de la recherche web intégrée.
+- **Mistral OCR** (`@mistralai/mistralai`) : SDK officiel Mistral utilisé exclusivement pour l'OCR (endpoint `/v1/ocr`). Distinct du provider Vercel AI SDK (`@ai-sdk/mistral`) utilisé pour le chat. Chargé en **dynamic import** (package ESM-only).
 
 ### 2.3 Routeurs et Gateways
 - **OpenRouter** (`@openrouter/ai-sdk-provider`) : Permet l'accès à des centaines de modèles via une seule clé API.
@@ -55,3 +56,20 @@ Cruchot n'envoie pas les messages de l'utilisateur tels quels. Un pipeline de pr
 
 Le SDK renvoie les métriques d'utilisation (tokens entrants, tokens sortants).
 Le fichier `cost-calculator.ts` possède une matrice de tarification par modèle permettant de calculer, en temps réel pendant le stream, le coût exact en dollars de la requête. Ces informations sont stockées en base de données pour générer des statistiques globales (coût par jour, par fournisseur).
+
+## 6. OCR — Reconnaissance Optique de Caractères
+
+Le service `src/main/services/ocr.service.ts` (`ocrService` singleton) intègre l'API **Mistral OCR** pour extraire le contenu textuel de documents scannés ou d'images. Il partage la même clé API que le provider Mistral chat.
+
+### 6.1 Formats supportés
+- **Documents** : PDF, DOCX, PPTX (envoyés en base64 data URL — l'endpoint `/v1/ocr` n'accepte pas les IDs de fichier uploadés)
+- **Images** : JPEG, PNG, WebP, TIFF, BMP, AVIF
+
+Taille maximum : **50 MB** par fichier (limite Mistral).
+
+### 6.2 Points d'intégration
+- **Pièces jointes de chat** (`src/main/llm/attachments.ts`) : les PDFs scannés et les images sont OCRisés automatiquement avant d'être envoyés au LLM. Un badge "OCR" est affiché dans l'UI (`MessageItem.tsx`).
+- **Bibliothèques RAG** (`src/main/services/library.service.ts`) : les fichiers images ajoutés à une bibliothèque sont OCRisés lors de l'indexation pour alimenter la recherche vectorielle.
+
+### 6.3 Tarification OCR
+Les coûts OCR sont calculés via `cost-calculator.ts` et enregistrés en base de données comme les autres requêtes LLM.
