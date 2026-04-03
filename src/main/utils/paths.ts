@@ -40,3 +40,13 @@ export function getImagesPath(): string {
   mkdirSync(dir, { recursive: true })
   return dir
 }
+
+/**
+ * Retourne le chemin du dossier de recordings VCR.
+ * Cree le dossier s'il n'existe pas.
+ */
+export function getVcrRecordingsPath(): string {
+  const dir = join(app.getPath('userData'), 'vcr-recordings')
+  mkdirSync(dir, { recursive: true })
+  return dir
+}
