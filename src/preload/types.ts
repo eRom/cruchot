@@ -27,6 +27,7 @@ export interface SendMessagePayload {
   libraryId?: string
   skillName?: string
   skillArgs?: string
+  planMode?: boolean  // force plan mode for this message
 }
 
 export interface FileNode {
@@ -81,8 +82,29 @@ export interface ToolCallInfo {
   error?: string
 }
 
+/** A single step in a plan */
+export interface PlanStep {
+  id: number
+  label: string
+  tools?: string[]
+  status: 'pending' | 'running' | 'done' | 'skipped' | 'failed'
+  enabled: boolean
+}
+
+/** Plan data stored in message contentData */
+export interface PlanData {
+  title: string
+  steps: PlanStep[]
+  status: 'proposed' | 'approved' | 'running' | 'done' | 'cancelled'
+  level: 'light' | 'full'
+  estimatedTokens?: number
+  estimatedCost?: number
+  approvedAt?: number
+  completedAt?: number
+}
+
 export interface StreamChunk {
-  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'tool-result' | 'tool-approval' | 'tool-approval-resolved' | 'finish' | 'error'
+  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'tool-result' | 'tool-approval' | 'tool-approval-resolved' | 'plan-proposed' | 'plan-decision' | 'plan-step' | 'plan-done' | 'finish' | 'error'
   content?: string
   error?: string
   toolName?: string
@@ -91,6 +113,12 @@ export interface StreamChunk {
   toolIsError?: boolean
   approvalId?: string
   decision?: 'allow' | 'deny'
+  // Plan fields
+  plan?: PlanData
+  planDecision?: 'approved' | 'cancelled'
+  planSteps?: PlanStep[]
+  stepIndex?: number
+  stepStatus?: 'running' | 'done' | 'failed' | 'skipped'
   usage?: {
     promptTokens: number
     completionTokens: number
