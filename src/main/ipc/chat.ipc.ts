@@ -440,15 +440,15 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
     if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
     combinedSystemPrompt += systemPrompt
   }
-  // Plan instructions injection — only when tools are available
+  // Plan instructions injection — ONLY when explicitly activated (switch ON or /plan)
   {
     const isForced = forcedPlanMode.get(conversationId) || planMode
-    // hasTools not yet computed here, but tools depend on workspace — always true in practice
-    // We inject plan prompt whenever tools exist; the gating on hasTools happens below after tool building
-    const planPromptBlock = buildPlanPromptBlock(isForced ? 'forced' : 'default')
-    if (planPromptBlock) {
-      if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
-      combinedSystemPrompt += planPromptBlock
+    if (isForced) {
+      const planPromptBlock = buildPlanPromptBlock('forced')
+      if (planPromptBlock) {
+        if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
+        combinedSystemPrompt += planPromptBlock
+      }
     }
     // Reset one-shot forced mode after use
     if (forcedPlanMode.get(conversationId)) {
