@@ -1,19 +1,7 @@
 import { getSqliteDatabase } from '../index'
+import type { SearchFilters, SearchResult } from '../../../preload/types'
 
-export interface SearchFilters {
-  role?: 'user' | 'assistant'
-  projectId?: string
-}
-
-export interface SearchResult {
-  messageId: string
-  conversationId: string
-  conversationTitle: string
-  projectId: string | null
-  role: string
-  content: string
-  createdAt: number
-}
+export type { SearchFilters, SearchResult }
 
 function sanitizeFtsQuery(query: string): string {
   const stripped = query
