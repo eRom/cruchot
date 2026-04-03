@@ -146,6 +146,11 @@ export function registerProvidersIpc(): void {
       .run()
 
     invalidateProviderCache(parsed.data.providerId)
+
+    // Invalidate OCR client when Mistral key changes
+    if (parsed.data.providerId === 'mistral') {
+      import('../services/ocr.service').then(m => m.ocrService.invalidate()).catch(() => {})
+    }
   })
 
   ipcMain.handle('providers:validateApiKey', async (_event, providerId: string, apiKey: string) => {
