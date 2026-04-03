@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo } from 'react'
-import { Search, Library } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ListChecks, Search, Library } from 'lucide-react'
 import { CollapsibleSection } from './CollapsibleSection'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -25,7 +25,14 @@ export function OptionsSection() {
   const setSearchEnabled = useSettingsStore((s) => s.setSearchEnabled)
   const { libraries, loadLibraries, activeLibraryId, setActiveLibraryId } = useLibraryStore()
 
+  const [planModeForced, setPlanModeForced] = useState(false)
+
   const isBusy = isStreaming
+
+  // Reset plan mode when conversation changes
+  useEffect(() => {
+    setPlanModeForced(false)
+  }, [activeConversationId])
 
   useEffect(() => {
     if (libraries.length === 0) loadLibraries()
@@ -69,6 +76,24 @@ export function OptionsSection() {
           <Switch
             checked={searchEnabled}
             onCheckedChange={setSearchEnabled}
+            disabled={isBusy}
+          />
+        </div>
+
+        {/* Plan Mode toggle */}
+        <div className="flex items-center justify-between gap-2 px-1">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <ListChecks className="size-4" />
+            Mode Plan
+          </label>
+          <Switch
+            checked={planModeForced}
+            onCheckedChange={(checked) => {
+              setPlanModeForced(checked)
+              if (activeConversationId) {
+                window.api.setPlanMode({ conversationId: activeConversationId, forced: checked })
+              }
+            }}
             disabled={isBusy}
           />
         </div>
