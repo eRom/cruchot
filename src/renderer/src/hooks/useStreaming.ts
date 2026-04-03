@@ -4,21 +4,16 @@ import { useMessagesStore } from '@/stores/messages.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useUiStore } from '@/stores/ui.store'
 import { useSemanticMemoryStore } from '@/stores/semantic-memory.store'
+import type { StreamChunk } from '../../../preload/types'
 
-interface StreamChunk {
-  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'tool-result' | 'tool-approval' | 'tool-approval-resolved' | 'plan-proposed' | 'plan-step' | 'plan-done' | 'finish' | 'error'
-  content?: string
+// Extended StreamChunk with renderer-side fields not present in preload types
+interface ExtendedStreamChunk extends StreamChunk {
   modelId?: string
   providerId?: string
   messageId?: string
   conversationId?: string // Present on chunks from scheduled task executor
-  error?: string
   category?: string
   suggestion?: string
-  toolName?: string
-  toolArgs?: Record<string, unknown>
-  toolCallId?: string
-  toolIsError?: boolean
   toolResult?: string
   toolResultMeta?: {
     duration?: number
@@ -28,22 +23,12 @@ interface StreamChunk {
     matchCount?: number
     fileCount?: number
   }
-  approvalId?: string
-  decision?: string
-  usage?: {
-    promptTokens: number
-    completionTokens: number
-    totalTokens: number
-  }
   cost?: number
   responseTimeMs?: number
   fileOperations?: Array<{ id: string; type: string; path: string; content?: string; status: string }>
   toolCalls?: Array<{ toolName: string; args?: Record<string, unknown>; status: string; error?: string }>
   searchSources?: Array<{ title: string; url: string; snippet?: string }>
   semanticRecallCount?: number
-  plan?: Record<string, unknown>
-  stepIndex?: number
-  stepStatus?: string
 }
 
 /** Human-readable labels for workspace tool calls */
@@ -99,7 +84,7 @@ export function useStreaming() {
   const streamingIdRef = useRef<string | null>(null)
 
   const handleChunk = useCallback(
-    (chunk: StreamChunk) => {
+    (chunk: ExtendedStreamChunk) => {
       // Ignore chunks from background scheduled tasks (they have a conversationId that differs from active)
       if (chunk.conversationId && chunk.conversationId !== activeConversationId) {
         return
@@ -211,7 +196,7 @@ export function useStreaming() {
         case 'plan-proposed': {
           const streamingId = useMessagesStore.getState().streamingMessageId
           if (streamingId && chunk.plan) {
-            useMessagesStore.getState().updateMessagePlan(streamingId, chunk.plan)
+            useMessagesStore.getState().updateMessagePlan(streamingId, chunk.plan as unknown as Record<string, unknown>)
           }
           return
         }
@@ -310,7 +295,7 @@ export function useStreaming() {
 
   // Listen for streaming chunks
   useEffect(() => {
-    window.api.onChunk(handleChunk)
+    window.api.onChunk(handleChunk as (chunk: StreamChunk) => void)
     return () => {
       window.api.offChunk()
     }

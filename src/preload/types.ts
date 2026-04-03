@@ -1110,6 +1110,11 @@ export interface ElectronAPI {
   // Settings
   getSetting: (key: string) => Promise<string | null>
   setSetting: (key: string, value: string) => Promise<void>
+
+  // Plan Mode
+  approvePlan: (payload: { conversationId: string; messageId: string; decision: 'approved' | 'cancelled'; steps: { id: number; label: string; tools?: string[]; status: string; enabled: boolean }[] }) => Promise<void>
+  setPlanMode: (payload: { conversationId: string; forced: boolean }) => Promise<void>
+  updatePlanStep: (payload: { conversationId: string; messageId: string; stepIndex: number; action: 'retry' | 'skip' | 'abort' }) => Promise<void>
 }
 
 // ---------------------------------------------------------------------------
