@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.1] - 2026-04-03
+
+### Added
+- **OCR Mistral** : reconnaissance optique de caractères via l'API Mistral OCR (`/v1/ocr`). PDF scannés et images automatiquement transcrits dans les pièces jointes chat et la bibliothèque RAG
+- Badge OCR sur les pièces jointes + affichage du coût OCR dans les stats de message
+- Service `OcrService` singleton avec partage de la clé API Mistral existante, envoi base64 data URL (50 MB max)
+- Pricing OCR intégré dans le cost-calculator
+- **Plan Mode** : mode de planification adaptatif en 3 niveaux (light / standard / deep) avec gate en lecture seule pendant la phase de réflexion
+- Composants `PlanMessage`, `PlanStickyIndicator`, `PlanErrorBanner` — 4 états visuels
+- Commande slash `/plan` pour activer le Plan Mode
+- Toggle Plan Mode dans le Right Panel
+- **Landing page** : section Mistral OCR dans Memory & RAG
+
+### Fixed
+- OCR : envoi en base64 data URL au lieu de file ID (Files API non accepté par `/v1/ocr`)
+- Attachments : copie des fichiers sélectionnés dans `userData/attachments/` — corrige la validation de chemin
+- Plan Mode : abandon du buffer sur détection de plan (évite les résidus texte), parsing/stripping des marqueurs déplacé dans `flushBatch`, abort du stream sur détection de plan, marqueurs non fuyants
+- Plan Mode : révision critique — phase d'exécution, porte outil, timeouts
+- Workspace : dérivation du `workspacePath` depuis le store — corrige le bouton Finder sur les nouvelles conversations
+
+### Changed
+- Tests : +24 tests OCR (`ocr.test.ts`) — ~145 tests total (7 suites)
+- Docs : tech docs Plan Mode + skill cruchot-push-main, SECURITY.md mis à jour v0.7.x
+
 ## [0.7.0] - 2026-04-02
 
 ### Added
