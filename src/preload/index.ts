@@ -538,6 +538,16 @@ const api: ElectronAPI = {
   approveToolCall: (approvalId: string, decision: 'allow' | 'deny' | 'allow-session'): Promise<void> =>
     ipcRenderer.invoke('chat:approve-tool', { approvalId, decision }),
 
+  // ── Plan Mode ─────────────────────────────────────────────
+  approvePlan: (payload: { conversationId: string; messageId: string; decision: 'approved' | 'cancelled'; steps: any[] }) =>
+    ipcRenderer.invoke('chat:approvePlan', payload),
+
+  setPlanMode: (payload: { conversationId: string; forced: boolean }) =>
+    ipcRenderer.invoke('chat:setPlanMode', payload),
+
+  updatePlanStep: (payload: { conversationId: string; messageId: string; stepIndex: number; action: 'retry' | 'skip' | 'abort' }) =>
+    ipcRenderer.invoke('chat:updatePlanStep', payload),
+
   // ── YOLO Mode (per-conversation, owned by main process) ──
   setYoloMode: (conversationId: string, enabled: boolean): Promise<void> =>
     ipcRenderer.invoke('chat:set-yolo-mode', { conversationId, enabled }),
