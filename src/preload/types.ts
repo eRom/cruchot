@@ -411,6 +411,29 @@ export interface MemoryFragment {
   updatedAt: Date
 }
 
+// ── Episodes (episodic memory) ──────────────────────────────
+export type EpisodeCategory = 'preference' | 'behavior' | 'context' | 'skill' | 'style'
+
+export interface Episode {
+  id: string
+  content: string
+  category: EpisodeCategory
+  confidence: number
+  occurrences: number
+  projectId: string | null
+  sourceConversationId: string
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface EpisodeStats {
+  total: number
+  active: number
+  categories: Record<string, number>
+  modelId: string | null
+}
+
 // ── Slash Commands ─────────────────────────────────────────
 export interface SlashCommandInfo {
   id: string
@@ -989,6 +1012,17 @@ export interface ElectronAPI {
   deleteMemoryFragment: (payload: { id: string }) => Promise<void>
   reorderMemoryFragments: (payload: { orderedIds: string[] }) => Promise<void>
   toggleMemoryFragment: (payload: { id: string }) => Promise<MemoryFragment | undefined>
+
+  // Episodes (episodic memory)
+  listEpisodes: () => Promise<Episode[]>
+  toggleEpisode: (id: string) => Promise<Episode | undefined>
+  deleteEpisode: (id: string) => Promise<void>
+  deleteAllEpisodes: () => Promise<void>
+  episodeStats: () => Promise<EpisodeStats>
+  setEpisodeModel: (data: { modelId: string }) => Promise<void>
+  extractEpisodesNow: (conversationId: string) => Promise<{ extracted: number }>
+
+  focusConversation: (id: string) => Promise<void>
 
   // Slash Commands
   slashCommandsList: () => Promise<SlashCommandInfo[]>

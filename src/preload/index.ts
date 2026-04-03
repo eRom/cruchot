@@ -326,6 +326,17 @@ const api: ElectronAPI = {
 
   toggleMemoryFragment: (payload) => ipcRenderer.invoke('memory:toggle', payload),
 
+  // ── Episodes (episodic memory) ─────────────────────────
+  listEpisodes: () => ipcRenderer.invoke('episode:list'),
+  toggleEpisode: (id) => ipcRenderer.invoke('episode:toggle', id),
+  deleteEpisode: (id) => ipcRenderer.invoke('episode:delete', id),
+  deleteAllEpisodes: () => ipcRenderer.invoke('episode:delete-all'),
+  episodeStats: () => ipcRenderer.invoke('episode:stats'),
+  setEpisodeModel: (data) => ipcRenderer.invoke('episode:set-model', data),
+  extractEpisodesNow: (conversationId) => ipcRenderer.invoke('episode:extract-now', conversationId),
+
+  focusConversation: (id) => ipcRenderer.invoke('conversations:focus', id),
+
   // ── Slash Commands ─────────────────────────────────────────
   slashCommandsList: () => ipcRenderer.invoke('slash-commands:list'),
 
