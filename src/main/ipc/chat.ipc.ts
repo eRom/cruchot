@@ -767,8 +767,9 @@ async function streamChat(
                 const planData = parsePlanMarkers(accumulatedText)
                 if (planData) {
                   planEmitted = true
-                  inPlanBlock = false // Bug 4: plan block complete, stop buffering
-                  flushBatch()
+                  inPlanBlock = false
+                  // Discard buffer (contains plan markers) — don't flush to renderer
+                  batchBuffer = ''
                   win.webContents.send('chat:chunk', { type: 'plan-proposed', plan: planData })
 
                   // Bug 2: Abort stream immediately for full plans (non-YOLO)
