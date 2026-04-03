@@ -59,7 +59,7 @@ class EpisodeExtractorService {
       return 0
     }
 
-    const existingEpisodes = getAllEpisodes()
+    const existingEpisodes = getAllEpisodes().filter(e => e.isActive)
     const conv = getConversation(conversationId)
     const projectId = conv?.projectId ?? null
 

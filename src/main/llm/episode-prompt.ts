@@ -24,7 +24,8 @@ export function buildEpisodeProfileBlock(projectId?: string | null): string | nu
     const occ = ep.occurrences > 1 ? `, vu ${ep.occurrences}x` : ''
 
     const content = ep.content
-      .replace(/<\/user-profile>/gi, '&lt;/user-profile&gt;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
       .slice(0, 200)
 
     const entry = `[${ep.category}] (confiance: ${pct}%${occ}) ${content}\n`

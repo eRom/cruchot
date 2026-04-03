@@ -45,6 +45,7 @@ export function deleteConversationsProjectsImages(): { imagePaths: string[] } {
   db.delete(remoteSessions).run()
   db.delete(vectorSyncState).run()
   db.delete(episodes).run()
+  db.run(sql`UPDATE conversations SET last_episode_message_id = NULL`)
   db.delete(messages).run()
   db.delete(scheduledTasks).run()
   db.delete(conversations).run()
