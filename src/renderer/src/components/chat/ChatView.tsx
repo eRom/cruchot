@@ -9,6 +9,8 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useUiStore } from '@/stores/ui.store'
 import MessageList from './MessageList'
 import { InputZone } from './InputZone'
+import { PlanErrorBanner } from './PlanErrorBanner'
+import { PlanStickyIndicator } from './PlanStickyIndicator'
 import { ToolApprovalBanner } from './ToolApprovalBanner'
 import { WorkspacePanel } from '@/components/workspace/WorkspacePanel'
 import { useLibraryStore } from '@/stores/library.store'
@@ -176,10 +178,49 @@ export default function ChatView() {
 
   const hasMessages = conversationMessages.length > 0
 
+  // Find the most recent active plan (running or proposed)
+  const activePlan = useMemo(() => {
+    for (let i = conversationMessages.length - 1; i >= 0; i--) {
+      const plan = conversationMessages[i].contentData?.plan as any
+      if (plan && (plan.status === 'running' || plan.status === 'proposed')) {
+        return { plan, messageId: conversationMessages[i].id }
+      }
+    }
+    return null
+  }, [conversationMessages])
+
+  // Find the first failed step in the active plan
+  const failedStep = useMemo(() => {
+    if (!activePlan) return null
+    const step = activePlan.plan.steps?.find((s: any) => s.status === 'failed')
+    return step ?? null
+  }, [activePlan])
+
   return (
     <div className="flex flex-1 min-h-0">
       {/* Chat area */}
       <div className="flex flex-1 flex-col bg-background min-w-0 min-h-0">
+        {/* Plan sticky indicator — shown when a plan is running */}
+        {activePlan && activeConversationId && (
+          <PlanStickyIndicator
+            plan={activePlan.plan}
+            visible={true}
+            onScrollToPlan={() => {
+              // Dispatch a custom event that MessageList can pick up to scroll to the plan message
+              window.dispatchEvent(new CustomEvent('plan:scroll', { detail: activePlan.messageId }))
+            }}
+          />
+        )}
+
+        {/* Plan error banner — shown when a step has failed */}
+        {failedStep && activePlan && activeConversationId && (
+          <PlanErrorBanner
+            step={failedStep}
+            conversationId={activeConversationId}
+            messageId={activePlan.messageId}
+          />
+        )}
+
         {/* Messages area */}
         {activeConversationId && hasMessages ? (
           <MessageList
