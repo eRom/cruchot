@@ -10,6 +10,7 @@ import type { FileOperation } from '../../../../preload/types'
 import { AudioPlayer } from './AudioPlayer'
 import { MessageContent } from './MessageContent'
 import { PerplexitySources, type PerplexitySource } from './PerplexitySources'
+import { PlanMessage } from './PlanMessage'
 import { SourceCitation } from './SourceCitation'
 import type { LibrarySourceForMessage } from '../../../../preload/types'
 
@@ -514,6 +515,15 @@ function MessageItem({ message, isStreaming = false, conversationId }: MessageIt
 
         {message.toolCalls && message.toolCalls.length > 0 && (
           <ToolCallBlock toolCalls={message.toolCalls} isStreaming={isStreaming} />
+        )}
+
+        {!isUser && message.contentData?.plan && (
+          <PlanMessage
+            plan={message.contentData.plan as any}
+            messageId={message.id}
+            conversationId={conversationId}
+            isStreaming={isStreaming}
+          />
         )}
 
         {/* Slash command badge */}
