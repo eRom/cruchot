@@ -16,6 +16,7 @@ import {
   ChevronsDownUp,
   ChevronsUpDown,
   Image,
+  Search,
   Settings,
   UserPen
 } from 'lucide-react'
@@ -96,6 +97,13 @@ export function UserMenu({ isCollapsed, currentView, onNavigate }: UserMenuProps
             isActive={currentView === 'customize'}
             onSelect={() => onNavigate('customize')}
             shortcut="⌘U"
+          />
+          <MenuItem
+            icon={Search}
+            label="Recherche"
+            isActive={currentView === 'search'}
+            onSelect={() => onNavigate('search')}
+            shortcut="⌘F"
           />
           <MenuItem
             icon={Settings}

@@ -16,6 +16,8 @@ export interface KeyboardShortcutCallbacks {
   onToggleRightPanel?: () => void
   /** Cmd+U — open customize */
   onCustomize?: () => void
+  /** Cmd+F — open search */
+  onSearch?: () => void
   /** Escape — stop streaming */
   onEscape?: () => void
 }
@@ -49,6 +51,11 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
     if (callbacks.onCustomize) {
       const handler = callbacks.onCustomize
       bindings.push(['command+u,ctrl+u', handler])
+    }
+
+    if (callbacks.onSearch) {
+      const handler = callbacks.onSearch
+      bindings.push(['command+f,ctrl+f', handler])
     }
 
     if (callbacks.onEscape) {
@@ -114,6 +121,7 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
     callbacks.onToggleSidebar,
     callbacks.onToggleRightPanel,
     callbacks.onCustomize,
+    callbacks.onSearch,
     callbacks.onEscape,
   ])
 }

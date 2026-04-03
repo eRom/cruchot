@@ -18,6 +18,7 @@ const ImagesView = React.lazy(() => import('@/components/images/ImagesView').the
 const ProjectsView = React.lazy(() => import('@/components/projects/ProjectsView').then(m => ({ default: m.ProjectsView })))
 const TasksView = React.lazy(() => import('@/components/tasks/TasksView').then(m => ({ default: m.TasksView })))
 const ArenaView = React.lazy(() => import('@/components/arena/ArenaView').then(m => ({ default: m.ArenaView })))
+const SearchView = React.lazy(() => import('@/components/search/SearchView').then(m => ({ default: m.SearchView })))
 import { useUiStore } from '@/stores/ui.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
@@ -86,6 +87,10 @@ function App(): React.JSX.Element {
     setCurrentView('customize')
   }, [setCurrentView])
 
+  const handleSearch = useCallback(() => {
+    setCurrentView('search')
+  }, [setCurrentView])
+
   const handleEscape = useCallback(async () => {
     if (commandPaletteOpen) {
       setCommandPaletteOpen(false)
@@ -104,6 +109,7 @@ function App(): React.JSX.Element {
     onToggleSidebar: handleToggleSidebar,
     onToggleRightPanel: handleToggleRightPanel,
     onCustomize: handleCustomize,
+    onSearch: handleSearch,
     onEscape: handleEscape,
   })
 
@@ -145,6 +151,7 @@ function App(): React.JSX.Element {
               {currentView === 'projects' && <ProjectsView />}
               {currentView === 'tasks' && <TasksView />}
               {currentView === 'arena' && <ArenaView />}
+              {currentView === 'search' && <SearchView />}
             </Suspense>
           </AppLayout>
 
