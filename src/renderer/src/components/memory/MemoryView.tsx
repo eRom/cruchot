@@ -5,10 +5,56 @@ import { useBardaStore } from '@/stores/barda.store'
 import { MemoryFragmentCard } from './MemoryFragmentCard'
 import { MemoryPreview } from './MemoryPreview'
 import { SemanticMemorySection } from './SemanticMemorySection'
+import { ProfileTab } from './ProfileTab'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
-export function MemoryView() {
+type MemoryTab = 'notes' | 'souvenirs' | 'profil'
 
+const TAB_ITEMS: { id: MemoryTab; label: string }[] = [
+  { id: 'notes', label: 'Notes' },
+  { id: 'souvenirs', label: 'Souvenirs' },
+  { id: 'profil', label: 'Profil' }
+]
+
+export function MemoryView() {
+  const [activeTab, setActiveTab] = useState<MemoryTab>('notes')
+
+  return (
+    <div className="flex h-full flex-col bg-background">
+      <div className="flex-1 overflow-y-auto px-8 py-6">
+        <div className="mx-auto max-w-2xl space-y-6">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Memoire</h1>
+
+          {/* Tab bar */}
+          <div className="flex gap-1 rounded-lg bg-muted/50 p-1">
+            {TAB_ITEMS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                  activeTab === tab.id
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab content */}
+          {activeTab === 'notes' && <NotesContent />}
+          {activeTab === 'souvenirs' && <SemanticMemorySection />}
+          {activeTab === 'profil' && <ProfileTab />}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function NotesContent() {
   const fragments = useMemoryStore((s) => s.fragments)
   const createFragment = useMemoryStore((s) => s.createFragment)
   const updateFragment = useMemoryStore((s) => s.updateFragment)
@@ -66,7 +112,6 @@ export function MemoryView() {
     }
   }, [toggleFragment])
 
-  // ── Drag & Drop (HTML5 natif) ──────────────────
   const handleDragStart = useCallback((index: number) => {
     dragItemIndex.current = index
   }, [])
@@ -104,123 +149,107 @@ export function MemoryView() {
   }
 
   return (
-    <div className="flex h-full flex-col bg-background">
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-8 py-6">
-        <div className="mx-auto max-w-2xl space-y-6">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Memoire</h1>
-          {/* Subheader */}
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              {filteredFragments.length === 0
-                ? 'Fragments de contexte personnel injectes dans toutes les conversations'
-                : `${filteredFragments.filter(f => f.isActive).length} actif${filteredFragments.filter(f => f.isActive).length > 1 ? 's' : ''} sur ${filteredFragments.length}`
-              }
-            </p>
-            <button
-              onClick={() => setIsAdding(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              <Plus className="size-3.5" />
-              Ajouter
-            </button>
-          </div>
+    <>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          {filteredFragments.length === 0
+            ? 'Fragments de contexte personnel injectes dans toutes les conversations'
+            : `${filteredFragments.filter(f => f.isActive).length} actif${filteredFragments.filter(f => f.isActive).length > 1 ? 's' : ''} sur ${filteredFragments.length}`
+          }
+        </p>
+        <button
+          onClick={() => setIsAdding(true)}
+          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          <Plus className="size-3.5" />
+          Ajouter
+        </button>
+      </div>
 
-          {/* Empty state */}
-          {filteredFragments.length === 0 && !isAdding && (
-            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/60 py-12">
-              <Brain className="size-10 text-muted-foreground/40" />
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Aucun fragment de memoire</p>
-                <p className="text-xs text-muted-foreground/60 mt-1">
-                  Ajoutez des informations personnelles (identite, preferences, contexte) qui seront injectees dans chaque conversation
-                </p>
-              </div>
+      {filteredFragments.length === 0 && !isAdding && (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/60 py-12">
+          <Brain className="size-10 text-muted-foreground/40" />
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">Aucun fragment de memoire</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">
+              Ajoutez des informations personnelles (identite, preferences, contexte) qui seront injectees dans chaque conversation
+            </p>
+          </div>
+          <button
+            onClick={() => setIsAdding(true)}
+            className="mt-2 flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="size-3.5" />
+            Ajouter un fragment
+          </button>
+        </div>
+      )}
+
+      {isAdding && (
+        <div className="rounded-xl border border-primary/30 bg-card p-4">
+          <textarea
+            value={newContent}
+            onChange={(e) => setNewContent(e.target.value)}
+            onKeyDown={handleKeyDown}
+            maxLength={2000}
+            autoFocus
+            placeholder="Ex: Je suis Romain, architecte logiciel..."
+            className="w-full resize-none bg-transparent p-0 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+            rows={3}
+          />
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              {newContent.length}/2000
+            </span>
+            <div className="flex items-center gap-1.5">
               <button
-                onClick={() => setIsAdding(true)}
-                className="mt-2 flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+                onClick={() => { setIsAdding(false); setNewContent('') }}
+                className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent"
               >
-                <Plus className="size-3.5" />
-                Ajouter un fragment
+                <X className="size-3" />
+                Annuler
+              </button>
+              <button
+                onClick={handleCreate}
+                disabled={!newContent.trim()}
+                className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                <Check className="size-3" />
+                Enregistrer
               </button>
             </div>
-          )}
-
-          {/* Add form */}
-          {isAdding && (
-            <div className="rounded-xl border border-primary/30 bg-card p-4">
-              <textarea
-                value={newContent}
-                onChange={(e) => setNewContent(e.target.value)}
-                onKeyDown={handleKeyDown}
-                maxLength={2000}
-                autoFocus
-                placeholder="Ex: Je suis Romain, architecte logiciel..."
-                className="w-full resize-none bg-transparent p-0 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-                rows={3}
-              />
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">
-                  {newContent.length}/2000
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => { setIsAdding(false); setNewContent('') }}
-                    className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent"
-                  >
-                    <X className="size-3" />
-                    Annuler
-                  </button>
-                  <button
-                    onClick={handleCreate}
-                    disabled={!newContent.trim()}
-                    className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                  >
-                    <Check className="size-3" />
-                    Enregistrer
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Fragment list */}
-          {filteredFragments.length > 0 && (
-            <div className="space-y-2">
-              {filteredFragments.map((fragment, index) => (
-                <div
-                  key={fragment.id}
-                  draggable
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDrop={(e) => handleDrop(e, index)}
-                  onDragEnd={handleDragEnd}
-                  className={dragOverIndex === index ? 'border-t-2 border-primary' : ''}
-                >
-                  <MemoryFragmentCard
-                    fragment={fragment}
-                    onToggle={handleToggle}
-                    onUpdate={handleUpdate}
-                    onDelete={handleDelete}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Preview */}
-          {filteredFragments.length > 0 && (
-            <div className="border-t border-border/40 pt-6">
-              <MemoryPreview fragments={fragments} />
-            </div>
-          )}
-
-          {/* Semantic Memory Section */}
-          <div className="border-t border-border/40 pt-6">
-            <SemanticMemorySection />
           </div>
         </div>
-      </div>
-    </div>
+      )}
+
+      {filteredFragments.length > 0 && (
+        <div className="space-y-2">
+          {filteredFragments.map((fragment, index) => (
+            <div
+              key={fragment.id}
+              draggable
+              onDragStart={() => handleDragStart(index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              className={dragOverIndex === index ? 'border-t-2 border-primary' : ''}
+            >
+              <MemoryFragmentCard
+                fragment={fragment}
+                onToggle={handleToggle}
+                onUpdate={handleUpdate}
+                onDelete={handleDelete}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {filteredFragments.length > 0 && (
+        <div className="border-t border-border/40 pt-6">
+          <MemoryPreview fragments={fragments} />
+        </div>
+      )}
+    </>
   )
 }
