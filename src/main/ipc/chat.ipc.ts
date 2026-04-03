@@ -686,7 +686,14 @@ async function streamChat(
 
   // Plan mode state for this stream
   let planEmitted = false
+  let planStartEmitted = false   // Bug 1: visual indicator when plan generation begins
+  let inPlanBlock = false         // Bug 4: buffer plan text to avoid marker leaking
   let approvedPlanData: PlanData | null = null
+
+  // Bug 2: Two-phase abort — abort the first stream when a full plan is detected
+  // so tools don't execute before user approval
+  const planDetectAbortController = new AbortController()
+  const firstStreamSignal = AbortSignal.any([abortSignal, planDetectAbortController.signal])
 
   // Token batching — accumulate text-delta chunks, flush every 50ms
   let batchBuffer = ''
@@ -723,7 +730,7 @@ async function streamChat(
     const result = streamText({
       model,
       messages: aiMessages,
-      abortSignal,
+      abortSignal: firstStreamSignal, // Bug 2: combined signal (user cancel + plan-detect abort)
       temperature,
       maxTokens,
       topP,
@@ -736,6 +743,15 @@ async function streamChat(
             if (seg.type === 'text') {
               // Keep raw text for plan block detection
               accumulatedText += seg.content
+
+              // Bug 1: Emit a visual indicator when plan generation starts
+              if (!planStartEmitted && accumulatedText.includes('[PLAN:start')) {
+                planStartEmitted = true
+                inPlanBlock = true // Bug 4: start buffering plan text
+                // Flush any text accumulated before the plan block
+                flushBatch()
+                win.webContents.send('chat:chunk', { type: 'text-delta', content: '\u{1F4CB} Planification en cours...\n\n' })
+              }
 
               // Check for step execution markers (e.g. [STEP:1:start], [STEP:2:done])
               const stepResult = parseStepMarker(seg.content)
@@ -753,16 +769,29 @@ async function streamChat(
                 const planData = parsePlanMarkers(accumulatedText)
                 if (planData) {
                   planEmitted = true
+                  inPlanBlock = false // Bug 4: plan block complete, stop buffering
                   flushBatch()
                   win.webContents.send('chat:chunk', { type: 'plan-proposed', plan: planData })
+
+                  // Bug 2: Abort stream immediately for full plans (non-YOLO)
+                  // to prevent tools from executing before user approval
+                  if (planData.level === 'full' && !yoloModeByConversation.get(conversationId)) {
+                    planDetectAbortController.abort()
+                  }
                 }
               }
 
-              // Strip markers from visible text before buffering
-              const cleanText = stripPlanMarkers(seg.content)
-              if (cleanText.length > 0) {
-                batchBuffer += cleanText
-                startBatchTimer()
+              // Bug 4: When inside a plan block, don't send marker text to renderer.
+              // The plan-proposed chunk replaces the plan block text visually.
+              if (inPlanBlock) {
+                // Swallow — plan markers are being buffered in accumulatedText only
+              } else {
+                // Normal text or post-plan text — strip any stray markers and send
+                const cleanText = stripPlanMarkers(seg.content)
+                if (cleanText.length > 0) {
+                  batchBuffer += cleanText
+                  startBatchTimer()
+                }
               }
             } else {
               flushBatch()
@@ -857,16 +886,41 @@ async function streamChat(
 
     // Consume the stream — usage is only available after full consumption
     let fullText = ''
+    let planDetectAborted = false // Bug 2: track whether we aborted for plan detection
+    // Mutable usage accumulator — written by both first stream and execution phase
+    let mergedUsage: { inputTokens?: number; outputTokens?: number } | null = null
+
     try {
       await result.text
+    } catch (firstStreamErr) {
+      // Bug 2: Distinguish plan-detect abort from user cancel
+      if (firstStreamErr instanceof Error && firstStreamErr.name === 'AbortError') {
+        if (planDetectAbortController.signal.aborted && !abortSignal.aborted) {
+          // Plan-detect abort — this is expected, not an error
+          planDetectAborted = true
+        } else {
+          // User cancel — rethrow to be handled by outer catch
+          throw firstStreamErr
+        }
+      } else if (firstStreamErr instanceof NoOutputGeneratedError) {
+        if (firstStreamErr.cause) throw firstStreamErr.cause
+        // Genuine no-output — continue
+      } else {
+        throw firstStreamErr
+      }
+    }
+
+    try {
       // Flush any remaining buffered content (e.g. partial <think> tag that never completed)
       const remaining = thinkParser.flush()
       for (const seg of remaining) {
         if (seg.type === 'text') {
           accumulatedText += seg.content
-          const cleanRemainder = stripPlanMarkers(seg.content)
-          if (cleanRemainder.length > 0) {
-            batchBuffer += cleanRemainder
+          if (!inPlanBlock) {
+            const cleanRemainder = stripPlanMarkers(seg.content)
+            if (cleanRemainder.length > 0) {
+              batchBuffer += cleanRemainder
+            }
           }
         } else {
           accumulatedReasoning += seg.content
@@ -880,6 +934,7 @@ async function streamChat(
         const planData = parsePlanMarkers(accumulatedText)
         if (planData) {
           planEmitted = true
+          inPlanBlock = false
           flushBatch()
           win.webContents.send('chat:chunk', { type: 'plan-proposed', plan: planData })
         }
@@ -893,15 +948,29 @@ async function streamChat(
         const planData = parsePlanMarkers(accumulatedText)
         if (planData && planData.level === 'full' && !yoloModeByConversation.get(conversationId)) {
           // I3: Add 5-minute timeout to plan approval
+          // Bug 3: Also cancel approval if user clicks STOP (abort signal)
           const approvalResult = await new Promise<{ decision: 'approved' | 'cancelled'; steps: PlanStep[] }>((resolve) => {
             const timeout = setTimeout(() => {
               pendingPlanApprovals.delete(conversationId)
               resolve({ decision: 'cancelled', steps: [] })
             }, 5 * 60 * 1000) // 5 minutes
 
+            // Listen for user abort during plan approval wait
+            const onAbort = () => {
+              clearTimeout(timeout)
+              pendingPlanApprovals.delete(conversationId)
+              resolve({ decision: 'cancelled', steps: [] })
+            }
+            if (abortSignal.aborted) {
+              onAbort()
+              return
+            }
+            abortSignal.addEventListener('abort', onAbort, { once: true })
+
             pendingPlanApprovals.set(conversationId, {
               resolve: (result) => {
                 clearTimeout(timeout)
+                abortSignal.removeEventListener('abort', onAbort)
                 resolve(result)
               },
               messageId: ''
@@ -920,16 +989,21 @@ async function streamChat(
             // C2: Launch execution phase — second streamText with write tools unlocked
             const executionPrompt = buildPlanPromptBlock('execution', planData)
             if (executionPrompt) {
-              // Rebuild tools with planMode: 'approved' (write tools unlocked)
-              const { resolvedWorkspacePath, rules, onAskApproval } = prepared
+              // Bug 5: Auto-approve all tools during execution — user already validated the plan
+              const execOnAskApproval = async (_request: { toolName: string; toolArgs: Record<string, unknown> }): Promise<'allow' | 'deny' | 'allow-session'> => {
+                return 'allow' as const
+              }
+
+              // Rebuild tools with planMode: 'approved' (write tools unlocked) + auto-approve
+              const { resolvedWorkspacePath, rules } = prepared
               const execWorkspaceTools = buildConversationTools(resolvedWorkspacePath, {
                 rules,
                 conversationId,
-                onAskApproval,
+                onAskApproval: execOnAskApproval,
                 planMode: 'approved'
               })
 
-              // Build MCP tools for execution (also unlocked)
+              // Build MCP tools for execution (also unlocked + auto-approve)
               let execMcpTools: Record<string, unknown> = {}
               try {
                 const rawMcpTools = await mcpManagerService.getToolsForChat(prepared.conv?.projectId)
@@ -937,7 +1011,7 @@ async function streamChat(
                   execMcpTools[name] = wrapExternalTool(name, t, resolvedWorkspacePath, {
                     rules,
                     conversationId,
-                    onAskApproval,
+                    onAskApproval: execOnAskApproval,
                     planMode: 'approved'
                   })
                 }
@@ -1075,15 +1149,17 @@ async function streamChat(
                 }
                 stopBatchTimer()
 
-                // Merge execution usage
-                const execUsage = await execResult.usage
-                if (execUsage) {
-                  const mainUsage = await result.usage
-                  // Combine both phase usages (overwrite — finalize will use these)
-                  if (mainUsage) {
-                    mainUsage.inputTokens = (mainUsage.inputTokens ?? 0) + (execUsage.inputTokens ?? 0)
-                    mainUsage.outputTokens = (mainUsage.outputTokens ?? 0) + (execUsage.outputTokens ?? 0)
+                // Merge execution usage into the shared accumulator
+                try {
+                  const execUsage = await execResult.usage
+                  if (execUsage) {
+                    mergedUsage = {
+                      inputTokens: ((mergedUsage?.inputTokens) ?? 0) + (execUsage.inputTokens ?? 0),
+                      outputTokens: ((mergedUsage?.outputTokens) ?? 0) + (execUsage.outputTokens ?? 0)
+                    }
                   }
+                } catch {
+                  // Execution usage unavailable — continue with what we have
                 }
               } catch (execErr) {
                 stopBatchTimer()
@@ -1130,13 +1206,24 @@ async function streamChat(
     }
 
     // Get usage from resolved promise (more reliable than onFinish for some providers)
-    const usage = await result.usage
+    // When the first stream was aborted for plan detection, result.usage may reject — handle gracefully
+    try {
+      const firstUsage = await result.usage
+      if (firstUsage) {
+        mergedUsage = {
+          inputTokens: ((mergedUsage?.inputTokens) ?? 0) + (firstUsage.inputTokens ?? 0),
+          outputTokens: ((mergedUsage?.outputTokens) ?? 0) + (firstUsage.outputTokens ?? 0)
+        }
+      }
+    } catch {
+      // Aborted stream — usage unavailable from first phase (execution phase usage is already in mergedUsage)
+    }
     const responseTimeMs = Date.now() - startTime
 
     return {
       fullText,
       accumulatedReasoning,
-      usage: usage ? { inputTokens: usage.inputTokens ?? 0, outputTokens: usage.outputTokens ?? 0 } : null,
+      usage: mergedUsage ? { inputTokens: mergedUsage.inputTokens ?? 0, outputTokens: mergedUsage.outputTokens ?? 0 } : null,
       accumulatedToolCalls,
       accumulatedSearchSources,
       responseTimeMs,
