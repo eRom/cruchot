@@ -294,6 +294,16 @@ interface SourceRowProps {
   onCancelDelete: () => void
 }
 
+const PROGRESS_STATUS_LABELS: Record<string, string> = {
+  extracting: 'Extraction du texte...',
+  chunking: 'Decoupage...',
+  embedding: 'Embedding...',
+  upserting: 'Sauvegarde...',
+  done: 'Termine',
+  error: 'Erreur',
+  'ocr-error': 'Erreur OCR'
+}
+
 function SourceRow({
   source,
   progress,
@@ -337,7 +347,9 @@ function SourceRow({
           <p className="text-sm font-medium text-foreground truncate">{source.filename}</p>
           <span className={cn('text-[10px] font-medium', statusColor)}>
             {isProcessing && <Loader2 className="mr-0.5 inline size-3 animate-spin" />}
-            {progress ? `${progress.status} (${progress.percent}%)` : statusLabel}
+            {progress
+            ? `${PROGRESS_STATUS_LABELS[progress.status] ?? progress.status} (${progress.percent}%)`
+            : statusLabel}
           </span>
         </div>
         <div className="flex items-center gap-3 text-[11px] text-muted-foreground/60">

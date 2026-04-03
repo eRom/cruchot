@@ -46,6 +46,7 @@ const detachSchema = z.object({
 
 const SUPPORTED_FILTERS = [
   { name: 'Documents', extensions: ['txt', 'md', 'pdf', 'docx', 'csv'] },
+  { name: 'Images (OCR)', extensions: ['jpg', 'jpeg', 'png', 'tiff', 'bmp', 'webp'] },
   { name: 'Code', extensions: ['ts', 'js', 'py', 'java', 'go', 'rs', 'c', 'cpp', 'rb', 'php', 'swift', 'kt', 'html', 'css', 'json', 'yaml', 'yml', 'xml', 'sql', 'sh'] },
   { name: 'Tous les fichiers', extensions: ['*'] }
 ]
