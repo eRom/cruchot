@@ -99,18 +99,18 @@ export function UserMenu({ isCollapsed, currentView, onNavigate }: UserMenuProps
             shortcut="⌘U"
           />
           <MenuItem
-            icon={Search}
-            label="Recherche"
-            isActive={currentView === 'search'}
-            onSelect={() => onNavigate('search')}
-            shortcut="⌘F"
-          />
-          <MenuItem
             icon={Settings}
             label="Parametres"
             isActive={currentView === 'settings'}
             onSelect={() => onNavigate('settings')}
             shortcut="⌘,"
+          />
+          <MenuItem
+            icon={Search}
+            label="Recherche"
+            isActive={currentView === 'search'}
+            onSelect={() => onNavigate('search')}
+            shortcut="⌘F"
           />
           <MenuItem
             icon={Image}

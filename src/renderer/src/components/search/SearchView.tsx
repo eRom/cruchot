@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, MessageSquare, Search, User, Bot } from 'lucide-react'
+import { ArrowLeft, MessageSquare, Search, User, Bot, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUiStore } from '@/stores/ui.store'
 import { useConversationsStore } from '@/stores/conversations.store'
@@ -54,6 +54,16 @@ interface ConversationGroup {
   messages: SearchResult[]
 }
 
+// ── Persistent state (survives view switches) ──────────
+
+const persistedState = {
+  query: '',
+  roleFilter: 'all' as RoleFilter,
+  projectFilter: '',
+  results: [] as SearchResult[],
+  hasSearched: false,
+}
+
 // ── Component ───────────────────────────────────────────
 
 export function SearchView() {
@@ -62,14 +72,23 @@ export function SearchView() {
   const setActiveProject = useProjectsStore((s) => s.setActiveProject)
   const projects = useProjectsStore((s) => s.projects)
 
-  const [query, setQuery] = useState('')
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
-  const [projectFilter, setProjectFilter] = useState<string>('')
-  const [results, setResults] = useState<SearchResult[]>([])
+  const [query, setQuery] = useState(persistedState.query)
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>(persistedState.roleFilter)
+  const [projectFilter, setProjectFilter] = useState<string>(persistedState.projectFilter)
+  const [results, setResults] = useState<SearchResult[]>(persistedState.results)
   const [loading, setLoading] = useState(false)
-  const [hasSearched, setHasSearched] = useState(false)
+  const [hasSearched, setHasSearched] = useState(persistedState.hasSearched)
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  // Persist state for view switches
+  useEffect(() => {
+    persistedState.query = query
+    persistedState.roleFilter = roleFilter
+    persistedState.projectFilter = projectFilter
+    persistedState.results = results
+    persistedState.hasSearched = hasSearched
+  }, [query, roleFilter, projectFilter, results, hasSearched])
 
   // Autofocus on mount
   useEffect(() => {
@@ -171,8 +190,16 @@ export function SearchView() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Rechercher dans toutes les conversations..."
-            className="h-11 w-full rounded-lg border border-border bg-card pl-10 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/50 focus:border-primary"
+            className="h-11 w-full rounded-lg border border-border bg-card pl-10 pr-10 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/50 focus:border-primary"
           />
+          {query && (
+            <button
+              onClick={() => { setQuery(''); setResults([]); setHasSearched(false); inputRef.current?.focus() }}
+              className="absolute right-3 rounded-md p-0.5 text-muted-foreground/50 hover:text-foreground"
+            >
+              <X className="size-4" />
+            </button>
+          )}
         </div>
       </div>
 
