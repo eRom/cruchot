@@ -6,7 +6,7 @@ import { useUiStore } from '@/stores/ui.store'
 import { useSemanticMemoryStore } from '@/stores/semantic-memory.store'
 
 interface StreamChunk {
-  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'tool-result' | 'tool-approval' | 'tool-approval-resolved' | 'finish' | 'error'
+  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'tool-result' | 'tool-approval' | 'tool-approval-resolved' | 'plan-proposed' | 'plan-step' | 'plan-done' | 'finish' | 'error'
   content?: string
   modelId?: string
   providerId?: string
@@ -41,6 +41,9 @@ interface StreamChunk {
   toolCalls?: Array<{ toolName: string; args?: Record<string, unknown>; status: string; error?: string }>
   searchSources?: Array<{ title: string; url: string; snippet?: string }>
   semanticRecallCount?: number
+  plan?: Record<string, unknown>
+  stepIndex?: number
+  stepStatus?: string
 }
 
 /** Human-readable labels for workspace tool calls */
@@ -203,6 +206,35 @@ export function useStreaming() {
             appendToMessage(streamingIdRef.current, chunk.content || '')
           }
           break
+        }
+
+        case 'plan-proposed': {
+          const streamingId = useMessagesStore.getState().streamingMessageId
+          if (streamingId && chunk.plan) {
+            useMessagesStore.getState().updateMessagePlan(streamingId, chunk.plan)
+          }
+          return
+        }
+
+        case 'plan-step': {
+          const streamingId = useMessagesStore.getState().streamingMessageId
+          if (streamingId && chunk.stepIndex !== undefined && chunk.stepStatus) {
+            useMessagesStore.getState().updateMessagePlanStep(streamingId, chunk.stepIndex, {
+              status: chunk.stepStatus
+            })
+          }
+          return
+        }
+
+        case 'plan-done': {
+          const streamingId = useMessagesStore.getState().streamingMessageId
+          if (streamingId) {
+            useMessagesStore.getState().updateMessagePlan(streamingId, {
+              status: 'done',
+              completedAt: Math.floor(Date.now() / 1000)
+            })
+          }
+          return
         }
 
         case 'finish': {
