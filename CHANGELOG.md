@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] - 2026-04-03
+
+- fix(plan): only inject plan prompt when explicitly activated (switch ON or /plan)
+- docs(vcr): document VCR Recording — services, IPC, UI components
+- fix(vcr): use Cruchot brand color (orange #FFAF5F) and exact dark palette
+- fix(vcr): write template to ~/.cruchot/ instead of userData
+- style(vcr): redesign HTML template with erom-design system
+- refactor(vcr): simplify to export-only flow — remove in-app player
+- update cruchot.romain-ecarnot.com
+- feat(vcr): integrate VcrPlayer and VcrRecordingsList in ChatView
+- feat(vcr): add VcrPlayer sheet with dual-mode switching
+- feat(vcr): add VcrReplay animated playback component
+- feat(vcr): add VcrProgressBar and VcrTimeline components
+- feat(vcr): add VcrRecordingsList sheet component
+- feat(vcr): add anonymizer, HTML template, and exporter services
+- feat(vcr): add VcrSection to Right Panel (position 7/7)
+- feat(vcr): add blinking REC badge in ContextWindowIndicator
+- feat(vcr): add Zustand store for VCR recording state
+- feat(vcr): add EventBus emission points in chat streaming pipeline
+- feat(vcr): add IPC handlers and preload bridge for VCR recording
+- feat(vcr): add VcrRecorderService with NDJSON write stream
+- feat(vcr): add VCR types and typed EventBus
+- feat(landing): add SearchView section + cruchot-landing-section skill
+- chore: move VCR spec to _internal/ (gitignored)
+- docs(vcr): add VCR Recording design spec (#18)
+- docs(search): document SearchView, FTS5 prefix matching, and CMD+F shortcut
+- refactor(search): import types from preload/types — remove duplicate definitions
+- feat(search): enable FTS5 prefix matching — 'arti' matches 'article'
+- fix(search): move menu item below Parametres, add clear button, persist state across view switches
+- feat(search): add SearchView with filters, grouping, and highlight
+- feat(search): add search ViewMode, CMD+F shortcut, UserMenu entry
+- feat(search): add filters (role, projectId) to FTS5 search backend
+
 ## [0.7.1] - 2026-04-03
 
 ### Added
