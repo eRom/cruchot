@@ -65,6 +65,8 @@ interface MessagesState {
   clearMessages: () => void
   setStreamingMessageId: (id: string | null) => void
   getConversationMessages: (conversationId: string | null) => Message[]
+  updateMessagePlan: (messageId: string, planUpdate: Record<string, unknown>) => void
+  updateMessagePlanStep: (messageId: string, stepIndex: number, stepUpdate: Record<string, unknown>) => void
 }
 
 export const useMessagesStore = create<MessagesState>((set, get) => ({
@@ -168,5 +170,40 @@ export const useMessagesStore = create<MessagesState>((set, get) => ({
   setStreamingMessageId: (id) => set({ streamingMessageId: id }),
 
   getConversationMessages: (conversationId) =>
-    conversationId ? get().messages.filter((m) => m.conversationId === conversationId) : []
+    conversationId ? get().messages.filter((m) => m.conversationId === conversationId) : [],
+
+  updateMessagePlan: (messageId, planUpdate) => {
+    set((state) => {
+      const messages = [...state.messages]
+      const idx = messages.findIndex(m => m.id === messageId)
+      if (idx === -1) return state
+
+      const msg = { ...messages[idx] }
+      const existingPlan = (msg.contentData?.plan ?? {}) as Record<string, unknown>
+      const updatedPlan = { ...existingPlan, ...planUpdate }
+
+      msg.contentData = { ...(msg.contentData ?? {}), plan: updatedPlan }
+      messages[idx] = msg
+      return { messages }
+    })
+  },
+
+  updateMessagePlanStep: (messageId, stepIndex, stepUpdate) => {
+    set((state) => {
+      const messages = [...state.messages]
+      const idx = messages.findIndex(m => m.id === messageId)
+      if (idx === -1) return state
+
+      const msg = { ...messages[idx] }
+      const plan = (msg.contentData?.plan ?? {}) as Record<string, unknown>
+      const steps = [...((plan.steps ?? []) as any[])]
+      const stepIdx = steps.findIndex((s: any) => s.id === stepIndex)
+      if (stepIdx === -1) return state
+
+      steps[stepIdx] = { ...steps[stepIdx], ...stepUpdate }
+      msg.contentData = { ...(msg.contentData ?? {}), plan: { ...plan, steps } }
+      messages[idx] = msg
+      return { messages }
+    })
+  },
 }))
