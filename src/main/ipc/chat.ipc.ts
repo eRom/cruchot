@@ -25,6 +25,7 @@ import { buildSemanticMemoryBlock } from '../llm/memory-prompt'
 import { buildLibraryContextBlock, type LibraryChunkForPrompt } from '../llm/library-prompt'
 import { buildSkillContextBlock } from '../llm/skill-prompt'
 import { DEFAULT_SYSTEM_PROMPT } from '../llm/system-prompt'
+import { vcrEventBus } from '../services/vcr-event-bus'
 import { getSkillByName } from '../db/queries/skills'
 import { libraryService } from '../services/library.service'
 import { getConversationLibraryId, getLibrary } from '../db/queries/libraries'
@@ -260,6 +261,7 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
     providerId,
     contentData: Object.keys(userContentData).length > 0 ? userContentData : undefined
   })
+  vcrEventBus.emitVcr('user-message', { content, attachments: validatedRefs.map(r => r.name) })
 
   // Touch conversation updatedAt
   touchConversation(conversationId)
@@ -716,11 +718,13 @@ async function streamChat(
           stepIndex: sr.index,
           stepStatus: sr.status
         })
+        vcrEventBus.emitVcr('plan-step', { stepIndex: sr.index, status: sr.status as 'running' | 'done' | 'failed' })
       }
       // Strip ALL plan/step markers from visible text
       const cleaned = stripPlanMarkers(batchBuffer)
       if (cleaned.length > 0) {
         win.webContents.send('chat:chunk', { type: 'text-delta', content: cleaned })
+        vcrEventBus.emitVcr('text-delta', { text: cleaned })
         if (isRemoteConnected) telegramBotService.pushChunk(cleaned)
         if (isWsConnected) remoteServerService.pushChunk(cleaned)
       }
@@ -778,6 +782,7 @@ async function streamChat(
                   // Discard buffer (contains plan markers) — don't flush to renderer
                   batchBuffer = ''
                   win.webContents.send('chat:chunk', { type: 'plan-proposed', plan: planData })
+                  vcrEventBus.emitVcr('plan-proposed', { plan: planData as unknown as Record<string, unknown> })
 
                   // Bug 2: Abort stream immediately for full plans (non-YOLO)
                   // to prevent tools from executing before user approval
@@ -797,6 +802,7 @@ async function streamChat(
               flushBatch()
               accumulatedReasoning += seg.content
               win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: seg.content })
+              vcrEventBus.emitVcr('reasoning-delta', { text: seg.content })
               if (isWsConnected) remoteServerService.pushReasoningChunk(seg.content)
             }
           }
@@ -807,6 +813,7 @@ async function streamChat(
             type: 'reasoning-delta',
             content: chunk.text
           })
+          vcrEventBus.emitVcr('reasoning-delta', { text: chunk.text })
           if (isWsConnected) remoteServerService.pushReasoningChunk(chunk.text)
         } else if (chunk.type === 'tool-call') {
           flushBatch() // Flush text buffer before non-text chunk
@@ -823,6 +830,7 @@ async function streamChat(
             toolArgs: chunk.args,
             toolCallId: chunk.toolCallId
           })
+          vcrEventBus.emitVcr('tool-call', { toolCallId: chunk.toolCallId, toolName: chunk.toolName, args: chunk.args as Record<string, unknown> })
           if (isWsConnected) {
             remoteServerService.broadcastToAuthenticatedClients({
               type: 'tool-call',
@@ -873,6 +881,7 @@ async function streamChat(
             toolResult: toolResultText,
             toolResultMeta: Object.keys(resultMeta).length > 0 ? resultMeta : undefined
           })
+          vcrEventBus.emitVcr('tool-result', { toolCallId: toolResult.toolCallId, status: isError ? 'error' : 'success', result: toolResultText, error: isError ? String((toolResult.output as Record<string, unknown>).error) : undefined, meta: Object.keys(resultMeta).length > 0 ? resultMeta : undefined })
           // Forward tool result to Telegram + WebSocket
           if (isRemoteConnected) {
             telegramBotService.sendToolResult(toolResult.toolName, toolResult.output).catch(() => {})
@@ -934,6 +943,7 @@ async function streamChat(
           inPlanBlock = false
           flushBatch()
           win.webContents.send('chat:chunk', { type: 'plan-proposed', plan: planData })
+          vcrEventBus.emitVcr('plan-proposed', { plan: planData as unknown as Record<string, unknown> })
         }
       }
 
@@ -984,6 +994,7 @@ async function streamChat(
             planData.approvedAt = Math.floor(Date.now() / 1000)
             planData.steps = approvalResult.steps.length > 0 ? approvalResult.steps : planData.steps
             approvedPlanData = planData
+            vcrEventBus.emitVcr('plan-approved', { editedSteps: approvalResult.steps.length > 0 ? approvalResult.steps as unknown as Record<string, unknown>[] : undefined })
 
             // Notify renderer that plan was approved (hides Valider/Annuler buttons)
             win.webContents.send('chat:chunk', { type: 'plan-proposed', plan: { ...planData } })
@@ -1066,6 +1077,7 @@ async function streamChat(
                         flushBatch()
                         accumulatedReasoning += seg.content
                         win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: seg.content })
+                        vcrEventBus.emitVcr('reasoning-delta', { text: seg.content })
                         if (isWsConnected) remoteServerService.pushReasoningChunk(seg.content)
                       }
                     }
@@ -1083,6 +1095,7 @@ async function streamChat(
                       toolArgs: execChunk.args,
                       toolCallId: execChunk.toolCallId
                     })
+                    vcrEventBus.emitVcr('tool-call', { toolCallId: execChunk.toolCallId, toolName: execChunk.toolName, args: execChunk.args as Record<string, unknown> })
                   } else if (execChunk.type === 'tool-result') {
                     const toolResult = execChunk as { type: 'tool-result'; toolName: string; toolCallId: string; output: unknown }
                     const isError = toolResult.output != null && typeof toolResult.output === 'object' && 'error' in (toolResult.output as Record<string, unknown>)
@@ -1108,6 +1121,7 @@ async function streamChat(
                       toolResult: toolResultText,
                       toolResultMeta: Object.keys(resultMeta).length > 0 ? resultMeta : undefined
                     })
+                    vcrEventBus.emitVcr('tool-result', { toolCallId: toolResult.toolCallId, status: isError ? 'error' : 'success', result: toolResultText, error: isError ? String((toolResult.output as Record<string, unknown>).error) : undefined, meta: Object.keys(resultMeta).length > 0 ? resultMeta : undefined })
                     if (isRemoteConnected) {
                       telegramBotService.sendToolResult(toolResult.toolName, toolResult.output).catch(() => {})
                     }
@@ -1251,6 +1265,7 @@ async function finalizeChat(
   }
 
   const cost = messageCost + ocrCost
+  vcrEventBus.emitVcr('finish', { tokensIn, tokensOut, cost, responseTimeMs })
 
   // Save last used model on the conversation (for restore on switch)
   updateConversationModel(conversationId, `${providerId}::${modelId}`)
