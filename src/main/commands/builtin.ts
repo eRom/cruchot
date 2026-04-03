@@ -25,6 +25,12 @@ export const BUILTIN_COMMANDS: BuiltinCommand[] = [
     category: 'git'
   },
   {
+    name: 'plan',
+    description: 'Active le mode plan pour le prochain message',
+    prompt: 'Mode plan active. Propose un plan structure avant d\'agir.',
+    category: 'tools'
+  },
+  {
     name: 'anonymize',
     description: 'Anonymise un document en remplacant les entites sensibles',
     prompt: `Tu es un agent expert en anonymisation de documents legaux et administratifs.
@@ -66,5 +72,5 @@ $ARGS`,
 
 /** Reserved names that cannot be used for custom commands */
 export const RESERVED_COMMAND_NAMES = new Set([
-  'help', 'clear', 'settings', 'quit', 'exit', 'fork'
+  'help', 'clear', 'settings', 'quit', 'exit', 'fork', 'plan'
 ])
