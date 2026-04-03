@@ -9,6 +9,7 @@ import { useMessagesStore } from '@/stores/messages.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useUiStore } from '@/stores/ui.store'
 import { cn, formatTokenCount } from '@/lib/utils'
+import { VcrBadge } from './VcrBadge'
 
 interface ContextWindowIndicatorProps {
   currentTokens: number
@@ -58,6 +59,9 @@ export function ContextWindowIndicator({
 
       {/* WebSocket badge */}
       <WebServerBadge />
+
+      {/* VCR recording badge */}
+      <VcrBadge />
 
       {/* Summary button */}
       <SummaryButton />
