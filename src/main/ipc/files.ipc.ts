@@ -112,10 +112,20 @@ export function registerFilesIpc(): void {
       return []
     }
 
+    // Copy picked files into userData/attachments/ so they pass path validation
+    // (same approach as files:save for drag & drop)
     const files: PickedFile[] = []
     for (const fp of result.filePaths) {
       const classified = classifyFile(fp)
-      if (classified) files.push(classified)
+      if (!classified) continue
+
+      const buffer = fs.readFileSync(fp)
+      const saved = saveAttachment(buffer, classified.name)
+      files.push({
+        ...classified,
+        path: saved.path,
+        size: saved.size
+      })
     }
 
     return files
