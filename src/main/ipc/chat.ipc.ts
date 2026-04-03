@@ -10,6 +10,9 @@ import { buildThinkingProviderOptions } from '../llm/thinking'
 import { validateAttachment, processAttachments, buildContentParts, MAX_FILES_PER_MESSAGE, type AttachmentRef } from '../llm/attachments'
 import { parseFileOperations } from '../llm/file-operations'
 import { ThinkTagParser } from '../llm/think-tag-parser'
+import { parsePlanMarkers, parseStepMarker, stripPlanMarkers } from '../llm/plan-parser'
+import { buildPlanPromptBlock } from '../llm/plan-prompt'
+import type { PlanData, PlanStep } from '../../preload/types'
 import { buildConversationTools, buildWorkspaceContextBlock, WORKSPACE_TOOLS_PROMPT, wrapExternalTool } from '../llm/tools'
 import { getAllPermissionRules } from '../db/queries/permissions'
 import { mcpManagerService } from '../services/mcp-manager.service'
@@ -56,6 +59,7 @@ const sendMessageSchema = z.object({
   libraryId: z.string().optional(),
   skillName: z.string().max(200).optional(),
   skillArgs: z.string().max(10_000).optional(),
+  planMode: z.boolean().optional(),
 })
 
 let currentAbortController: AbortController | null = null
@@ -68,6 +72,13 @@ const pendingApprovals = new Map<string, {
 
 // YOLO mode state — main process owns this, not renderer
 const yoloModeByConversation = new Map<string, boolean>()
+
+// Plan mode state
+const forcedPlanMode = new Map<string, boolean>()
+const pendingPlanApprovals = new Map<string, {
+  resolve: (result: { decision: 'approved' | 'cancelled'; steps: PlanStep[] }) => void
+  messageId: string
+}>()
 
 const APPROVAL_TIMEOUT_MS = 60_000 // 60 seconds
 
@@ -161,6 +172,7 @@ interface ChatStreamResult {
   accumulatedToolCalls: ToolCallRecord[]
   accumulatedSearchSources: Array<{ title: string; url: string; snippet?: string }>
   responseTimeMs: number
+  planData: PlanData | null
 }
 
 // ── Exported chat handler (used by both IPC and Telegram) ───
@@ -181,6 +193,7 @@ export interface HandleChatMessageParams {
   searchEnabled?: boolean
   skillName?: string
   skillArgs?: string
+  planMode?: boolean
   source: 'desktop' | 'telegram' | 'websocket'
   window: BrowserWindow
 }
@@ -192,7 +205,7 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
     conversationId, content, modelId, providerId, systemPrompt,
     temperature, maxTokens, topP, thinkingEffort, roleId,
     attachments: attachmentRefs, fileContexts,
-    searchEnabled, skillName, skillArgs, source
+    searchEnabled, skillName, skillArgs, planMode, source
   } = params
 
   const isRemoteConnected = telegramBotService.getStatus() === 'connected'
@@ -414,6 +427,21 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
     if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
     combinedSystemPrompt += systemPrompt
   }
+  // Plan instructions injection — only when tools are available
+  {
+    const isForced = forcedPlanMode.get(conversationId) || planMode
+    // hasTools not yet computed here, but tools depend on workspace — always true in practice
+    // We inject plan prompt whenever tools exist; the gating on hasTools happens below after tool building
+    const planPromptBlock = buildPlanPromptBlock(isForced ? 'forced' : 'default')
+    if (planPromptBlock) {
+      if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
+      combinedSystemPrompt += planPromptBlock
+    }
+    // Reset one-shot forced mode after use
+    if (forcedPlanMode.get(conversationId)) {
+      forcedPlanMode.delete(conversationId)
+    }
+  }
   if (skillContextBlock) {
     if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
     combinedSystemPrompt += skillContextBlock
@@ -626,7 +654,7 @@ async function streamChat(
   abortSignal: AbortSignal
 ): Promise<ChatStreamResult> {
   const {
-    model, aiMessages, tools, hasTools, providerOptions,
+    conversationId, model, aiMessages, tools, hasTools, providerOptions,
     temperature, maxTokens, topP,
     isRemoteConnected, isWsConnected, startTime
   } = prepared
@@ -637,6 +665,10 @@ async function streamChat(
   const accumulatedToolCalls: ToolCallRecord[] = []
   const accumulatedSearchSources: Array<{ title: string; url: string; snippet?: string }> = []
   const toolStartTimes = new Map<string, number>() // toolCallId -> Date.now()
+
+  // Plan mode state for this stream
+  let planEmitted = false
+  let approvedPlanData: PlanData | null = null
 
   // Token batching — accumulate text-delta chunks, flush every 50ms
   let batchBuffer = ''
@@ -684,9 +716,36 @@ async function streamChat(
           const segments = thinkParser.parse(chunk.text)
           for (const seg of segments) {
             if (seg.type === 'text') {
+              // Keep raw text for plan block detection
               accumulatedText += seg.content
-              batchBuffer += seg.content
-              startBatchTimer()
+
+              // Check for step execution markers (e.g. [STEP:1:start], [STEP:2:done])
+              const stepResult = parseStepMarker(seg.content)
+              if (stepResult) {
+                flushBatch()
+                win.webContents.send('chat:chunk', {
+                  type: 'plan-step',
+                  stepIndex: stepResult.index,
+                  stepStatus: stepResult.status
+                })
+              }
+
+              // Check for complete plan block
+              if (!planEmitted && accumulatedText.includes('[PLAN:end]')) {
+                const planData = parsePlanMarkers(accumulatedText)
+                if (planData) {
+                  planEmitted = true
+                  flushBatch()
+                  win.webContents.send('chat:chunk', { type: 'plan-proposed', plan: planData })
+                }
+              }
+
+              // Strip markers from visible text before buffering
+              const cleanText = stripPlanMarkers(seg.content)
+              if (cleanText.length > 0) {
+                batchBuffer += cleanText
+                startBatchTimer()
+              }
             } else {
               flushBatch()
               accumulatedReasoning += seg.content
@@ -787,16 +846,56 @@ async function streamChat(
       for (const seg of remaining) {
         if (seg.type === 'text') {
           accumulatedText += seg.content
-          batchBuffer += seg.content
+          const cleanRemainder = stripPlanMarkers(seg.content)
+          if (cleanRemainder.length > 0) {
+            batchBuffer += cleanRemainder
+          }
         } else {
           accumulatedReasoning += seg.content
           win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: seg.content })
           if (isWsConnected) remoteServerService.pushReasoningChunk(seg.content)
         }
       }
+
+      // Final plan block check (in case [PLAN:end] arrived in the last flush)
+      if (!planEmitted && accumulatedText.includes('[PLAN:end]')) {
+        const planData = parsePlanMarkers(accumulatedText)
+        if (planData) {
+          planEmitted = true
+          flushBatch()
+          win.webContents.send('chat:chunk', { type: 'plan-proposed', plan: planData })
+        }
+      }
+
       // Stop batch timer and flush any remaining batched text
       stopBatchTimer()
-      fullText = accumulatedText
+
+      // Plan approval gate — block for full-level plans unless YOLO mode
+      if (planEmitted) {
+        const planData = parsePlanMarkers(accumulatedText)
+        if (planData && planData.level === 'full' && !yoloModeByConversation.get(conversationId)) {
+          const approvalResult = await new Promise<{ decision: 'approved' | 'cancelled'; steps: PlanStep[] }>((resolve) => {
+            pendingPlanApprovals.set(conversationId, { resolve, messageId: '' })
+          })
+          pendingPlanApprovals.delete(conversationId)
+
+          if (approvalResult.decision === 'cancelled') {
+            planData.status = 'cancelled'
+          } else {
+            planData.status = 'approved'
+            planData.approvedAt = Math.floor(Date.now() / 1000)
+            planData.steps = approvalResult.steps.length > 0 ? approvalResult.steps : planData.steps
+            approvedPlanData = planData
+          }
+        } else if (planData) {
+          // Light plan or YOLO mode — auto-approve
+          planData.status = 'approved'
+          planData.approvedAt = Math.floor(Date.now() / 1000)
+          approvedPlanData = planData
+        }
+      }
+
+      fullText = stripPlanMarkers(accumulatedText)
     } catch (e) {
       if (e instanceof NoOutputGeneratedError) {
         // If the NoOutputGeneratedError wraps a real API error, rethrow it
@@ -826,7 +925,8 @@ async function streamChat(
       usage: usage ? { inputTokens: usage.inputTokens ?? 0, outputTokens: usage.outputTokens ?? 0 } : null,
       accumulatedToolCalls,
       accumulatedSearchSources,
-      responseTimeMs
+      responseTimeMs,
+      planData: approvedPlanData
     }
   } finally {
     // Ensure batch timer is always cleaned up (covers error/abort paths)
@@ -847,7 +947,7 @@ async function finalizeChat(
   } = prepared
   const {
     fullText, accumulatedReasoning, usage, accumulatedToolCalls,
-    accumulatedSearchSources, responseTimeMs
+    accumulatedSearchSources, responseTimeMs, planData
   } = streamResult
 
   const tokensIn = usage?.inputTokens ?? 0
@@ -876,6 +976,7 @@ async function finalizeChat(
     }))
   }
   if (fileOps.length > 0) contentData.fileOperations = fileOps.map(op => ({ ...op, status: 'pending' }))
+  if (planData) contentData.plan = planData
   if (accumulatedSearchSources.length > 0) contentData.searchSources = accumulatedSearchSources
   if (librarySourcesForMessage.length > 0) {
     contentData.librarySources = librarySourcesForMessage.map(s => ({
@@ -1072,6 +1173,65 @@ export function registerChatIpc(): void {
       clearTimeout(pending.timeout)
       pendingApprovals.delete(approvalId)
       pending.resolve(decision)
+    }
+  })
+
+  // ── Plan mode handlers ──────────────────────────────────
+
+  ipcMain.handle('chat:approvePlan', async (_event, payload: unknown) => {
+    const schema = z.object({
+      conversationId: z.string().min(1),
+      messageId: z.string(),
+      decision: z.enum(['approved', 'cancelled']),
+      steps: z.array(z.object({
+        id: z.number(),
+        label: z.string(),
+        tools: z.array(z.string()).optional(),
+        status: z.enum(['pending', 'running', 'done', 'skipped', 'failed']),
+        enabled: z.boolean()
+      }))
+    })
+    const parsed = schema.safeParse(payload)
+    if (!parsed.success) throw new Error('Invalid approvePlan payload')
+
+    const pending = pendingPlanApprovals.get(parsed.data.conversationId)
+    if (pending) {
+      pending.resolve({ decision: parsed.data.decision, steps: parsed.data.steps })
+    }
+  })
+
+  ipcMain.handle('chat:setPlanMode', async (_event, payload: unknown) => {
+    const parsed = z.object({
+      conversationId: z.string().min(1),
+      forced: z.boolean()
+    }).safeParse(payload)
+    if (!parsed.success) throw new Error('Invalid setPlanMode payload')
+
+    if (parsed.data.forced) {
+      forcedPlanMode.set(parsed.data.conversationId, true)
+    } else {
+      forcedPlanMode.delete(parsed.data.conversationId)
+    }
+  })
+
+  ipcMain.handle('chat:updatePlanStep', async (_event, payload: unknown) => {
+    const schema = z.object({
+      conversationId: z.string().min(1),
+      messageId: z.string(),
+      stepIndex: z.number(),
+      action: z.enum(['retry', 'skip', 'abort'])
+    })
+    const parsed = schema.safeParse(payload)
+    if (!parsed.success) throw new Error('Invalid updatePlanStep payload')
+
+    const pending = pendingPlanApprovals.get(parsed.data.conversationId)
+    if (pending) {
+      if (parsed.data.action === 'abort') {
+        pending.resolve({ decision: 'cancelled', steps: [] })
+      } else if (parsed.data.action === 'skip') {
+        pending.resolve({ decision: 'approved', steps: [] })
+      }
+      // 'retry' is handled by re-sending the same step — no resolver action needed
     }
   })
 
