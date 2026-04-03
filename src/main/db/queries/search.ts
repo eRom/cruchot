@@ -28,7 +28,7 @@ function sanitizeFtsQuery(query: string): string {
   if (!stripped) return '""'
 
   const terms = stripped.split(/\s+/).filter(Boolean)
-  return terms.map(t => `"${t}"`).join(' ')
+  return terms.map(t => `"${t}"*`).join(' ')
 }
 
 export function searchMessages(query: string, filters?: SearchFilters): SearchResult[] {
