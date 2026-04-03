@@ -1,9 +1,10 @@
-import { writeFileSync, readFileSync, existsSync } from 'fs'
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
-import { app } from 'electron'
+import { homedir } from 'os'
 import { DEFAULT_VCR_HTML_TEMPLATE } from './vcr-html-template'
 
 const TEMPLATE_FILENAME = 'template-vcr-share.html'
+const CRUCHOT_DIR = join(homedir(), '.cruchot')
 const DATA_START_MARKER = '<!-- VCR_DATA_START -->'
 const DATA_END_MARKER = '<!-- VCR_DATA_END -->'
 
@@ -56,7 +57,8 @@ class VcrHtmlExporterService {
   }
 
   private getTemplatePath(): string {
-    return join(app.getPath('userData'), TEMPLATE_FILENAME)
+    mkdirSync(CRUCHOT_DIR, { recursive: true })
+    return join(CRUCHOT_DIR, TEMPLATE_FILENAME)
   }
 }
 
