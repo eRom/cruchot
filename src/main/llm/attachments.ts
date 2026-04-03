@@ -51,6 +51,10 @@ export interface ProcessedAttachment {
   base64?: string
   /** Extracted text content for documents and code */
   textContent?: string
+  /** True if text was extracted via OCR (Mistral) */
+  ocrProcessed?: boolean
+  /** Number of pages OCR-processed (for cost tracking) */
+  ocrPagesProcessed?: number
 }
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -135,9 +139,7 @@ export function validateAttachment(filePath: string, workspaceRoot?: string | nu
 
 // ── Text extraction ──────────────────────────────────────────────
 
-async function extractPdfText(filePath: string): Promise<string> {
-  // Import lib/pdf-parse directly to avoid index.js test code
-  // (pdf-parse v1.1.1 runs a test file read when module.parent is null in bundled context)
+async function extractPdfText(filePath: string): Promise<{ text: string; ocrProcessed: boolean; ocrPages: number }> {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const pdfParse = require('pdf-parse/lib/pdf-parse.js')
   const buffer = fs.readFileSync(filePath)
@@ -146,10 +148,19 @@ async function extractPdfText(filePath: string): Promise<string> {
 
   // Detect scanned PDF (text is empty or near-empty)
   if (text.length < 50) {
-    throw new Error('PDF scanne detecte — extraction de texte impossible. Seuls les PDF textuels sont supportes.')
+    const { ocrService } = await import('../services/ocr.service')
+
+    if (ocrService.isAvailable()) {
+      const ocrResult = await ocrService.processFile(filePath, { tableFormat: 'html' })
+      return { text: ocrResult.text, ocrProcessed: true, ocrPages: ocrResult.pagesProcessed }
+    }
+
+    throw new Error(
+      'PDF scanne detecte — configurez une cle API Mistral pour activer l\'OCR automatique.'
+    )
   }
 
-  return text
+  return { text, ocrProcessed: false, ocrPages: 0 }
 }
 
 async function extractDocxText(filePath: string): Promise<string> {
@@ -167,37 +178,68 @@ function readTextFile(filePath: string): string {
 
 // ── Process attachments ──────────────────────────────────────────
 
+export interface ProcessAttachmentOptions {
+  /** If true, OCR images to extract text (for models without vision) */
+  preferOcrForImages?: boolean
+}
+
 /**
  * Process a list of attachment references for sending to the LLM.
  * - Images: read as base64 (except SVG → treated as code)
  * - Documents: extract text (PDF via pdf-parse, DOCX via mammoth, others via readFile)
  * - Code: read as UTF-8 text
  */
-export async function processAttachments(refs: AttachmentRef[]): Promise<ProcessedAttachment[]> {
+export async function processAttachments(
+  refs: AttachmentRef[],
+  options?: ProcessAttachmentOptions
+): Promise<ProcessedAttachment[]> {
   const results: ProcessedAttachment[] = []
 
   for (const ref of refs) {
     const ext = path.extname(ref.name).toLowerCase()
 
     if (ref.type === 'image' && ext !== '.svg') {
-      // Image → base64
       const buffer = fs.readFileSync(ref.path)
+
+      // If model doesn't support images and OCR is available, extract text instead
+      if (options?.preferOcrForImages) {
+        try {
+          const { ocrService } = await import('../services/ocr.service')
+          if (ocrService.isAvailable() && ocrService.canProcess(ref.mimeType)) {
+            const ocrResult = await ocrService.processImage(buffer, ref.mimeType)
+            results.push({
+              ref,
+              textContent: ocrResult.text,
+              ocrProcessed: true,
+              ocrPagesProcessed: ocrResult.pagesProcessed
+            })
+            continue
+          }
+        } catch (err) {
+          console.warn('[Attachments] OCR image failed, falling back to base64:', err)
+        }
+      }
+
+      // Default: base64 for vision models
       results.push({
         ref,
         base64: buffer.toString('base64')
       })
     } else if (ext === '.svg') {
-      // SVG → treat as code/text (security: no image rendering)
       const text = readTextFile(ref.path)
       results.push({ ref, textContent: text })
     } else if (ext === '.pdf') {
-      const text = await extractPdfText(ref.path)
-      results.push({ ref, textContent: text })
+      const { text, ocrProcessed, ocrPages } = await extractPdfText(ref.path)
+      results.push({
+        ref,
+        textContent: text,
+        ocrProcessed,
+        ocrPagesProcessed: ocrPages
+      })
     } else if (ext === '.docx') {
       const text = await extractDocxText(ref.path)
       results.push({ ref, textContent: text })
     } else {
-      // .txt, .md, .csv, code files → read as UTF-8
       const text = readTextFile(ref.path)
       results.push({ ref, textContent: text })
     }
@@ -230,7 +272,8 @@ export function buildContentParts(
       })
     } else if (p.textContent) {
       const sizeLabel = formatSize(p.ref.size)
-      textParts.push(`---\n📎 ${p.ref.name} (${sizeLabel})\n\`\`\`\n${p.textContent}\n\`\`\``)
+      const ocrLabel = p.ocrProcessed ? ' [OCR Mistral]' : ''
+      textParts.push(`---\n📎 ${p.ref.name} (${sizeLabel})${ocrLabel}\n\`\`\`\n${p.textContent}\n\`\`\``)
     }
   }
 

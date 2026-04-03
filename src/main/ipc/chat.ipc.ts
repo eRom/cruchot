@@ -4,10 +4,11 @@ import { z } from 'zod'
 import { streamText, tool, NoOutputGeneratedError, stepCountIs } from 'ai'
 import { nanoid } from 'nanoid'
 import { getModel } from '../llm/router'
+import { MODELS } from '../llm/registry'
 import { calculateMessageCost } from '../llm/cost-calculator'
 import { classifyError } from '../llm/errors'
 import { buildThinkingProviderOptions } from '../llm/thinking'
-import { validateAttachment, processAttachments, buildContentParts, MAX_FILES_PER_MESSAGE, type AttachmentRef } from '../llm/attachments'
+import { validateAttachment, processAttachments, buildContentParts, MAX_FILES_PER_MESSAGE, type AttachmentRef, type ProcessedAttachment } from '../llm/attachments'
 import { parseFileOperations } from '../llm/file-operations'
 import { ThinkTagParser } from '../llm/think-tag-parser'
 import { parsePlanMarkers, parseStepMarker, stripPlanMarkers } from '../llm/plan-parser'
@@ -168,6 +169,7 @@ interface ChatPrepareResult {
   rules: import('../llm/permission-engine').PermissionRule[]
   onAskApproval: (request: { toolName: string; toolArgs: Record<string, unknown> }) => Promise<'allow' | 'deny' | 'allow-session'>
   systemPromptBase: string
+  processedAttachments: ProcessedAttachment[]
 }
 
 interface ChatStreamResult {
@@ -297,9 +299,13 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
   const [attachResult, recallResult, libraryResult, skillResult] = await Promise.allSettled([
 
     // 1. Attachment processing (extract text, encode images)
+    // If model doesn't support images, prefer OCR to extract text from images
     (async (): Promise<Awaited<ReturnType<typeof processAttachments>>> => {
       if (validatedRefs.length === 0) return []
-      return processAttachments(validatedRefs)
+      const modelInfo = MODELS.find(m => m.id === modelId)
+      return processAttachments(validatedRefs, {
+        preferOcrForImages: !modelInfo?.supportsImages
+      })
     })(),
 
     // 2. Semantic memory recall (Qdrant)
@@ -660,7 +666,8 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
     resolvedWorkspacePath,
     rules,
     onAskApproval,
-    systemPromptBase
+    systemPromptBase,
+    processedAttachments
   }
 }
 
@@ -1223,7 +1230,7 @@ async function finalizeChat(
 ): Promise<void> {
   const {
     conversationId, content, modelId, providerId, roleId, conv,
-    librarySourcesForMessage
+    librarySourcesForMessage, processedAttachments
   } = prepared
   const {
     fullText, accumulatedReasoning, usage, accumulatedToolCalls,
@@ -1232,7 +1239,18 @@ async function finalizeChat(
 
   const tokensIn = usage?.inputTokens ?? 0
   const tokensOut = usage?.outputTokens ?? 0
-  const cost = calculateMessageCost(modelId, tokensIn, tokensOut)
+  const messageCost = calculateMessageCost(modelId, tokensIn, tokensOut)
+
+  // Calculate OCR cost from processed attachments
+  let ocrCost = 0
+  for (const p of processedAttachments) {
+    if (p.ocrProcessed && p.ocrPagesProcessed) {
+      const { calculateOcrCost } = await import('../llm/cost-calculator')
+      ocrCost += calculateOcrCost(p.ocrPagesProcessed)
+    }
+  }
+
+  const cost = messageCost + ocrCost
 
   // Save last used model on the conversation (for restore on switch)
   updateConversationModel(conversationId, `${providerId}::${modelId}`)
@@ -1258,6 +1276,10 @@ async function finalizeChat(
   if (fileOps.length > 0) contentData.fileOperations = fileOps.map(op => ({ ...op, status: 'pending' }))
   if (planData) contentData.plan = planData
   if (accumulatedSearchSources.length > 0) contentData.searchSources = accumulatedSearchSources
+  if (ocrCost > 0) {
+    contentData.ocrCost = ocrCost
+    contentData.ocrProcessed = true
+  }
   if (librarySourcesForMessage.length > 0) {
     contentData.librarySources = librarySourcesForMessage.map(s => ({
       id: s.id,
