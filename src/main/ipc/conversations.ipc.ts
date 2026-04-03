@@ -119,5 +119,11 @@ export function registerConversationsIpc(): void {
     setWorkspacePath(id, workspacePath)
   })
 
+  ipcMain.handle('conversations:focus', async (_event, conversationId: string) => {
+    if (!conversationId || typeof conversationId !== 'string') return
+    const { episodeTriggerService } = await import('../services/episode-trigger.service')
+    episodeTriggerService.onConversationChanged(conversationId)
+  })
+
   console.log('[IPC] Conversations handlers registered')
 }

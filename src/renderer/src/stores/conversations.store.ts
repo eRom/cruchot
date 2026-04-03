@@ -30,7 +30,10 @@ export const useConversationsStore = create<ConversationsState>((set, get) => ({
 
   setConversations: (conversations) => set({ conversations }),
 
-  setActiveConversation: (id) => set({ activeConversationId: id }),
+  setActiveConversation: (id) => {
+    set({ activeConversationId: id })
+    if (id) window.api.focusConversation(id)
+  },
 
   addConversation: (conversation) =>
     set((state) => ({
