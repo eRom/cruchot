@@ -23,7 +23,8 @@ import {
   arenaMatches,
   bardas,
   skills,
-  permissionRules
+  permissionRules,
+  episodes
 } from '../schema'
 
 /**
@@ -43,6 +44,7 @@ export function deleteConversationsProjectsImages(): { imagePaths: string[] } {
   db.delete(arenaMatches).run()
   db.delete(remoteSessions).run()
   db.delete(vectorSyncState).run()
+  db.delete(episodes).run()
   db.delete(messages).run()
   db.delete(scheduledTasks).run()
   db.delete(conversations).run()
@@ -82,6 +84,7 @@ export function factoryResetDatabase(): { imagePaths: string[] } {
   db.delete(projects).run()
   db.delete(roles).run()
   db.delete(prompts).run()
+  db.delete(episodes).run()
   db.delete(memoryFragments).run()
   db.delete(statistics).run()
   db.delete(ttsUsage).run()
