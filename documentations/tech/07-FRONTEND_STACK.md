@@ -41,6 +41,25 @@ Le **Plan Mode** introduit un ensemble de composants dédiés à la supervision 
 
 Ces composants sont intégrés dans `ChatView.tsx` et `MessageItem.tsx`. L'état du plan est géré dans le store Zustand via `updateMessagePlan`. Le toggle Plan Mode se trouve dans le panneau de droite (section Options). La commande slash `/plan` permet de forcer l'activation en cours de conversation.
 
-## 6. Internationalisation (i18n)
+## 6. Vue Recherche (SearchView)
+
+La **SearchView** est une vue dédiée à la recherche plein texte dans toutes les conversations, accessible via `Menu > Recherche` ou le raccourci `⌘F` / `Ctrl+F`.
+
+### Architecture
+
+- **`ViewMode 'search'`** : ajouté au type `ViewMode` dans `ui.store.ts` et routé dans `App.tsx` via un `React.lazy`.
+- **Composant** : `src/renderer/src/components/search/SearchView.tsx`.
+- **Raccourci clavier** : `useKeyboardShortcuts` gère `command+f,ctrl+f` via un callback `onSearch`.
+- **Entrée UserMenu** : item "Recherche" placé entre Personnaliser et Paramètres.
+
+### Fonctionnement
+
+- **Input** avec debounce 300 ms, autofocus à l'ouverture, minimum 2 caractères.
+- **Filtres** : pill `Tout / User / Assistant` (rôle) + dropdown projet.
+- **Résultats** groupés par conversation, avec snippet surligné (`<mark>`).
+- **Navigation** : clic sur un résultat → bascule sur `'chat'` et sélectionne la conversation.
+- L'état du filtre et de la query **persiste** lors des allers-retours entre vues (state dans le composant).
+
+## 7. Internationalisation (i18n)
 
 - **i18next / react-i18next** : L'infrastructure i18n est en place avec les fichiers de traduction dans `src/renderer/src/locales/`. En pratique, l'interface est principalement en français avec un support anglais partiel. L'utilisation de `useTranslation()` dans les composants reste limitée — la majorité des textes UI sont codés en dur en français.

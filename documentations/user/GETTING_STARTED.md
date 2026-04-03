@@ -46,7 +46,19 @@ Vous pouvez "forker" (dupliquer) une conversation depuis n'importe quel message 
 
 Les deux conversations restent totalement indépendantes — vous pouvez continuer l'une ou l'autre sans effet sur l'autre.
 
-## 5. Outils de Base (Tools)
+## 5. Recherche dans les Conversations
+
+Cruchot intègre une recherche plein texte dans l'historique complet de toutes vos conversations.
+
+1. Appuyez sur **`⌘F`** (macOS) ou **`Ctrl+F`** (Windows/Linux), ou cliquez sur votre avatar puis **Recherche**.
+2. Tapez votre terme — les résultats apparaissent dès 2 caractères, avec **prefix matching** (taper `arti` remonte les messages contenant `article`).
+3. Affinez avec les **filtres** :
+   - **Rôle** : Tout / User / Assistant (filtrer les messages que vous avez envoyés ou les réponses IA).
+   - **Projet** : restreindre la recherche à un projet particulier.
+4. Les résultats sont **groupés par conversation**, avec un extrait contextuel et le terme surligné en orange.
+5. Cliquez sur un résultat pour ouvrir directement la conversation.
+
+## 6. Outils de Base (Tools)
 
 Par défaut, Cruchot permet à l'IA d'interagir avec votre machine de manière sécurisée (si vous le permettez).
 - L'IA peut lire des fichiers, écrire du code, et même exécuter des scripts dans un environnement isolé (le "Sandbox").

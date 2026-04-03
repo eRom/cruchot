@@ -20,7 +20,30 @@ Le schéma totalise **27 tables** Drizzle.
 ### 1.2 Migrations et Évolutivité
 Les migrations sont gérées par des instructions SQL manuelles dans `migrate.ts` (pattern `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE ... ADD COLUMN` avec gestion d'idempotence). Elles sont exécutées automatiquement au lancement de l'application via `runMigrations()`. Cela garantit que la base de données locale de l'utilisateur est toujours à jour avec la version de l'application.
 
-## 2. Base Vectorielle et Mémoire Sémantique (Qdrant)
+## 2. Recherche Plein Texte (FTS5)
+
+Cruchot intègre une recherche plein texte rapide sur l'ensemble des messages, basée sur l'extension **FTS5** de SQLite.
+
+### 2.1 Table Virtuelle et Synchronisation
+
+Une table virtuelle `messages_fts` (FTS5) est créée avec `content='messages'` et `content_rowid='rowid'`. Des triggers SQLite (`messages_ai`, `messages_au`, `messages_ad`) maintiennent automatiquement l'index FTS5 en sync avec la table `messages` lors de chaque INSERT / UPDATE / DELETE.
+
+Le mode **prefix matching** est activé (`prefix='2,3'`), ce qui permet des recherches partielles : taper `arti` remonte les messages contenant `article`, `articles`, etc.
+
+### 2.2 Query et Filtres
+
+La fonction `searchMessages(query, filters?)` dans `src/main/db/queries/search.ts` :
+
+- **Sanitise** la query FTS5 (échappe les caractères spéciaux, ajoute le suffixe `*` pour le prefix matching).
+- Accepte un objet `SearchFilters` optionnel : `{ role?: 'user' | 'assistant', projectId?: string }`.
+- Retourne les résultats avec `snippet` FTS5 (extrait contextuel de 10 tokens, terme en gras), ainsi que `conversationId`, `conversationTitle`, `projectId`, `createdAt`, `role` et `modelId`.
+- Les résultats sont groupés par conversation côté renderer.
+
+### 2.3 IPC Handler
+
+Le handler `search.ipc.ts` expose `search:messages` — il accepte un payload `{ query: string, filters?: SearchFilters }` et retourne un tableau de `SearchResult`.
+
+## 3. Base Vectorielle et Mémoire Sémantique (Qdrant)
 
 Pour offrir des fonctionnalités de RAG (Retrieval-Augmented Generation) et de "Mémoire Sémantique" à long terme, Cruchot embarque un binaire **Qdrant** compilé pour l'OS cible.
 
