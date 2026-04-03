@@ -15,6 +15,7 @@ export interface ToolPipelineOptions {
   rules: PermissionRule[]
   conversationId?: string
   onAskApproval: (request: { toolName: string; toolArgs: Record<string, unknown> }) => Promise<'allow' | 'deny' | 'allow-session'>
+  planMode?: 'proposed' | 'approved'  // NEW
 }
 
 export function buildConversationTools(
@@ -37,6 +38,9 @@ export function buildConversationTools(
 
   const { rules, onAskApproval } = options
 
+  // Tools allowed during plan proposal phase (read-only)
+  const READ_ONLY_TOOLS = new Set(['readFile', 'listFiles', 'GrepTool', 'GlobTool', 'WebFetchTool'])
+
   // Wrap each tool with the security pipeline
   const wrapped: Record<string, unknown> = {}
   for (const [name, toolDef] of Object.entries(rawTools)) {
@@ -44,6 +48,11 @@ export function buildConversationTools(
     wrapped[name] = {
       ...original,
       execute: async (args: Record<string, unknown>) => {
+        // 0. Plan mode gate — block write tools during proposal phase
+        if (options.planMode === 'proposed' && !READ_ONLY_TOOLS.has(name)) {
+          return { error: 'Plan en attente de validation. Outil bloque en lecture seule.' }
+        }
+
         // 1. Security checks (bash only, hard block)
         if (name === 'bash') {
           const check = runBashSecurityChecks(String(args.command ?? ''))
