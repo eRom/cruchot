@@ -163,6 +163,11 @@ interface ChatPrepareResult {
   startTime: number
   conv: ReturnType<typeof getConversation>
   librarySourcesForMessage: LibraryChunkForPrompt[]
+  // Execution-phase context (needed to rebuild tools after plan approval)
+  resolvedWorkspacePath: string
+  rules: import('../llm/permission-engine').PermissionRule[]
+  onAskApproval: (request: { toolName: string; toolArgs: Record<string, unknown> }) => Promise<'allow' | 'deny' | 'allow-session'>
+  systemPromptBase: string
 }
 
 interface ChatStreamResult {
@@ -553,10 +558,13 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
     })
   }
 
+  // C1: Pass planMode to gate write tools during forced plan proposal phase
+  const planModeActive = forcedPlanMode.get(conversationId) || planMode
   const workspaceTools = buildConversationTools(resolvedWorkspacePath, {
     rules,
     conversationId,
-    onAskApproval
+    onAskApproval,
+    planMode: planModeActive ? 'proposed' : undefined
   })
 
   // Build MCP tools — wrapped with same permission pipeline as workspace tools
@@ -567,7 +575,8 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
       mcpTools[name] = wrapExternalTool(name, tool, resolvedWorkspacePath, {
         rules,
         conversationId,
-        onAskApproval
+        onAskApproval,
+        planMode: planModeActive ? 'proposed' : undefined
       })
     }
   } catch (err) {
@@ -582,7 +591,7 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
       if (perplexityApiKey) {
         const { perplexitySearch } = await import('@perplexity-ai/ai-sdk')
         const rawSearchTool = perplexitySearch({ apiKey: perplexityApiKey })
-        mcpTools = { ...mcpTools, search: wrapExternalTool('search', rawSearchTool, resolvedWorkspacePath, { rules, conversationId, onAskApproval }) }
+        mcpTools = { ...mcpTools, search: wrapExternalTool('search', rawSearchTool, resolvedWorkspacePath, { rules, conversationId, onAskApproval, planMode: planModeActive ? 'proposed' : undefined }) }
       }
     } catch (err) {
       console.warn('[Chat] Failed to inject Perplexity Search tool:', err)
@@ -623,6 +632,11 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
     ? buildThinkingProviderOptions(providerId, thinkingEffort)
     : undefined
 
+  // Capture base system prompt (from aiMessages[0]) for execution-phase prompt building
+  const systemPromptBase = (aiMessages.length > 0 && aiMessages[0].role === 'system' && typeof aiMessages[0].content === 'string')
+    ? aiMessages[0].content
+    : ''
+
   return {
     conversationId,
     content,
@@ -642,7 +656,11 @@ IMPORTANT : Quand l'utilisateur pose une question, privilegiez l'outil "search" 
     isWsConnected,
     startTime,
     conv,
-    librarySourcesForMessage
+    librarySourcesForMessage,
+    resolvedWorkspacePath,
+    rules,
+    onAskApproval,
+    systemPromptBase
   }
 }
 
@@ -874,8 +892,20 @@ async function streamChat(
       if (planEmitted) {
         const planData = parsePlanMarkers(accumulatedText)
         if (planData && planData.level === 'full' && !yoloModeByConversation.get(conversationId)) {
+          // I3: Add 5-minute timeout to plan approval
           const approvalResult = await new Promise<{ decision: 'approved' | 'cancelled'; steps: PlanStep[] }>((resolve) => {
-            pendingPlanApprovals.set(conversationId, { resolve, messageId: '' })
+            const timeout = setTimeout(() => {
+              pendingPlanApprovals.delete(conversationId)
+              resolve({ decision: 'cancelled', steps: [] })
+            }, 5 * 60 * 1000) // 5 minutes
+
+            pendingPlanApprovals.set(conversationId, {
+              resolve: (result) => {
+                clearTimeout(timeout)
+                resolve(result)
+              },
+              messageId: ''
+            })
           })
           pendingPlanApprovals.delete(conversationId)
 
@@ -886,6 +916,190 @@ async function streamChat(
             planData.approvedAt = Math.floor(Date.now() / 1000)
             planData.steps = approvalResult.steps.length > 0 ? approvalResult.steps : planData.steps
             approvedPlanData = planData
+
+            // C2: Launch execution phase — second streamText with write tools unlocked
+            const executionPrompt = buildPlanPromptBlock('execution', planData)
+            if (executionPrompt) {
+              // Rebuild tools with planMode: 'approved' (write tools unlocked)
+              const { resolvedWorkspacePath, rules, onAskApproval } = prepared
+              const execWorkspaceTools = buildConversationTools(resolvedWorkspacePath, {
+                rules,
+                conversationId,
+                onAskApproval,
+                planMode: 'approved'
+              })
+
+              // Build MCP tools for execution (also unlocked)
+              let execMcpTools: Record<string, unknown> = {}
+              try {
+                const rawMcpTools = await mcpManagerService.getToolsForChat(prepared.conv?.projectId)
+                for (const [name, t] of Object.entries(rawMcpTools)) {
+                  execMcpTools[name] = wrapExternalTool(name, t, resolvedWorkspacePath, {
+                    rules,
+                    conversationId,
+                    onAskApproval,
+                    planMode: 'approved'
+                  })
+                }
+              } catch { /* MCP tools unavailable during execution — continue without */ }
+
+              const execTools = { ...execWorkspaceTools, ...execMcpTools }
+              const execHasTools = Object.keys(execTools).length > 0
+
+              // Update plan status to running
+              planData.status = 'running'
+              win.webContents.send('chat:chunk', {
+                type: 'plan-step',
+                stepIndex: planData.steps.filter(s => s.enabled)[0]?.id ?? 1,
+                stepStatus: 'running'
+              })
+
+              // Build execution system prompt (base + execution block)
+              const execSystemPrompt = prepared.systemPromptBase + '\n\n' + executionPrompt
+
+              // Build execution messages: original conversation + plan response + execution instruction
+              const execMessages: typeof aiMessages = [
+                { role: 'system', content: execSystemPrompt },
+                ...aiMessages.filter(m => m.role !== 'system'),
+                { role: 'assistant' as const, content: accumulatedText },
+                { role: 'user' as const, content: 'Plan approuve. Execute-le maintenant.' }
+              ]
+
+              // Second streamText for execution phase
+              const execResult = streamText({
+                model,
+                messages: execMessages,
+                abortSignal,
+                temperature,
+                maxTokens,
+                topP,
+                providerOptions,
+                ...(execHasTools ? { tools: execTools, maxSteps: 200, stopWhen: stepCountIs(200) } : {}),
+                onChunk({ chunk: execChunk }) {
+                  if (execChunk.type === 'text-delta') {
+                    const segments = thinkParser.parse(execChunk.text)
+                    for (const seg of segments) {
+                      if (seg.type === 'text') {
+                        accumulatedText += seg.content
+
+                        // Parse step execution markers
+                        const stepResult = parseStepMarker(seg.content)
+                        if (stepResult) {
+                          flushBatch()
+                          win.webContents.send('chat:chunk', {
+                            type: 'plan-step',
+                            stepIndex: stepResult.index,
+                            stepStatus: stepResult.status
+                          })
+                        }
+
+                        // Strip markers from visible text
+                        const cleanText = stripPlanMarkers(seg.content)
+                        if (cleanText.length > 0) {
+                          batchBuffer += cleanText
+                          startBatchTimer()
+                        }
+                      } else {
+                        flushBatch()
+                        accumulatedReasoning += seg.content
+                        win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: seg.content })
+                        if (isWsConnected) remoteServerService.pushReasoningChunk(seg.content)
+                      }
+                    }
+                  } else if (execChunk.type === 'tool-call') {
+                    flushBatch()
+                    toolStartTimes.set(execChunk.toolCallId, Date.now())
+                    accumulatedToolCalls.push({
+                      toolName: execChunk.toolName,
+                      args: execChunk.args as Record<string, unknown>,
+                      status: 'running'
+                    })
+                    win.webContents.send('chat:chunk', {
+                      type: 'tool-call',
+                      toolName: execChunk.toolName,
+                      toolArgs: execChunk.args,
+                      toolCallId: execChunk.toolCallId
+                    })
+                  } else if (execChunk.type === 'tool-result') {
+                    const toolResult = execChunk as { type: 'tool-result'; toolName: string; toolCallId: string; output: unknown }
+                    const isError = toolResult.output != null && typeof toolResult.output === 'object' && 'error' in (toolResult.output as Record<string, unknown>)
+                    const { result: toolResultText, resultMeta } = extractToolMeta(toolResult.toolName, toolResult.output)
+                    const toolStart = toolStartTimes.get(toolResult.toolCallId)
+                    if (toolStart) {
+                      resultMeta.duration = Date.now() - toolStart
+                      toolStartTimes.delete(toolResult.toolCallId)
+                    }
+                    const tc = accumulatedToolCalls.find(t => t.toolName === toolResult.toolName && t.status === 'running')
+                    if (tc) {
+                      tc.status = isError ? 'error' : 'success'
+                      if (isError) tc.error = String((toolResult.output as Record<string, unknown>).error)
+                      tc.result = toolResultText
+                      tc.resultMeta = Object.keys(resultMeta).length > 0 ? resultMeta : undefined
+                    }
+                    flushBatch()
+                    win.webContents.send('chat:chunk', {
+                      type: 'tool-result',
+                      toolName: toolResult.toolName,
+                      toolCallId: toolResult.toolCallId,
+                      toolIsError: isError,
+                      toolResult: toolResultText,
+                      toolResultMeta: Object.keys(resultMeta).length > 0 ? resultMeta : undefined
+                    })
+                    if (isRemoteConnected) {
+                      telegramBotService.sendToolResult(toolResult.toolName, toolResult.output).catch(() => {})
+                    }
+                    if (isWsConnected) {
+                      remoteServerService.sendToolResult(toolResult.toolName, toolResult.output).catch(() => {})
+                    }
+                  }
+                }
+              })
+
+              // Consume execution stream
+              try {
+                await execResult.text
+
+                // Flush remaining from thinkParser
+                const remaining = thinkParser.flush()
+                for (const seg of remaining) {
+                  if (seg.type === 'text') {
+                    accumulatedText += seg.content
+                    const cleanRemainder = stripPlanMarkers(seg.content)
+                    if (cleanRemainder.length > 0) {
+                      batchBuffer += cleanRemainder
+                    }
+                  } else {
+                    accumulatedReasoning += seg.content
+                    win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: seg.content })
+                  }
+                }
+                stopBatchTimer()
+
+                // Merge execution usage
+                const execUsage = await execResult.usage
+                if (execUsage) {
+                  const mainUsage = await result.usage
+                  // Combine both phase usages (overwrite — finalize will use these)
+                  if (mainUsage) {
+                    mainUsage.inputTokens = (mainUsage.inputTokens ?? 0) + (execUsage.inputTokens ?? 0)
+                    mainUsage.outputTokens = (mainUsage.outputTokens ?? 0) + (execUsage.outputTokens ?? 0)
+                  }
+                }
+              } catch (execErr) {
+                stopBatchTimer()
+                if (execErr instanceof NoOutputGeneratedError) {
+                  if (execErr.cause) throw execErr.cause
+                } else {
+                  throw execErr
+                }
+              }
+
+              // C3: Mark plan as done after execution
+              planData.status = 'done'
+              planData.completedAt = Math.floor(Date.now() / 1000)
+              approvedPlanData = planData
+              win.webContents.send('chat:chunk', { type: 'plan-done' })
+            }
           }
         } else if (planData) {
           // Light plan or YOLO mode — auto-approve
@@ -1231,7 +1445,10 @@ export function registerChatIpc(): void {
       } else if (parsed.data.action === 'skip') {
         pending.resolve({ decision: 'approved', steps: [] })
       }
-      // 'retry' is handled by re-sending the same step — no resolver action needed
+      // I4: retry re-approves the plan to allow the failed step to be re-attempted
+      if (parsed.data.action === 'retry') {
+        pending.resolve({ decision: 'approved', steps: [] })
+      }
     }
   })
 

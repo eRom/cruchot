@@ -104,7 +104,7 @@ export interface PlanData {
 }
 
 export interface StreamChunk {
-  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'tool-result' | 'tool-approval' | 'tool-approval-resolved' | 'plan-proposed' | 'plan-decision' | 'plan-step' | 'plan-done' | 'finish' | 'error'
+  type: 'start' | 'text-delta' | 'reasoning-delta' | 'tool-call' | 'tool-result' | 'tool-approval' | 'tool-approval-resolved' | 'plan-proposed' | 'plan-step' | 'plan-done' | 'finish' | 'error'
   content?: string
   error?: string
   toolName?: string
@@ -115,8 +115,6 @@ export interface StreamChunk {
   decision?: 'allow' | 'deny'
   // Plan fields
   plan?: PlanData
-  planDecision?: 'approved' | 'cancelled'
-  planSteps?: PlanStep[]
   stepIndex?: number
   stepStatus?: 'running' | 'done' | 'failed' | 'skipped'
   usage?: {

@@ -237,6 +237,11 @@ export function useStreaming() {
               finishContentData.searchSources = chunk.searchSources
             }
 
+            // I5: Merge with existing contentData to preserve plan data
+            const existingMsg = useMessagesStore.getState().messages.find(m => m.id === msgId)
+            const existingContentData = (existingMsg?.contentData ?? {}) as Record<string, unknown>
+            const mergedContentData = { ...existingContentData, ...finishContentData }
+
             updateMessage(msgId, {
               isStreaming: false,
               streamPhase: null,
@@ -246,8 +251,8 @@ export function useStreaming() {
               tokensOut: chunk.usage?.completionTokens,
               cost: chunk.cost,
               responseTimeMs: chunk.responseTimeMs,
-              ...(Object.keys(finishContentData).length > 0
-                ? { contentData: finishContentData }
+              ...(Object.keys(mergedContentData).length > 0
+                ? { contentData: mergedContentData }
                 : {})
             })
           }

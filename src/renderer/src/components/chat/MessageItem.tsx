@@ -517,7 +517,7 @@ function MessageItem({ message, isStreaming = false, conversationId }: MessageIt
           <ToolCallBlock toolCalls={message.toolCalls} isStreaming={isStreaming} />
         )}
 
-        {!isUser && message.contentData?.plan && (
+        {!isUser && message.contentData?.plan && conversationId && (
           <PlanMessage
             plan={message.contentData.plan as any}
             messageId={message.id}

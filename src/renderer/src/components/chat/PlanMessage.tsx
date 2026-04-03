@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Check, X, Play, ChevronRight, ChevronDown, Loader2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -33,7 +33,7 @@ export function PlanMessage({ plan, messageId, conversationId, isStreaming }: Pl
   const [expanded, setExpanded] = useState(plan.status !== 'done' && plan.status !== 'cancelled')
 
   // Sync with live updates during streaming
-  useMemo(() => {
+  useEffect(() => {
     if (plan.status === 'running' || plan.status === 'done') {
       setLocalSteps(plan.steps)
     }

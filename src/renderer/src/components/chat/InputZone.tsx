@@ -731,7 +731,9 @@ export function InputZone({
         attachments: attachmentRefsForIpc.length > 0 ? attachmentRefsForIpc : undefined,
         fileContexts: fileContexts && fileContexts.length > 0 ? fileContexts : undefined,
         searchEnabled: searchEnabled || undefined,
-        libraryId: activeLibraryId || undefined
+        libraryId: activeLibraryId || undefined,
+        // I6: /plan slash command activates forced plan mode
+        planMode: slashCommandName === 'plan' || undefined
       })
     } catch {
       // Erreur geree par le stream handler dans le main

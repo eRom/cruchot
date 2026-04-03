@@ -105,6 +105,11 @@ export function wrapExternalTool(
   return {
     ...toolDef,
     execute: async (args: Record<string, unknown>) => {
+      // I2: Plan mode gate — block MCP tools during proposal phase
+      if (options.planMode === 'proposed') {
+        return { error: 'Plan en attente de validation. Outil MCP bloque en lecture seule.' }
+      }
+
       const decision = evaluatePermission(
         { toolName: name, toolArgs: args, workspacePath, conversationId },
         rules
