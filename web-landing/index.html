@@ -591,9 +591,6 @@
 
             /* ---- Privacy section ---- */
             .privacy-section {
-                background: var(--bg-elevated);
-                border-top: 1px solid var(--border);
-                border-bottom: 1px solid var(--border);
             }
             .privacy-grid {
                 display: grid;
@@ -1600,7 +1597,7 @@
             </div>
         </section>
 
-        <!-- ======== Feature cards grid ======== -->
+        <!-- ======== Feature: Recherche ======== -->
         <section
             style="
                 background: var(--bg-elevated);
@@ -1608,6 +1605,66 @@
                 border-bottom: 1px solid var(--border);
             "
         >
+            <div class="section-inner">
+                <div class="feature-row reverse reveal">
+                    <div class="feature-text">
+                        <div class="section-label" style="color: var(--cyan)">
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="M21 21l-4.35-4.35" />
+                            </svg>
+                            Recherche
+                        </div>
+                        <h2 class="section-title">
+                            Recherche plein texte<br />dans toutes vos conversations
+                        </h2>
+                        <p class="section-desc">
+                            Retrouvez n'importe quelle information en quelques
+                            frappes. La recherche FTS5 indexe chaque message et
+                            affiche les resultats groupes par conversation avec
+                            surlignage des termes trouves.
+                        </p>
+                        <ul class="feature-list">
+                            <li>
+                                <span class="check">&#10003;</span> Raccourci CMD+F
+                                depuis n'importe ou
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Prefix matching
+                                (<code>arti</code> trouve <code>article</code>)
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Filtres par role
+                                (user/assistant) et par projet
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Resultats groupes
+                                avec snippet surligne
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="feature-media">
+                        <img
+                            src="screenshots/CleanShot 2026-04-03 at 17.31.12@2x.png"
+                            alt="Recherche plein texte FTS5 dans Cruchot avec prefix matching et filtres"
+                            width="1920"
+                            height="1080"
+                            loading="lazy"
+                        />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======== Feature cards grid ======== -->
+        <section>
             <div class="section-inner" style="text-align: center">
                 <div
                     class="section-label reveal"
@@ -1777,7 +1834,13 @@
         </section>
 
         <!-- ======== Screenshots: Stats + Remote + Tasks ======== -->
-        <section>
+        <section
+            style="
+                background: var(--bg-elevated);
+                border-top: 1px solid var(--border);
+                border-bottom: 1px solid var(--border);
+            "
+        >
             <div class="section-inner">
                 <div
                     class="showcase-grid"
@@ -1900,7 +1963,14 @@
         </section>
 
         <!-- ======== Tech Stack ======== -->
-        <section style="text-align: center">
+        <section
+            style="
+                text-align: center;
+                background: var(--bg-elevated);
+                border-top: 1px solid var(--border);
+                border-bottom: 1px solid var(--border);
+            "
+        >
             <div class="section-inner">
                 <div
                     class="section-label reveal"
