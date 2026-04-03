@@ -22,6 +22,8 @@ import { remoteServerService } from '../services/remote-server.service'
 import { buildMemoryBlock } from '../db/queries/memory-fragments'
 import { qdrantMemoryService } from '../services/qdrant-memory.service'
 import { buildSemanticMemoryBlock } from '../llm/memory-prompt'
+import { buildEpisodeProfileBlock } from '../llm/episode-prompt'
+import { episodeTriggerService } from '../services/episode-trigger.service'
 import { buildLibraryContextBlock, type LibraryChunkForPrompt } from '../llm/library-prompt'
 import { buildSkillContextBlock } from '../llm/skill-prompt'
 import { DEFAULT_SYSTEM_PROMPT } from '../llm/system-prompt'
@@ -261,6 +263,7 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
     providerId,
     contentData: Object.keys(userContentData).length > 0 ? userContentData : undefined
   })
+  episodeTriggerService.onMessageSent(conversationId)
   vcrEventBus.emitVcr('user-message', { content, attachments: validatedRefs.map(r => r.name) })
 
   // Touch conversation updatedAt
@@ -431,6 +434,11 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
   if (semanticMemoryBlock) {
     if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
     combinedSystemPrompt += semanticMemoryBlock
+  }
+  const episodeProfileBlock = buildEpisodeProfileBlock(conv?.projectId)
+  if (episodeProfileBlock) {
+    if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
+    combinedSystemPrompt += episodeProfileBlock
   }
   if (memoryBlock) {
     if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'

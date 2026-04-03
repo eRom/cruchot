@@ -86,6 +86,14 @@ async function lazyInitServices(mainWindow: BrowserWindow): Promise<void> {
   } catch (err) {
     console.error('[QdrantMemory] Lazy init failed:', err)
   }
+
+  // Episodic memory trigger
+  try {
+    const { episodeTriggerService } = await import('./services/episode-trigger.service')
+    episodeTriggerService.init()
+  } catch (err) {
+    console.error('[EpisodeTrigger] Lazy init failed:', err)
+  }
 }
 
 app.whenReady().then(() => {
@@ -213,6 +221,15 @@ app.on('before-quit', async (event) => {
   console.log('[App] Graceful shutdown starting...')
 
   try {
+    // Flush episodic memory extraction
+    try {
+      const { episodeTriggerService } = await import('./services/episode-trigger.service')
+      await episodeTriggerService.onAppQuitting()
+      episodeTriggerService.dispose()
+    } catch (err) {
+      console.error('[EpisodeTrigger] Quit flush failed:', err)
+    }
+
     // Stop all registered services in LIFO order
     await serviceRegistry.stopAll()
 
