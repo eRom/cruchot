@@ -189,7 +189,18 @@ export function registerWorkspaceIpc(): void {
     const resolved = parsed.data.startsWith('~/')
       ? path.join(os.homedir(), parsed.data.slice(2))
       : path.resolve(parsed.data)
-    await shell.openPath(resolved)
+    // Ensure the directory exists before trying to open it
+    const fs = await import('node:fs/promises')
+    try {
+      await fs.access(resolved)
+    } catch {
+      await fs.mkdir(resolved, { recursive: true })
+    }
+    const errorMessage = await shell.openPath(resolved)
+    if (errorMessage) {
+      console.error('[workspace:openInFinder] shell.openPath failed:', errorMessage)
+      throw new Error(errorMessage)
+    }
   })
 
   // ── Get workspace info ─────────────────────────────────

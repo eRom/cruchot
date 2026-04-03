@@ -14,17 +14,13 @@ export function WorkspaceSection() {
   const rootPath = useWorkspaceStore((s) => s.rootPath)
   const [yoloMode, setYoloLocal] = useState(false)
 
-  const [workspacePath, setWorkspacePath] = useState(rootPath || DEFAULT_SANDBOX)
+  // Derive workspacePath directly from store — no local state, no useEffect sync lag
+  const workspacePath = rootPath || DEFAULT_SANDBOX
 
   useEffect(() => {
     if (!activeConversationId) return
     window.api.getYoloMode(activeConversationId).then(setYoloLocal).catch(() => {})
   }, [activeConversationId])
-
-  useEffect(() => {
-    if (rootPath) setWorkspacePath(rootPath)
-    else setWorkspacePath(DEFAULT_SANDBOX)
-  }, [rootPath])
 
   const isBusy = isStreaming
 
@@ -34,7 +30,8 @@ export function WorkspaceSection() {
       const chosenPath = await window.api.workspaceSelectFolder()
       if (chosenPath) {
         await window.api.conversationSetWorkspacePath(activeConversationId, chosenPath)
-        setWorkspacePath(chosenPath)
+        // Immediate store update for UI, then async tree fetch
+        useWorkspaceStore.getState().setRootPath(chosenPath)
         useWorkspaceStore.getState().openWorkspace(chosenPath)
       }
     } catch { /* silent */ }
@@ -43,7 +40,9 @@ export function WorkspaceSection() {
   const handleOpenInFinder = useCallback(async () => {
     try {
       await window.api.workspaceOpenInFinder(workspacePath)
-    } catch { /* silent */ }
+    } catch (err) {
+      console.warn('[WorkspaceSection] openInFinder failed:', err)
+    }
   }, [workspacePath])
 
   const handleYoloToggle = useCallback(async () => {
