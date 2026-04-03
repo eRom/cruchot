@@ -728,6 +728,72 @@ export interface CustomModelInfo {
 export interface LocalProviderStatus { ollama: boolean; lmstudio: boolean }
 export interface LocalProviderTestResult { reachable: boolean; modelCount: number; models: ModelInfo[] }
 
+// ── VCR Recording ─────────────────────────────────────
+export interface VcrRecordingHeader {
+  recordingId: string
+  conversationId: string
+  modelId: string
+  providerId: string
+  workspacePath: string
+  roleId?: string
+  fullCapture: boolean
+  startedAt: number
+  duration?: number
+  eventCount?: number
+  toolCallCount?: number
+  metadata: { appVersion: string }
+}
+
+export interface VcrEvent {
+  offsetMs: number
+  type: VcrEventType
+  data: Record<string, unknown>
+}
+
+export type VcrEventType =
+  | 'session-start'
+  | 'session-stop'
+  | 'user-message'
+  | 'text-delta'
+  | 'reasoning-delta'
+  | 'tool-call'
+  | 'tool-result'
+  | 'permission-decision'
+  | 'permission-response'
+  | 'plan-proposed'
+  | 'plan-approved'
+  | 'plan-step'
+  | 'file-diff'
+  | 'finish'
+
+export interface VcrRecording {
+  header: VcrRecordingHeader
+  events: VcrEvent[]
+}
+
+export interface ActiveRecordingInfo {
+  recordingId: string
+  conversationId: string
+  startedAt: number
+  eventCount: number
+  toolCallCount: number
+  fullCapture: boolean
+}
+
+export interface RecordingState {
+  recording: boolean
+  info?: ActiveRecordingInfo
+}
+
+export interface ToolResultMeta {
+  duration?: number
+  exitCode?: number
+  lineCount?: number
+  byteSize?: number
+  matchCount?: number
+  fileCount?: number
+}
+
 // L'API exposee au renderer via contextBridge
 export interface ElectronAPI {
   // Chat
