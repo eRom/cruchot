@@ -29,6 +29,12 @@ Chaque appel d'outil passe par un pipeline de sécurité à 5 étages :
 
 Le **Mode YOLO** (activable par conversation dans le panneau de droite) bypasse uniquement l'étape 5 (Ask) — les security checks et deny rules restent actifs. Le flag YOLO est géré côté main process (`Map<conversationId, boolean>`), pas dans le payload IPC.
 
+### 1.3 Plan Mode — Porte Read-Only
+
+Le **Plan Mode** ajoute une porte supplémentaire **en amont** du pipeline de sécurité. Lorsque le mode est actif et que la phase de planification est en cours, tous les outils d'écriture (`writeFile`, `FileEdit`, `bash` avec commandes mutantes) sont bloqués avec l'erreur `PLAN_MODE_READ_ONLY`. Seuls les outils de lecture (`readFile`, `listFiles`, `GrepTool`, `GlobTool`) et `WebFetchTool` restent accessibles.
+
+Cette porte est levée automatiquement dès que le LLM bascule en phase d'exécution (signalé par les marqueurs `<plan_start>` / `<plan_end>` dans le stream). La logique est dans `src/main/llm/tools/index.ts`.
+
 ## 2. Les Skills (Compétences Locales)
 
 Les Skills sont des "mini-applications" ou des scripts encapsulés que le LLM peut invoquer. Ils sont gérés par le `skill.service.ts`.

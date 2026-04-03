@@ -31,6 +31,16 @@ Le cœur de la valeur de Cruchot réside dans sa capacité à afficher correctem
 - **Diagrammes** : Support natif du rendu `mermaid` pour générer des diagrammes d'architecture, des flux de données ou des mindmaps directement dans le chat.
 - **Graphiques** : `recharts` est utilisé pour afficher les statistiques d'utilisation (tokens, coûts) dans le panneau de paramètres.
 
-## 5. Internationalisation (i18n)
+## 5. Plan Mode — Composants UI
+
+Le **Plan Mode** introduit un ensemble de composants dédiés à la supervision de la planification du LLM.
+
+- **`PlanMessage`** (`src/renderer/src/components/chat/PlanMessage.tsx`) : Affiche le plan structuré (`PlanData`) dans le fil de messages, avec 4 états visuels : `planning` (en cours), `ready` (en attente validation), `executing` (exécution) et `done` (terminé).
+- **`PlanStickyIndicator`** : Bandeau collant affiché en haut de `ChatView` pendant la phase d'exécution — indique la progression (étape courante / total) et permet d'annuler.
+- **`PlanErrorBanner`** : Bannière d'erreur affichée si le plan échoue ou si un outil est bloqué par la porte read-only.
+
+Ces composants sont intégrés dans `ChatView.tsx` et `MessageItem.tsx`. L'état du plan est géré dans le store Zustand via `updateMessagePlan`. Le toggle Plan Mode se trouve dans le panneau de droite (section Options). La commande slash `/plan` permet de forcer l'activation en cours de conversation.
+
+## 6. Internationalisation (i18n)
 
 - **i18next / react-i18next** : L'infrastructure i18n est en place avec les fichiers de traduction dans `src/renderer/src/locales/`. En pratique, l'interface est principalement en français avec un support anglais partiel. L'utilisation de `useTranslation()` dans les composants reste limitée — la majorité des textes UI sont codés en dur en français.
