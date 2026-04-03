@@ -14,6 +14,7 @@ Ajoute une nouvelle section feature avec screenshot a `web-landing/index.html`.
 
 La landing page est un fichier HTML statique unique : `web-landing/index.html`.
 Deploy Vercel : https://cruchot.vercel.app
+Domain : https://cruchot.romain-ecarnot.com
 
 ---
 

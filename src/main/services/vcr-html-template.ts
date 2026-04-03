@@ -219,7 +219,7 @@ export function generateVcrHtml(recording: VcrRecording): string {
   </div>
 
   <footer id="vcr-branding">
-    Recorded with <a href="https://cruchot.vercel.app" target="_blank">Cruchot</a>
+    Recorded with <a href="https://cruchot.romain-ecarnot.com" target="_blank">Cruchot</a>
     <span class="dot">·</span>
     ${recordedAt}
     <span class="dot">·</span>
