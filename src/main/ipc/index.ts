@@ -38,6 +38,7 @@ import { registerBardaHandlers } from './barda.ipc'
 import { registerSkillsIpc } from './skills.ipc'
 import { registerPermissionsIpc } from './permissions.ipc'
 import { registerVcrIpc } from './vcr.ipc'
+import { registerEpisodeIpc } from './episode.ipc'
 
 
 /**
@@ -151,6 +152,9 @@ export function registerAllIpcHandlers(): void {
   // ── VCR Recording ──────────────────────────────────────────
   registerVcrIpc()
 
+  // ── Episodes (episodic memory) ────────────────────────────
+  registerEpisodeIpc()
+
   // ── Settings ────────────────────────────────────────
   const ALLOWED_SETTING_KEYS = new Set([
     // User profile
@@ -187,6 +191,8 @@ export function registerAllIpcHandlers(): void {
     'ollama:baseUrl',
     // Semantic memory
     'multi-llm:semantic-memory-enabled',
+    // Episodic memory
+    'multi-llm:episode-model-id',
     // Legacy (kept for migration)
     'onboarding_completed',
   ])
