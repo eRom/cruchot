@@ -89,7 +89,40 @@ La mémoire sémantique retrouve les passages de vos **anciennes conversations**
 
 ---
 
-## 5. Nettoyage des Données
+## 5. Consolidation Onirique (Onglet Oneiric)
+
+La consolidation onirique est un processus de **maintenance automatique** de votre mémoire. Elle s'exécute en arrière-plan pour nettoyer, fusionner et enrichir les données accumulées par les deux premières couches de mémoire (sémantique et épisodique).
+
+### Qu'est-ce que ça fait ?
+
+En 3 phases séquentielles :
+
+1. **Phase sémantique** — Analyse les chunks Qdrant de vos conversations et fusionne ou supprime ceux qui sont redondants ou obsolètes. Résultat : une base vectorielle plus propre, des recherches de meilleure qualité.
+2. **Phase épisodique** — Révise les épisodes existants : baisse la confiance des épisodes devenus obsolètes, fusionne les doublons.
+3. **Phase croisée** — Croise les chunks récents avec les épisodes pour faire émerger de nouvelles observations comportementales que les extractions individuelles n'auraient pas capturées.
+
+### Quand se déclenche-t-elle ?
+
+La consolidation peut se déclencher de trois façons :
+
+1. **Planification automatique** — Daily (heure configurable) ou par intervalle (toutes les N heures).
+2. **À la fermeture de l'application** — si la dernière consolidation date de plus d'1 heure.
+3. **Manuellement** — bouton "Consolider maintenant" dans l'onglet Oneiric.
+
+### L'onglet Oneiric
+
+Dans **Personnaliser > Mémoire > Oneiric** :
+
+- **Sélecteur de modèle** : choisissez le modèle LLM qui effectue la consolidation. Un modèle de taille moyenne est recommandé (ex: `gemini-2.0-flash`, `gpt-4o`, `claude-3-5-sonnet`) — la qualité de l'analyse compte plus que pour l'extraction épisodique.
+- **Configuration du schedule** : activez le mode automatique, choisissez `daily` ou `interval`, configurez l'heure.
+- **Consolider maintenant** : lance un run manuel immédiat.
+- **Historique des runs** : chaque run affiché avec statut, déclencheur, durée et statistiques (chunks mergés/supprimés, épisodes créés/nettoyés, coût LLM).
+
+> La consolidation peut être annulée à tout moment depuis l'onglet. Elle est conçue pour être silencieuse — vous pouvez continuer à utiliser Cruchot pendant qu'elle tourne.
+
+---
+
+## 7. Nettoyage des Données
 
 Dans **Personnaliser > Mémoire**, deux zones de nettoyage :
 

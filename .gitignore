@@ -19,6 +19,7 @@ dist/
 *.key
 electron-builder.env
 .claude/worktrees/*
+.claude/settings.local.json
 
 # Drizzle migrations (non utilisees — tables creees manuellement dans migrate.ts)
 drizzle/
@@ -42,3 +43,4 @@ pop.txt
 .memory/
 feature-research-*.md
 docs/
+improvement-research-s52.md

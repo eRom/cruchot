@@ -43,7 +43,58 @@ Le LLM reçoit les épisodes existants en contexte pour assurer la déduplicatio
 
 Le modèle d'extraction est **configurable par l'utilisateur** depuis l'onglet Profil de la MemoryView (sélecteur provider::modelId). Un petit modèle léger est recommandé (l'extraction est silencieuse en arrière-plan).
 
-## 2. Serveur Remote Telegram (`telegram-bot.service.ts`)
+## 2. Consolidation Onirique (`oneiric.service.ts`, `oneiric-trigger.service.ts`)
+
+La consolidation onirique est un pipeline de maintenance automatique de la mémoire en **3 phases séquentielles**. Elle s'exécute silencieusement en arrière-plan pour nettoyer et enrichir les deux couches de mémoire (Qdrant + épisodes).
+
+### 2.1 Déclenchement (`OneiricTriggerService`)
+
+Deux modes de déclenchement :
+
+- **Planifié** : configurable en mode `daily` (heure précise) ou `interval` (toutes les N heures). Le timer est un simple `setTimeout` Node.js qui se reprogramme après chaque run.
+- **Fermeture app** : `onAppQuitting()` lance une consolidation `quit` si le dernier run date de plus d'1 heure. Timeout de 30 secondes pour ne pas bloquer la fermeture.
+
+Guards intégrés : si `isRunning = true`, le run est ignoré. Si aucun modèle n'est configuré (`multi-llm:oneiric-model-id`), un run `failed` est créé en DB pour traçabilité.
+
+### 2.2 Pipeline 3 phases (`OneiricService`)
+
+#### Phase 1 — Sémantique
+
+- Charge les conversations Qdrant **non encore consolidées** (`lastOneiricRunAt IS NULL OR updatedAt > lastOneiricRunAt`), max 30 par run.
+- Pour chaque conversation avec ≥ 3 chunks : envoie les chunks (max 100) au LLM avec `SEMANTIC_CONSOLIDATION_PROMPT`.
+- Le LLM retourne des actions JSON : `merge` (fusionner N chunks en 1 avec re-embedding), `delete` (supprimer un chunk obsolète), `keep` (no-op).
+- Les chunks merged sont re-embeddés localement et upserté dans Qdrant avec les métadonnées préservées.
+
+#### Phase 2 — Épisodique
+
+- Attend la fin des extractions épisodiques en cours (`episodeTriggerService.isExtracting()`, timeout 30s).
+- Charge tous les épisodes actifs et leur présente au LLM avec `EPISODIC_CONSOLIDATION_PROMPT` (avec âge, confiance, occurrences).
+- Actions LLM : `stale` (diminuer la confiance d'un épisode obsolète), `merge` (fusionner des doublons), `delete` (supprimer un épisode caduc).
+
+#### Phase 3 — Croisée
+
+- Croise les épisodes actifs avec les **chunks récents des 7 derniers jours** (max 50) via `CROSS_CONSOLIDATION_PROMPT`.
+- Actions LLM : `create` (créer un nouvel épisode synthétisé, seuil de confiance minimum 0.5, max 10 nouveaux épisodes par run), `reinforce` (augmenter la confiance d'un épisode), `update` (réécrire un épisode).
+
+### 2.3 Traçabilité (`oneiric_runs`)
+
+Chaque run est enregistré dans la table `oneiric_runs` avec statut (`running` | `completed` | `failed` | `cancelled`), déclencheur, modèle utilisé, statistiques détaillées (chunks/épisodes analysés, mergés, supprimés, créés) et coût LLM. Un `cleanupOrphanRuns()` marque les runs `running` restants comme `failed` au redémarrage (crash recovery).
+
+### 2.4 IPC (`oneiric.ipc.ts`)
+
+| Channel | Description |
+|---------|-------------|
+| `oneiric:consolidate-now` | Lance une consolidation manuelle |
+| `oneiric:cancel` | Annule via `AbortController` |
+| `oneiric:status` | Retourne `isRunning` + dernier run complété |
+| `oneiric:list-runs` | Liste tous les runs (historique) |
+| `oneiric:get-run` | Détail d'un run spécifique |
+| `oneiric:set-model` | Configure le modèle + refresh schedule |
+| `oneiric:set-schedule` | Configure le schedule + refresh schedule |
+
+La progression est pushée au renderer via `oneiric:progress` events (phase 1/2/3 en cours).
+
+## 3. Serveur Remote Telegram (`telegram-bot.service.ts`)
 
 Ce service permet à l'utilisateur de continuer ses conversations Cruchot depuis son smartphone via l'application Telegram, en utilisant sa propre machine locale comme "serveur".
 
@@ -59,7 +110,7 @@ Pour simuler le streaming typique des LLMs, le service met à jour le message Te
 - **Debouncing** : Les mises à jour de l'API Telegram sont regroupées (debounce de 500ms) pour éviter le *Rate Limiting* (erreur 429).
 - **Validation d'Outils (Inline Keyboard)** : Si le LLM utilise un outil nécessitant une permission (`Ask`), le bot envoie un message avec des boutons interactifs "Approuver" ou "Refuser" directement dans Telegram.
 
-## 3. Planificateur de Tâches (`scheduler.service.ts`)
+## 4. Planificateur de Tâches (`scheduler.service.ts`)
 
 Cruchot peut exécuter des requêtes LLM de manière autonome et récurrente.
 
@@ -72,7 +123,7 @@ Le planificateur (`SchedulerService`) n'utilise pas Cron, mais les timers natifs
 ### 2.2 Exécution (`task-executor.ts`)
 Lorsqu'un timer se déclenche, le `TaskExecutor` crée une conversation invisible (ou reprend la précédente), injecte le prompt de la tâche et déclenche le routeur LLM. Si des outils (MCP ou Bash) sont configurés en auto-approve, la tâche peut interagir avec le système de fichiers ou des APIs pendant la nuit, et l'utilisateur retrouvera le résultat au matin dans l'interface.
 
-## 4. VCR Recording (`vcr-recorder.service.ts`, `vcr-anonymizer.service.ts`, `vcr-html-exporter.service.ts`) (`vcr-recorder.service.ts`, `vcr-anonymizer.service.ts`, `vcr-html-exporter.service.ts`)
+## 5. VCR Recording (`vcr-recorder.service.ts`, `vcr-anonymizer.service.ts`, `vcr-html-exporter.service.ts`) (`vcr-recorder.service.ts`, `vcr-anonymizer.service.ts`, `vcr-html-exporter.service.ts`)
 
 Le système VCR (Video Cassette Recorder) permet d'enregistrer une session de chat complète — messages, streaming LLM, appels d'outils, décisions de permissions, étapes de Plan Mode — et de l'exporter en deux formats partageables.
 
@@ -116,7 +167,7 @@ Types d'événements capturés : `session-start`, `session-stop`, `user-message`
 
 L'état est pushé au renderer via `vcr:recording-state` event après start/stop.
 
-## 5. Synthèse Vocale (Text-to-Speech) (`tts.service.ts`)
+## 6. Synthèse Vocale (Text-to-Speech) (`tts.service.ts`)
 
 Cruchot intègre des capacités de lecture vocale des messages via les APIs cloud d'OpenAI et de Google (Gemini).
 

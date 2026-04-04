@@ -15,7 +15,7 @@ Le schéma est complet et gère toutes les entités de l'application :
 - **Outils & Extension** : `mcpServers`, `skills`, `permissionRules`, `bardas`, `customModels`.
 - **Opérations** : `scheduledTasks`, `statistics`, `ttsUsage`, `arenaMatches`, `remoteSessions`.
 
-Le schéma totalise **28 tables** Drizzle (dont la table `episodes` ajoutée en S55).
+Le schéma totalise **29 tables** Drizzle (dont la table `episodes` ajoutée en S55, et `oneiric_runs` en S56).
 
 ### 1.2 Migrations et Évolutivité
 Les migrations sont gérées par des instructions SQL manuelles dans `migrate.ts` (pattern `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE ... ADD COLUMN` avec gestion d'idempotence). Elles sont exécutées automatiquement au lancement de l'application via `runMigrations()`. Cela garantit que la base de données locale de l'utilisateur est toujours à jour avec la version de l'application.
@@ -75,6 +75,26 @@ Règles d'injection (`episode-prompt.ts`) : `isActive = true`, `confidence >= 0.
 | `episode:extract-now` | Force extraction manuelle (debug/test) |
 
 Validation Zod sur tous les payloads. 7 méthodes `window.api.episode*` exposées via `contextBridge`.
+
+### 2.5 Table `oneiric_runs`
+
+Traçabilité de chaque pipeline de consolidation onirique :
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `id` | text PK | nanoid |
+| `status` | text | enum: `running`, `completed`, `failed`, `cancelled` |
+| `trigger` | text | enum: `scheduled`, `manual`, `quit` |
+| `modelId` | text | Modèle LLM utilisé (format `providerId::modelId`) |
+| `chunksAnalyzed/Merged/Deleted` | integer | Stats phase sémantique |
+| `episodesAnalyzed/Reinforced/Staled/Deleted/Created/Updated` | integer | Stats phases épisodique + croisée |
+| `tokensIn` / `tokensOut` / `cost` | integer/real | Consommation LLM totale |
+| `durationMs` | integer | Durée totale du run |
+| `errorMessage` | text \| null | Message d'erreur si `failed` |
+| `actions` | text JSON | Tableau détaillé des actions appliquées (`OneiricAction[]`) |
+| `startedAt` / `completedAt` | integer | Timestamps |
+
+Colonne `lastOneiricRunAt` ajoutée sur la table `conversations` : timestamp du dernier passage de la phase sémantique. Sert à identifier les conversations à consolider (`lastOneiricRunAt IS NULL OR updatedAt > lastOneiricRunAt`).
 
 ## 3. Recherche Plein Texte (FTS5)
 
