@@ -94,6 +94,14 @@ async function lazyInitServices(mainWindow: BrowserWindow): Promise<void> {
   } catch (err) {
     console.error('[EpisodeTrigger] Lazy init failed:', err)
   }
+
+  // Oneiric consolidation trigger
+  try {
+    const { oneiricTriggerService } = await import('./services/oneiric-trigger.service')
+    oneiricTriggerService.init()
+  } catch (err) {
+    console.error('[OneiricTrigger] Lazy init failed:', err)
+  }
 }
 
 app.whenReady().then(() => {
@@ -135,6 +143,11 @@ app.whenReady().then(() => {
   registerAllIpcHandlers()
 
   mainWindow = createMainWindow()
+
+  // Set mainWindow ref for oneiric progress events
+  import('./services/oneiric.service').then(({ oneiricService }) => {
+    oneiricService.setMainWindow(mainWindow!)
+  }).catch(() => {})
 
   // Ensure default sandbox directory exists
   const sandboxDir = path.join(os.homedir(), '.cruchot', 'sandbox')
@@ -228,6 +241,15 @@ app.on('before-quit', async (event) => {
       episodeTriggerService.dispose()
     } catch (err) {
       console.error('[EpisodeTrigger] Quit flush failed:', err)
+    }
+
+    // Flush oneiric consolidation
+    try {
+      const { oneiricTriggerService } = await import('./services/oneiric-trigger.service')
+      await oneiricTriggerService.onAppQuitting()
+      oneiricTriggerService.stop()
+    } catch (err) {
+      console.error('[OneiricTrigger] Quit flush failed:', err)
     }
 
     // Stop all registered services in LIFO order
