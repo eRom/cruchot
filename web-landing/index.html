@@ -750,7 +750,11 @@
                 width: 48px;
                 height: 48px;
                 border-radius: var(--radius-sm);
-                background: color-mix(in oklch, var(--tool-accent) 12%, transparent);
+                background: color-mix(
+                    in oklch,
+                    var(--tool-accent) 12%,
+                    transparent
+                );
                 color: var(--tool-accent);
                 display: flex;
                 align-items: center;
@@ -782,8 +786,13 @@
                 font-size: 10px;
                 font-weight: 600;
                 color: var(--tool-accent);
-                background: color-mix(in oklch, var(--tool-accent) 10%, transparent);
-                border: 1px solid color-mix(in oklch, var(--tool-accent) 20%, transparent);
+                background: color-mix(
+                    in oklch,
+                    var(--tool-accent) 10%,
+                    transparent
+                );
+                border: 1px solid
+                    color-mix(in oklch, var(--tool-accent) 20%, transparent);
                 padding: 2px 8px;
                 border-radius: 100px;
                 white-space: nowrap;
@@ -1362,16 +1371,22 @@
                             Il se souvient<br />de tout — et il lit tout
                         </h2>
                         <p class="section-desc">
-                            Trois couches de memoire : semantique (conversations),
-                            episodique (preferences apprises) et manuelle (fragments).
-                            Ajoutez vos referentiels de documents pour un RAG 100%
-                            prive. Et grace a l'OCR Mistral, meme vos PDF
-                            scannes et vos images deviennent cherchables.
+                            Trois couches de memoire : semantique
+                            (conversations), episodique (preferences apprises)
+                            et manuelle (fragments). Ajoutez vos referentiels de
+                            documents pour un RAG 100% prive. Et grace a l'OCR
+                            Mistral, meme vos PDF scannes et vos images
+                            deviennent cherchables.
                         </p>
                         <ul class="feature-list">
                             <li>
                                 <span class="check">&#10003;</span> Memoire
                                 semantique automatique (Qdrant)
+                            </li>
+                            <li>
+                                <span class="check">&#10003;</span> Memoire
+                                episodique — apprend vos preferences et
+                                habitudes
                             </li>
                             <li>
                                 <span class="check">&#10003;</span> Referentiels
@@ -1386,14 +1401,11 @@
                                 memoire manuels
                             </li>
                             <li>
-                                <span class="check" style="color: var(--amber)">&#10003;</span>
+                                <span class="check" style="color: var(--amber)"
+                                    >&#10003;</span
+                                >
                                 <strong>OCR Mistral</strong> — PDF scannes,
                                 images, PPTX extraits automatiquement
-                            </li>
-                            <li>
-                                <span class="check" style="color: var(--amber)">&#10003;</span>
-                                <strong>Profil episodique</strong> — apprend vos
-                                preferences et habitudes automatiquement
                             </li>
                         </ul>
                     </div>
@@ -1507,7 +1519,9 @@
                         stroke="currentColor"
                         stroke-width="2"
                     >
-                        <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
+                        <path
+                            d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"
+                        />
                     </svg>
                     Outils de chat
                 </div>
@@ -1522,75 +1536,144 @@
                     style="margin-left: auto; margin-right: auto"
                 >
                     Prompts reutilisables, resume instantane, optimisation
-                    automatique et fork de conversations. Tout est a portee
-                    d'un clic dans le panneau lateral.
+                    automatique et fork de conversations. Tout est a portee d'un
+                    clic dans le panneau lateral.
                 </p>
 
                 <div class="tools-grid">
                     <!-- Tool 1 — Prompts -->
-                    <div class="tool-card reveal" style="--tool-accent: var(--violet)">
+                    <div
+                        class="tool-card reveal"
+                        style="--tool-accent: var(--violet)"
+                    >
                         <span class="tool-number-bg">01</span>
                         <div class="tool-icon">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M4 7V4h16v3" /><path d="M9 20h6" /><path d="M12 4v16" />
+                            <svg
+                                width="22"
+                                height="22"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path d="M4 7V4h16v3" />
+                                <path d="M9 20h6" />
+                                <path d="M12 4v16" />
                             </svg>
                         </div>
                         <div class="tool-card-content">
-                            <h3>Bibliotheque de prompts <span class="tool-tag">Variabilise</span></h3>
+                            <h3>
+                                Bibliotheque de prompts
+                                <span class="tool-tag">Variabilise</span>
+                            </h3>
                             <p>
-                                Sauvegardez vos meilleurs prompts et reutilisez-les
-                                en un clic. Systeme de variables <code>{{nom}}</code>
+                                Sauvegardez vos meilleurs prompts et
+                                reutilisez-les en un clic. Systeme de variables
+                                <code>{{nom}}</code>
                                 pour personnaliser a la volee.
                             </p>
                         </div>
                     </div>
 
                     <!-- Tool 2 — Resume -->
-                    <div class="tool-card reveal reveal-delay-1" style="--tool-accent: var(--emerald)">
+                    <div
+                        class="tool-card reveal reveal-delay-1"
+                        style="--tool-accent: var(--emerald)"
+                    >
                         <span class="tool-number-bg">02</span>
                         <div class="tool-icon">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" />
+                            <svg
+                                width="22"
+                                height="22"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
+                                />
+                                <path d="M14 2v6h6" />
+                                <path d="M16 13H8" />
+                                <path d="M16 17H8" />
+                                <path d="M10 9H8" />
                             </svg>
                         </div>
                         <div class="tool-card-content">
-                            <h3>Resume instantane <span class="tool-tag">One-shot</span></h3>
+                            <h3>
+                                Resume instantane
+                                <span class="tool-tag">One-shot</span>
+                            </h3>
                             <p>
                                 Generez un resume structure de n'importe quelle
-                                conversation en un clic. Parfait pour garder
-                                le fil apres de longues sessions.
+                                conversation en un clic. Parfait pour garder le
+                                fil apres de longues sessions.
                             </p>
                         </div>
                     </div>
 
                     <!-- Tool 3 — Prompt optimizer -->
-                    <div class="tool-card reveal reveal-delay-2" style="--tool-accent: var(--amber)">
+                    <div
+                        class="tool-card reveal reveal-delay-2"
+                        style="--tool-accent: var(--amber)"
+                    >
                         <span class="tool-number-bg">03</span>
                         <div class="tool-icon">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                            <svg
+                                width="22"
+                                height="22"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <polygon
+                                    points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
+                                />
                             </svg>
                         </div>
                         <div class="tool-card-content">
-                            <h3>Amelioration de prompt <span class="tool-tag">AI-powered</span></h3>
+                            <h3>
+                                Amelioration de prompt
+                                <span class="tool-tag">AI-powered</span>
+                            </h3>
                             <p>
-                                Le LLM reecrit et optimise votre prompt avant
-                                de l'envoyer. Plus precis, plus structure,
+                                Le LLM reecrit et optimise votre prompt avant de
+                                l'envoyer. Plus precis, plus structure,
                                 meilleurs resultats.
                             </p>
                         </div>
                     </div>
 
                     <!-- Tool 4 — Fork -->
-                    <div class="tool-card reveal reveal-delay-3" style="--tool-accent: var(--pink)">
+                    <div
+                        class="tool-card reveal reveal-delay-3"
+                        style="--tool-accent: var(--pink)"
+                    >
                         <span class="tool-number-bg">04</span>
                         <div class="tool-icon">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><circle cx="18" cy="6" r="3" /><path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" /><path d="M12 12v3" />
+                            <svg
+                                width="22"
+                                height="22"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <circle cx="12" cy="18" r="3" />
+                                <circle cx="6" cy="6" r="3" />
+                                <circle cx="18" cy="6" r="3" />
+                                <path
+                                    d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9"
+                                />
+                                <path d="M12 12v3" />
                             </svg>
                         </div>
                         <div class="tool-card-content">
-                            <h3>Fork de conversation <span class="tool-tag">Branchement</span></h3>
+                            <h3>
+                                Fork de conversation
+                                <span class="tool-tag">Branchement</span>
+                            </h3>
                             <p>
                                 Dupliquez une conversation entiere ou bifurquez
                                 depuis n'importe quel message. Explorez des
@@ -1628,7 +1711,8 @@
                             Recherche
                         </div>
                         <h2 class="section-title">
-                            Recherche plein texte<br />dans toutes vos conversations
+                            Recherche plein texte<br />dans toutes vos
+                            conversations
                         </h2>
                         <p class="section-desc">
                             Retrouvez n'importe quelle information en quelques
@@ -1638,20 +1722,21 @@
                         </p>
                         <ul class="feature-list">
                             <li>
-                                <span class="check">&#10003;</span> Raccourci CMD+F
-                                depuis n'importe ou
+                                <span class="check">&#10003;</span> Raccourci
+                                CMD+F depuis n'importe ou
                             </li>
                             <li>
-                                <span class="check">&#10003;</span> Prefix matching
-                                (<code>arti</code> trouve <code>article</code>)
+                                <span class="check">&#10003;</span> Prefix
+                                matching (<code>arti</code> trouve
+                                <code>article</code>)
                             </li>
                             <li>
-                                <span class="check">&#10003;</span> Filtres par role
-                                (user/assistant) et par projet
+                                <span class="check">&#10003;</span> Filtres par
+                                role (user/assistant) et par projet
                             </li>
                             <li>
-                                <span class="check">&#10003;</span> Resultats groupes
-                                avec snippet surligne
+                                <span class="check">&#10003;</span> Resultats
+                                groupes avec snippet surligne
                             </li>
                         </ul>
                     </div>
@@ -2077,7 +2162,9 @@
         <!-- ======== Footer ======== -->
         <footer>
             <p>
-                <strong>Cruchot</strong> <span id="version-footer">v0.6.*</span> &mdash; Fait avec passion par
+                <strong>Cruchot</strong>
+                <span id="version-footer">v0.6.*</span> &mdash; Fait avec
+                passion par
                 <a
                     href="https://www.romain-ecarnot.com"
                     target="_blank"
@@ -2171,12 +2258,15 @@
 
             // Fetch latest release from GitHub
             fetch("https://api.github.com/repos/eRom/cruchot/releases/latest")
-                .then((r) => r.ok ? r.json() : null)
+                .then((r) => (r.ok ? r.json() : null))
                 .then((data) => {
                     if (data && data.tag_name) {
-                        const v = data.tag_name.startsWith("v") ? data.tag_name : "v" + data.tag_name;
+                        const v = data.tag_name.startsWith("v")
+                            ? data.tag_name
+                            : "v" + data.tag_name;
                         document.getElementById("version-hero").textContent = v;
-                        document.getElementById("version-footer").textContent = v;
+                        document.getElementById("version-footer").textContent =
+                            v;
                     }
                 })
                 .catch(() => {});
