@@ -24,7 +24,8 @@ import {
   bardas,
   skills,
   permissionRules,
-  episodes
+  episodes,
+  oneiricRuns
 } from '../schema'
 
 /**
@@ -45,7 +46,9 @@ export function deleteConversationsProjectsImages(): { imagePaths: string[] } {
   db.delete(remoteSessions).run()
   db.delete(vectorSyncState).run()
   db.delete(episodes).run()
+  db.delete(oneiricRuns).run()
   db.run(sql`UPDATE conversations SET last_episode_message_id = NULL`)
+  db.run(sql`UPDATE conversations SET last_oneiric_run_at = NULL`)
   db.delete(messages).run()
   db.delete(scheduledTasks).run()
   db.delete(conversations).run()
@@ -86,6 +89,7 @@ export function factoryResetDatabase(): { imagePaths: string[] } {
   db.delete(roles).run()
   db.delete(prompts).run()
   db.delete(episodes).run()
+  db.delete(oneiricRuns).run()
   db.delete(memoryFragments).run()
   db.delete(statistics).run()
   db.delete(ttsUsage).run()
