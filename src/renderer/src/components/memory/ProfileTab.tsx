@@ -3,6 +3,13 @@ import { Eye, EyeOff, Trash2, Sparkles } from 'lucide-react'
 import { useEpisodeStore } from '@/stores/episode.store'
 import { useProvidersStore } from '@/stores/providers.store'
 import { toast } from 'sonner'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
 import type { Episode, EpisodeCategory } from '../../../../preload/types'
 
 const CATEGORY_LABELS: Record<EpisodeCategory, string> = {
@@ -30,10 +37,13 @@ export function ProfileTab() {
   const toggleEpisode = useEpisodeStore((s) => s.toggleEpisode)
   const deleteEpisode = useEpisodeStore((s) => s.deleteEpisode)
   const setModel = useEpisodeStore((s) => s.setModel)
+  const clearModel = useEpisodeStore((s) => s.clearModel)
 
   const models = useProvidersStore((s) => s.models)
 
   const [selectedModelId, setSelectedModelId] = useState<string>('')
+
+  const isEnabled = !!stats?.modelId
 
   useEffect(() => {
     if (!isLoaded) loadEpisodes()
@@ -44,17 +54,42 @@ export function ProfileTab() {
     if (stats?.modelId) setSelectedModelId(stats.modelId)
   }, [stats?.modelId])
 
+  const handleToggleEnabled = useCallback(async () => {
+    if (isEnabled) {
+      // Disable: clear model
+      try {
+        await clearModel()
+        setSelectedModelId('')
+        toast.success('Profilage desactive')
+      } catch {
+        toast.error('Erreur')
+      }
+    } else {
+      // Enable: pick the first available model
+      if (models.length > 0) {
+        const first = `${models[0].providerId}::${models[0].id}`
+        setSelectedModelId(first)
+        try {
+          await setModel(first)
+          toast.success('Profilage active')
+        } catch {
+          toast.error('Erreur')
+        }
+      }
+    }
+  }, [isEnabled, clearModel, setModel, models])
+
   const handleModelChange = useCallback(async (value: string) => {
     setSelectedModelId(value)
     try {
       await setModel(value)
-      toast.success('Modele d\'extraction mis a jour')
+      toast.success('Modele de profilage mis a jour')
     } catch {
       toast.error('Erreur lors de la sauvegarde')
     }
   }, [setModel])
 
-  const handleToggle = useCallback(async (id: string) => {
+  const handleToggleEpisode = useCallback(async (id: string) => {
     try {
       await toggleEpisode(id)
     } catch {
@@ -85,28 +120,48 @@ export function ProfileTab() {
 
   return (
     <div className="space-y-6">
-      {/* Model selector */}
-      <div className="rounded-xl border border-border/60 bg-card p-4">
+      {/* Enable/disable + model selector */}
+      <div className="rounded-xl border border-border/60 bg-card p-4 space-y-4">
+        {/* Switch row */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-foreground">Modele d'extraction</p>
+            <p className="text-sm font-medium text-foreground">Profilage automatique</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              LLM utilise pour analyser les conversations et extraire les episodes
+              Analyse les conversations pour apprendre tes preferences
             </p>
           </div>
-          <select
-            value={selectedModelId}
-            onChange={(e) => handleModelChange(e.target.value)}
-            className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground"
+          <button
+            onClick={handleToggleEnabled}
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${isEnabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}
           >
-            <option value="">Non configure</option>
-            {models.map((m) => (
-              <option key={`${m.providerId}::${m.id}`} value={`${m.providerId}::${m.id}`}>
-                {m.name}
-              </option>
-            ))}
-          </select>
+            <span
+              className={`inline-block size-3.5 rounded-full bg-white transition-transform ${isEnabled ? 'translate-x-[18px]' : 'translate-x-[3px]'}`}
+            />
+          </button>
         </div>
+
+        {/* Model selector — only when enabled */}
+        {isEnabled && (
+          <div className="flex items-center justify-between pt-2 border-t border-border/40">
+            <p className="text-xs text-muted-foreground">Modele de profilage</p>
+            <Select value={selectedModelId} onValueChange={handleModelChange}>
+              <SelectTrigger className="w-[220px] h-8 text-xs">
+                <SelectValue placeholder="Choisir un modele" />
+              </SelectTrigger>
+              <SelectContent>
+                {models.map((m) => (
+                  <SelectItem
+                    key={`${m.providerId}::${m.id}`}
+                    value={`${m.providerId}::${m.id}`}
+                    className="text-xs"
+                  >
+                    {m.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {/* Stats */}
@@ -123,7 +178,10 @@ export function ProfileTab() {
           <div className="text-center">
             <p className="text-sm text-muted-foreground">Aucun episode detecte</p>
             <p className="text-xs text-muted-foreground/60 mt-1">
-              Cruchot apprendra a te connaitre au fil des conversations
+              {isEnabled
+                ? 'Cruchot apprendra a te connaitre au fil des conversations'
+                : 'Active le profilage pour commencer'
+              }
             </p>
           </div>
         </div>
@@ -155,7 +213,7 @@ export function ProfileTab() {
 
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
-                  onClick={() => handleToggle(ep.id)}
+                  onClick={() => handleToggleEpisode(ep.id)}
                   className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                   title={ep.isActive ? 'Desactiver' : 'Activer'}
                 >

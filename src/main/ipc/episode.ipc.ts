@@ -14,7 +14,7 @@ import { settings } from '../db/schema'
 import { eq } from 'drizzle-orm'
 
 const setModelSchema = z.object({
-  modelId: z.string().min(1).max(200)
+  modelId: z.string().max(200)
 })
 
 export function registerEpisodeIpc(): void {
@@ -51,13 +51,20 @@ export function registerEpisodeIpc(): void {
     if (!parsed.success) throw new Error('Invalid model data')
 
     const db = getDatabase()
-    db.insert(settings)
-      .values({ key: 'multi-llm:episode-model-id', value: parsed.data.modelId, updatedAt: new Date() })
-      .onConflictDoUpdate({
-        target: settings.key,
-        set: { value: parsed.data.modelId, updatedAt: new Date() }
-      })
-      .run()
+    const value = parsed.data.modelId || ''
+
+    if (value) {
+      db.insert(settings)
+        .values({ key: 'multi-llm:episode-model-id', value, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: settings.key,
+          set: { value, updatedAt: new Date() }
+        })
+        .run()
+    } else {
+      // Disable: remove the setting
+      db.delete(settings).where(eq(settings.key, 'multi-llm:episode-model-id')).run()
+    }
 
     episodeTriggerService.refresh()
   })

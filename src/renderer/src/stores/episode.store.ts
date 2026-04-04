@@ -12,6 +12,7 @@ interface EpisodeState {
   deleteEpisode: (id: string) => Promise<void>
   deleteAllEpisodes: () => Promise<void>
   setModel: (modelId: string) => Promise<void>
+  clearModel: () => Promise<void>
   extractNow: (conversationId: string) => Promise<number>
 }
 
@@ -50,6 +51,12 @@ export const useEpisodeStore = create<EpisodeState>((set) => ({
 
   setModel: async (modelId) => {
     await window.api.setEpisodeModel({ modelId })
+    const stats = await window.api.episodeStats()
+    set({ stats })
+  },
+
+  clearModel: async () => {
+    await window.api.setEpisodeModel({ modelId: '' })
     const stats = await window.api.episodeStats()
     set({ stats })
   },
