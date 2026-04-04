@@ -335,6 +335,15 @@ const api: ElectronAPI = {
   setEpisodeModel: (data) => ipcRenderer.invoke('episode:set-model', data),
   extractEpisodesNow: (conversationId) => ipcRenderer.invoke('episode:extract-now', conversationId),
 
+  // ── Oneiric (consolidation onirique) ───────────────────
+  oneiricConsolidateNow: () => ipcRenderer.invoke('oneiric:consolidate-now'),
+  oneiricCancel: () => ipcRenderer.invoke('oneiric:cancel'),
+  oneiricStatus: () => ipcRenderer.invoke('oneiric:status'),
+  oneiricListRuns: () => ipcRenderer.invoke('oneiric:list-runs'),
+  oneiricGetRun: (id: string) => ipcRenderer.invoke('oneiric:get-run', id),
+  oneiricSetModel: (data: { modelId: string }) => ipcRenderer.invoke('oneiric:set-model', data),
+  oneiricSetSchedule: (schedule: unknown) => ipcRenderer.invoke('oneiric:set-schedule', schedule),
+
   focusConversation: (id) => ipcRenderer.invoke('conversations:focus', id),
 
   // ── Slash Commands ─────────────────────────────────────────

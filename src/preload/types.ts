@@ -434,6 +434,48 @@ export interface EpisodeStats {
   modelId: string | null
 }
 
+// ── Oneiric (consolidation onirique) ──────────────────────
+export interface OneiricRun {
+  id: string
+  status: 'running' | 'completed' | 'failed' | 'cancelled'
+  trigger: 'scheduled' | 'manual' | 'quit'
+  modelId: string
+  chunksAnalyzed: number
+  chunksMerged: number
+  chunksDeleted: number
+  episodesAnalyzed: number
+  episodesReinforced: number
+  episodesStaled: number
+  episodesDeleted: number
+  episodesCreated: number
+  episodesUpdated: number
+  tokensIn: number
+  tokensOut: number
+  cost: number
+  durationMs: number | null
+  errorMessage: string | null
+  actions: Array<{
+    phase: 'semantic' | 'episodic' | 'cross'
+    type: string
+    details: string
+    targetIds: string[]
+  }>
+  startedAt: Date
+  completedAt: Date | null
+}
+
+export interface OneiricSchedule {
+  enabled: boolean
+  type: 'daily' | 'interval'
+  time?: string
+  intervalHours?: number
+}
+
+export interface OneiricStatus {
+  isRunning: boolean
+  lastRun: OneiricRun | null
+}
+
 // ── Slash Commands ─────────────────────────────────────────
 export interface SlashCommandInfo {
   id: string
@@ -1021,6 +1063,15 @@ export interface ElectronAPI {
   episodeStats: () => Promise<EpisodeStats>
   setEpisodeModel: (data: { modelId: string }) => Promise<void>
   extractEpisodesNow: (conversationId: string) => Promise<{ extracted: number }>
+
+  // Oneiric (consolidation onirique)
+  oneiricConsolidateNow: () => Promise<{ runId: string | null }>
+  oneiricCancel: () => Promise<void>
+  oneiricStatus: () => Promise<OneiricStatus>
+  oneiricListRuns: () => Promise<OneiricRun[]>
+  oneiricGetRun: (id: string) => Promise<OneiricRun | null>
+  oneiricSetModel: (data: { modelId: string }) => Promise<void>
+  oneiricSetSchedule: (schedule: OneiricSchedule) => Promise<void>
 
   focusConversation: (id: string) => Promise<void>
 

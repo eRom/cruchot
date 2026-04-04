@@ -39,6 +39,7 @@ import { registerSkillsIpc } from './skills.ipc'
 import { registerPermissionsIpc } from './permissions.ipc'
 import { registerVcrIpc } from './vcr.ipc'
 import { registerEpisodeIpc } from './episode.ipc'
+import { registerOneiricIpc } from './oneiric.ipc'
 
 
 /**
@@ -155,6 +156,9 @@ export function registerAllIpcHandlers(): void {
   // ── Episodes (episodic memory) ────────────────────────────
   registerEpisodeIpc()
 
+  // ── Oneiric (consolidation onirique) ────────────────────
+  registerOneiricIpc()
+
   // ── Settings ────────────────────────────────────────
   const ALLOWED_SETTING_KEYS = new Set([
     // User profile
@@ -193,6 +197,9 @@ export function registerAllIpcHandlers(): void {
     'multi-llm:semantic-memory-enabled',
     // Episodic memory
     'multi-llm:episode-model-id',
+    // Oneiric consolidation
+    'multi-llm:oneiric-model-id',
+    'multi-llm:oneiric-schedule',
     // Legacy (kept for migration)
     'onboarding_completed',
   ])
