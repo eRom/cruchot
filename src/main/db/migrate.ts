@@ -669,4 +669,38 @@ export function runMigrations(): void {
   } catch {
     // Column already exists — ignore
   }
+
+  // --- Oneiric consolidation (S56) ---
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS oneiric_runs (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL CHECK(status IN ('running', 'completed', 'failed', 'cancelled')),
+      trigger TEXT NOT NULL CHECK(trigger IN ('scheduled', 'manual', 'quit')),
+      model_id TEXT NOT NULL,
+      chunks_analyzed INTEGER NOT NULL DEFAULT 0,
+      chunks_merged INTEGER NOT NULL DEFAULT 0,
+      chunks_deleted INTEGER NOT NULL DEFAULT 0,
+      episodes_analyzed INTEGER NOT NULL DEFAULT 0,
+      episodes_reinforced INTEGER NOT NULL DEFAULT 0,
+      episodes_staled INTEGER NOT NULL DEFAULT 0,
+      episodes_deleted INTEGER NOT NULL DEFAULT 0,
+      episodes_created INTEGER NOT NULL DEFAULT 0,
+      episodes_updated INTEGER NOT NULL DEFAULT 0,
+      tokens_in INTEGER NOT NULL DEFAULT 0,
+      tokens_out INTEGER NOT NULL DEFAULT 0,
+      cost REAL NOT NULL DEFAULT 0,
+      duration_ms INTEGER,
+      error_message TEXT,
+      actions TEXT NOT NULL DEFAULT '[]',
+      started_at INTEGER NOT NULL,
+      completed_at INTEGER
+    );
+  `)
+
+  // Add last_oneiric_run_at column to conversations
+  try {
+    sqlite.exec('ALTER TABLE conversations ADD COLUMN last_oneiric_run_at INTEGER')
+  } catch {
+    // Column already exists — ignore
+  }
 }

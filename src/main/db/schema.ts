@@ -78,6 +78,7 @@ export const conversations = sqliteTable('conversations', {
   isArena: integer('is_arena', { mode: 'boolean' }).default(false),
   isScheduledTask: integer('is_scheduled_task', { mode: 'boolean' }).default(false),
   lastEpisodeMessageId: text('last_episode_message_id'),
+  lastOneiricRunAt: integer('last_oneiric_run_at', { mode: 'timestamp' }),
 
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
@@ -511,6 +512,17 @@ export const permissionRules = sqliteTable('permission_rules', {
 })
 
 // ---------------------------------------------------------------------------
+// Oneiric Action type
+// ---------------------------------------------------------------------------
+export type OneiricAction = {
+  phase: 'semantic' | 'episodic' | 'cross'
+  type: 'merge_chunks' | 'delete_chunk' | 'reinforce_episode' |
+        'stale_episode' | 'delete_episode' | 'create_episode' | 'update_episode'
+  details: string
+  targetIds: string[]
+}
+
+// ---------------------------------------------------------------------------
 // Images
 // ---------------------------------------------------------------------------
 export const images = sqliteTable('images', {
@@ -524,4 +536,31 @@ export const images = sqliteTable('images', {
   path: text('path').notNull(),
   size: integer('size'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+})
+
+// ---------------------------------------------------------------------------
+// Oneiric Runs (consolidation onirique — dream task)
+// ---------------------------------------------------------------------------
+export const oneiricRuns = sqliteTable('oneiric_runs', {
+  id: text('id').primaryKey(),
+  status: text('status', { enum: ['running', 'completed', 'failed', 'cancelled'] }).notNull(),
+  trigger: text('trigger', { enum: ['scheduled', 'manual', 'quit'] }).notNull(),
+  modelId: text('model_id').notNull(),
+  chunksAnalyzed: integer('chunks_analyzed').notNull().default(0),
+  chunksMerged: integer('chunks_merged').notNull().default(0),
+  chunksDeleted: integer('chunks_deleted').notNull().default(0),
+  episodesAnalyzed: integer('episodes_analyzed').notNull().default(0),
+  episodesReinforced: integer('episodes_reinforced').notNull().default(0),
+  episodesStaled: integer('episodes_staled').notNull().default(0),
+  episodesDeleted: integer('episodes_deleted').notNull().default(0),
+  episodesCreated: integer('episodes_created').notNull().default(0),
+  episodesUpdated: integer('episodes_updated').notNull().default(0),
+  tokensIn: integer('tokens_in').notNull().default(0),
+  tokensOut: integer('tokens_out').notNull().default(0),
+  cost: real('cost').notNull().default(0),
+  durationMs: integer('duration_ms'),
+  errorMessage: text('error_message'),
+  actions: text('actions', { mode: 'json' }).$type<OneiricAction[]>().notNull(),
+  startedAt: integer('started_at', { mode: 'timestamp' }).notNull(),
+  completedAt: integer('completed_at', { mode: 'timestamp' })
 })
