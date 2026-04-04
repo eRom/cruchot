@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.2] - 2026-04-04
+
+- feat(oneiric): add OneiricTab UI + MemoryView 4th tab (Zustand store, IPC handlers, preload bridge, types)
+- feat(oneiric): add OneiricService 3-phase consolidation pipeline + OneiricTriggerService
+- feat(oneiric): integrate lifecycle (init + quit hooks) + CRUD queries + cleanup integration
+- feat(oneiric): add LLM prompts + oneiric_runs table + lastOneiricRunAt column
+- fix(oneiric): labels français + cleanup runs orphelins au startup + 6 code review findings
+- docs: document Oneiric consolidation feature + update landing page
+- chore: untrack docs/superpowers/ and .memory/ (local only)
+
 ## [0.8.1] - 2026-04-04
 
 - fix(landing): manual updates to landing page
