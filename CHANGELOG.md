@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.1] - 2026-04-04
+
+- fix(landing): manual updates to landing page
+- feat(landing): add episodic memory to Memory & RAG section
+- docs: document episodic memory feature (S55)
+- fix(episode): redesign ProfileTab — switch ON/OFF + Radix Select
+- docs: update .memory with episodic memory architecture
+- fix(episode): review fixes — XML sanitization, active filter, cleanup reset
+- feat(episode): wire conversation switch detection to trigger service
+- feat(episode): refactor MemoryView into 3 tabs (Notes/Souvenirs/Profil)
+- feat(episode): add ProfileTab component with model selector
+- feat(episode): add Zustand store for episodes
+- feat(episode): add preload bridge (7 episode methods + focusConversation)
+- feat(episode): inject <user-profile> in system prompt + wire trigger service
+- feat(episode): add episodes to cleanup and factory reset
+- feat(episode): add 7 IPC handlers with Zod validation
+- feat(episode): add trigger service (switch/idle/quit)
+- feat(episode): add LLM-based episode extractor service
+- feat(episode): add episode profile block builder for system prompt
+- feat(episode): add CRUD queries for episodes table
+- feat(episode): add episodes table + lastEpisodeMessageId column
+
 ## [0.8.0] - 2026-04-03
 
 - fix(plan): only inject plan prompt when explicitly activated (switch ON or /plan)
