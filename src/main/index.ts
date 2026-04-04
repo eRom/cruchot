@@ -95,8 +95,12 @@ async function lazyInitServices(mainWindow: BrowserWindow): Promise<void> {
     console.error('[EpisodeTrigger] Lazy init failed:', err)
   }
 
-  // Oneiric consolidation trigger
+  // Oneiric consolidation — cleanup orphan runs then start trigger
   try {
+    const { cleanupOrphanRuns } = await import('./db/queries/oneiric')
+    const cleaned = cleanupOrphanRuns()
+    if (cleaned > 0) console.log(`[Oneiric] Cleaned ${cleaned} orphan run(s)`)
+
     const { oneiricTriggerService } = await import('./services/oneiric-trigger.service')
     oneiricTriggerService.init()
   } catch (err) {

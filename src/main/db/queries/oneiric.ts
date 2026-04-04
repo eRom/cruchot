@@ -124,3 +124,17 @@ export function deleteAllOneiricRuns(): void {
   const db = getDatabase()
   db.delete(oneiricRuns).run()
 }
+
+/**
+ * Mark orphan "running" runs as "failed" — called at startup.
+ * A run stuck in "running" means the app crashed mid-consolidation.
+ */
+export function cleanupOrphanRuns(): number {
+  const db = getDatabase()
+  const now = new Date()
+  const result = db.update(oneiricRuns)
+    .set({ status: 'failed', errorMessage: 'Interruption (redemarrage app)', completedAt: now })
+    .where(eq(oneiricRuns.status, 'running'))
+    .run()
+  return result.changes
+}

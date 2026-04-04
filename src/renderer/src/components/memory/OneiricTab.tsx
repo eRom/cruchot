@@ -26,6 +26,13 @@ const STATUS_COLORS: Record<string, string> = {
   running: 'text-blue-400'
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  completed: 'Termine',
+  failed: 'Echoue',
+  cancelled: 'Annule',
+  running: 'En cours'
+}
+
 const PHASE_LABELS: Record<number, string> = {
   1: 'Semantique',
   2: 'Episodique',
@@ -263,7 +270,7 @@ export function OneiricTab() {
               const Icon = STATUS_ICONS[lastRun.status] ?? Clock
               return <Icon className={`size-4 ${STATUS_COLORS[lastRun.status] ?? 'text-muted-foreground'} ${lastRun.status === 'running' ? 'animate-spin' : ''}`} />
             })()}
-            <span className="text-sm text-foreground capitalize">{lastRun.status}</span>
+            <span className="text-sm text-foreground">{STATUS_LABELS[lastRun.status] ?? lastRun.status}</span>
             <span className="text-xs text-muted-foreground">
               — {formatRelativeTime(lastRun.startedAt)}
             </span>
@@ -326,7 +333,7 @@ function RunHistoryRow({ run }: { run: OneiricRun }) {
     <div className="flex items-center gap-2 text-xs text-muted-foreground">
       <Icon className={`size-3 ${STATUS_COLORS[run.status] ?? ''} ${run.status === 'running' ? 'animate-spin' : ''}`} />
       <span className="w-[80px]">{date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })} {date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-      <span className="capitalize">{run.status}</span>
+      <span>{STATUS_LABELS[run.status] ?? run.status}</span>
       {run.status === 'completed' && <span>${run.cost.toFixed(3)}</span>}
     </div>
   )
