@@ -22,5 +22,6 @@ Ces documents sont destinés aux utilisateurs finaux pour comprendre et exploite
 1.  [`GETTING_STARTED.md`](./user/GETTING_STARTED.md) : Installation et configuration.
 2.  [`WORKSPACE_AND_LIBRARIES.md`](./user/WORKSPACE_AND_LIBRARIES.md) : Gérer son contexte.
 3.  [`USING_SKILLS_AND_MCP.md`](./user/USING_SKILLS_AND_MCP.md) : Ajouter des outils à l'IA.
-4.  [`REMOTE_ACCESS_AND_BOTS.md`](./user/REMOTE_ACCESS_AND_BOTS.md) : Accéder à Cruchot depuis son téléphone ou Telegram.
-5.  [`TROUBLESHOOTING.md`](./user/TROUBLESHOOTING.md) : Résolution des problèmes courants.
+4.  [`MEMORY_AND_PROFILE.md`](./user/MEMORY_AND_PROFILE.md) : Mémoire épisodique, notes et souvenirs sémantiques.
+5.  [`REMOTE_ACCESS_AND_BOTS.md`](./user/REMOTE_ACCESS_AND_BOTS.md) : Accéder à Cruchot depuis son téléphone ou Telegram.
+6.  [`TROUBLESHOOTING.md`](./user/TROUBLESHOOTING.md) : Résolution des problèmes courants.

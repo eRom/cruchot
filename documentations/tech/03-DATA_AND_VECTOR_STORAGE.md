@@ -15,12 +15,68 @@ Le schéma est complet et gère toutes les entités de l'application :
 - **Outils & Extension** : `mcpServers`, `skills`, `permissionRules`, `bardas`, `customModels`.
 - **Opérations** : `scheduledTasks`, `statistics`, `ttsUsage`, `arenaMatches`, `remoteSessions`.
 
-Le schéma totalise **27 tables** Drizzle.
+Le schéma totalise **28 tables** Drizzle (dont la table `episodes` ajoutée en S55).
 
 ### 1.2 Migrations et Évolutivité
 Les migrations sont gérées par des instructions SQL manuelles dans `migrate.ts` (pattern `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE ... ADD COLUMN` avec gestion d'idempotence). Elles sont exécutées automatiquement au lancement de l'application via `runMigrations()`. Cela garantit que la base de données locale de l'utilisateur est toujours à jour avec la version de l'application.
 
-## 2. Recherche Plein Texte (FTS5)
+## 2. Mémoire Épisodique (Episodes)
+
+La mémoire épisodique est une troisième couche de mémoire, distincte de la mémoire sémantique Qdrant et des fragments manuels. Elle **distille automatiquement** des faits comportementaux sur l'utilisateur à partir des conversations, dans le style "Mem0".
+
+### 2.1 Table `episodes`
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `id` | text PK | nanoid |
+| `content` | text | Le fait distillé ("Préfère les réponses courtes") |
+| `category` | text | enum: `preference`, `behavior`, `context`, `skill`, `style` |
+| `confidence` | real | Score 0.0 — 1.0 fourni par le LLM |
+| `occurrences` | integer | Nombre de fois observé (default 1) |
+| `projectId` | text \| null | null = global, sinon scopé à un projet |
+| `sourceConversationId` | text | Conversation d'origine (pas de FK — l'épisode survit à la suppression) |
+| `isActive` | integer | Boolean (default 1) |
+| `createdAt` / `updatedAt` | integer | Timestamps seconds |
+
+Index : `idx_episodes_active_project` sur `(isActive, projectId)`.
+
+**Pas de FK** vers `conversations` : les épisodes survivent à la suppression de la conversation source.
+
+### 2.2 Colonne `lastEpisodeMessageId` sur `conversations`
+
+Pointe vers le dernier message traité pour l'extraction. Permet de ne traiter que le **delta** (les nouveaux messages depuis la dernière extraction), évitant de reprocesser toute la conversation à chaque fois.
+
+### 2.3 Scope et injection dans le system prompt
+
+Au recall, les épisodes injectés sont : les globaux (`projectId IS NULL`) + ceux du projet actif. Le bloc est formaté en XML :
+
+```xml
+<user-profile>
+Profil comportemental de l'utilisateur :
+
+[preference] (confiance: 95%, vu 12x) Préfère les réponses courtes
+[style] (confiance: 87%, vu 5x) Ton sec et direct, humour noir
+[skill] (confiance: 80%, vu 3x) Expert TypeScript, débutant Rust
+</user-profile>
+```
+
+Règles d'injection (`episode-prompt.ts`) : `isActive = true`, `confidence >= 0.3`, tri `confidence * log(occurrences + 1)` desc, cap 100 épisodes / ~2500 tokens. Ce bloc est injecté en **position 3** dans le system prompt, après `<semantic-memory>` et avant `<user-memory>`.
+
+### 2.4 IPC (`episode.ipc.ts`)
+
+| Channel | Description |
+|---------|-------------|
+| `episode:list` | Liste épisodes (filtres: projectId, category, isActive) |
+| `episode:toggle` | Toggle isActive |
+| `episode:delete` | Supprime un épisode |
+| `episode:delete-all` | Supprime tous les épisodes |
+| `episode:stats` | Count, dernière extraction, modèle |
+| `episode:set-model` | Sauvegarde le modèle d'extraction |
+| `episode:extract-now` | Force extraction manuelle (debug/test) |
+
+Validation Zod sur tous les payloads. 7 méthodes `window.api.episode*` exposées via `contextBridge`.
+
+## 3. Recherche Plein Texte (FTS5)
 
 Cruchot intègre une recherche plein texte rapide sur l'ensemble des messages, basée sur l'extension **FTS5** de SQLite.
 
@@ -43,7 +99,7 @@ La fonction `searchMessages(query, filters?)` dans `src/main/db/queries/search.t
 
 Le handler `search.ipc.ts` expose `search:messages` — il accepte un payload `{ query: string, filters?: SearchFilters }` et retourne un tableau de `SearchResult`.
 
-## 3. Base Vectorielle et Mémoire Sémantique (Qdrant)
+## 4. Base Vectorielle et Mémoire Sémantique (Qdrant)
 
 Pour offrir des fonctionnalités de RAG (Retrieval-Augmented Generation) et de "Mémoire Sémantique" à long terme, Cruchot embarque un binaire **Qdrant** compilé pour l'OS cible.
 
@@ -59,7 +115,7 @@ Le `QdrantMemoryService` agit comme un singleton pour gérer la mémoire sémant
 ### 2.3 Recherche Sémantique (Recall)
 Lorsqu'un utilisateur pose une question, Cruchot peut interroger Qdrant pour retrouver les anciens messages pertinents. La recherche utilise le "Cosine Similarity" et peut être filtrée par projet, ou exclure la conversation courante.
 
-## 3. Modèles d'Embeddings Locaux
+## 5. Modèles d'Embeddings Locaux
 
 Pour transformer le texte en vecteurs (embeddings) à stocker dans Qdrant sans envoyer les données privées dans le cloud, Cruchot utilise des modèles d'embeddings locaux.
 

@@ -12,23 +12,54 @@ Tous les services en arrière-plan sont enregistrés dans un `ServiceRegistry` c
 
 L'inférence ONNX pour les embeddings (modèle `all-MiniLM-L6-v2`, 384 dimensions) est déléguée à un Worker thread Node.js séparé. Cela évite de bloquer le main process pendant les calculs vectoriels. Le worker est construit comme un entry point séparé dans `electron.vite.config.ts` et communique via `postMessage`/`on('message')`. Timeout de 30 secondes par requête. Le worker est arrêté proprement dans le handler `before-quit` via le ServiceRegistry.
 
-## 1. Serveur Remote Telegram (`telegram-bot.service.ts`)
+## 1. Mémoire Épisodique (`episode-trigger.service.ts`, `episode-extractor.service.ts`)
+
+Ces deux services singletons forment le pipeline d'apprentissage comportemental automatique de Cruchot.
+
+### 1.1 Service de déclenchement (`EpisodeTriggerService`)
+
+Centralise la logique de "quand extraire" — 3 déclencheurs :
+
+- **Switch de conversation** : quand l'utilisateur change de conversation active, `onConversationLeft(convId)` déclenche une extraction sur la conversation quittée.
+- **Idle timeout 5 min** : timer reset à chaque message via `onMessageSent(convId)`. Si 5 min s'écoulent sans message, extraction sur la conversation active.
+- **Fermeture app** : le hook `before-quit` appelle `onAppQuitting()` — extraction synchrone sur toutes les conversations avec delta non traité.
+
+Guards intégrés : delta < 4 messages → skip ; extraction déjà en cours (`extractingSet: Set<string>`) → skip ; mémoire épisodique désactivée dans settings → skip.
+
+### 1.2 Service d'extraction (`EpisodeExtractorService`)
+
+Prend un delta de messages + les épisodes existants, et appelle un LLM pour distiller les faits comportementaux.
+
+**Flux d'extraction :**
+
+1. Charger les épisodes actifs depuis SQLite.
+2. Charger le delta de messages (depuis `lastEpisodeMessageId` jusqu'au dernier message).
+3. `generateText()` avec le modèle configuré (`settings.episodeModelId`, format `providerId::modelId`).
+4. Parser le JSON retourné — chaque action est soit `create`, `reinforce`, ou `update`.
+5. Appliquer les actions en DB (INSERT ou UPDATE sur la table `episodes`).
+6. Mettre à jour `conversations.lastEpisodeMessageId`.
+
+Le LLM reçoit les épisodes existants en contexte pour assurer la déduplication : il doit `create` uniquement si le fait est nouveau, `reinforce` si rré-observé, `update` si le fait a évolué.
+
+Le modèle d'extraction est **configurable par l'utilisateur** depuis l'onglet Profil de la MemoryView (sélecteur provider::modelId). Un petit modèle léger est recommandé (l'extraction est silencieuse en arrière-plan).
+
+## 2. Serveur Remote Telegram (`telegram-bot.service.ts`)
 
 Ce service permet à l'utilisateur de continuer ses conversations Cruchot depuis son smartphone via l'application Telegram, en utilisant sa propre machine locale comme "serveur".
 
-### 1.1 Polling et Connexion
+### 2.1 Polling et Connexion
 Le service utilise la méthode de *Long Polling* pour récupérer les messages depuis l'API Telegram. Cela évite d'avoir à configurer un Webhook ou d'ouvrir un port sur le routeur de l'utilisateur (pas de redirection de port nécessaire).
 
-### 1.2 Sécurité et Authentification (Pairing)
+### 2.2 Sécurité et Authentification (Pairing)
 - **Code de Pairing** : La connexion initiale nécessite de générer un code temporaire (5 min) sur l'application Desktop et de l'envoyer au bot Telegram (`/pair CODE`).
 - **Restriction d'Utilisateur** : Seul l'ID utilisateur Telegram autorisé (`allowedUserId`) peut interagir avec le bot. Les messages provenant d'autres utilisateurs sont ignorés silencieusement.
 
-### 1.3 Streaming et UI Telegram
+### 2.3 Streaming et UI Telegram
 Pour simuler le streaming typique des LLMs, le service met à jour le message Telegram en temps réel :
 - **Debouncing** : Les mises à jour de l'API Telegram sont regroupées (debounce de 500ms) pour éviter le *Rate Limiting* (erreur 429).
 - **Validation d'Outils (Inline Keyboard)** : Si le LLM utilise un outil nécessitant une permission (`Ask`), le bot envoie un message avec des boutons interactifs "Approuver" ou "Refuser" directement dans Telegram.
 
-## 2. Planificateur de Tâches (`scheduler.service.ts`)
+## 3. Planificateur de Tâches (`scheduler.service.ts`)
 
 Cruchot peut exécuter des requêtes LLM de manière autonome et récurrente.
 
@@ -41,7 +72,7 @@ Le planificateur (`SchedulerService`) n'utilise pas Cron, mais les timers natifs
 ### 2.2 Exécution (`task-executor.ts`)
 Lorsqu'un timer se déclenche, le `TaskExecutor` crée une conversation invisible (ou reprend la précédente), injecte le prompt de la tâche et déclenche le routeur LLM. Si des outils (MCP ou Bash) sont configurés en auto-approve, la tâche peut interagir avec le système de fichiers ou des APIs pendant la nuit, et l'utilisateur retrouvera le résultat au matin dans l'interface.
 
-## 4. VCR Recording (`vcr-recorder.service.ts`, `vcr-anonymizer.service.ts`, `vcr-html-exporter.service.ts`)
+## 4. VCR Recording (`vcr-recorder.service.ts`, `vcr-anonymizer.service.ts`, `vcr-html-exporter.service.ts`) (`vcr-recorder.service.ts`, `vcr-anonymizer.service.ts`, `vcr-html-exporter.service.ts`)
 
 Le système VCR (Video Cassette Recorder) permet d'enregistrer une session de chat complète — messages, streaming LLM, appels d'outils, décisions de permissions, étapes de Plan Mode — et de l'exporter en deux formats partageables.
 
@@ -85,7 +116,7 @@ Types d'événements capturés : `session-start`, `session-stop`, `user-message`
 
 L'état est pushé au renderer via `vcr:recording-state` event après start/stop.
 
-## 3. Synthèse Vocale (Text-to-Speech) (`tts.service.ts`)
+## 5. Synthèse Vocale (Text-to-Speech) (`tts.service.ts`)
 
 Cruchot intègre des capacités de lecture vocale des messages via les APIs cloud d'OpenAI et de Google (Gemini).
 
