@@ -6,15 +6,17 @@ import { MemoryFragmentCard } from './MemoryFragmentCard'
 import { MemoryPreview } from './MemoryPreview'
 import { SemanticMemorySection } from './SemanticMemorySection'
 import { ProfileTab } from './ProfileTab'
+import { OneiricTab } from './OneiricTab'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
-type MemoryTab = 'notes' | 'souvenirs' | 'profil'
+type MemoryTab = 'notes' | 'souvenirs' | 'profil' | 'consolidation'
 
 const TAB_ITEMS: { id: MemoryTab; label: string }[] = [
   { id: 'notes', label: 'Notes' },
   { id: 'souvenirs', label: 'Souvenirs' },
-  { id: 'profil', label: 'Profil' }
+  { id: 'profil', label: 'Profil' },
+  { id: 'consolidation', label: 'Consolidation' }
 ]
 
 export function MemoryView() {
@@ -48,6 +50,7 @@ export function MemoryView() {
           {activeTab === 'notes' && <NotesContent />}
           {activeTab === 'souvenirs' && <SemanticMemorySection />}
           {activeTab === 'profil' && <ProfileTab />}
+          {activeTab === 'consolidation' && <OneiricTab />}
         </div>
       </div>
     </div>
