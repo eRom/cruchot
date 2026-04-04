@@ -1072,6 +1072,8 @@ export interface ElectronAPI {
   oneiricGetRun: (id: string) => Promise<OneiricRun | null>
   oneiricSetModel: (data: { modelId: string }) => Promise<void>
   oneiricSetSchedule: (schedule: OneiricSchedule) => Promise<void>
+  onOneiricProgress: (callback: (data: { phase: number; label: string }) => void) => void
+  offOneiricProgress: () => void
 
   focusConversation: (id: string) => Promise<void>
 

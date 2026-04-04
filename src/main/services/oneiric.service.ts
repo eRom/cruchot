@@ -147,8 +147,15 @@ class OneiricService {
     // Resolve model from settings
     const { providerId, modelId } = this.getConfiguredModel()
     if (!providerId || !modelId) {
-      console.log('[Oneiric] No model configured (multi-llm:oneiric-model-id), skipping')
-      return null
+      console.log('[Oneiric] No model configured, creating failed run')
+      const failedRunId = createOneiricRun({ trigger, modelId: 'none' })
+      updateOneiricRun(failedRunId, {
+        status: 'failed',
+        errorMessage: 'Aucun modele configure',
+        durationMs: 0,
+        completedAt: new Date()
+      })
+      return failedRunId
     }
 
     const fullModelId = `${providerId}::${modelId}`
@@ -326,6 +333,21 @@ class OneiricService {
     modelId: string
   ): Promise<PhaseStats> {
     const stats = emptyStats()
+
+    // Wait for in-flight episode extractions to finish (max 30s)
+    try {
+      const { episodeTriggerService } = await import('./episode-trigger.service')
+      const maxWait = 30_000
+      const start = Date.now()
+      while (episodeTriggerService.isExtracting() && Date.now() - start < maxWait) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+      if (episodeTriggerService.isExtracting()) {
+        console.log('[Oneiric] Episode extraction still in progress after 30s, proceeding anyway')
+      }
+    } catch {
+      // episodeTriggerService not available — proceed
+    }
 
     const allEpisodes = getAllEpisodes().filter(e => e.isActive)
     if (allEpisodes.length === 0) {
@@ -634,10 +656,22 @@ class OneiricService {
   }
 
   private async mergeChunks(keepId: string, deleteIds: string[], mergedContent: string): Promise<void> {
-    // Re-embed the merged content
+    // 1. Embed merged content
     const vector = await embed(mergedContent)
 
-    // Upsert the kept point with new content + vector
+    // 2. Read existing payload from kept point to preserve metadata
+    let existingPayload: Record<string, unknown> = {}
+    try {
+      const res = await this.qdrantFetch(`/collections/${COLLECTION_NAME}/points/${keepId}`)
+      if (res.ok) {
+        const data = await res.json() as { result: { payload?: Record<string, unknown> } }
+        existingPayload = data.result?.payload ?? {}
+      }
+    } catch {
+      // Best effort — proceed with minimal payload
+    }
+
+    // 3. Upsert the kept point with merged content + preserved metadata
     await this.qdrantFetch(`/collections/${COLLECTION_NAME}/points`, {
       method: 'PUT',
       body: JSON.stringify({
@@ -645,15 +679,17 @@ class OneiricService {
           id: keepId,
           vector,
           payload: {
+            ...existingPayload,
             content: mergedContent,
             contentPreview: mergedContent.slice(0, 200),
+            merged: true,
             mergedAt: Math.floor(Date.now() / 1000)
           }
         }]
       })
     })
 
-    // Delete old points
+    // 4. Delete old points
     await this.deleteChunks(deleteIds)
   }
 

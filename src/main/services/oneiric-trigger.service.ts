@@ -102,7 +102,8 @@ class OneiricTriggerService {
         const delay = nextRun - now.getTime()
         return delay > 0 ? delay : 0
       }
-      return 0
+      // No prior run — wait one full interval before first run
+      return schedule.intervalHours * 60 * 60 * 1000
     }
 
     if (schedule.type === 'daily' && schedule.time) {

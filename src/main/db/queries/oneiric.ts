@@ -1,4 +1,4 @@
-import { eq, desc, isNull } from 'drizzle-orm'
+import { eq, desc, isNull, or, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { getDatabase } from '../index'
 import { oneiricRuns, conversations } from '../schema'
@@ -100,7 +100,12 @@ export function getConversationsToConsolidate(limit: number): Array<{ id: string
   const db = getDatabase()
   return db.select({ id: conversations.id })
     .from(conversations)
-    .where(isNull(conversations.lastOneiricRunAt))
+    .where(
+      or(
+        isNull(conversations.lastOneiricRunAt),
+        sql`${conversations.updatedAt} > ${conversations.lastOneiricRunAt}`
+      )
+    )
     .orderBy(desc(conversations.updatedAt))
     .limit(limit)
     .all()

@@ -344,6 +344,13 @@ const api: ElectronAPI = {
   oneiricSetModel: (data: { modelId: string }) => ipcRenderer.invoke('oneiric:set-model', data),
   oneiricSetSchedule: (schedule: unknown) => ipcRenderer.invoke('oneiric:set-schedule', schedule),
 
+  onOneiricProgress: (callback: (data: { phase: number; label: string }) => void): void => {
+    ipcRenderer.on('oneiric:progress', (_event, data) => callback(data))
+  },
+  offOneiricProgress: (): void => {
+    ipcRenderer.removeAllListeners('oneiric:progress')
+  },
+
   focusConversation: (id) => ipcRenderer.invoke('conversations:focus', id),
 
   // ── Slash Commands ─────────────────────────────────────────

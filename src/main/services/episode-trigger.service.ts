@@ -65,6 +65,10 @@ class EpisodeTriggerService {
     }
   }
 
+  isExtracting(): boolean {
+    return this.extractingSet.size > 0
+  }
+
   dispose(): void {
     for (const [, timer] of this.idleTimers) {
       clearTimeout(timer)

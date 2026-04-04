@@ -43,6 +43,7 @@ export function OneiricTab() {
   const loadStatus = useOneiricStore((s) => s.loadStatus)
   const consolidateNow = useOneiricStore((s) => s.consolidateNow)
   const cancel = useOneiricStore((s) => s.cancel)
+  const setCurrentPhase = useOneiricStore((s) => s.setCurrentPhase)
   const setModel = useOneiricStore((s) => s.setModel)
   const clearModel = useOneiricStore((s) => s.clearModel)
   const setSchedule = useOneiricStore((s) => s.setSchedule)
@@ -60,6 +61,17 @@ export function OneiricTab() {
   useEffect(() => {
     if (modelId) setSelectedModelId(modelId)
   }, [modelId])
+
+  // Listen for progress events
+  useEffect(() => {
+    const handler = (data: { phase: number; label: string }) => {
+      setCurrentPhase(data.phase)
+    }
+    window.api.onOneiricProgress(handler)
+    return () => {
+      window.api.offOneiricProgress()
+    }
+  }, [setCurrentPhase])
 
   const handleToggleEnabled = useCallback(async () => {
     if (isEnabled) {
