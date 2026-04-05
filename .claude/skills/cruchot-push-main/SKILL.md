@@ -12,6 +12,14 @@ Pipeline de commit + push sur `main` avec mise a jour documentaire automatique.
 
 ---
 
+## Etape 0 : Déplacer les documents de Superpower (git ignoré)
+
+Liste les fichiers issus de **superpower**, commit ou pas du dossier `docs/spec`et `docs/plan`
+
+Pour chaque fichier, les déplacer vers le dossier `_internal/specs` et `_internal/plans`
+
+---
+
 ## Etape 1 : Mettre a jour la documentation
 
 ### 1.1 Evaluer le besoin
