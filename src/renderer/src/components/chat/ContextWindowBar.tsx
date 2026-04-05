@@ -79,7 +79,7 @@ export function ContextWindowBar() {
   const totalCost = conversationMessages.reduce((sum, m) => sum + (m.cost ?? 0), 0)
 
   return (
-    <div className="flex items-center gap-2 px-4 py-1">
+    <div className="mx-auto flex w-full max-w-3xl items-center gap-2 px-4 py-1">
       {/* Progress bar */}
       <div className="flex-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
         <div
