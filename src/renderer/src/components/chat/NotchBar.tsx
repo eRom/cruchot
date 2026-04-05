@@ -1,7 +1,11 @@
 import { useEffect, useCallback, useState } from 'react'
+import { Monitor } from 'lucide-react'
 import { useGeminiLiveStore } from '@/stores/gemini-live.store'
+import { useSettingsStore } from '@/stores/settings.store'
 import { useGeminiLiveAudio } from '@/hooks/useGeminiLiveAudio'
+import { useScreenCapture } from '@/hooks/useScreenCapture'
 import { cruchotCommandHandler } from '@/services/cruchot-command-handler'
+import { ScreenSourcePicker } from './ScreenSourcePicker'
 import type { GeminiLiveStatus } from '../../../../preload/types'
 
 const STATUS_STYLES: Record<string, { bg: string; glow: string; label: string; color: string }> = {
@@ -32,13 +36,14 @@ function WaveformBars({ level, color }: { level: number; color: string }) {
 }
 
 export function NotchBar() {
-  const { status, micLevel, speakerLevel, connect, disconnect } = useGeminiLiveStore()
+  const { status, micLevel, speakerLevel, isScreenSharing, connect, disconnect } = useGeminiLiveStore()
   const { startAudio, stopAudio } = useGeminiLiveAudio()
+  const { startCapture, stopCapture } = useScreenCapture()
   const [isHovered, setIsHovered] = useState(false)
+  const [showPicker, setShowPicker] = useState(false)
 
   // Listen for status changes + commands from main process
   useEffect(() => {
-    // Clear stale listeners first (prevents duplicates from HMR/re-mounts)
     window.api.offGeminiLiveStatus()
     window.api.offGeminiLiveCommand()
 
@@ -70,12 +75,45 @@ export function NotchBar() {
     if (status === 'off' || status === 'dormant') {
       connect()
     } else {
+      stopCapture()
       disconnect()
       stopAudio()
     }
-  }, [status, connect, disconnect, stopAudio])
+  }, [status, connect, disconnect, stopAudio, stopCapture])
 
-  // Off or Dormant — show the pill ("y'a un truc")
+  const handleScreenShareClick = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation()
+
+    if (isScreenSharing) {
+      stopCapture()
+      return
+    }
+
+    const permission = await window.api.geminiLiveCheckScreenPermission()
+    if (permission !== 'granted') {
+      console.warn('[ScreenShare] Permission not granted:', permission)
+      return
+    }
+
+    setShowPicker(true)
+  }, [isScreenSharing, stopCapture])
+
+  const handleSourceSelect = useCallback(async (sourceId: string, sourceName: string) => {
+    setShowPicker(false)
+    try {
+      await startCapture(sourceId)
+
+      const { hasShownScreenShareNotice, setHasShownScreenShareNotice } = useSettingsStore.getState()
+      if (!hasShownScreenShareNotice) {
+        console.log(`[ScreenShare] Le contenu de "${sourceName}" est partagé avec Gemini en temps réel.`)
+        setHasShownScreenShareNotice(true)
+      }
+    } catch (err: any) {
+      console.error('[ScreenShare] Failed to start capture:', err.message)
+    }
+  }, [startCapture])
+
+  // Off or Dormant — show the pill
   if (status === 'off' || status === 'dormant') {
     return (
       <div
@@ -85,10 +123,8 @@ export function NotchBar() {
         onClick={handleClick}
       >
         {!isHovered ? (
-          // Tiny pill peeking out — "y'a un truc"
           <div className="w-9 h-1.5 rounded-b-md bg-gradient-to-r from-slate-600 to-slate-500 opacity-60 transition-all duration-200" />
         ) : (
-          // Hover: expand to show LIVE label
           <div className="flex items-center justify-center gap-1.5 w-[120px] h-7 rounded-b-xl bg-gradient-to-br from-slate-800 to-slate-700 border border-t-0 border-slate-600 transition-all duration-200">
             <div className={`w-2 h-2 rounded-full ${status === 'dormant' ? 'bg-amber-500' : 'bg-slate-500'}`} />
             <span className="text-[10px] font-medium text-slate-400">LIVE</span>
@@ -102,25 +138,61 @@ export function NotchBar() {
   const style = STATUS_STYLES[status] || STATUS_STYLES.connected
   const activeLevel = status === 'listening' ? micLevel : status === 'speaking' ? speakerLevel : 0
   const barColor = status === 'listening' ? 'bg-blue-400' : status === 'speaking' ? 'bg-amber-300' : 'bg-slate-500'
+  const isActive = status === 'connected' || status === 'listening' || status === 'speaking'
 
   return (
-    <div
-      className={`absolute left-1/2 -translate-x-1/2 top-[6px] [-webkit-app-region:no-drag] z-10
-        flex items-center justify-center gap-1.5
-        w-40 h-8 rounded-b-2xl
-        bg-gradient-to-br ${style.bg}
-        border border-t-0 border-white/10
-        ${style.glow}
-        transition-all duration-300 cursor-pointer`}
-      onClick={handleClick}
-      title="Cliquer pour déconnecter"
-    >
-      {(status === 'listening' || status === 'speaking') && (
-        <WaveformBars level={activeLevel} color={barColor} />
+    <div className="absolute left-1/2 -translate-x-1/2 top-[6px] [-webkit-app-region:no-drag] z-10">
+      <div
+        className={`flex items-center justify-center gap-1.5
+          w-48 h-8 rounded-b-2xl
+          bg-gradient-to-br ${style.bg}
+          border border-t-0 border-white/10
+          ${style.glow}
+          transition-all duration-300 cursor-pointer`}
+        onClick={handleClick}
+        title="Cliquer pour déconnecter"
+      >
+        {(status === 'listening' || status === 'speaking') && (
+          <WaveformBars level={activeLevel} color={barColor} />
+        )}
+        <span className={`text-[10px] font-semibold ${style.color} ml-1`}>
+          {style.label}
+        </span>
+
+        {/* Screen share icon — only when session is active */}
+        {isActive && (
+          <div
+            className={`ml-1.5 p-0.5 rounded cursor-pointer relative transition-all duration-150
+              ${isScreenSharing
+                ? 'opacity-100'
+                : 'opacity-50 hover:opacity-90 hover:bg-white/10'
+              }`}
+            onClick={handleScreenShareClick}
+            title={isScreenSharing ? 'Arrêter le partage' : 'Partager l\'écran'}
+          >
+            <Monitor
+              className={`w-3.5 h-3.5 ${
+                isScreenSharing
+                  ? 'text-green-400'
+                  : 'text-current'
+              }`}
+              fill={isScreenSharing ? 'rgba(74,222,128,0.15)' : 'none'}
+            />
+            {/* Green pulsing dot when active */}
+            {isScreenSharing && (
+              <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-400 rounded-full animate-[dotPulse_2s_ease-in-out_infinite]" />
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Source picker popover */}
+      {showPicker && (
+        <ScreenSourcePicker
+          onSelect={handleSourceSelect}
+          onClose={() => setShowPicker(false)}
+        />
       )}
-      <span className={`text-[10px] font-semibold ${style.color} ml-1`}>
-        {style.label}
-      </span>
     </div>
   )
 }
