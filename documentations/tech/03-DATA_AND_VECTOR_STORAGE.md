@@ -15,8 +15,9 @@ Le schéma est complet et gère toutes les entités de l'application :
 - **Outils & Extension** : `mcpServers`, `skills`, `permissionRules`, `bardas`, `customModels`.
 - **Opérations** : `scheduledTasks`, `statistics`, `ttsUsage`, `arenaMatches`, `remoteSessions`.
 - **Applications** : `allowedApps` (applications locales et sites web autorisés à être ouverts).
+- **Coûts LLM** : `llmCosts` (opérations en arrière-plan — compaction, épisodes, résumés, etc.).
 
-Le schéma totalise **30 tables** Drizzle (dont `episodes` en S55, `oneiric_runs` en S56, `allowedApps` en S59).
+Le schéma totalise **31 tables** Drizzle (dont `episodes` en S55, `oneiric_runs` en S56, `allowedApps` en S59, `llmCosts` en S60).
 
 Colonnes notables ajoutées sur `conversations` :
 - `compactSummary` (text | null) — résumé LLM généré lors d'une compaction complète.
@@ -189,3 +190,50 @@ Index : `idx_allowed_apps_enabled` sur `is_enabled`.
 | `updateAllowedApp(id, data)` | Mise à jour (IPC handler) |
 | `toggleAllowedApp(id, bool)` | Activer / désactiver |
 | `deleteAllowedApp(id)` | Suppression |
+
+## 7. Suivi des Coûts LLM Arrière-plan (`llm_costs`)
+
+La table `llm_costs` centralise le suivi des coûts LLM pour toutes les **opérations en arrière-plan** — distincte de la table `messages` qui couvre les coûts de chat. Elle permet d'avoir une vision complète du coût total de l'application.
+
+### 7.1 Table `llm_costs`
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `id` | text PK | nanoid |
+| `type` | text | enum: `compact` \| `episode` \| `summary` \| `optimizer` \| `image` \| `skills` \| `live_memory` \| `oneiric` |
+| `conversationId` | text \| null | Conversation concernée (si applicable) |
+| `modelId` | text | ID du modèle utilisé |
+| `providerId` | text | ID du provider |
+| `tokensIn` | integer | Tokens d'entrée (default 0) |
+| `tokensOut` | integer | Tokens de sortie (default 0) |
+| `cost` | real | Coût en USD (default 0) |
+| `metadata` | text JSON | Données additionnelles (ex: `tokensBefore`, `tokensAfter` pour compact) |
+| `createdAt` | integer | Timestamp (mode: timestamp) |
+
+### 7.2 Types de coûts trackés
+
+| Type | Service source |
+|------|---------------|
+| `compact` | `compact.ipc.ts` — compaction de la fenêtre de contexte |
+| `episode` | `episode-extractor.service.ts` — extraction mémoire épisodique |
+| `summary` | `summary.ipc.ts` — génération de résumés de conversation |
+| `optimizer` | `prompt-optimizer.ipc.ts` — optimisation de prompts |
+| `image` | `images.ipc.ts` — génération d'images |
+| `skills` | `skills.ipc.ts` — analyse de skills |
+| `live_memory` | `live-memory.service.ts` — extraction mémoire vocale |
+| `oneiric` | `oneiric.service.ts` — consolidation onirique |
+
+### 7.3 Queries (`db/queries/llm-costs.ts`)
+
+| Fonction | Usage |
+|----------|-------|
+| `createLlmCost(params)` | Enregistre un coût LLM (appelé depuis chaque service) |
+| `getTotalLlmCosts(days?)` | Total consolidé `{ totalCost, totalTokensIn, totalTokensOut }` |
+
+Et dans `db/queries/statistics.ts` :
+- `getBackgroundCostsByType(days?)` — coûts groupés par type (pour le dashboard stats)
+- `getPreviousPeriodCost(days)` — coût de la période précédente (comparaison dans le dashboard)
+
+### 7.4 Nettoyage
+
+Un `cleanupOldLlmCosts(retentionDays)` est intégré dans `cleanup.ts` — suit la même rétention que les statistiques globales (configurable via `settings.statsRetentionDays`).

@@ -76,6 +76,35 @@ La section **VCR** est la 7e section du Right Panel (`chat/right-panel/VcrSectio
 - `stopRecording()` déclenche le handler IPC `vcr:stop` qui ouvre une `dialog.showSaveDialog()` côté main process — l'utilisateur choisit le dossier et le nom du fichier. Les exports `.ndjson` + `.html` sont écrits en parallèle.
 - Le timer local (intervalle 1s) calcule la durée d'enregistrement côté renderer à partir de `activeRecording.startedAt`.
 
-## 8. Internationalisation (i18n)
+## 8. Dashboard Statistiques (`StatsView`)
+
+Le dashboard `StatsView` (`src/renderer/src/components/statistics/StatsView.tsx`) offre une vue complète des coûts et de l'utilisation de l'application.
+
+### Structure du dashboard
+
+- **Filtres de période** : sélecteur 7j / 30j / 90j / 1an avec comparaison à la période précédente (variation en %).
+- **Section "Coûts Chat"** : coût total des messages, tokens in/out, provenant de la table `messages`.
+- **Section "Coûts Arrière-plan"** : breakdown par type (`compact`, `episode`, `summary`, `optimizer`, `image`, `skills`, `live_memory`, `oneiric`) provenant de la table `llm_costs`. Chaque type affiché avec son coût et ses tokens.
+- **Coût total combiné** : somme des coûts chat + arrière-plan.
+- **Graphiques** : courbes journalières (`recharts`) + barres par provider/modèle.
+- **Section projets** : coûts par projet avec nombre de conversations et messages.
+
+### IPC Statistics
+
+| Channel | Description |
+|---------|-------------|
+| `statistics:daily` | Coûts journaliers (N derniers jours) |
+| `statistics:providers` | Coûts groupés par provider |
+| `statistics:models` | Coûts groupés par modèle |
+| `statistics:total` | Stats globales (messages chat uniquement) |
+| `statistics:projects` | Coûts par projet |
+| `statistics:backgroundCosts` | Coûts arrière-plan groupés par type (`llm_costs`) |
+| `statistics:previousPeriod` | Coût total de la période précédente (comparaison) |
+
+### Store (`stats.store.ts`)
+
+Le `stats.store.ts` Zustand expose `backgroundCosts`, `previousPeriodCost`, et `todayCost` en plus des stats historiques existantes. Le store charge les données en parallèle via `Promise.all` sur les 7 channels IPC.
+
+## 9. Internationalisation (i18n)
 
 - **i18next / react-i18next** : L'infrastructure i18n est en place avec les fichiers de traduction dans `src/renderer/src/locales/`. En pratique, l'interface est principalement en français avec un support anglais partiel. L'utilisation de `useTranslation()` dans les composants reste limitée — la majorité des textes UI sont codés en dur en français.

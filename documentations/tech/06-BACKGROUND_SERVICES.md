@@ -305,6 +305,8 @@ Le composant `ContextWindowBar` (`src/renderer/src/components/chat/ContextWindow
 |---------|-------------|
 | `compact:run` | Lance la full compaction. Charge les messages, génère le résumé, persiste `compactSummary` + `compactBoundaryId` |
 
+Le handler `compact:run` enregistre également le coût LLM de la compaction dans la table `llm_costs` via `createLlmCost({ type: 'compact', ... })` avec les métadonnées `tokensBefore` / `tokensAfter`.
+
 ### 7.5 Guard anti-double invocation
 
 Un `Set<string>` (`compactingSet`) dans le handler IPC empêche deux compactions simultanées sur la même conversation. Une tentative parallèle retourne une erreur immédiate.
