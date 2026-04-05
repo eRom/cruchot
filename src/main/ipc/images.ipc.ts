@@ -9,6 +9,7 @@ import { images } from '../db/schema'
 import { generateImage } from '../llm/image'
 import { createMessage } from '../db/queries/messages'
 import { touchConversation } from '../db/queries/conversations'
+import { createLlmCost } from '../db/queries/llm-costs'
 
 const generateImageSchema = z.object({
   prompt: z.string().min(1).max(4000),
@@ -76,6 +77,25 @@ export function registerImagesIpc(): void {
       })
       .run()
 
+    // Track image generation cost (flat rate per image)
+    const IMAGE_PRICING: Record<string, number> = {
+      'gemini-3.1-flash-image-preview': 0.0315,
+      'gemini-3-pro-image-preview': 0.063,
+      'gpt-image-1.5': 0.04
+    }
+    const imageCost = IMAGE_PRICING[modelId] ?? 0.04
+
+    createLlmCost({
+      type: 'image',
+      conversationId: conversationId ?? undefined,
+      modelId,
+      providerId: providerId ?? (modelId.startsWith('gpt-') ? 'openai' : 'google'),
+      tokensIn: 0,
+      tokensOut: 0,
+      cost: imageCost,
+      metadata: { aspectRatio, prompt: prompt.slice(0, 200) }
+    })
+
     // Save assistant message with image contentData to DB
     if (conversationId) {
       createMessage({
@@ -85,6 +105,7 @@ export function registerImagesIpc(): void {
         modelId,
         providerId,
         responseTimeMs,
+        cost: imageCost,
         contentData: {
           type: 'image',
           imageId: id,
