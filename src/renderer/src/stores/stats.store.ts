@@ -1,5 +1,11 @@
 import { create } from 'zustand'
 
+export interface BackgroundCostByType {
+  type: string
+  totalCost: number
+  count: number
+}
+
 export interface DailyStat {
   date: string
   cost: number
@@ -19,6 +25,7 @@ export interface ModelStat {
   provider: string
   messages: number
   tokens: number
+  cost: number
 }
 
 export interface ProjectStat {
@@ -32,10 +39,11 @@ export interface ProjectStat {
   conversations: number
 }
 
-export type StatsPeriod = '7d' | '30d' | '90d' | 'all'
+export type StatsPeriod = 'today' | '7d' | '30d' | '90d' | 'all'
 
 function periodToDays(period: StatsPeriod): number {
   switch (period) {
+    case 'today': return 1
     case '7d': return 7
     case '30d': return 30
     case '90d': return 90
@@ -55,6 +63,10 @@ interface StatsState {
   totalResponseTimeMs: number
   totalConversations: number
   totalTtsCost: number
+  totalBackgroundCost: number
+  backgroundCostsByType: BackgroundCostByType[]
+  previousPeriodCost: number | null
+  totalImageCost: number
   selectedPeriod: StatsPeriod
   isLoading: boolean
   error: string | null
@@ -75,6 +87,10 @@ export const useStatsStore = create<StatsState>((set, get) => ({
   totalResponseTimeMs: 0,
   totalConversations: 0,
   totalTtsCost: 0,
+  totalBackgroundCost: 0,
+  backgroundCostsByType: [],
+  previousPeriodCost: null,
+  totalImageCost: 0,
   selectedPeriod: '30d',
   isLoading: false,
   error: null,
@@ -90,12 +106,14 @@ export const useStatsStore = create<StatsState>((set, get) => ({
     try {
       const days = periodToDays(get().selectedPeriod)
 
-      const [rawDaily, rawProviders, rawModels, rawGlobal, rawProjects] = await Promise.all([
+      const [rawDaily, rawProviders, rawModels, rawGlobal, rawProjects, rawBgCosts, rawPrevPeriod] = await Promise.all([
         window.api.getDailyStats(days || undefined),
         window.api.getProviderStats(days || undefined),
         window.api.getModelStats(days || undefined),
         window.api.getGlobalStats(days || undefined),
-        window.api.getProjectStats(days || undefined)
+        window.api.getProjectStats(days || undefined),
+        window.api.getBackgroundCosts(days || undefined),
+        days > 0 ? window.api.getPreviousPeriodCost(days) : Promise.resolve(null)
       ])
 
       const dailyStats: DailyStat[] = (rawDaily ?? []).map((d) => ({
@@ -116,7 +134,8 @@ export const useStatsStore = create<StatsState>((set, get) => ({
         model: m.modelId ?? 'unknown',
         provider: m.providerId ?? 'unknown',
         messages: m.messagesCount ?? 0,
-        tokens: (m.tokensIn ?? 0) + (m.tokensOut ?? 0)
+        tokens: (m.tokensIn ?? 0) + (m.tokensOut ?? 0),
+        cost: m.totalCost ?? 0
       }))
 
       const projectStats: ProjectStat[] = (rawProjects ?? []).map((p) => ({
@@ -142,6 +161,14 @@ export const useStatsStore = create<StatsState>((set, get) => ({
         totalResponseTimeMs: rawGlobal?.totalResponseTimeMs ?? 0,
         totalConversations: rawGlobal?.totalConversations ?? 0,
         totalTtsCost: rawGlobal?.totalTtsCost ?? 0,
+        totalBackgroundCost: rawGlobal?.totalBackgroundCost ?? 0,
+        backgroundCostsByType: (rawBgCosts ?? []).map((b: { type: string; totalCost: number; count: number }) => ({
+          type: b.type,
+          totalCost: b.totalCost ?? 0,
+          count: b.count ?? 0
+        })),
+        previousPeriodCost: rawPrevPeriod?.totalCost ?? null,
+        totalImageCost: (rawBgCosts ?? []).find((b: { type: string; totalCost: number }) => b.type === 'image')?.totalCost ?? 0,
         isLoading: false
       })
     } catch (error) {
@@ -158,6 +185,10 @@ export const useStatsStore = create<StatsState>((set, get) => ({
         totalResponseTimeMs: 0,
         totalConversations: 0,
         totalTtsCost: 0,
+        totalBackgroundCost: 0,
+        backgroundCostsByType: [],
+        previousPeriodCost: null,
+        totalImageCost: 0,
         isLoading: false,
         error: error instanceof Error ? error.message : 'Failed to load statistics'
       })
