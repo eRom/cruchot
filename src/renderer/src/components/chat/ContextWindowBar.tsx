@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from 'react'
+import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { useUiStore } from '@/stores/ui.store'
 import { useConversationsStore } from '@/stores/conversations.store'
@@ -50,6 +51,7 @@ export function ContextWindowBar() {
     try {
       await window.api.runCompact(activeConversationId)
     } catch (error) {
+      toast.error('Echec de la compaction')
       console.error('[Compact] Failed:', error)
     }
   }, [activeConversationId, isCompacting])
