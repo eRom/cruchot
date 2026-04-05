@@ -1472,21 +1472,21 @@ export interface AllowedApp {
   updatedAt: Date
 }
 
-// ── Gemini Live ─────────────────────────────────────────
-export type GeminiLiveStatus = 'off' | 'connecting' | 'connected' | 'listening' | 'speaking' | 'dormant' | 'error'
+// ── Live (voice agent) ─────────────────────────────────
+export type LiveStatus = 'off' | 'connecting' | 'connected' | 'listening' | 'speaking' | 'dormant' | 'error'
 
-export interface GeminiLiveStatusInfo {
-  status: GeminiLiveStatus
+export interface LiveStatusInfo {
+  status: LiveStatus
   error?: string
 }
 
-export interface GeminiLiveCommand {
+export interface LiveCommand {
   id: string
   name: string
   args: Record<string, unknown>
 }
 
-export interface GeminiLiveCommandResult {
+export interface LiveCommandResult {
   success: boolean
   data?: unknown
   error?: string
@@ -1498,5 +1498,13 @@ export interface ScreenSource {
   thumbnailDataUrl: string
   appIconDataUrl?: string
   type: 'screen' | 'window'
+}
+
+export interface AvailablePlugin {
+  providerId: string
+  displayName: string
+  modelName: string
+  available: boolean
+  supportsScreenShare: boolean
 }
 
