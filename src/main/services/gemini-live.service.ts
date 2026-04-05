@@ -25,6 +25,8 @@ class GeminiLiveService {
   private readonly POST_TURN_COOLDOWN_MS = 500
   // Playback state from renderer (worklet started/ended)
   private isPlaybackActive = false
+  // Screen sharing state
+  private isScreenSharing = false
 
   init(mainWindow: BrowserWindow) {
     this.mainWindow = mainWindow
@@ -132,6 +134,8 @@ class GeminiLiveService {
       this.session = null
     }
     this.ai = null
+    this.isScreenSharing = false
+    this.mainWindow?.webContents.send('gemini-live:screen-sharing:status', false)
     liveMemoryService.extractAndStore().catch(err =>
       console.error('[GeminiLive] Memory extraction failed:', err.message)
     )
@@ -164,6 +168,31 @@ class GeminiLiveService {
       this.sendStatus()
     }
     this.resetIdleTimer()
+  }
+
+  sendScreenFrame(jpegBase64: string): void {
+    if (!this.session || this.status === 'off' || this.status === 'dormant') return
+    if (!this.isScreenSharing) return
+    this.session.sendRealtimeInput({
+      video: { data: jpegBase64, mimeType: 'image/jpeg' }
+    })
+    this.resetIdleTimer()
+  }
+
+  setScreenSharing(active: boolean): void {
+    this.isScreenSharing = active
+    this.mainWindow?.webContents.send('gemini-live:screen-sharing:status', active)
+    console.log(`[GeminiLive] Screen sharing: ${active ? 'ON' : 'OFF'}`)
+  }
+
+  getScreenSharing(): boolean {
+    return this.isScreenSharing
+  }
+
+  requestScreenshot(): void {
+    if (!this.isScreenSharing) return
+    this.mainWindow?.webContents.send('gemini-live:request-screenshot')
+    console.log('[GeminiLive] Screenshot requested')
   }
 
   respondToCommand(id: string, name: string, result: GeminiLiveCommandResult): void {
