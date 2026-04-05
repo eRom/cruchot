@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useUiStore } from '@/stores/ui.store'
-import { useGeminiLiveStore } from '@/stores/gemini-live.store'
+import { useLiveStore } from '@/stores/live.store'
 import { NotchBar } from '../chat/NotchBar'
 
 export function TopBar() {
@@ -11,7 +11,7 @@ export function TopBar() {
   const toggleSidebar = useSettingsStore((s) => s.toggleSidebar)
   const openPanel = useUiStore((s) => s.openPanel)
   const rightExpanded = openPanel === 'right'
-  const isGeminiAvailable = useGeminiLiveStore((s) => s.isAvailable)
+  const isGeminiAvailable = useLiveStore((s) => s.isAvailable)
 
   return (
     <div className="relative flex h-[38px] shrink-0 items-center bg-background border-b">

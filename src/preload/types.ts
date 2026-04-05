@@ -1311,16 +1311,16 @@ export interface ElectronAPI {
   // Gemini Live
   geminiLiveConnect: () => Promise<void>
   geminiLiveDisconnect: () => Promise<void>
-  geminiLiveGetStatus: () => Promise<GeminiLiveStatusInfo>
+  geminiLiveGetStatus: () => Promise<LiveStatusInfo>
   geminiLiveIsAvailable: () => Promise<boolean>
   geminiLiveSendAudio: (base64: string) => void
   geminiLiveSetPlaybackActive: (active: boolean) => void
-  geminiLiveRespondCommand: (id: string, name: string, result: GeminiLiveCommandResult) => Promise<void>
+  geminiLiveRespondCommand: (id: string, name: string, result: LiveCommandResult) => Promise<void>
   onGeminiLiveAudio: (cb: (base64: string) => void) => void
   offGeminiLiveAudio: () => void
-  onGeminiLiveStatus: (cb: (info: GeminiLiveStatusInfo) => void) => void
+  onGeminiLiveStatus: (cb: (info: LiveStatusInfo) => void) => void
   offGeminiLiveStatus: () => void
-  onGeminiLiveCommand: (cb: (cmd: GeminiLiveCommand) => void) => void
+  onGeminiLiveCommand: (cb: (cmd: LiveCommand) => void) => void
   offGeminiLiveCommand: () => void
   onGeminiLiveClearPlayback: (cb: () => void) => void
   offGeminiLiveClearPlayback: () => void
