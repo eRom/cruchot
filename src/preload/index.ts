@@ -613,73 +613,77 @@ const api: ElectronAPI = {
   applicationsOpen: (id: string) => ipcRenderer.invoke('applications:open', { id }),
   applicationsOpenByName: (name: string) => ipcRenderer.invoke('applications:openByName', { name }),
 
-  // ── Gemini Live (voice agent) ────────────────────────────
-  geminiLiveConnect: () => ipcRenderer.invoke('gemini-live:connect'),
+  // ── Live (voice agent) ─────────────────────────────────
+  liveConnect: () => ipcRenderer.invoke('live:connect'),
 
-  geminiLiveDisconnect: () => ipcRenderer.invoke('gemini-live:disconnect'),
+  liveDisconnect: () => ipcRenderer.invoke('live:disconnect'),
 
-  geminiLiveGetStatus: () => ipcRenderer.invoke('gemini-live:status'),
+  liveGetStatus: () => ipcRenderer.invoke('live:status'),
 
-  geminiLiveIsAvailable: (): Promise<boolean> => ipcRenderer.invoke('gemini-live:available'),
+  liveIsAvailable: (): Promise<boolean> => ipcRenderer.invoke('live:available'),
 
-  geminiLiveSendAudio: (base64: string) => ipcRenderer.send('gemini-live:audio:send', base64),
+  liveGetPlugins: () => ipcRenderer.invoke('live:plugins'),
 
-  geminiLiveSetPlaybackActive: (active: boolean) => ipcRenderer.send('gemini-live:playback-active', active),
+  liveGetActiveProvider: () => ipcRenderer.invoke('live:active-provider'),
 
-  geminiLiveRespondCommand: (id: string, name: string, result: { success: boolean; data?: unknown; error?: string }) =>
-    ipcRenderer.invoke('gemini-live:command-result', { id, name, result }),
+  liveSendAudio: (base64: string) => ipcRenderer.send('live:audio:send', base64),
 
-  onGeminiLiveAudio: (cb: (base64: string) => void) => {
-    ipcRenderer.on('gemini-live:audio', (_event: Electron.IpcRendererEvent, data: string) => cb(data))
+  liveSetPlaybackActive: (active: boolean) => ipcRenderer.send('live:playback-active', active),
+
+  liveRespondCommand: (id: string, name: string, result: { success: boolean; data?: unknown; error?: string }) =>
+    ipcRenderer.invoke('live:command-result', { id, name, result }),
+
+  onLiveAudio: (cb: (base64: string) => void) => {
+    ipcRenderer.on('live:audio', (_event: Electron.IpcRendererEvent, data: string) => cb(data))
   },
 
-  offGeminiLiveAudio: () => ipcRenderer.removeAllListeners('gemini-live:audio'),
+  offLiveAudio: () => ipcRenderer.removeAllListeners('live:audio'),
 
-  onGeminiLiveStatus: (cb: (info: { status: string; error?: string }) => void) => {
-    ipcRenderer.on('gemini-live:status', (_event: Electron.IpcRendererEvent, info: { status: string; error?: string }) => cb(info))
+  onLiveStatus: (cb: (info: { status: string; error?: string }) => void) => {
+    ipcRenderer.on('live:status', (_event: Electron.IpcRendererEvent, info: { status: string; error?: string }) => cb(info))
   },
 
-  offGeminiLiveStatus: () => ipcRenderer.removeAllListeners('gemini-live:status'),
+  offLiveStatus: () => ipcRenderer.removeAllListeners('live:status'),
 
-  onGeminiLiveCommand: (cb: (cmd: { id: string; name: string; args: Record<string, unknown> }) => void) => {
-    ipcRenderer.on('gemini-live:command', (_event: Electron.IpcRendererEvent, cmd: { id: string; name: string; args: Record<string, unknown> }) => cb(cmd))
+  onLiveCommand: (cb: (cmd: { id: string; name: string; args: Record<string, unknown> }) => void) => {
+    ipcRenderer.on('live:command', (_event: Electron.IpcRendererEvent, cmd: { id: string; name: string; args: Record<string, unknown> }) => cb(cmd))
   },
 
-  offGeminiLiveCommand: () => ipcRenderer.removeAllListeners('gemini-live:command'),
+  offLiveCommand: () => ipcRenderer.removeAllListeners('live:command'),
 
-  onGeminiLiveClearPlayback: (cb: () => void) => {
-    ipcRenderer.on('gemini-live:clear-playback', () => cb())
+  onLiveClearPlayback: (cb: () => void) => {
+    ipcRenderer.on('live:clear-playback', () => cb())
   },
 
-  offGeminiLiveClearPlayback: () => ipcRenderer.removeAllListeners('gemini-live:clear-playback'),
+  offLiveClearPlayback: () => ipcRenderer.removeAllListeners('live:clear-playback'),
 
-  // ── Gemini Live — Screen Sharing ───────────────────────
-  geminiLiveGetScreenSources: () =>
-    ipcRenderer.invoke('gemini-live:screen-sources'),
+  // ── Live — Screen Sharing ──────────────────────────────
+  liveGetScreenSources: () =>
+    ipcRenderer.invoke('live:screen-sources'),
 
-  geminiLiveSendScreenFrame: (base64: string) =>
-    ipcRenderer.send('gemini-live:screen-frame', base64),
+  liveSendScreenFrame: (base64: string) =>
+    ipcRenderer.send('live:screen-frame', base64),
 
-  geminiLiveSetScreenSharing: (active: boolean) =>
-    ipcRenderer.send('gemini-live:screen-sharing:set', active),
+  liveSetScreenSharing: (active: boolean) =>
+    ipcRenderer.send('live:screen-sharing:set', active),
 
-  geminiLiveSelectScreenSource: (sourceId: string): Promise<void> =>
-    ipcRenderer.invoke('gemini-live:screen-select-source', sourceId),
+  liveSelectScreenSource: (sourceId: string): Promise<void> =>
+    ipcRenderer.invoke('live:screen-select-source', sourceId),
 
-  geminiLiveCheckScreenPermission: (): Promise<string> =>
-    ipcRenderer.invoke('gemini-live:screen-permission'),
+  liveCheckScreenPermission: (): Promise<string> =>
+    ipcRenderer.invoke('live:screen-permission'),
 
-  onGeminiLiveScreenSharing: (cb: (active: boolean) => void) => {
-    ipcRenderer.on('gemini-live:screen-sharing:status', (_event: Electron.IpcRendererEvent, active: boolean) => cb(active))
+  onLiveScreenSharing: (cb: (active: boolean) => void) => {
+    ipcRenderer.on('live:screen-sharing:status', (_event: Electron.IpcRendererEvent, active: boolean) => cb(active))
   },
 
-  offGeminiLiveScreenSharing: () => ipcRenderer.removeAllListeners('gemini-live:screen-sharing:status'),
+  offLiveScreenSharing: () => ipcRenderer.removeAllListeners('live:screen-sharing:status'),
 
-  onGeminiLiveRequestScreenshot: (cb: () => void) => {
-    ipcRenderer.on('gemini-live:request-screenshot', () => cb())
+  onLiveRequestScreenshot: (cb: () => void) => {
+    ipcRenderer.on('live:request-screenshot', () => cb())
   },
 
-  offGeminiLiveRequestScreenshot: () => ipcRenderer.removeAllListeners('gemini-live:request-screenshot'),
+  offLiveRequestScreenshot: () => ipcRenderer.removeAllListeners('live:request-screenshot'),
 
   // ── Compact ──────────────────────────────────────────
   runCompact: (conversationId: string) =>
