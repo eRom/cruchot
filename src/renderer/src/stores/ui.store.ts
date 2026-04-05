@@ -18,6 +18,8 @@ interface UiState {
   openPanel: OpenPanel
   draftContent: string
   pendingApproval: { approvalId: string; toolName: string; toolArgs: Record<string, unknown> } | null
+  isCompacting: boolean
+  compactStatus: { needsFullCompact: boolean; tokenEstimate: number } | null
 
   setCurrentView: (view: ViewMode) => void
   setIsStreaming: (streaming: boolean) => void
@@ -29,6 +31,8 @@ interface UiState {
   toggleRightPanel: () => void
   setDraftContent: (content: string) => void
   setPendingApproval: (approval: { approvalId: string; toolName: string; toolArgs: Record<string, unknown> } | null) => void
+  setIsCompacting: (compacting: boolean) => void
+  setCompactStatus: (status: { needsFullCompact: boolean; tokenEstimate: number } | null) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -41,6 +45,8 @@ export const useUiStore = create<UiState>((set) => ({
   openPanel: null,
   draftContent: '',
   pendingApproval: null,
+  isCompacting: false,
+  compactStatus: null,
 
   setCurrentView: (view) => set({ currentView: view }),
   setIsStreaming: (streaming) => set({ isStreaming: streaming }),
@@ -52,4 +58,6 @@ export const useUiStore = create<UiState>((set) => ({
   toggleRightPanel: () => set((s) => ({ openPanel: s.openPanel === 'right' ? null : 'right' })),
   setDraftContent: (content) => set({ draftContent: content }),
   setPendingApproval: (approval) => set({ pendingApproval: approval }),
+  setIsCompacting: (compacting) => set({ isCompacting: compacting }),
+  setCompactStatus: (status) => set({ compactStatus: status }),
 }))

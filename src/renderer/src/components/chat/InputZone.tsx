@@ -110,6 +110,7 @@ export function InputZone({
   const activeProjectId = useProjectsStore((s) => s.activeProjectId)
   const { messages, addMessage } = useMessagesStore()
   const isStreaming = useUiStore((s) => s.isStreaming)
+  const isCompacting = useUiStore((s) => s.isCompacting)
 
   const temperature = useSettingsStore((s) => s.temperature)
   const settingsMaxTokens = useSettingsStore((s) => s.maxTokens)
@@ -182,7 +183,7 @@ export function InputZone({
   const isImageMode = selectedModel?.type === 'image'
 
   // ── Derived state ────────────────────────────────────────
-  const isBusy = isStreaming || isGeneratingImage
+  const isBusy = isStreaming || isGeneratingImage || isCompacting
   const hasAttachments = pendingAttachments.length > 0
   const hasDroppedFiles = droppedFileContexts.size > 0
   const canSend = (content.trim().length > 0 || hasAttachments || hasDroppedFiles) && !isBusy && !!selectedModelId && !!selectedProviderId

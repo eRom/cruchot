@@ -12,6 +12,7 @@ import { InputZone } from './InputZone'
 import { PlanErrorBanner } from './PlanErrorBanner'
 import { PlanStickyIndicator } from './PlanStickyIndicator'
 import { ToolApprovalBanner } from './ToolApprovalBanner'
+import { ContextWindowBar } from './ContextWindowBar'
 import { WorkspacePanel } from '@/components/workspace/WorkspacePanel'
 import { useLibraryStore } from '@/stores/library.store'
 import { useVcrStore } from '@/stores/vcr.store'
@@ -244,6 +245,7 @@ export default function ChatView() {
         <div className="shrink-0">
           <ToolApprovalBanner />
           <InputZone />
+          <ContextWindowBar />
         </div>
       </div>
 
