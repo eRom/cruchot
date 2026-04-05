@@ -1308,33 +1308,35 @@ export interface ElectronAPI {
   applicationsOpen: (id: string) => Promise<{ success: boolean }>
   applicationsOpenByName: (name: string) => Promise<{ success: boolean }>
 
-  // Gemini Live
-  geminiLiveConnect: () => Promise<void>
-  geminiLiveDisconnect: () => Promise<void>
-  geminiLiveGetStatus: () => Promise<LiveStatusInfo>
-  geminiLiveIsAvailable: () => Promise<boolean>
-  geminiLiveSendAudio: (base64: string) => void
-  geminiLiveSetPlaybackActive: (active: boolean) => void
-  geminiLiveRespondCommand: (id: string, name: string, result: LiveCommandResult) => Promise<void>
-  onGeminiLiveAudio: (cb: (base64: string) => void) => void
-  offGeminiLiveAudio: () => void
-  onGeminiLiveStatus: (cb: (info: LiveStatusInfo) => void) => void
-  offGeminiLiveStatus: () => void
-  onGeminiLiveCommand: (cb: (cmd: LiveCommand) => void) => void
-  offGeminiLiveCommand: () => void
-  onGeminiLiveClearPlayback: (cb: () => void) => void
-  offGeminiLiveClearPlayback: () => void
+  // Live (voice agent)
+  liveConnect: () => Promise<void>
+  liveDisconnect: () => Promise<void>
+  liveGetStatus: () => Promise<LiveStatusInfo>
+  liveIsAvailable: () => Promise<boolean>
+  liveGetPlugins: () => Promise<AvailablePlugin[]>
+  liveGetActiveProvider: () => Promise<string | null>
+  liveSendAudio: (base64: string) => void
+  liveSetPlaybackActive: (active: boolean) => void
+  liveRespondCommand: (id: string, name: string, result: LiveCommandResult) => Promise<void>
+  onLiveAudio: (cb: (base64: string) => void) => void
+  offLiveAudio: () => void
+  onLiveStatus: (cb: (info: LiveStatusInfo) => void) => void
+  offLiveStatus: () => void
+  onLiveCommand: (cb: (cmd: LiveCommand) => void) => void
+  offLiveCommand: () => void
+  onLiveClearPlayback: (cb: () => void) => void
+  offLiveClearPlayback: () => void
 
-  // Gemini Live — Screen Sharing
-  geminiLiveGetScreenSources: () => Promise<ScreenSource[]>
-  geminiLiveSendScreenFrame: (base64: string) => void
-  geminiLiveSetScreenSharing: (active: boolean) => void
-  geminiLiveSelectScreenSource: (sourceId: string) => Promise<void>
-  geminiLiveCheckScreenPermission: () => Promise<string>
-  onGeminiLiveScreenSharing: (cb: (active: boolean) => void) => void
-  offGeminiLiveScreenSharing: () => void
-  onGeminiLiveRequestScreenshot: (cb: () => void) => void
-  offGeminiLiveRequestScreenshot: () => void
+  // Live — Screen Sharing
+  liveGetScreenSources: () => Promise<ScreenSource[]>
+  liveSendScreenFrame: (base64: string) => void
+  liveSetScreenSharing: (active: boolean) => void
+  liveSelectScreenSource: (sourceId: string) => Promise<void>
+  liveCheckScreenPermission: () => Promise<string>
+  onLiveScreenSharing: (cb: (active: boolean) => void) => void
+  offLiveScreenSharing: () => void
+  onLiveRequestScreenshot: (cb: () => void) => void
+  offLiveRequestScreenshot: () => void
 
   // ── Compact ──────────────────────────────────────────
   runCompact: (conversationId: string) => Promise<{ tokensBefore: number; tokensAfter: number }>
