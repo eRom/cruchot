@@ -730,4 +730,23 @@ export function runMigrations(): void {
     );
     CREATE INDEX IF NOT EXISTS idx_allowed_apps_enabled ON allowed_apps(is_enabled);
   `)
+
+  // --- LLM Costs (universal cost tracking — S60) ---
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS llm_costs (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL CHECK(type IN ('compact', 'episode', 'summary', 'optimizer', 'image', 'skills', 'live_memory', 'oneiric')),
+      conversation_id TEXT,
+      model_id TEXT NOT NULL,
+      provider_id TEXT NOT NULL,
+      tokens_in INTEGER NOT NULL DEFAULT 0,
+      tokens_out INTEGER NOT NULL DEFAULT 0,
+      cost REAL NOT NULL DEFAULT 0,
+      metadata TEXT,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_llm_costs_type ON llm_costs(type);
+    CREATE INDEX IF NOT EXISTS idx_llm_costs_created_at ON llm_costs(created_at);
+    CREATE INDEX IF NOT EXISTS idx_llm_costs_conversation ON llm_costs(conversation_id);
+  `)
 }

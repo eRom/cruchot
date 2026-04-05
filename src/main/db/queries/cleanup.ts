@@ -25,7 +25,8 @@ import {
   skills,
   permissionRules,
   episodes,
-  oneiricRuns
+  oneiricRuns,
+  llmCosts
 } from '../schema'
 
 /**
@@ -49,6 +50,7 @@ export function deleteConversationsProjectsImages(): { imagePaths: string[] } {
   db.delete(oneiricRuns).run()
   db.run(sql`UPDATE conversations SET last_episode_message_id = NULL`)
   db.run(sql`UPDATE conversations SET last_oneiric_run_at = NULL`)
+  db.delete(llmCosts).run()
   db.delete(messages).run()
   db.delete(scheduledTasks).run()
   db.delete(conversations).run()
@@ -93,6 +95,7 @@ export function factoryResetDatabase(): { imagePaths: string[] } {
   db.delete(memoryFragments).run()
   db.delete(statistics).run()
   db.delete(ttsUsage).run()
+  db.delete(llmCosts).run()
   db.delete(settings).run()
   db.delete(permissionRules).run()
 

@@ -581,3 +581,21 @@ export const allowedApps = sqliteTable('allowed_apps', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
+
+// ---------------------------------------------------------------------------
+// LLM Costs (background operations — not in messages table)
+// ---------------------------------------------------------------------------
+export const llmCosts = sqliteTable('llm_costs', {
+  id: text('id').primaryKey(),
+  type: text('type', {
+    enum: ['compact', 'episode', 'summary', 'optimizer', 'image', 'skills', 'live_memory', 'oneiric']
+  }).notNull(),
+  conversationId: text('conversation_id'),
+  modelId: text('model_id').notNull(),
+  providerId: text('provider_id').notNull(),
+  tokensIn: integer('tokens_in').notNull().default(0),
+  tokensOut: integer('tokens_out').notNull().default(0),
+  cost: real('cost').notNull().default(0),
+  metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+})
