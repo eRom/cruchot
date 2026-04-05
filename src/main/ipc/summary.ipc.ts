@@ -4,6 +4,8 @@ import { generateText } from 'ai'
 import { getModel } from '../llm/router'
 import { getMessagesForConversation } from '../db/queries/messages'
 import { getConversation } from '../db/queries/conversations'
+import { calculateMessageCost } from '../llm/cost-calculator'
+import { createLlmCost } from '../db/queries/llm-costs'
 
 const VALID_PROVIDERS = ['openai', 'anthropic', 'google', 'mistral', 'xai', 'deepseek', 'qwen', 'perplexity', 'lmstudio', 'ollama'] as const
 
@@ -64,7 +66,27 @@ export function registerSummaryIpc(): void {
       temperature: 0.3
     })
 
-    return { text: result.text.trim() }
+    const usage = result.usage
+    let cost = 0
+    if (usage) {
+      cost = calculateMessageCost(actualModelId, usage.inputTokens, usage.outputTokens)
+      createLlmCost({
+        type: 'summary',
+        conversationId,
+        modelId: actualModelId,
+        providerId,
+        tokensIn: usage.inputTokens,
+        tokensOut: usage.outputTokens,
+        cost
+      })
+    }
+
+    return {
+      text: result.text.trim(),
+      tokensIn: usage?.inputTokens ?? 0,
+      tokensOut: usage?.outputTokens ?? 0,
+      cost
+    }
   })
 
   console.log('[IPC] Summary handlers registered')
