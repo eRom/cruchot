@@ -89,10 +89,17 @@ export function NotchBar() {
       return
     }
 
-    const permission = await window.api.geminiLiveCheckScreenPermission()
-    if (permission !== 'granted') {
-      console.warn('[ScreenShare] Permission not granted:', permission)
-      return
+    // Check macOS screen recording permission — but don't block on 'not-determined'
+    // since Electron may trigger the OS prompt via getDisplayMedia() anyway
+    try {
+      const permission = await window.api.geminiLiveCheckScreenPermission()
+      if (permission === 'denied') {
+        // On macOS, 'denied' means explicitly refused — guide user to settings
+        console.warn('[ScreenShare] Permission denied — user must enable in System Preferences')
+        // Still open picker — getDisplayMedia will fail gracefully and the user sees the error
+      }
+    } catch {
+      // systemPreferences may not be available — proceed anyway
     }
 
     setShowPicker(true)
