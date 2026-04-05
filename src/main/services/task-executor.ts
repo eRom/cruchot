@@ -230,12 +230,7 @@ const TASK_ALLOWED_KEYS = new Set([
   'multi-llm:temperature',
   'multi-llm:max-tokens',
   'multi-llm:top-p',
-  'multi-llm:thinking-effort',
-  // Legacy bare keys (some code still stores without namespace)
-  'temperature',
-  'maxTokens',
-  'topP',
-  'thinkingEffort'
+  'multi-llm:thinking-effort'
 ])
 
 function getSettingNumber(key: string): number | null {

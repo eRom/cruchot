@@ -14,6 +14,7 @@ import {
   setWorkspacePath
 } from '../db/queries/conversations'
 import { getMessagesForConversation, getMessagesPage, deleteMessagesForConversation, deleteAllMessages } from '../db/queries/messages'
+import { cleanupConversationState, cleanupAllConversationState } from './chat.ipc'
 
 const idSchema = z.string().min(1).max(100)
 const titleSchema = z.string().min(1).max(500)
@@ -43,6 +44,7 @@ export function registerConversationsIpc(): void {
 
   ipcMain.handle('conversations:delete', async (_event, id: string) => {
     idSchema.parse(id)
+    cleanupConversationState(id)
     deleteMessagesForConversation(id)
     deleteConversation(id)
   })
@@ -73,6 +75,7 @@ export function registerConversationsIpc(): void {
   })
 
   ipcMain.handle('conversations:deleteAll', async () => {
+    cleanupAllConversationState()
     deleteAllMessages()
     deleteAllConversations()
   })

@@ -1458,6 +1458,25 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
   }
 }
 
+// ── Cleanup on conversation delete ───────────────────────
+
+export function cleanupConversationState(conversationId: string): void {
+  yoloModeByConversation.delete(conversationId)
+  forcedPlanMode.delete(conversationId)
+}
+
+export function cleanupAllConversationState(): void {
+  yoloModeByConversation.clear()
+  forcedPlanMode.clear()
+
+  // Clear all pending approvals with timeout cleanup
+  for (const [id, approval] of pendingApprovals) {
+    clearTimeout(approval.timeout)
+    pendingApprovals.delete(id)
+  }
+  pendingPlanApprovals.clear()
+}
+
 // ── IPC Registration ──────────────────────────────────────
 
 export function registerChatIpc(): void {

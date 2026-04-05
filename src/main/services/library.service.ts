@@ -4,6 +4,7 @@
  */
 import path from 'node:path'
 import fs from 'node:fs'
+import fsp from 'node:fs/promises'
 import { createHash, randomUUID } from 'crypto'
 import { app, BrowserWindow } from 'electron'
 import { QDRANT_PORT_NUMBER } from './qdrant-process'
@@ -207,14 +208,14 @@ class LibraryService {
           continue
         }
 
-        const stat = fs.statSync(filePath)
+        const stat = await fsp.stat(filePath)
         if (stat.size > MAX_FILE_SIZE) {
           console.warn(`[Library] File too large: ${filePath} (${stat.size} bytes)`)
           continue
         }
 
         const filename = path.basename(filePath)
-        const fileBuffer = fs.readFileSync(filePath)
+        const fileBuffer = await fsp.readFile(filePath)
         const contentHash = createHash('sha256').update(fileBuffer).digest('hex')
 
         // Check for duplicate by hash
@@ -227,7 +228,7 @@ class LibraryService {
         const mimeType = MIME_MAP[ext] || IMAGE_MIME_MAP[ext] || `text/x-${ext.slice(1)}`
         const storedFilename = `${Date.now()}-${filename}`
         const storedPath = path.join(sourceDir, storedFilename)
-        fs.copyFileSync(filePath, storedPath)
+        await fsp.copyFile(filePath, storedPath)
 
         const source = createLibrarySource({
           libraryId,
@@ -538,7 +539,7 @@ class LibraryService {
     if (mimeType === 'application/pdf') {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const pdfParse = require('pdf-parse/lib/pdf-parse.js')
-      const buffer = fs.readFileSync(filePath)
+      const buffer = await fsp.readFile(filePath)
       const result = await pdfParse(buffer)
       const text = result.text?.trim() ?? ''
 
@@ -567,13 +568,13 @@ class LibraryService {
       if (!ocrService.isAvailable()) {
         throw new Error('L\'indexation d\'images necessite une cle API Mistral pour l\'OCR')
       }
-      const buffer = fs.readFileSync(filePath)
+      const buffer = await fsp.readFile(filePath)
       const ocrResult = await ocrService.processImage(buffer, mimeType)
       return ocrResult.text
     }
 
     // All other formats: read as text
-    return fs.readFileSync(filePath, 'utf-8')
+    return fsp.readFile(filePath, 'utf-8')
   }
 
   // ── Chunking ──────────────────────────────────────

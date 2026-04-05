@@ -264,21 +264,22 @@ class OneiricService {
 
     console.log(`[Oneiric:Semantic] Processing ${conversations.length} conversations`)
 
-    for (const conv of conversations) {
-      // Check abort
-      if (this.currentAbortController?.signal.aborted) break
+    // Process conversations with concurrency limit (3 LLM calls in parallel)
+    const CONCURRENCY = 3
+    const processConversation = async (conv: { id: string }): Promise<PhaseStats> => {
+      const convStats = emptyStats()
+
+      if (this.currentAbortController?.signal.aborted) return convStats
 
       const points = await this.getPointsByConversation(conv.id)
       if (points.length < MIN_CHUNKS_TO_CONSOLIDATE) {
         markConversationConsolidated(conv.id)
-        continue
+        return convStats
       }
 
-      // Cap at MAX_CHUNKS_PER_CONVERSATION
       const cappedPoints = points.slice(0, MAX_CHUNKS_PER_CONVERSATION)
-      stats.chunksAnalyzed += cappedPoints.length
+      convStats.chunksAnalyzed += cappedPoints.length
 
-      // Build chunks block
       const chunksBlock = cappedPoints.map(p =>
         `[id: "${p.id}"] ${String(p.payload.content ?? '')}`
       ).join('\n\n')
@@ -296,9 +297,9 @@ class OneiricService {
 
         const text = await result.text
         const usage = await result.usage
-        stats.tokensIn += usage.inputTokens
-        stats.tokensOut += usage.outputTokens
-        stats.cost += calculateMessageCost(modelId, usage.inputTokens, usage.outputTokens)
+        convStats.tokensIn += usage.inputTokens
+        convStats.tokensOut += usage.outputTokens
+        convStats.cost += calculateMessageCost(modelId, usage.inputTokens, usage.outputTokens)
 
         const actions = parseJsonActions<SemanticAction>(text, 'Semantic')
 
@@ -306,9 +307,9 @@ class OneiricService {
           try {
             if (action.action === 'merge' && action.keepId && action.deleteIds?.length && action.mergedContent) {
               await this.mergeChunks(action.keepId, action.deleteIds, action.mergedContent)
-              stats.chunksMerged++
-              stats.chunksDeleted += action.deleteIds.length
-              stats.actions.push({
+              convStats.chunksMerged++
+              convStats.chunksDeleted += action.deleteIds.length
+              convStats.actions.push({
                 phase: 'semantic',
                 type: 'merge_chunks',
                 details: `Merged ${action.deleteIds.length + 1} chunks`,
@@ -316,15 +317,14 @@ class OneiricService {
               })
             } else if (action.action === 'delete' && action.pointId) {
               await this.deleteChunks([action.pointId])
-              stats.chunksDeleted++
-              stats.actions.push({
+              convStats.chunksDeleted++
+              convStats.actions.push({
                 phase: 'semantic',
                 type: 'delete_chunk',
                 details: action.reason ?? 'Deleted chunk',
                 targetIds: [action.pointId]
               })
             }
-            // 'keep' actions are no-ops
           } catch (err) {
             console.error('[Oneiric:Semantic] Failed to apply action:', action, err)
           }
@@ -335,9 +335,22 @@ class OneiricService {
       }
 
       markConversationConsolidated(conv.id)
+      return convStats
     }
 
-    return stats
+    // Concurrency pool — process up to CONCURRENCY conversations at a time
+    const results: PhaseStats[] = []
+    for (let i = 0; i < conversations.length; i += CONCURRENCY) {
+      if (this.currentAbortController?.signal.aborted) break
+      const batch = conversations.slice(i, i + CONCURRENCY)
+      const batchResults = await Promise.allSettled(batch.map(processConversation))
+      for (const r of batchResults) {
+        if (r.status === 'fulfilled') results.push(r.value)
+      }
+    }
+
+    // Merge all per-conversation stats
+    return results.reduce(mergeStats, stats)
   }
 
   // ── Phase 2 : Episodic ─────────────────────────────────────────────────

@@ -215,8 +215,6 @@ export function registerAllIpcHandlers(): void {
     // Live audio
     'multi-llm:live-model-id',
     'multi-llm:live-identity-prompt',
-    // Legacy (kept for migration)
-    'onboarding_completed',
   ])
 
   function isSettingKeyAllowed(key: string): boolean {
