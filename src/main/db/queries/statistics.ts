@@ -49,6 +49,12 @@ export interface GlobalStats {
   totalBackgroundCost: number
 }
 
+export interface BackgroundCostByType {
+  type: string
+  totalCost: number
+  count: number
+}
+
 function buildWhereClause(days?: number, tableRef = messages): ReturnType<typeof sql> | undefined {
   if (!days || days <= 0) return undefined
   const sinceTimestamp = Math.floor((Date.now() - days * 86400000) / 1000)
@@ -70,7 +76,9 @@ export function getDailyStats(days: number = 30): DailyStat[] {
     .from(messages)
 
   if (whereClause) {
-    query.where(whereClause)
+    query.where(sql`${messages.role} = 'assistant' AND ${whereClause}`)
+  } else {
+    query.where(sql`${messages.role} = 'assistant'`)
   }
 
   return query
@@ -164,8 +172,8 @@ export function getGlobalStats(days?: number): GlobalStats {
     : null
 
   const timeFilter = sinceTimestamp
-    ? sql`WHERE ${messages.createdAt} >= ${sinceTimestamp}`
-    : sql``
+    ? sql`WHERE ${messages.role} = 'assistant' AND ${messages.createdAt} >= ${sinceTimestamp}`
+    : sql`WHERE ${messages.role} = 'assistant'`
 
   const ttsTimeFilter = sinceTimestamp
     ? sql`WHERE ${ttsUsage.createdAt} >= ${sinceTimestamp}`
@@ -199,4 +207,47 @@ export function getGlobalStats(days?: number): GlobalStats {
     totalTtsCost: 0,
     totalBackgroundCost: 0
   }
+}
+
+export function getBackgroundCostsByType(days?: number): BackgroundCostByType[] {
+  const db = getDatabase()
+  const sinceTimestamp = days && days > 0
+    ? Math.floor((Date.now() - days * 86400000) / 1000)
+    : null
+
+  const timeFilter = sinceTimestamp
+    ? sql`WHERE ${llmCosts.createdAt} >= ${sinceTimestamp}`
+    : sql``
+
+  return db.all<BackgroundCostByType>(sql`
+    SELECT
+      ${llmCosts.type} as type,
+      coalesce(sum(${llmCosts.cost}), 0) as totalCost,
+      count(*) as count
+    FROM ${llmCosts}
+    ${timeFilter}
+    GROUP BY ${llmCosts.type}
+    ORDER BY totalCost DESC
+  `)
+}
+
+export function getPreviousPeriodCost(days: number): { totalCost: number } {
+  const db = getDatabase()
+  const now = Math.floor(Date.now() / 1000)
+  const periodStart = now - days * 86400
+  const prevStart = periodStart - days * 86400
+
+  const result = db.get<{ totalCost: number }>(sql`
+    SELECT
+      coalesce(sum(cost), 0) +
+      (SELECT coalesce(sum(${ttsUsage.cost}), 0) FROM ${ttsUsage}
+       WHERE ${ttsUsage.createdAt} >= ${prevStart} AND ${ttsUsage.createdAt} < ${periodStart}) +
+      (SELECT coalesce(sum(${llmCosts.cost}), 0) FROM ${llmCosts}
+       WHERE ${llmCosts.createdAt} >= ${prevStart} AND ${llmCosts.createdAt} < ${periodStart})
+      as totalCost
+    FROM ${messages}
+    WHERE ${messages.createdAt} >= ${prevStart} AND ${messages.createdAt} < ${periodStart}
+  `)
+
+  return result ?? { totalCost: 0 }
 }
