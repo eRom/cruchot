@@ -167,19 +167,52 @@ Types d'événements capturés : `session-start`, `session-stop`, `user-message`
 
 L'état est pushé au renderer via `vcr:recording-state` event après start/stop.
 
-## 6. Gemini Live Voice (`gemini-live.service.ts`, `gemini-live.ipc.ts`, `gemini-live-tools.ts`)
+## 6. Live Voice — Architecture Plugin (`live-engine.service.ts`, `live-plugin.interface.ts`, `live.ipc.ts`)
 
-Gemini Live est un service de conversation vocale temps-réel basé sur l'API Gemini Live de Google. Il permet à l'utilisateur de parler directement à l'IA (et de l'entendre répondre) sans passer par le pipeline text LLM habituel.
+Le système Live Voice est un service de conversation vocale temps-réel. Il a été migré d'une architecture monolithique (Gemini uniquement) vers une **architecture plugin extensible** (v0.9+), prête à accueillir OpenAI Realtime et Voxstral.
 
-### 6.1 Architecture
+### 6.1 Architecture Plugin
 
-Le service tourne entièrement dans le **main process** (pas un UtilityProcess ni un Worker thread) — une contrainte découverte après debug : le Garbage Collector de Node.js tuait la session WebSocket si le client `@google/genai` était dans un processus séparé. Le singleton `geminiLiveService` est enregistré dans le `ServiceRegistry` sous la clé `gemini-live`.
+```
+src/main/live/
+  live-plugin.interface.ts     # Interface LivePlugin + types partagés
+  live-plugin-registry.ts      # LivePluginRegistry — registration + resolution
+  live-engine.service.ts       # LiveEngineService — orchestrateur principal
+  live-core-tools.ts           # 13 outils génériques (CoreToolDeclaration[])
+  live-core-prompt.ts          # Prompt builder générique (profil + mémoire)
+  plugins/
+    gemini/
+      gemini-live.plugin.ts    # GeminiLivePlugin (transport @google/genai)
+      gemini-live-tools.ts     # Outils Gemini-specific (screen share, search grounding)
+```
+
+**Interface `LivePlugin`** — contrat minimal qu'implémente chaque plugin :
+- `connect(config)` / `disconnect()` — lifecycle
+- `sendAudio(base64)` / `sendToolResponse(id, name, result)` — transport audio
+- `supportsScreenShare()` / `sendScreenFrame?()` / `setScreenSharing?(active)` — capacités opt-in
+- `buildFinalPrompt(corePrompt)` — permet au plugin d'enrichir le prompt (ex: search grounding)
+- `getPluginTools()` — outils spécifiques au provider (s'ajoutent aux 13 outils core)
+- Callbacks injectés par l'Engine avant `connect()` : `onAudio`, `onToolCall`, `onStatusChange`, `onTranscript`, `onError`
+
+**`LiveEngineService`** (singleton `liveEngineService`) — orchestrateur :
+- Résout le plugin actif via `livePluginRegistry.resolveActivePlugin()` (setting `multi-llm:live-model-id`)
+- Gère l'anti-écho 3x (voir §6.3), l'idle timer, les diagnostics (turn/chunk counters)
+- Délègue le transport audio et les tool calls au plugin actif
+- Enregistré dans le `ServiceRegistry` sous la clé `live`
+
+**`LivePluginRegistry`** — registration et résolution :
+- `register(plugin)` — enregistre un plugin au startup
+- `resolveActivePlugin()` — lit `multi-llm:live-model-id` depuis DB, fallback sur le premier plugin dispo avec clé API
+- `getApiKey(providerId)` — déchiffre la clé via `safeStorage`
+- `getAvailablePlugins()` — liste tous les plugins avec disponibilité et capacités
 
 Le flux audio est entièrement géré côté renderer via deux **AudioWorklet processors** :
-- `capture-processor.ts` : capture le micro à 16 kHz, encode en PCM 16-bit, transfère le buffer au hook `useGeminiLiveAudio` qui le forward au main via IPC `gemini-live:send-audio`.
-- `playback-processor.ts` : reçoit les chunks audio PCM 24 kHz depuis Gemini, les ré-échantillonne en 48 kHz pour le DAC, et joue la réponse en temps réel.
+- `capture-processor.ts` : capture le micro à 16 kHz, encode en PCM 16-bit, transfère le buffer au hook `useLiveAudio` qui le forward au main via IPC `live:send-audio`.
+- `playback-processor.ts` : reçoit les chunks audio PCM 24 kHz depuis le plugin, les ré-échantillonne en 48 kHz pour le DAC, et joue la réponse en temps réel.
 
-### 6.2 Connexion et configuration
+Le singleton tourne entièrement dans le **main process** (pas un UtilityProcess ni un Worker thread) — contrainte GC : le Garbage Collector de Node.js tue la session WebSocket si le client `@google/genai` est dans un processus séparé.
+
+### 6.2 Plugin Gemini (`gemini-live.plugin.ts`)
 
 L'API Gemini Live nécessite **`v1alpha`** (`httpOptions: { apiVersion: 'v1alpha' }`) — la v1beta/v1 ne supporte pas les features avancées (transcription, thinking, proactivité).
 
@@ -187,27 +220,29 @@ Modèle : `gemini-3.1-flash-live-preview`.
 
 Config session :
 - `responseModalities: [AUDIO]` — réponse audio uniquement
-- `systemInstruction` — prompt assemblé par `gemini-live-system-prompt.ts` (profil utilisateur + contexte dynamique)
-- `tools: CRUCHOT_TOOLS` — 10 function declarations (voir §6.4)
+- `systemInstruction` — prompt assemblé par `live-core-prompt.ts` puis enrichi par `buildFinalPrompt()` du plugin (inject `googleSearch: {}`)
+- `tools: [...CORE_TOOLS, ...GEMINI_TOOLS]` — 13 core + outils Gemini-specific
 - `thinkingConfig: { thinkingLevel: 'low', includeThoughts: false }` — réflexion légère, non streamée
 - `speechConfig` — voix Aoede
 - `inputAudioTranscription: {}` + `outputAudioTranscription: {}` — transcriptions activées (loggées en console)
 - `realtimeInputConfig` — VAD HIGH sensitivity, 500ms prefix padding, 500ms silence duration
 
+**Search Grounding** : le `GeminiLivePlugin` injecte `{ googleSearch: {} }` dans les outils de la session, permettant à Gemini de récupérer des informations web en temps réel pendant la conversation vocale.
+
 ### 6.3 Cycle de vie et états
 
-5 statuts possibles (`GeminiLiveStatus`) : `off` → `connecting` → `connected` → `listening` → `speaking` (+ `dormant` + `error`).
+5 statuts possibles (`LiveStatus`) : `off` → `connecting` → `connected` → `listening` → `speaking` (+ `dormant` + `error`).
 
-**Anti-écho 3x** — bug de répétition audio résolu par 3 guards dans `sendAudio()` :
-1. Si `status === 'speaking'` → mute le micro (Gemini parle, ne pas lui renvoyer sa propre voix)
+**Anti-écho 3x** — 3 guards dans `sendAudio()` de `LiveEngineService` :
+1. Si `status === 'speaking'` → mute le micro (le plugin parle, ne pas lui renvoyer sa propre voix)
 2. Si `isPlaybackActive === true` → mute (buffer worklet en cours de drainage)
 3. Si `Date.now() < postTurnCooldownUntil` → mute (cooldown 500ms post-playback pour laisser l'écho se dissiper)
 
 **Idle timer** : après 5 min sans activité, la session est fermée (statut → `dormant`). Le service passe en `dormant` (pas `off`) pour permettre une reconnexion rapide au prochain clic.
 
-### 6.4 Function Calling (14 outils Cruchot)
+### 6.4 Function Calling (13 outils core + outils plugin)
 
-Le fichier `gemini-live-tools.ts` déclare 14 outils que Gemini peut invoquer en temps réel pour contrôler l'application :
+Les 13 **outils core** (`live-core-tools.ts`) sont partagés entre tous les plugins :
 
 | Outil | Action |
 |-------|--------|
@@ -226,7 +261,7 @@ Le fichier `gemini-live-tools.ts` déclare 14 outils que Gemini peut invoquer en
 | `pause_screen_share` | Met en pause l'envoi de frames vidéo sans fermer le MediaStream |
 | `resume_screen_share` | Reprend l'envoi de frames après une pause |
 
-Quand Gemini appelle un outil, le main envoie un `gemini-live:command` event au renderer. Le `CruchotCommandHandler` (renderer, `cruchot-command-handler.ts`) dispatch des `CustomEvent` DOM (`cruchot:navigate`, `cruchot:toggle-ui`, etc.) écoutés par les stores Zustand et les composants React. Le résultat est renvoyé au main via `gemini-live:respond-command`, et le main appelle `session.sendToolResponse()`.
+Quand le plugin appelle un outil, le main envoie un `live:command` event au renderer. Le `CruchotCommandHandler` (renderer, `cruchot-command-handler.ts`) dispatch des `CustomEvent` DOM (`cruchot:navigate`, `cruchot:toggle-ui`, etc.) écoutés par les stores Zustand et les composants React. Le résultat est renvoyé au main via `live:respond-command`, et le main appelle `plugin.sendToolResponse()`.
 
 ### 6.5 NotchBar (UI)
 
@@ -239,9 +274,7 @@ La `NotchBar` est un composant flottant positionné dans le `TopBar` (`-webkit-a
 
 Cliquer la pill connecte/déconnecte. Les bars waveform sont animées via CSS `height` en pixels synchronisé avec les niveaux audio réels.
 
-### 6.5b Search Grounding
-
-Google Search Grounding est activé sur chaque session Gemini Live via `tools: [{ googleSearch: {} }]` dans la config. Cela permet à Gemini de récupérer des informations web en temps réel pendant la conversation vocale, sans configuration supplémentaire de l'utilisateur.
+Le store renderer est `live.store.ts` (ex `gemini-live.store.ts`), le hook audio est `useLiveAudio.ts` (ex `useGeminiLiveAudio.ts`).
 
 ### 6.6 Mémoire Sémantique Vocale (`live-memory.service.ts`)
 
@@ -253,37 +286,38 @@ Le `LiveMemoryService` (singleton `liveMemoryService`) offre une mémoire persis
 3. **Embedding + stockage** : chaque fait extrait est embeddé localement (384d, `all-MiniLM-L6-v2`) et inséré dans la collection Qdrant `live_memories` avec métadonnées (`sessionId`, `provider`, `timestamp`).
 4. **Recall** : `recallRecent(days)` retourne les N derniers souvenirs (SEARCH_TOP_K=5, seuil=0.4) des `days` jours passés. `search(query)` effectue une recherche vectorielle sémantique sur toute l'histoire.
 
-**Intégration dans le system prompt** : `buildLiveMemoryBlock()` dans `gemini-live-system-prompt.ts` injecte automatiquement les souvenirs des 7 derniers jours dans le prompt de chaque session via le bloc XML `<live-memory>`.
+**Intégration dans le system prompt** : `buildLiveMemoryBlock()` dans `live-core-prompt.ts` injecte automatiquement les souvenirs des 7 derniers jours dans le prompt de chaque session via le bloc XML `<live-memory>`.
 
-**Outil `recall_memory`** : Gemini peut invoquer cet outil en temps réel pour effectuer une recherche sémantique sur demande ("Qu'est-ce qu'on avait discuté la semaine dernière ?").
+**Outil `recall_memory`** : le plugin peut invoquer cet outil en temps réel pour effectuer une recherche sémantique sur demande.
 
 **Configurable via Personnaliser > Audio Live :**
-- `liveModelId` : modèle Live à utiliser (actuellement Gemini 3.1 Flash Live, GPT-4o Realtime en préparation).
-- `liveIdentityPrompt` : prompt de personnalité injecté en tête du system prompt (comportement, langue, ton).
+- `liveModelId` : modèle Live à utiliser (format `providerId::modelId`).
+- `liveIdentityPrompt` : prompt de personnalité injecté en tête du system prompt.
 
-### 6.6 IPC (`gemini-live.ipc.ts`)
+### 6.7 IPC (`live.ipc.ts`) — canaux renommés `gemini-live:*` → `live:*`
 
 | Channel | Direction | Description |
 |---------|-----------|-------------|
-| `gemini-live:check-availability` | invoke | Vérifie si une clé Google est configurée |
-| `gemini-live:connect` | invoke | Ouvre la session WebSocket |
-| `gemini-live:disconnect` | invoke | Ferme la session |
-| `gemini-live:send-audio` | invoke | Forward un chunk PCM 16 kHz au service |
-| `gemini-live:respond-command` | invoke | Envoie le résultat d'un tool call à Gemini |
-| `gemini-live:set-playback-active` | invoke | Notifie le service que le buffer worklet est actif/inactif |
-| `gemini-live:status` | push → renderer | Changement de statut + erreur éventuelle |
-| `gemini-live:audio` | push → renderer | Chunk audio PCM base64 depuis Gemini |
-| `gemini-live:command` | push → renderer | Tool call à exécuter |
-| `gemini-live:clear-playback` | push → renderer | Interruption utilisateur — vider le buffer |
-| `gemini-live:screen-sources` | invoke | Liste les sources disponibles (écrans + fenêtres) → `ScreenSource[]` |
-| `gemini-live:screen-frame` | send (R→M) | Fire-and-forget — JPEG base64 depuis le hook renderer |
-| `gemini-live:screen-sharing:set` | send (R→M) | Toggle `isScreenSharing` dans le service |
-| `gemini-live:screen-sharing:status` | push → renderer | Broadcast du nouvel état isScreenSharing |
-| `gemini-live:screen-select-source` | invoke | Transmet le sourceId avant appel `getDisplayMedia()` |
-| `gemini-live:request-screenshot` | push → renderer | Déclenche une capture haute qualité côté renderer |
-| `gemini-live:screen-permission` | invoke | Check `systemPreferences.getMediaAccessStatus('screen')` |
+| `live:check-availability` | invoke | Vérifie si au moins un plugin a une clé API |
+| `live:connect` | invoke | Ouvre la session via le plugin résolu |
+| `live:disconnect` | invoke | Ferme la session |
+| `live:send-audio` | invoke | Forward un chunk PCM 16 kHz au plugin actif |
+| `live:respond-command` | invoke | Envoie le résultat d'un tool call au plugin |
+| `live:set-playback-active` | invoke | Notifie le service que le buffer worklet est actif/inactif |
+| `live:status` | push → renderer | Changement de statut + erreur éventuelle |
+| `live:audio` | push → renderer | Chunk audio PCM base64 depuis le plugin |
+| `live:command` | push → renderer | Tool call à exécuter |
+| `live:clear-playback` | push → renderer | Interruption utilisateur — vider le buffer |
+| `live:screen-sources` | invoke | Liste les sources disponibles (écrans + fenêtres) → `ScreenSource[]` |
+| `live:screen-frame` | send (R→M) | Fire-and-forget — JPEG base64 depuis le hook renderer |
+| `live:screen-sharing:set` | send (R→M) | Toggle `isScreenSharing` dans le plugin |
+| `live:screen-sharing:status` | push → renderer | Broadcast du nouvel état isScreenSharing |
+| `live:screen-select-source` | invoke | Transmet le sourceId avant appel `getDisplayMedia()` |
+| `live:request-screenshot` | push → renderer | Déclenche une capture haute qualité côté renderer |
+| `live:screen-permission` | invoke | Check `systemPreferences.getMediaAccessStatus('screen')` |
+| `live:list-plugins` | invoke | Retourne `AvailablePlugin[]` avec disponibilité et capacités |
 
-### 6.7 Screen Sharing (`useScreenCapture.ts`, `ScreenSourcePicker.tsx`)
+### 6.8 Screen Sharing (`useScreenCapture.ts`, `ScreenSourcePicker.tsx`)
 
 Le screen sharing est un sous-état de la session Live — toujours déclenché explicitement par l'utilisateur, jamais automatiquement.
 

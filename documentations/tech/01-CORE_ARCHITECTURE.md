@@ -53,7 +53,7 @@ Au démarrage (`app.whenReady()`), le processus Main orchestre l'initialisation 
     *   `telegramBotService` : Initialisation du bot Telegram (si configuré).
     *   `remoteServerService` : Lancement du serveur WebSockets distant.
     *   `qdrantMemoryService` : Démarrage de la base vectorielle locale pour le RAG.
-    *   `geminiLiveService` : Service de conversation vocale temps-réel (initialisé avec la BrowserWindow).
+    *   `liveEngineService` : Orchestrateur de conversation vocale temps-réel — architecture plugin (initialisé avec la BrowserWindow).
 
 Depuis la v0.7, les services sont gérés par un `ServiceRegistry` centralisé (`service-registry.ts`). Ce registre :
 - **Lazy-load** : les services lourds (Qdrant, MCP, Telegram) ne sont initialisés qu'au premier accès, pas au démarrage.
