@@ -273,7 +273,43 @@ Le `LiveMemoryService` (singleton `liveMemoryService`) offre une mémoire persis
 | `gemini-live:command` | push → renderer | Tool call à exécuter |
 | `gemini-live:clear-playback` | push → renderer | Interruption utilisateur — vider le buffer |
 
-## 7. Synthèse Vocale (Text-to-Speech) (`tts.service.ts`)
+## 7. Gestion du Contexte (CompactService) (`compact.service.ts`, `compact.ipc.ts`)
+
+Le `CompactService` gère automatiquement la fenêtre de contexte LLM pour éviter les erreurs de dépassement (`context_length_exceeded`) sur les longues conversations.
+
+### 7.1 Architecture
+
+Le service est appelé par `chat.ipc.ts` **avant** chaque appel `streamText()`, dans la fonction `prepareMessages()`. Il opère en 3 niveaux :
+
+1. **Injection du résumé existant** : si la conversation possède déjà un `compactSummary`, le service construit un message synthétique `<conversation-summary>` + les messages postérieurs au `compactBoundaryId`. Les messages anciens sont ignorés — la fenêtre de contexte est reconstituée à partir du résumé.
+
+2. **Micro-compaction** : si l'estimation des tokens dépasse 75 % (`COMPACT_THRESHOLD`) du `contextWindow` du modèle, le service supprime les résultats d'outils volumineux (remplacés par `[Resultat supprime]`), en commençant par les plus anciens, jusqu'à descendre sous 60 % (`MICROCOMPACT_TARGET`). Aucune donnée n'est modifiée en DB — c'est une opération en mémoire.
+
+3. **Full compact** (déclenché manuellement via IPC) : appel LLM (`generateText`) avec `COMPACT_PROMPT` pour résumer toute la conversation. Le résumé et le `compactBoundaryId` (ID du dernier message résumé) sont persistés sur `conversations` en SQLite.
+
+### 7.2 Estimation des tokens
+
+L'estimation (`estimateTokens()`) est heuristique : `content.length / 4` pour les messages texte, avec des majorations pour les images JPEG/PNG (2048 tokens) et les images PDF (1024 tokens par page). Elle prend en compte les `contentData` (pièces jointes multi-part).
+
+### 7.3 UI (ContextWindowBar)
+
+Le composant `ContextWindowBar` (`src/renderer/src/components/chat/ContextWindowBar.tsx`) affiche une barre de progression en bas de l'InputZone :
+- **Visible** uniquement si l'utilisation dépasse 50 % de la fenêtre de contexte.
+- **Couleur** : verte (< 75 %), orange (75–90 %), rouge (> 90 %).
+- **Bouton "Compacter"** : déclenche `compact:run` via IPC. L'`ui.store` met `isCompacting = true` pendant l'opération — l'InputZone est bloquée.
+- **Label** : affiche le pourcentage d'utilisation et le nom du modèle actif.
+
+### 7.4 IPC (`compact.ipc.ts`)
+
+| Channel | Description |
+|---------|-------------|
+| `compact:run` | Lance la full compaction. Charge les messages, génère le résumé, persiste `compactSummary` + `compactBoundaryId` |
+
+### 7.5 Guard anti-double invocation
+
+Un `Set<string>` (`compactingSet`) dans le handler IPC empêche deux compactions simultanées sur la même conversation. Une tentative parallèle retourne une erreur immédiate.
+
+## 8. Synthèse Vocale (Text-to-Speech) (`tts.service.ts`)
 
 Cruchot intègre des capacités de lecture vocale des messages via les APIs cloud d'OpenAI et de Google (Gemini).
 

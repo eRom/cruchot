@@ -18,6 +18,10 @@ Le schéma est complet et gère toutes les entités de l'application :
 
 Le schéma totalise **30 tables** Drizzle (dont `episodes` en S55, `oneiric_runs` en S56, `allowedApps` en S59).
 
+Colonnes notables ajoutées sur `conversations` :
+- `compactSummary` (text | null) — résumé LLM généré lors d'une compaction complète.
+- `compactBoundaryId` (text | null) — ID du dernier message inclus dans la compaction (point d'ancrage).
+
 ### 1.2 Migrations et Évolutivité
 Les migrations sont gérées par des instructions SQL manuelles dans `migrate.ts` (pattern `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE ... ADD COLUMN` avec gestion d'idempotence). Elles sont exécutées automatiquement au lancement de l'application via `runMigrations()`. Cela garantit que la base de données locale de l'utilisateur est toujours à jour avec la version de l'application.
 
