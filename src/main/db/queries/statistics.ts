@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { getDatabase } from '../index'
-import { messages, conversations, projects, ttsUsage } from '../schema'
+import { messages, conversations, projects, ttsUsage, llmCosts } from '../schema'
 
 export interface DailyStat {
   date: string
@@ -46,6 +46,7 @@ export interface GlobalStats {
   totalResponseTimeMs: number
   totalConversations: number
   totalTtsCost: number
+  totalBackgroundCost: number
 }
 
 function buildWhereClause(days?: number, tableRef = messages): ReturnType<typeof sql> | undefined {
@@ -170,6 +171,10 @@ export function getGlobalStats(days?: number): GlobalStats {
     ? sql`WHERE ${ttsUsage.createdAt} >= ${sinceTimestamp}`
     : sql``
 
+  const bgTimeFilter = sinceTimestamp
+    ? sql`WHERE ${llmCosts.createdAt} >= ${sinceTimestamp}`
+    : sql``
+
   const result = db.get<GlobalStats>(sql`
     SELECT
       coalesce(sum(${messages.cost}), 0) as totalCost,
@@ -178,7 +183,8 @@ export function getGlobalStats(days?: number): GlobalStats {
       coalesce(sum(${messages.tokensOut}), 0) as totalTokensOut,
       coalesce(sum(${messages.responseTimeMs}), 0) as totalResponseTimeMs,
       count(distinct ${messages.conversationId}) as totalConversations,
-      (SELECT coalesce(sum(${ttsUsage.cost}), 0) FROM ${ttsUsage} ${ttsTimeFilter}) as totalTtsCost
+      (SELECT coalesce(sum(${ttsUsage.cost}), 0) FROM ${ttsUsage} ${ttsTimeFilter}) as totalTtsCost,
+      (SELECT coalesce(sum(${llmCosts.cost}), 0) FROM ${llmCosts} ${bgTimeFilter}) as totalBackgroundCost
     FROM ${messages}
     ${timeFilter}
   `)
@@ -190,6 +196,7 @@ export function getGlobalStats(days?: number): GlobalStats {
     totalTokensOut: 0,
     totalResponseTimeMs: 0,
     totalConversations: 0,
-    totalTtsCost: 0
+    totalTtsCost: 0,
+    totalBackgroundCost: 0
   }
 }
