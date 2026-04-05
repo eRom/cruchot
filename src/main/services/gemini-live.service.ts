@@ -328,6 +328,49 @@ class GeminiLiveService {
           continue  // Skip the normal renderer dispatch for this tool
         }
 
+        // Handle screen sharing tools directly in main process
+        if (fc.name === 'request_screenshot') {
+          console.log('[GeminiLive] request_screenshot')
+          const response = this.isScreenSharing
+            ? { success: true, message: 'Screenshot capture' }
+            : { success: false, error: 'Aucun partage actif' }
+          if (this.isScreenSharing) this.requestScreenshot()
+          try {
+            this.session?.sendToolResponse({
+              functionResponses: [{ id: fc.id || `tool_${Date.now()}`, name: fc.name, response }]
+            })
+          } catch (err: any) {
+            console.error('[GeminiLive] request_screenshot response error:', err.message)
+          }
+          continue
+        }
+
+        if (fc.name === 'pause_screen_share') {
+          console.log('[GeminiLive] pause_screen_share')
+          this.setScreenSharing(false)
+          try {
+            this.session?.sendToolResponse({
+              functionResponses: [{ id: fc.id || `tool_${Date.now()}`, name: fc.name, response: { success: true } }]
+            })
+          } catch (err: any) {
+            console.error('[GeminiLive] pause_screen_share response error:', err.message)
+          }
+          continue
+        }
+
+        if (fc.name === 'resume_screen_share') {
+          console.log('[GeminiLive] resume_screen_share')
+          this.setScreenSharing(true)
+          try {
+            this.session?.sendToolResponse({
+              functionResponses: [{ id: fc.id || `tool_${Date.now()}`, name: fc.name, response: { success: true } }]
+            })
+          } catch (err: any) {
+            console.error('[GeminiLive] resume_screen_share response error:', err.message)
+          }
+          continue
+        }
+
         console.log('[GeminiLive] Tool call:', fc.name, JSON.stringify(fc.args))
         this.mainWindow?.webContents.send('gemini-live:command', {
           id: fc.id || `tool_${Date.now()}`,

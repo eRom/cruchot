@@ -165,5 +165,32 @@ Appeler list_allowed_apps d'abord si tu ne connais pas le nom exact.`,
       },
       required: ['query']
     }
+  },
+  {
+    name: 'request_screenshot',
+    description: "Capturer un screenshot haute qualite de l'ecran partage. Utilise quand l'utilisateur demande d'analyser en detail ce qu'il voit a l'ecran.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'pause_screen_share',
+    description: "Mettre en pause le partage d'ecran. Les frames ne sont plus envoyees mais la source reste selectionnee.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'resume_screen_share',
+    description: "Reprendre le partage d'ecran apres une pause.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+      required: []
+    }
   }
 ]
