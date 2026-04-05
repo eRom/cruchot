@@ -18,6 +18,7 @@ import {
   getConversationsToConsolidate,
   markConversationConsolidated
 } from '../db/queries/oneiric'
+import { createLlmCost } from '../db/queries/llm-costs'
 import {
   getAllEpisodes,
   createEpisode,
@@ -202,6 +203,19 @@ class OneiricService {
         actions: total.actions,
         completedAt: new Date()
       })
+
+      // Mirror to unified llm_costs table
+      if (total.cost > 0) {
+        createLlmCost({
+          type: 'oneiric',
+          modelId,
+          providerId,
+          tokensIn: total.tokensIn,
+          tokensOut: total.tokensOut,
+          cost: total.cost,
+          metadata: { runId, chunksMerged: total.chunksMerged, episodesCreated: total.episodesCreated }
+        })
+      }
 
       console.log(`[Oneiric] Consolidation completed in ${durationMs}ms — ` +
         `chunks: ${total.chunksAnalyzed} analyzed, ${total.chunksMerged} merged, ${total.chunksDeleted} deleted | ` +
