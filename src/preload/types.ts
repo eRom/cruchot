@@ -301,6 +301,7 @@ export interface GlobalStats {
   totalResponseTimeMs: number
   totalConversations: number
   totalTtsCost: number
+  totalBackgroundCost: number
 }
 
 // ── TTS ─────────────────────────────────────────────
@@ -765,6 +766,7 @@ export interface OptimizePromptResult {
   optimizedText: string
   inputTokens: number
   outputTokens: number
+  cost: number
 }
 
 // ── Summary ─────────────────────────────────────────────────
@@ -775,6 +777,9 @@ export interface SummarizePayload {
 }
 export interface SummarizeResult {
   text: string
+  tokensIn: number
+  tokensOut: number
+  cost: number
 }
 
 // ── Custom Models (OpenRouter, etc.) ─────────────────────────────

@@ -405,6 +405,7 @@ export function runMigrations(): void {
       DELETE FROM images WHERE conversation_id = OLD.id;
       DELETE FROM remote_sessions WHERE conversation_id = OLD.id;
       DELETE FROM vector_sync_state WHERE conversation_id = OLD.id;
+      DELETE FROM llm_costs WHERE conversation_id = OLD.id;
     END
   `)
 
