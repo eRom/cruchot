@@ -42,6 +42,7 @@ import { registerEpisodeIpc } from './episode.ipc'
 import { registerOneiricIpc } from './oneiric.ipc'
 import { registerGeminiLiveIpc } from './gemini-live.ipc'
 import { registerApplicationsIpc } from './applications.ipc'
+import { registerCompactIpc } from './compact.ipc'
 
 
 /**
@@ -166,6 +167,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Applications (allowed apps) ─────────────────────────────
   registerApplicationsIpc()
+
+  // ── Compact (context compression) ────────────────────
+  registerCompactIpc()
 
   // ── Settings ────────────────────────────────────────
   const ALLOWED_SETTING_KEYS = new Set([

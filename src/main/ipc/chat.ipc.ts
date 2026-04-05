@@ -27,6 +27,7 @@ import { episodeTriggerService } from '../services/episode-trigger.service'
 import { buildLibraryContextBlock, type LibraryChunkForPrompt } from '../llm/library-prompt'
 import { buildSkillContextBlock } from '../llm/skill-prompt'
 import { DEFAULT_SYSTEM_PROMPT } from '../llm/system-prompt'
+import { compactService } from '../services/compact.service'
 import { vcrEventBus } from '../services/vcr-event-bus'
 import { getSkillByName } from '../db/queries/skills'
 import { libraryService } from '../services/library.service'
@@ -420,7 +421,21 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
   const { imageParts, inlineText } = buildContentParts(processedAttachments)
 
   // Load conversation history from DB
-  const dbMessages = getMessagesForConversation(conversationId)
+  const dbMessagesRaw = getMessagesForConversation(conversationId)
+
+  // Compact messages if context window is filling up
+  const modelInfo = MODELS.find(m => m.id === modelId)
+  const modelContextWindow = modelInfo?.contextWindow ?? 200_000
+  const { messages: dbMessages, needsFullCompact, tokenEstimate } = compactService.prepareMessages(
+    conversationId,
+    dbMessagesRaw,
+    modelContextWindow,
+    conv?.compactSummary,
+    conv?.compactBoundaryId
+  )
+  // Notify renderer of compact status
+  win.webContents.send('compact:status', { needsFullCompact, tokenEstimate, isCompacting: false })
+
   const aiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<{ type: string; text?: string; image?: string; mimeType?: string }> }> = []
 
   // Build combined system prompt: base + library-context + semantic memory + memory fragments + role prompt

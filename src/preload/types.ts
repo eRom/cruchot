@@ -859,6 +859,12 @@ export interface ToolResultMeta {
   fileCount?: number
 }
 
+export interface CompactStatus {
+  isCompacting?: boolean
+  needsFullCompact?: boolean
+  tokenEstimate?: number
+}
+
 // L'API exposee au renderer via contextBridge
 export interface ElectronAPI {
   // Chat
@@ -1305,6 +1311,11 @@ export interface ElectronAPI {
   offGeminiLiveCommand: () => void
   onGeminiLiveClearPlayback: (cb: () => void) => void
   offGeminiLiveClearPlayback: () => void
+
+  // ── Compact ──────────────────────────────────────────
+  runCompact: (conversationId: string) => Promise<{ tokensBefore: number; tokensAfter: number }>
+  onCompactStatus: (callback: (status: CompactStatus) => void) => void
+  offCompactStatus: () => void
 }
 
 // ---------------------------------------------------------------------------

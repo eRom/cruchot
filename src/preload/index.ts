@@ -649,6 +649,18 @@ const api: ElectronAPI = {
   },
 
   offGeminiLiveClearPlayback: () => ipcRenderer.removeAllListeners('gemini-live:clear-playback'),
+
+  // ── Compact ──────────────────────────────────────────
+  runCompact: (conversationId: string) =>
+    ipcRenderer.invoke('compact:run', { conversationId }),
+
+  onCompactStatus: (callback: (status: import('./types').CompactStatus) => void): void => {
+    ipcRenderer.on('compact:status', (_event, status) => callback(status))
+  },
+
+  offCompactStatus: (): void => {
+    ipcRenderer.removeAllListeners('compact:status')
+  },
 }
 
 contextBridge.exposeInMainWorld('api', api)
