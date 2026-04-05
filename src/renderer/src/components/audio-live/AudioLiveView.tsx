@@ -1,12 +1,8 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AudioLines } from 'lucide-react'
 import { useSettingsStore } from '@/stores/settings.store'
 import { toast } from 'sonner'
-
-const LIVE_MODELS = [
-  { id: 'gemini-3.1-flash-live-preview', label: 'Gemini 3.1 Flash Live', provider: 'Google', enabled: true },
-  { id: 'gpt-4o-realtime-preview', label: 'GPT-4o Realtime', provider: 'OpenAI', enabled: false },
-]
+import type { AvailablePlugin } from '../../../../preload/types'
 
 const DEFAULT_PROMPT = `- Communication en temps réel via audio (live)\n- Langue : Français par défaut.\n- Personnalité : Concis, efficace, ton chaleureux.`
 
@@ -15,9 +11,14 @@ export function AudioLiveView() {
   const liveIdentityPrompt = useSettingsStore((s) => s.liveIdentityPrompt) ?? DEFAULT_PROMPT
   const setLiveModelId = useSettingsStore((s) => s.setLiveModelId)
   const setLiveIdentityPrompt = useSettingsStore((s) => s.setLiveIdentityPrompt)
+  const [plugins, setPlugins] = useState<AvailablePlugin[]>([])
 
-  const handleModelChange = useCallback((modelId: string) => {
-    setLiveModelId(modelId)
+  useEffect(() => {
+    window.api.liveGetPlugins().then(setPlugins).catch(() => {})
+  }, [])
+
+  const handleModelChange = useCallback((providerId: string) => {
+    setLiveModelId(`${providerId}::live`)
     toast.success('Modele Live mis a jour')
   }, [setLiveModelId])
 
@@ -42,12 +43,12 @@ export function AudioLiveView() {
       <div className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
         <p className="text-sm font-medium text-foreground">Modele Live</p>
         <div className="space-y-2">
-          {LIVE_MODELS.map((model) => (
+          {plugins.map((plugin) => (
             <label
-              key={model.id}
+              key={plugin.providerId}
               className={`flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors ${
-                model.enabled
-                  ? liveModelId === model.id
+                plugin.available
+                  ? liveModelId?.startsWith(plugin.providerId)
                     ? 'border-primary/60 bg-primary/5 cursor-pointer'
                     : 'border-border/40 hover:border-border cursor-pointer'
                   : 'border-border/20 opacity-40 cursor-not-allowed'
@@ -56,19 +57,19 @@ export function AudioLiveView() {
               <input
                 type="radio"
                 name="live-model"
-                value={model.id}
-                checked={liveModelId === model.id}
-                disabled={!model.enabled}
-                onChange={() => model.enabled && handleModelChange(model.id)}
+                value={plugin.providerId}
+                checked={liveModelId?.startsWith(plugin.providerId)}
+                disabled={!plugin.available}
+                onChange={() => plugin.available && handleModelChange(plugin.providerId)}
                 className="accent-primary"
               />
               <div className="flex-1">
-                <p className={`text-sm font-medium ${model.enabled ? 'text-foreground' : 'text-muted-foreground'}`}>
-                  {model.label}
+                <p className={`text-sm font-medium ${plugin.available ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  {plugin.modelName}
                 </p>
-                <p className="text-[11px] text-muted-foreground">{model.provider}</p>
+                <p className="text-[11px] text-muted-foreground">{plugin.displayName}</p>
               </div>
-              {!model.enabled && (
+              {!plugin.available && (
                 <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
                   bientot
                 </span>
