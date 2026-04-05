@@ -13,6 +13,7 @@ import { buildSkillContextBlock } from '../llm/skill-prompt'
 import { buildConversationTools } from '../llm/tools'
 import { getModel } from '../llm/router'
 import { calculateMessageCost } from '../llm/cost-calculator'
+import { createLlmCost } from '../db/queries/llm-costs'
 import { getDatabase } from '../db'
 import { settings } from '../db/schema'
 import { eq } from 'drizzle-orm'
@@ -382,6 +383,16 @@ export function registerSkillsIpc(): void {
         usage?.inputTokens ?? 0,
         usage?.outputTokens ?? 0
       )
+
+      // Persist cost
+      createLlmCost({
+        type: 'skills',
+        modelId: defaultModel.modelId,
+        providerId: defaultModel.providerId,
+        tokensIn: usage?.inputTokens ?? 0,
+        tokensOut: usage?.outputTokens ?? 0,
+        cost
+      })
 
       return {
         success: true,
