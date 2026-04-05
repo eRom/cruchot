@@ -42,6 +42,11 @@ export function useSlashCommands(content: string): UseSlashCommandsResult {
       command: { id: '__action_fork', name: 'fork', description: 'Forker cette discussion', prompt: '', isBuiltin: true, sortOrder: 0, createdAt: new Date(), updatedAt: new Date() } as SlashCommand,
       isProjectScoped: false,
       isAction: true
+    },
+    {
+      command: { id: '__action_open', name: 'open', description: 'Ouvrir une application autorisee', prompt: '$ARGS', isBuiltin: true, sortOrder: 0, createdAt: new Date(), updatedAt: new Date() } as SlashCommand,
+      isProjectScoped: false,
+      isAction: true
     }
   ], [])
 

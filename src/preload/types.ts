@@ -1280,6 +1280,15 @@ export interface ElectronAPI {
   onVcrRecordingState: (cb: (state: RecordingState) => void) => void
   offVcrRecordingState: () => void
 
+  // Applications (allowed apps)
+  applicationsList: () => Promise<AllowedApp[]>
+  applicationsCreate: (data: { name: string; path: string; type: 'local' | 'web'; description?: string }) => Promise<AllowedApp>
+  applicationsUpdate: (data: { id: string; name?: string; path?: string; type?: 'local' | 'web'; description?: string | null }) => Promise<AllowedApp>
+  applicationsDelete: (id: string) => Promise<void>
+  applicationsToggle: (id: string, isEnabled: boolean) => Promise<void>
+  applicationsOpen: (id: string) => Promise<{ success: boolean }>
+  applicationsOpenByName: (name: string) => Promise<{ success: boolean }>
+
   // Gemini Live
   geminiLiveConnect: () => Promise<void>
   geminiLiveDisconnect: () => Promise<void>
@@ -1414,6 +1423,18 @@ export interface SkillAnalyzeResult {
   tokensOut?: number
   cost?: number
   error?: string
+}
+
+// ── Allowed Apps ────────────────────────────────────────
+export interface AllowedApp {
+  id: string
+  name: string
+  path: string
+  type: 'local' | 'web'
+  description: string | null
+  isEnabled: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
 // ── Gemini Live ─────────────────────────────────────────

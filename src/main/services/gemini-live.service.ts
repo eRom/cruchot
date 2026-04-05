@@ -209,6 +209,62 @@ class GeminiLiveService {
     // Tool calls (separate from audio)
     if (message.toolCall?.functionCalls) {
       for (const fc of message.toolCall.functionCalls) {
+        // Handle open_app directly in main process
+        if (fc.name === 'open_app') {
+          const appName = String(fc.args?.name ?? '')
+          console.log('[GeminiLive] open_app:', appName)
+          import('../db/queries/applications').then(async ({ getAllowedAppByName }) => {
+            const app = getAllowedAppByName(appName)
+            let response: Record<string, unknown>
+            if (!app) {
+              response = { success: false, error: `Application "${appName}" introuvable dans la liste autorisee` }
+            } else if (!app.isEnabled) {
+              response = { success: false, error: `Application "${appName}" est desactivee` }
+            } else {
+              try {
+                const { shell } = await import('electron')
+                if (app.type === 'web') {
+                  await shell.openExternal(app.path)
+                } else {
+                  const errorMsg = await shell.openPath(app.path)
+                  if (errorMsg) throw new Error(errorMsg)
+                }
+                response = { success: true, message: `${app.name} ouverte` }
+              } catch (err: any) {
+                response = { success: false, error: err.message }
+              }
+            }
+            try {
+              this.session?.sendToolResponse({
+                functionResponses: [{ id: fc.id || `tool_${Date.now()}`, name: fc.name, response }]
+              })
+            } catch (err: any) {
+              console.error('[GeminiLive] open_app response error:', err.message)
+            }
+          })
+          continue
+        }
+
+        // Handle list_allowed_apps directly in main process
+        if (fc.name === 'list_allowed_apps') {
+          console.log('[GeminiLive] list_allowed_apps')
+          import('../db/queries/applications').then(({ listEnabledApps }) => {
+            const apps = listEnabledApps()
+            const response = {
+              success: true,
+              apps: apps.map(a => ({ name: a.name, type: a.type, description: a.description }))
+            }
+            try {
+              this.session?.sendToolResponse({
+                functionResponses: [{ id: fc.id || `tool_${Date.now()}`, name: fc.name, response }]
+              })
+            } catch (err: any) {
+              console.error('[GeminiLive] list_allowed_apps response error:', err.message)
+            }
+          })
+          continue
+        }
+
         // Handle recall_memory directly in main process (no renderer roundtrip needed)
         if (fc.name === 'recall_memory') {
           const query = String(fc.args?.query ?? '')

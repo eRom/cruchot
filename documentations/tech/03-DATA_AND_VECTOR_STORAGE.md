@@ -14,8 +14,9 @@ Le schéma est complet et gère toutes les entités de l'application :
 - **RAG & Librairies** : `libraries`, `librarySources`, `libraryChunks`.
 - **Outils & Extension** : `mcpServers`, `skills`, `permissionRules`, `bardas`, `customModels`.
 - **Opérations** : `scheduledTasks`, `statistics`, `ttsUsage`, `arenaMatches`, `remoteSessions`.
+- **Applications** : `allowedApps` (applications locales et sites web autorisés à être ouverts).
 
-Le schéma totalise **29 tables** Drizzle (dont la table `episodes` ajoutée en S55, et `oneiric_runs` en S56).
+Le schéma totalise **30 tables** Drizzle (dont `episodes` en S55, `oneiric_runs` en S56, `allowedApps` en S59).
 
 ### 1.2 Migrations et Évolutivité
 Les migrations sont gérées par des instructions SQL manuelles dans `migrate.ts` (pattern `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE ... ADD COLUMN` avec gestion d'idempotence). Elles sont exécutées automatiquement au lancement de l'application via `runMigrations()`. Cela garantit que la base de données locale de l'utilisateur est toujours à jour avec la version de l'application.
@@ -148,3 +149,39 @@ Deux modèles d'embeddings sont supportés :
 - **Google** : `gemini-embedding-2-preview` via `@ai-sdk/google`, générant des vecteurs de dimension **768**. Sélectionnable par bibliothèque RAG pour une meilleure qualité de recherche.
 
 Chaque collection Qdrant est configurée pour la dimension du modèle choisi (`conversations_memory` = 384d, `library_{id}` = 384d ou 768d selon le modèle de la bibliothèque).
+
+## 6. Applications Autorisées (`allowed_apps`)
+
+La table `allowed_apps` gère la liste des applications locales et sites web que l'utilisateur autorise Cruchot à ouvrir — via la commande `/open` dans le chat ou via le tool `open_app` du Gemini Live Voice.
+
+### 6.1 Table `allowed_apps`
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `id` | text PK | UUID |
+| `name` | text | Nom affiché ("Zed", "Gmail") |
+| `path` | text | Chemin absolu (local) ou URL HTTPS (web) |
+| `type` | text | enum: `local` \| `web` |
+| `description` | text \| null | Aide optionnelle pour la reconnaissance vocale |
+| `isEnabled` | integer | Boolean — désactiver sans supprimer |
+| `createdAt` / `updatedAt` | integer | Timestamps (mode: timestamp) |
+
+Index : `idx_allowed_apps_enabled` sur `is_enabled`.
+
+### 6.2 Sécurité
+
+- **URLs** : seules les URLs `http:` / `https:` sont acceptées pour le type `web` — validées côté main process avant insertion et avant ouverture.
+- **Chemin local** : passé à `shell.openPath()` (Electron) — seules les apps dans la liste peuvent être ouvertes.
+- **Pas d'injection** : le renderer ne peut pas appeler `shell.openExternal()` directement — il passe par `applications:open` ou `applications:openByName` validés par Zod.
+
+### 6.3 Queries (`db/queries/applications.ts`)
+
+| Fonction | Usage |
+|----------|-------|
+| `listAllowedApps()` | Toutes les apps (UI de gestion) |
+| `listEnabledApps()` | Apps actives seulement (Gemini Live) |
+| `getAllowedAppByName(name)` | Recherche insensible à la casse (tool vocal) |
+| `createAllowedApp(data)` | Création (IPC handler) |
+| `updateAllowedApp(id, data)` | Mise à jour (IPC handler) |
+| `toggleAllowedApp(id, bool)` | Activer / désactiver |
+| `deleteAllowedApp(id)` | Suppression |

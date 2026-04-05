@@ -1,7 +1,7 @@
 import React, { Suspense, useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useUiStore, type CustomizeTab } from '@/stores/ui.store'
-import { ArrowLeft, AudioLines, BookOpen, Brain, Dumbbell, Library, Network, Shield, TerminalSquare, UserCircle } from 'lucide-react'
+import { AppWindow, ArrowLeft, AudioLines, BookOpen, Brain, Dumbbell, Library, Network, Shield, TerminalSquare, UserCircle } from 'lucide-react'
 
 const PromptsView = React.lazy(() => import('@/components/prompts/PromptsView').then(m => ({ default: m.PromptsView })))
 const RolesView = React.lazy(() => import('@/components/roles/RolesView').then(m => ({ default: m.RolesView })))
@@ -11,6 +11,7 @@ const CommandsView = React.lazy(() => import('@/components/commands/CommandsView
 const LibrariesView = React.lazy(() => import('@/components/libraries/LibrariesView').then(m => ({ default: m.LibrariesView })))
 const BrigadeView = React.lazy(() => import('@/components/brigade/BrigadeView').then(m => ({ default: m.BrigadeView })))
 const SkillsView = React.lazy(() => import('@/components/skills/SkillsView').then(m => ({ default: m.SkillsView })))
+const ApplicationsView = React.lazy(() => import('@/components/applications/ApplicationsView').then(m => ({ default: m.ApplicationsView })))
 const AudioLiveView = React.lazy(() => import('@/components/audio-live/AudioLiveView').then(m => ({ default: m.AudioLiveView })))
 
 type TabItem =
@@ -28,6 +29,7 @@ const TABS: TabItem[] = [
   { type: 'tab', id: 'skills' as CustomizeTab, label: 'Skills', icon: <Dumbbell className="size-4" /> },
   { type: 'tab', id: 'mcp', label: 'MCP', icon: <Network className="size-4" /> },
   { type: 'tab', id: 'brigade', label: 'Brigade', icon: <Shield className="size-4" /> },
+  { type: 'tab', id: 'applications' as CustomizeTab, label: 'Applications', icon: <AppWindow className="size-4" /> },
   { type: 'separator' },
   { type: 'tab', id: 'audio-live' as CustomizeTab, label: 'Audio Live', icon: <AudioLines className="size-4" /> },
 ]
@@ -96,6 +98,7 @@ export function CustomizeView() {
             {activeTab === 'libraries' && <LibrariesView />}
             {activeTab === 'skills' && <SkillsView />}
             {activeTab === 'brigade' && <BrigadeView />}
+            {activeTab === 'applications' && <ApplicationsView />}
             {activeTab === 'audio-live' && <AudioLiveView />}
           </Suspense>
         </div>

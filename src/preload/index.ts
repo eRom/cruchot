@@ -599,6 +599,17 @@ const api: ElectronAPI = {
   },
   offVcrRecordingState: () => ipcRenderer.removeAllListeners('vcr:recording-state'),
 
+  // ── Applications (allowed apps) ─────────────────────────────
+  applicationsList: () => ipcRenderer.invoke('applications:list'),
+  applicationsCreate: (data: { name: string; path: string; type: 'local' | 'web'; description?: string }) =>
+    ipcRenderer.invoke('applications:create', data),
+  applicationsUpdate: (data: { id: string; name?: string; path?: string; type?: 'local' | 'web'; description?: string | null }) =>
+    ipcRenderer.invoke('applications:update', data),
+  applicationsDelete: (id: string) => ipcRenderer.invoke('applications:delete', { id }),
+  applicationsToggle: (id: string, isEnabled: boolean) => ipcRenderer.invoke('applications:toggle', { id, isEnabled }),
+  applicationsOpen: (id: string) => ipcRenderer.invoke('applications:open', { id }),
+  applicationsOpenByName: (name: string) => ipcRenderer.invoke('applications:openByName', { name }),
+
   // ── Gemini Live (voice agent) ────────────────────────────
   geminiLiveConnect: () => ipcRenderer.invoke('gemini-live:connect'),
 

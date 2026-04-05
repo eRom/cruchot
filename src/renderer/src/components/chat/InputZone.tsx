@@ -570,7 +570,7 @@ export function InputZone({
     if (trimmed.startsWith('/')) {
       const resolved = resolveSlashCommand(trimmed)
       if (resolved) {
-        // Action commands (e.g. /fork) — execute client-side, don't send to LLM
+        // Action commands (e.g. /fork, /open) — execute client-side, don't send to LLM
         if (resolved.isAction && resolved.commandName === 'fork') {
           if (activeConversationId) {
             try {
@@ -581,6 +581,26 @@ export function InputZone({
               }
             } catch (err) {
               console.error('Failed to fork conversation:', err)
+            }
+          }
+          setContent('')
+          return
+        }
+
+        if (resolved.isAction && resolved.commandName === 'open') {
+          const appName = resolved.prompt?.trim()
+          if (!appName) {
+            const { toast } = await import('sonner')
+            toast.error('Precisez le nom : /open <nom>')
+          } else {
+            try {
+              await window.api.applicationsOpenByName(appName)
+            } catch (err: unknown) {
+              const raw = err instanceof Error ? err.message : 'Erreur'
+              // Strip Electron IPC wrapper: "Error invoking remote method '...': Error: <actual message>"
+              const clean = raw.replace(/^Error invoking remote method '[^']+': Error:\s*/i, '')
+              const { toast } = await import('sonner')
+              toast.error(clean)
             }
           }
           setContent('')

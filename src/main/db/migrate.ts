@@ -703,4 +703,19 @@ export function runMigrations(): void {
   } catch {
     // Column already exists — ignore
   }
+
+  // --- Allowed Apps (applications autorisees) ---
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS allowed_apps (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      path TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'local' CHECK(type IN ('local', 'web')),
+      description TEXT,
+      is_enabled INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_allowed_apps_enabled ON allowed_apps(is_enabled);
+  `)
 }

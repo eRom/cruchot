@@ -5,7 +5,7 @@ export const CRUCHOT_TOOLS = [
     name: 'navigate_to',
     description: `Naviguer vers une vue ou un onglet de l'application.
 Vues: 'settings', 'chat', 'tasks', 'arena', 'images', 'statistics', 'search'.
-Onglets Personnaliser: 'customize:prompts', 'customize:roles', 'customize:commands', 'customize:memory', 'customize:libraries', 'customize:mcp', 'customize:brigade'.
+Onglets Personnaliser: 'customize:prompts', 'customize:roles', 'customize:commands', 'customize:memory', 'customize:libraries', 'customize:mcp', 'customize:brigade', 'customize:applications'.
 Pour une conversation spécifique, utiliser son ID (appeler list_conversations d'abord).`,
     parameters: {
       type: Type.OBJECT,
@@ -122,6 +122,30 @@ Pour une conversation spécifique, utiliser son ID (appeler list_conversations d
   {
     name: 'list_models',
     description: "Lister tous les modèles LLM disponibles avec leur ID complet.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'open_app',
+    description: `Ouvrir une application ou un site web autorise. Exemples : "ouvre Zed", "lance Gmail", "ouvre mes mails".
+Appeler list_allowed_apps d'abord si tu ne connais pas le nom exact.`,
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        name: {
+          type: Type.STRING,
+          description: "Nom de l'application a ouvrir (ex: 'Zed', 'Gmail', 'Slack')"
+        }
+      },
+      required: ['name']
+    }
+  },
+  {
+    name: 'list_allowed_apps',
+    description: "Lister les applications et sites web autorises a etre ouverts.",
     parameters: {
       type: Type.OBJECT,
       properties: {},

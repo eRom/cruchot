@@ -50,8 +50,29 @@ Gemini Live peut contrôler Cruchot pendant la conversation. Vous pouvez demande
 | "Envoie un prompt : résume ce projet" | Le texte est envoyé dans le chat actif |
 | "Forke la conversation" | La conversation courante est dupliquée |
 | "Quelles sont mes conversations récentes ?" | Gemini vous liste les conversations |
+| "Ouvre Zed" / "Lance Gmail" | Ouvre l'application ou le site autorisé |
+| "Quelles apps tu peux ouvrir ?" | Gemini liste les applications autorisées |
 
 > **Note :** Gemini confirmera toujours avant d'envoyer un prompt dans votre nom (`send_prompt`).
+
+## 5.1 Ouvrir des applications par la voix
+
+Cruchot peut ouvrir des **applications locales** (ex: Zed, Terminal, Slack) et des **sites web** (ex: Gmail, GitHub) sur simple demande vocale — à condition qu'ils soient dans votre liste d'applications autorisées.
+
+**Configurer les applications autorisées :**
+
+1. Allez dans **Personnaliser > Applications**.
+2. Cliquez sur **Ajouter**.
+3. Choisissez le type : *Application locale* (chemin `.app`) ou *Site web* (URL HTTPS).
+4. Renseignez le nom (tel que vous l'appellerez à voix haute), le chemin ou l'URL, et une description optionnelle pour aider la reconnaissance.
+
+**Exemples de demandes vocales :**
+- "Ouvre Zed"
+- "Lance mon éditeur de code"
+- "Ouvre Gmail"
+- "Lance mes mails pro"
+
+> Seules les applications présentes dans la liste autorisée peuvent être ouvertes. Aucune app non listée ne peut être lancée, même par erreur.
 
 ## 6. Mémoire des sessions vocales
 

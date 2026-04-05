@@ -564,3 +564,17 @@ export const oneiricRuns = sqliteTable('oneiric_runs', {
   startedAt: integer('started_at', { mode: 'timestamp' }).notNull(),
   completedAt: integer('completed_at', { mode: 'timestamp' })
 })
+
+// ---------------------------------------------------------------------------
+// Allowed Apps (applications autorisees — local + web)
+// ---------------------------------------------------------------------------
+export const allowedApps = sqliteTable('allowed_apps', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  path: text('path').notNull(),
+  type: text('type', { enum: ['local', 'web'] }).notNull(),
+  description: text('description'),
+  isEnabled: integer('is_enabled', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+})

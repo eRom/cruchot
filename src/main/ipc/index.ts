@@ -41,6 +41,7 @@ import { registerVcrIpc } from './vcr.ipc'
 import { registerEpisodeIpc } from './episode.ipc'
 import { registerOneiricIpc } from './oneiric.ipc'
 import { registerGeminiLiveIpc } from './gemini-live.ipc'
+import { registerApplicationsIpc } from './applications.ipc'
 
 
 /**
@@ -162,6 +163,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Gemini Live (voice agent) ─────────────────────────────
   registerGeminiLiveIpc()
+
+  // ── Applications (allowed apps) ─────────────────────────────
+  registerApplicationsIpc()
 
   // ── Settings ────────────────────────────────────────
   const ALLOWED_SETTING_KEYS = new Set([
