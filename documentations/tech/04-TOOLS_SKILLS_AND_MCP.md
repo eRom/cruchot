@@ -47,6 +47,8 @@ Un Skill est un dossier contenant au minimum un fichier `SKILL.md`. Ce fichier p
 ### 2.2 Découverte et Installation
 Le service `skill.service.ts` scrute le dossier `~/.cruchot/skills/` au démarrage pour synchroniser les skills trouvés sur le disque avec la base de données SQLite. Il permet également de cloner dynamiquement de nouveaux skills depuis un dépôt Git.
 
+> **Sécurité — Clonage de skills** : Seules les URLs HTTPS GitHub sont autorisées (`https://github.com/owner/repo`). Les URLs SSH, les protocoles locaux (`ext::`, `file://`) et les autres hébergeurs sont rejetés par validation regex avant tout appel `git clone`, prévenant les exploits d'injection via URL.
+
 ## 3. Model Context Protocol (MCP)
 
 Cruchot intègre pleinement le **Model Context Protocol (MCP)**, une norme ouverte permettant de brancher des outils externes standardisés à n'importe quel LLM. L'intégration est gérée par le `mcp-manager.service.ts`.

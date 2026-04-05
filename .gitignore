@@ -39,6 +39,7 @@ improvement/
 
 # Internal dev
 _internal/
+.serena/
 pop.txt
 .memory/
 feature-research-*.md

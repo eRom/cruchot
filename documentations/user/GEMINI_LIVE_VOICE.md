@@ -1,0 +1,91 @@
+# Gemini Live Voice — Conversation vocale temps-réel
+
+Cruchot intègre une conversation vocale bidirectionnelle basée sur l'API **Gemini Live** de Google. Parlez directement à l'IA, elle vous répond à voix haute en temps réel — sans délai de frappe, sans attente de génération texte.
+
+## 1. Prérequis
+
+- Une clé API **Google** (Gemini) configurée dans les Paramètres > Providers.
+- Un microphone fonctionnel (autorisé par le système d'exploitation).
+- Connexion internet (l'API Gemini Live est une API cloud).
+
+> Gemini Live utilise le modèle `gemini-3.1-flash-live-preview` via l'API `v1alpha`. Ce modèle est distinct des modèles Gemini disponibles dans le chat texte.
+
+## 2. Démarrer une conversation vocale
+
+La **NotchBar** est la petite pill grise discrète affichée au centre du bord supérieur de la fenêtre (dans la barre de titre).
+
+1. **Survolez** la NotchBar — elle s'étend et affiche le label "LIVE".
+2. **Cliquez** pour démarrer la connexion.
+3. L'indicateur passe en gris "CONNECTING…" pendant l'établissement de la session WebSocket.
+4. Une fois connecté, la pill devient **bleue "LISTENING"** avec des barres de waveform animées dès que vous parlez.
+
+## 3. Les états de la NotchBar
+
+| Etat | Couleur | Signification |
+|------|---------|---------------|
+| **Off** | Grise minuscule | Inactif — cliquer pour démarrer |
+| **Connecting** | Grise | Connexion en cours |
+| **Connected** | Slate | Connecté, en attente de voix |
+| **Listening** | Bleue + barres | Vous parlez, Gemini écoute |
+| **Speaking** | Ambrée + barres | Gemini répond à voix haute |
+| **Dormant** | Grise + pastille ambrée | Session fermée après 5 min d'inactivité |
+| **Error** | Rouge | Erreur de connexion — vérifier la clé API |
+
+## 4. Parler et interrompre
+
+- Parlez naturellement — la détection d'activité vocale (VAD) est automatique.
+- **Pour interrompre** Gemini pendant qu'il parle, parlez simplement. La lecture audio s'arrête immédiatement et Gemini écoute de nouveau.
+- Des silences courts (< 500 ms) ne déclenchent pas la fin de votre tour — le VAD attend une pause franche.
+
+## 5. Commandes vocales — contrôler l'application
+
+Gemini Live peut contrôler Cruchot pendant la conversation. Vous pouvez demander à voix haute :
+
+| Ce que vous dites (exemple) | Ce qui se passe |
+|-----------------------------|-----------------|
+| "Navigue vers les statistiques" | Cruchot ouvre la vue Statistiques |
+| "Ouvre les paramètres MCP" | Cruchot va dans Personnaliser > MCP |
+| "Change le modèle pour claude-sonnet" | Le modèle actif est mis à jour |
+| "Ouvre/ferme le panneau droit" | Le right-panel est affiché ou masqué |
+| "Envoie un prompt : résume ce projet" | Le texte est envoyé dans le chat actif |
+| "Forke la conversation" | La conversation courante est dupliquée |
+| "Quelles sont mes conversations récentes ?" | Gemini vous liste les conversations |
+
+> **Note :** Gemini confirmera toujours avant d'envoyer un prompt dans votre nom (`send_prompt`).
+
+## 6. Mémoire des sessions vocales
+
+Cruchot retient les faits importants évoqués pendant vos sessions vocales. À la fin de chaque session, l'IA extrait automatiquement les sujets abordés, les décisions prises et les informations partagées, puis les stocke dans sa mémoire.
+
+**À la prochaine session**, les souvenirs des 7 derniers jours sont automatiquement injectés dans le contexte. Vous pouvez aussi demander vocalement :
+- "Qu'est-ce qu'on avait discuté hier ?"
+- "Tu te souviens de ce qu'on avait prévu pour le projet X ?"
+
+> La mémoire vocale est stockée localement dans Qdrant (collection `live_memories`) — rien ne quitte votre machine.
+
+## 6.1 Personnaliser l'assistant vocal
+
+Vous pouvez configurer le comportement de l'assistant dans **Personnaliser > Audio Live** :
+
+- **Modèle Live** : sélectionner le modèle vocal actif (Gemini 3.1 Flash Live, d'autres à venir).
+- **Prompt Identité** : personnaliser la langue, le ton et la personnalité de l'agent vocal. Ce texte est injecté au début du system prompt à chaque connexion.
+
+## 7. Inactivité et reconnexion
+
+Si aucune activité audio n'est détectée pendant **5 minutes**, la session est fermée automatiquement (état **Dormant**). La NotchBar affiche une pastille ambrée pour signaler cet état.
+
+Pour reprendre, il suffit de **cliquer sur la NotchBar** — Cruchot se reconnecte.
+
+## 8. Arrêter la conversation
+
+Cliquez sur la NotchBar en état actif (Listening / Speaking / Connected) pour déconnecter et arrêter l'audio.
+
+## 9. Dépannage
+
+| Problème | Solution |
+|----------|----------|
+| La NotchBar reste en "CONNECTING..." | Vérifiez votre clé API Google dans Paramètres > Providers |
+| L'état passe en "ERROR" | Clé API invalide ou pas de réseau — relancer après correction |
+| Gemini ne vous entend pas | Vérifiez les permissions microphone macOS (Préférences Système > Sécurité > Microphone) |
+| La voix de Gemini est robotique / saccadée | Latence réseau élevée — aucune action côté Cruchot |
+| Gemini répète sa propre réponse | Problème résolu en v0.8.2 (anti-écho 3x). Si récurrent, déconnecter/reconnecter |

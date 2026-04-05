@@ -167,7 +167,113 @@ Types d'événements capturés : `session-start`, `session-stop`, `user-message`
 
 L'état est pushé au renderer via `vcr:recording-state` event après start/stop.
 
-## 6. Synthèse Vocale (Text-to-Speech) (`tts.service.ts`)
+## 6. Gemini Live Voice (`gemini-live.service.ts`, `gemini-live.ipc.ts`, `gemini-live-tools.ts`)
+
+Gemini Live est un service de conversation vocale temps-réel basé sur l'API Gemini Live de Google. Il permet à l'utilisateur de parler directement à l'IA (et de l'entendre répondre) sans passer par le pipeline text LLM habituel.
+
+### 6.1 Architecture
+
+Le service tourne entièrement dans le **main process** (pas un UtilityProcess ni un Worker thread) — une contrainte découverte après debug : le Garbage Collector de Node.js tuait la session WebSocket si le client `@google/genai` était dans un processus séparé. Le singleton `geminiLiveService` est enregistré dans le `ServiceRegistry` sous la clé `gemini-live`.
+
+Le flux audio est entièrement géré côté renderer via deux **AudioWorklet processors** :
+- `capture-processor.ts` : capture le micro à 16 kHz, encode en PCM 16-bit, transfère le buffer au hook `useGeminiLiveAudio` qui le forward au main via IPC `gemini-live:send-audio`.
+- `playback-processor.ts` : reçoit les chunks audio PCM 24 kHz depuis Gemini, les ré-échantillonne en 48 kHz pour le DAC, et joue la réponse en temps réel.
+
+### 6.2 Connexion et configuration
+
+L'API Gemini Live nécessite **`v1alpha`** (`httpOptions: { apiVersion: 'v1alpha' }`) — la v1beta/v1 ne supporte pas les features avancées (transcription, thinking, proactivité).
+
+Modèle : `gemini-3.1-flash-live-preview`.
+
+Config session :
+- `responseModalities: [AUDIO]` — réponse audio uniquement
+- `systemInstruction` — prompt assemblé par `gemini-live-system-prompt.ts` (profil utilisateur + contexte dynamique)
+- `tools: CRUCHOT_TOOLS` — 10 function declarations (voir §6.4)
+- `thinkingConfig: { thinkingLevel: 'low', includeThoughts: false }` — réflexion légère, non streamée
+- `speechConfig` — voix Aoede
+- `inputAudioTranscription: {}` + `outputAudioTranscription: {}` — transcriptions activées (loggées en console)
+- `realtimeInputConfig` — VAD HIGH sensitivity, 500ms prefix padding, 500ms silence duration
+
+### 6.3 Cycle de vie et états
+
+5 statuts possibles (`GeminiLiveStatus`) : `off` → `connecting` → `connected` → `listening` → `speaking` (+ `dormant` + `error`).
+
+**Anti-écho 3x** — bug de répétition audio résolu par 3 guards dans `sendAudio()` :
+1. Si `status === 'speaking'` → mute le micro (Gemini parle, ne pas lui renvoyer sa propre voix)
+2. Si `isPlaybackActive === true` → mute (buffer worklet en cours de drainage)
+3. Si `Date.now() < postTurnCooldownUntil` → mute (cooldown 500ms post-playback pour laisser l'écho se dissiper)
+
+**Idle timer** : après 5 min sans activité, la session est fermée (statut → `dormant`). Le service passe en `dormant` (pas `off`) pour permettre une reconnexion rapide au prochain clic.
+
+### 6.4 Function Calling (11 outils Cruchot)
+
+Le fichier `gemini-live-tools.ts` déclare 11 outils que Gemini peut invoquer en temps réel pour contrôler l'application :
+
+| Outil | Action |
+|-------|--------|
+| `navigate_to` | Naviguer vers une vue ou une conversation |
+| `toggle_ui` | Afficher/masquer sidebar, right-panel (le mode YOLO est exclu par sécurité) |
+| `change_model` | Changer le modèle LLM actif |
+| `change_thinking` | Changer le niveau de réflexion |
+| `send_prompt` | Écrire et envoyer un prompt dans l'InputZone |
+| `summarize_conversation` | Générer un résumé de la conversation courante |
+| `fork_conversation` | Dupliquer la conversation courante |
+| `get_current_state` | Lire la vue courante, modèle actif, conversations |
+| `list_conversations` | Lister les conversations récentes |
+| `list_models` | Lister tous les modèles disponibles |
+| `recall_memory` | Recherche sémantique dans les souvenirs des sessions vocales passées |
+
+Quand Gemini appelle un outil, le main envoie un `gemini-live:command` event au renderer. Le `CruchotCommandHandler` (renderer, `cruchot-command-handler.ts`) dispatch des `CustomEvent` DOM (`cruchot:navigate`, `cruchot:toggle-ui`, etc.) écoutés par les stores Zustand et les composants React. Le résultat est renvoyé au main via `gemini-live:respond-command`, et le main appelle `session.sendToolResponse()`.
+
+### 6.5 NotchBar (UI)
+
+La `NotchBar` est un composant flottant positionné dans le `TopBar` (`-webkit-app-region: drag` désactivé sur la pill). Elle affiche 5 états visuels :
+- **Off/Dormant** : petite pill grise discrète (hover → expand + label LIVE)
+- **Connecting** : pill grise étendue
+- **Connected** : pill slate + label LIVE
+- **Listening** : pill bleue + waveform bars animées (niveau mic)
+- **Speaking** : pill ambrée + waveform bars animées (niveau speaker)
+
+Cliquer la pill connecte/déconnecte. Les bars waveform sont animées via CSS `height` en pixels synchronisé avec les niveaux audio réels.
+
+### 6.5b Search Grounding
+
+Google Search Grounding est activé sur chaque session Gemini Live via `tools: [{ googleSearch: {} }]` dans la config. Cela permet à Gemini de récupérer des informations web en temps réel pendant la conversation vocale, sans configuration supplémentaire de l'utilisateur.
+
+### 6.6 Mémoire Sémantique Vocale (`live-memory.service.ts`)
+
+Le `LiveMemoryService` (singleton `liveMemoryService`) offre une mémoire persistante entre les sessions vocales, distincte de la mémoire sémantique des conversations texte.
+
+**Pipeline :**
+1. **Accumulation** : `addTranscript(role, text)` accumule les transcriptions (user + assistant) pendant la session.
+2. **Extraction** : à la déconnexion (ou idle timeout), `extractAndStore()` — fire-and-forget — envoie les transcripts au LLM configuré si ≥ 3 échanges utilisateur. Le LLM extrait les faits clés sous forme de phrases courtes (retourne un JSON array de strings).
+3. **Embedding + stockage** : chaque fait extrait est embeddé localement (384d, `all-MiniLM-L6-v2`) et inséré dans la collection Qdrant `live_memories` avec métadonnées (`sessionId`, `provider`, `timestamp`).
+4. **Recall** : `recallRecent(days)` retourne les N derniers souvenirs (SEARCH_TOP_K=5, seuil=0.4) des `days` jours passés. `search(query)` effectue une recherche vectorielle sémantique sur toute l'histoire.
+
+**Intégration dans le system prompt** : `buildLiveMemoryBlock()` dans `gemini-live-system-prompt.ts` injecte automatiquement les souvenirs des 7 derniers jours dans le prompt de chaque session via le bloc XML `<live-memory>`.
+
+**Outil `recall_memory`** : Gemini peut invoquer cet outil en temps réel pour effectuer une recherche sémantique sur demande ("Qu'est-ce qu'on avait discuté la semaine dernière ?").
+
+**Configurable via Personnaliser > Audio Live :**
+- `liveModelId` : modèle Live à utiliser (actuellement Gemini 3.1 Flash Live, GPT-4o Realtime en préparation).
+- `liveIdentityPrompt` : prompt de personnalité injecté en tête du system prompt (comportement, langue, ton).
+
+### 6.6 IPC (`gemini-live.ipc.ts`)
+
+| Channel | Direction | Description |
+|---------|-----------|-------------|
+| `gemini-live:check-availability` | invoke | Vérifie si une clé Google est configurée |
+| `gemini-live:connect` | invoke | Ouvre la session WebSocket |
+| `gemini-live:disconnect` | invoke | Ferme la session |
+| `gemini-live:send-audio` | invoke | Forward un chunk PCM 16 kHz au service |
+| `gemini-live:respond-command` | invoke | Envoie le résultat d'un tool call à Gemini |
+| `gemini-live:set-playback-active` | invoke | Notifie le service que le buffer worklet est actif/inactif |
+| `gemini-live:status` | push → renderer | Changement de statut + erreur éventuelle |
+| `gemini-live:audio` | push → renderer | Chunk audio PCM base64 depuis Gemini |
+| `gemini-live:command` | push → renderer | Tool call à exécuter |
+| `gemini-live:clear-playback` | push → renderer | Interruption utilisateur — vider le buffer |
+
+## 7. Synthèse Vocale (Text-to-Speech) (`tts.service.ts`)
 
 Cruchot intègre des capacités de lecture vocale des messages via les APIs cloud d'OpenAI et de Google (Gemini).
 
