@@ -162,6 +162,9 @@ const api: ElectronAPI = {
 
   getProjectStats: (days) => ipcRenderer.invoke('statistics:projects', days),
 
+  getBackgroundCosts: (days?: number) => ipcRenderer.invoke('statistics:backgroundCosts', days),
+  getPreviousPeriodCost: (days?: number) => ipcRenderer.invoke('statistics:previousPeriod', days),
+
   // ── Events ────────────────────────────────────────────
   onConversationUpdated: (callback: (data: { id: string; title: string }) => void): void => {
     ipcRenderer.on('conversation:updated', (_event, data) => callback(data))

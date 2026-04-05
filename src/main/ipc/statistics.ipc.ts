@@ -5,7 +5,9 @@ import {
   getProviderStats,
   getModelStats,
   getGlobalStats,
-  getProjectStats
+  getProjectStats,
+  getBackgroundCostsByType,
+  getPreviousPeriodCost
 } from '../db/queries/statistics'
 
 const daysSchema = z.number().int().min(1).max(3650).optional()
@@ -35,6 +37,16 @@ export function registerStatisticsIpc(): void {
 
   ipcMain.handle('statistics:projects', async (_event, days?: number) => {
     return getProjectStats(parseDays(days))
+  })
+
+  ipcMain.handle('statistics:backgroundCosts', async (_event, days?: number) => {
+    return getBackgroundCostsByType(parseDays(days))
+  })
+
+  ipcMain.handle('statistics:previousPeriod', async (_event, days?: number) => {
+    const d = parseDays(days)
+    if (!d) return { totalCost: 0 }
+    return getPreviousPeriodCost(d)
   })
 
   console.log('[IPC] Statistics handlers registered')

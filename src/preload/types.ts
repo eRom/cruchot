@@ -304,6 +304,12 @@ export interface GlobalStats {
   totalBackgroundCost: number
 }
 
+export interface BackgroundCostByType {
+  type: string
+  totalCost: number
+  count: number
+}
+
 // ── TTS ─────────────────────────────────────────────
 export type TtsProvider = 'browser' | 'openai' | 'google'
 
@@ -963,6 +969,8 @@ export interface ElectronAPI {
   getModelStats: (days?: number) => Promise<ModelStat[]>
   getGlobalStats: (days?: number) => Promise<GlobalStats>
   getProjectStats: (days?: number) => Promise<ProjectStat[]>
+  getBackgroundCosts: (days?: number) => Promise<BackgroundCostByType[]>
+  getPreviousPeriodCost: (days?: number) => Promise<{ totalCost: number }>
 
   // Events
   onConversationUpdated: (callback: (data: { id: string; title: string }) => void) => void
