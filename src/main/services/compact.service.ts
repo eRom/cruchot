@@ -47,6 +47,7 @@ export interface CompactResult {
   keptMessages: DbMessage[]
   tokensBefore: number
   tokensAfter: number
+  usage: { inputTokens: number; outputTokens: number } | null
 }
 
 class CompactService {
@@ -268,7 +269,8 @@ class CompactService {
         summary: existingSummary ?? '',
         keptMessages: messages,
         tokensBefore,
-        tokensAfter: tokensBefore
+        tokensAfter: tokensBefore,
+        usage: null
       }
     }
 
@@ -321,6 +323,7 @@ class CompactService {
     })
 
     const summary = result.text.trim()
+    const usage = result.usage
     const keptMessages = keptRounds.flatMap((r) => r.messages)
     const tokensAfter = Math.ceil(summary.length / 4) + this.estimateTokens(keptMessages)
 
@@ -328,7 +331,8 @@ class CompactService {
       summary,
       keptMessages,
       tokensBefore,
-      tokensAfter
+      tokensAfter,
+      usage: usage ? { inputTokens: usage.inputTokens, outputTokens: usage.outputTokens } : null
     }
   }
 }
