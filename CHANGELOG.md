@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.4] - 2026-04-05
+
+- feat: Applications autorisées — CRUD + ouverture via /open et Gemini Live
+- feat(skill): ajout étape 0 déplacement fichiers Superpower dans cruchot-push-main
+- chore: fix typo in cruchot-push-main skill (docs/spec -> docs/specs)
+
 ## [0.8.3] - 2026-04-05
 
 - feat(gemini-live): real-time voice assistant with Gemini Live API
