@@ -704,6 +704,18 @@ export function runMigrations(): void {
     // Column already exists — ignore
   }
 
+  // Add compact columns to conversations
+  try {
+    sqlite.exec('ALTER TABLE conversations ADD COLUMN compact_summary TEXT')
+  } catch {
+    // Column already exists
+  }
+  try {
+    sqlite.exec('ALTER TABLE conversations ADD COLUMN compact_boundary_id TEXT')
+  } catch {
+    // Column already exists
+  }
+
   // --- Allowed Apps (applications autorisees) ---
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS allowed_apps (

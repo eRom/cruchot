@@ -80,6 +80,9 @@ export const conversations = sqliteTable('conversations', {
   lastEpisodeMessageId: text('last_episode_message_id'),
   lastOneiricRunAt: integer('last_oneiric_run_at', { mode: 'timestamp' }),
 
+  compactSummary: text('compact_summary'),
+  compactBoundaryId: text('compact_boundary_id'),
+
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })

@@ -110,6 +110,14 @@ export function touchConversation(id: string) {
     .run()
 }
 
+export function updateConversationCompact(id: string, compactSummary: string, compactBoundaryId: string) {
+  const db = getDatabase()
+  db.update(conversations)
+    .set({ compactSummary, compactBoundaryId, updatedAt: new Date() })
+    .where(eq(conversations.id, id))
+    .run()
+}
+
 export function deleteConversation(id: string) {
   const db = getDatabase()
   // Messages are cascade-deleted via FK or we delete them explicitly
