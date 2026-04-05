@@ -30,6 +30,7 @@ interface SettingsState {
   yoloMode: boolean
   liveModelId: string
   liveIdentityPrompt: string
+  hasShownScreenShareNotice: boolean
 
   setDefaultModelId: (modelId: string) => void
   setTheme: (theme: ThemeMode) => void
@@ -55,6 +56,7 @@ interface SettingsState {
   setYoloMode: (value: boolean) => void
   setLiveModelId: (modelId: string) => void
   setLiveIdentityPrompt: (prompt: string) => void
+  setHasShownScreenShareNotice: (shown: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -91,6 +93,7 @@ Format : sections avec titres, bullet points. Sois concis mais complet.`,
       yoloMode: false,
       liveModelId: 'gemini-3.1-flash-live-preview',
       liveIdentityPrompt: `- Communication en temps réel via audio (live)\n- Langue : Français par défaut.\n- Personnalité : Concis, efficace, ton chaleureux.`,
+      hasShownScreenShareNotice: false,
 
       setDefaultModelId: (modelId) => {
         set({ defaultModelId: modelId })
@@ -187,6 +190,7 @@ Format : sections avec titres, bullet points. Sois concis mais complet.`,
         set({ liveIdentityPrompt: trimmed })
         window.api.setSetting('multi-llm:live-identity-prompt', trimmed).catch(() => {})
       },
+      setHasShownScreenShareNotice: (shown) => set({ hasShownScreenShareNotice: shown }),
       toggleFavoriteModel: (modelId) =>
         set((state) => {
           const updated = state.favoriteModelIds.includes(modelId)

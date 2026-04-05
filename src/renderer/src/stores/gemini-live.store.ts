@@ -8,6 +8,7 @@ interface GeminiLiveState {
   speakerLevel: number // 0-1
   isPlaybackActive: boolean // true while worklet ring buffer has audio
   error: string | null
+  isScreenSharing: boolean
 
   // Actions
   setAvailable: (available: boolean) => void
@@ -18,6 +19,7 @@ interface GeminiLiveState {
   connect: () => Promise<void>
   disconnect: () => Promise<void>
   refreshAvailability: () => Promise<void>
+  setScreenSharing: (active: boolean) => void
 }
 
 export const useGeminiLiveStore = create<GeminiLiveState>((set, get) => ({
@@ -27,12 +29,14 @@ export const useGeminiLiveStore = create<GeminiLiveState>((set, get) => ({
   speakerLevel: 0,
   isPlaybackActive: false,
   error: null,
+  isScreenSharing: false,
 
   setAvailable: (available) => set({ isAvailable: available }),
   setStatus: (status, error) => set({ status, error: error ?? null }),
   setMicLevel: (level) => set({ micLevel: level }),
   setSpeakerLevel: (level) => set({ speakerLevel: level }),
   setPlaybackActive: (active) => set({ isPlaybackActive: active }),
+  setScreenSharing: (active) => set({ isScreenSharing: active }),
 
   connect: async () => {
     try {
@@ -46,7 +50,7 @@ export const useGeminiLiveStore = create<GeminiLiveState>((set, get) => ({
   disconnect: async () => {
     try {
       await window.api.geminiLiveDisconnect()
-      set({ status: 'off', error: null, micLevel: 0, speakerLevel: 0, isPlaybackActive: false })
+      set({ status: 'off', error: null, micLevel: 0, speakerLevel: 0, isPlaybackActive: false, isScreenSharing: false })
     } catch (err: any) {
       console.error('[GeminiLive] Disconnect error:', err)
     }
