@@ -653,6 +653,34 @@ const api: ElectronAPI = {
 
   offGeminiLiveClearPlayback: () => ipcRenderer.removeAllListeners('gemini-live:clear-playback'),
 
+  // ── Gemini Live — Screen Sharing ───────────────────────
+  geminiLiveGetScreenSources: () =>
+    ipcRenderer.invoke('gemini-live:screen-sources'),
+
+  geminiLiveSendScreenFrame: (base64: string) =>
+    ipcRenderer.send('gemini-live:screen-frame', base64),
+
+  geminiLiveSetScreenSharing: (active: boolean) =>
+    ipcRenderer.send('gemini-live:screen-sharing:set', active),
+
+  geminiLiveSelectScreenSource: (sourceId: string): Promise<void> =>
+    ipcRenderer.invoke('gemini-live:screen-select-source', sourceId),
+
+  geminiLiveCheckScreenPermission: (): Promise<string> =>
+    ipcRenderer.invoke('gemini-live:screen-permission'),
+
+  onGeminiLiveScreenSharing: (cb: (active: boolean) => void) => {
+    ipcRenderer.on('gemini-live:screen-sharing:status', (_event: Electron.IpcRendererEvent, active: boolean) => cb(active))
+  },
+
+  offGeminiLiveScreenSharing: () => ipcRenderer.removeAllListeners('gemini-live:screen-sharing:status'),
+
+  onGeminiLiveRequestScreenshot: (cb: () => void) => {
+    ipcRenderer.on('gemini-live:request-screenshot', () => cb())
+  },
+
+  offGeminiLiveRequestScreenshot: () => ipcRenderer.removeAllListeners('gemini-live:request-screenshot'),
+
   // ── Compact ──────────────────────────────────────────
   runCompact: (conversationId: string) =>
     ipcRenderer.invoke('compact:run', { conversationId }),

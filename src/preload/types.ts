@@ -1325,6 +1325,17 @@ export interface ElectronAPI {
   onGeminiLiveClearPlayback: (cb: () => void) => void
   offGeminiLiveClearPlayback: () => void
 
+  // Gemini Live — Screen Sharing
+  geminiLiveGetScreenSources: () => Promise<ScreenSource[]>
+  geminiLiveSendScreenFrame: (base64: string) => void
+  geminiLiveSetScreenSharing: (active: boolean) => void
+  geminiLiveSelectScreenSource: (sourceId: string) => Promise<void>
+  geminiLiveCheckScreenPermission: () => Promise<string>
+  onGeminiLiveScreenSharing: (cb: (active: boolean) => void) => void
+  offGeminiLiveScreenSharing: () => void
+  onGeminiLiveRequestScreenshot: (cb: () => void) => void
+  offGeminiLiveRequestScreenshot: () => void
+
   // ── Compact ──────────────────────────────────────────
   runCompact: (conversationId: string) => Promise<{ tokensBefore: number; tokensAfter: number }>
   onCompactStatus: (callback: (status: CompactStatus) => void) => void
@@ -1479,5 +1490,13 @@ export interface GeminiLiveCommandResult {
   success: boolean
   data?: unknown
   error?: string
+}
+
+export interface ScreenSource {
+  id: string
+  name: string
+  thumbnailDataUrl: string
+  appIconDataUrl?: string
+  type: 'screen' | 'window'
 }
 
