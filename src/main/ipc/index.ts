@@ -40,7 +40,7 @@ import { registerPermissionsIpc } from './permissions.ipc'
 import { registerVcrIpc } from './vcr.ipc'
 import { registerEpisodeIpc } from './episode.ipc'
 import { registerOneiricIpc } from './oneiric.ipc'
-import { registerGeminiLiveIpc } from './gemini-live.ipc'
+import { registerLiveIpc } from './live.ipc'
 import { registerApplicationsIpc } from './applications.ipc'
 import { registerCompactIpc } from './compact.ipc'
 
@@ -162,8 +162,8 @@ export function registerAllIpcHandlers(): void {
   // ── Oneiric (consolidation onirique) ────────────────────
   registerOneiricIpc()
 
-  // ── Gemini Live (voice agent) ─────────────────────────────
-  registerGeminiLiveIpc()
+  // ── Live (voice agent) ────────────────────────────────────
+  registerLiveIpc()
 
   // ── Applications (allowed apps) ─────────────────────────────
   registerApplicationsIpc()
