@@ -61,6 +61,24 @@ telemetry_disabled: true
   return configPath
 }
 
+/**
+ * Wait for port to be free (previous Qdrant instance may still linger).
+ */
+export async function waitForPortFree(timeoutMs = 5000): Promise<void> {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    try {
+      await fetch(`http://127.0.0.1:${QDRANT_PORT}/healthz`)
+      // Still responding — old process alive, wait
+      await new Promise((r) => setTimeout(r, 200))
+    } catch {
+      // Connection refused = port is free
+      return
+    }
+  }
+  console.warn(`[Qdrant] Port ${QDRANT_PORT} still in use after ${timeoutMs}ms, starting anyway`)
+}
+
 export function startQdrant(): ChildProcess {
   const binaryPath = getQdrantBinaryPath()
   const storagePath = getQdrantStoragePath()

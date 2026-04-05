@@ -31,8 +31,8 @@ We will credit reporters in the release notes unless they prefer to remain anony
 
 | Version | Supported |
 |---------|-----------|
-| 0.7.x | Yes |
-| < 0.7 | No |
+| 0.8.x | Yes |
+| < 0.8 | No |
 
 Only the latest minor release receives security patches.
 
@@ -74,6 +74,8 @@ Additional layers:
 - **Remote access**: WebSocket connections restricted to the local network (`127.0.0.1`). Session tokens validated on every request. Triple verification for Telegram bot access.
 - **Library RAG validation**: `validateSourcePath()` blocks system roots and sensitive file patterns.
 - **WebFetch protection**: HTTPS-only, anti-SSRF (private IP blocking), 2MB response limit.
+- **Gemini Live voice restriction**: YOLO mode toggle is blocked from voice commands to prevent voice-injected prompt execution without approval. Only UI elements (sidebar, right-panel) can be toggled via voice.
+- **Skill installation**: `git clone` restricted to HTTPS GitHub URLs only (`https://github.com/owner/repo`). SSH, `ext::`, and local path transports are rejected. Optional Maton security scanner analyzes skill code before installation.
 
 ## Automated Security Scanning
 
@@ -105,24 +107,27 @@ These are documented risks that have been evaluated and accepted given the appli
 | ONNX embedding model kept in memory | Loaded once in a worker thread, never unloaded — acceptable for single-user desktop |
 | Semgrep false positive on localhost HTTP | HTTP to local Qdrant instance (127.0.0.1) is expected and safe |
 | Plan Mode auto-approves tools during execution | After explicit user validation of the plan, tool approvals are bypassed. Security checks and deny rules remain active |
-| YOLO mode bypasses tool approval | By design — user explicitly enables per-conversation. Hard security checks (23 bash checks + Seatbelt) remain enforced |
+| YOLO mode bypasses tool approval | By design — user explicitly enables per-conversation. Hard security checks (23 bash checks + Seatbelt) remain enforced. Blocked from Gemini Live voice commands |
+| VCR anonymizer broad PII regex | 32+ char alphanumeric pattern may over-mask UUIDs/hashes in exports. Acceptable — better safe than leaking |
+| CSP `style-src 'unsafe-inline'` | Required for Tailwind CSS + shadcn/ui runtime styles. No user-controlled style injection vector exists |
 
 ## Testing
 
-142 tests across 6 suites:
+168 tests across 7 suites:
 
 | Suite | Tests | Coverage |
 |-------|-------|----------|
 | Permission engine | 42 | Deny/allow/ask pipeline, session approvals, READONLY commands |
 | Bash security | 38 | 23 security checks, quote stripping, edge cases |
-| Plan parser | 20 | Plan block parsing, step markers, stripping |
-| Think-tag parser | 14 | Open-source model `<think>` tag extraction |
+| Plan parser | 21 | Plan block parsing, step markers, stripping |
+| OCR service | 21 | Mistral OCR validation, format detection, error handling |
 | Error classification | 19 | Retry logic, transient vs permanent errors |
-| Cost calculator | 8 | Multi-provider pricing |
+| Think-tag parser | 14 | Open-source model `<think>` tag extraction |
+| Cost calculator | 13 | Multi-provider pricing, token calculation |
 
 ## Security Audit History
 
-Cruchot has undergone 6 security-related audits:
+Cruchot has undergone 7 security-related audits:
 
 | Audit | Date | Findings | Fixed | Score |
 |-------|------|----------|-------|-------|
@@ -132,6 +137,7 @@ Cruchot has undergone 6 security-related audits:
 | S37 — Performance | 2026-03-15 | 9 performance issues | 9 fixes across 9 files | N/A |
 | S42 — v4 (Sandbox) | 2026-03-20 | Seatbelt + permission engine review | Complete rewrite | 97 |
 | S50 — Improvement | 2026-04-02 | 7 security + 6 perf fixes | 13 fixes across 8 files | 97 |
+| S59 — v5 (Post-Voice) | 2026-04-04 | 7 vulnerabilities (0C, 1H, 2M, 4L) | 4 fixes across 5 files | 97 |
 
 Current security score: **97/100** with zero P0/P1 open issues.
 

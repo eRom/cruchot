@@ -5,7 +5,7 @@ import { oneiricService } from './oneiric.service'
 import { getLastCompletedOneiricRun } from '../db/queries/oneiric'
 
 const MIN_HOURS_BETWEEN_QUIT_RUNS = 1
-const QUIT_TIMEOUT_MS = 30_000
+const QUIT_TIMEOUT_MS = 10_000
 
 interface OneiricSchedule {
   enabled: boolean

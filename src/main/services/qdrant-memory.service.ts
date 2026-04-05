@@ -5,7 +5,7 @@
 import { EventEmitter } from 'events'
 import type { ChildProcess } from 'child_process'
 import { randomUUID } from 'crypto'
-import { startQdrant, waitForQdrantReady, stopQdrant, isQdrantAvailable, QDRANT_PORT_NUMBER } from './qdrant-process'
+import { startQdrant, waitForQdrantReady, stopQdrant, isQdrantAvailable, waitForPortFree, QDRANT_PORT_NUMBER } from './qdrant-process'
 import { initEmbedding, embed, embedBatch, isEmbeddingReady, EMBEDDING_DIM } from './embedding.service'
 import { serviceRegistry } from './registry'
 import {
@@ -80,6 +80,9 @@ class QdrantMemoryService extends EventEmitter {
         this.emit('status', this.status)
         return
       }
+
+      // 0. Wait for previous Qdrant to release port
+      await waitForPortFree()
 
       // 1. Start Qdrant binary
       this.qdrantProcess = startQdrant()

@@ -332,6 +332,12 @@ class SkillService {
 
   cloneRepo(gitUrl: string): { success: true; tempDir: string } | { success: false; error: string } {
     const { repoUrl, branch, subpath } = this.parseGitHubUrl(gitUrl)
+
+    // Security: only allow HTTPS GitHub URLs to prevent ext::, SSH, or local path exploits
+    if (!/^https:\/\/github\.com\/[^/]+\/[^/]+$/.test(repoUrl)) {
+      return { success: false, error: 'Seules les URLs HTTPS GitHub sont autorisées (https://github.com/owner/repo)' }
+    }
+
     const tempDir = path.join('/tmp', `cruchot-skill-${randomUUID()}`)
 
     try {
