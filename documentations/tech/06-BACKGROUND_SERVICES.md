@@ -205,9 +205,9 @@ Config session :
 
 **Idle timer** : après 5 min sans activité, la session est fermée (statut → `dormant`). Le service passe en `dormant` (pas `off`) pour permettre une reconnexion rapide au prochain clic.
 
-### 6.4 Function Calling (11 outils Cruchot)
+### 6.4 Function Calling (14 outils Cruchot)
 
-Le fichier `gemini-live-tools.ts` déclare 11 outils que Gemini peut invoquer en temps réel pour contrôler l'application :
+Le fichier `gemini-live-tools.ts` déclare 14 outils que Gemini peut invoquer en temps réel pour contrôler l'application :
 
 | Outil | Action |
 |-------|--------|
@@ -222,6 +222,9 @@ Le fichier `gemini-live-tools.ts` déclare 11 outils que Gemini peut invoquer en
 | `list_conversations` | Lister les conversations récentes |
 | `list_models` | Lister tous les modèles disponibles |
 | `recall_memory` | Recherche sémantique dans les souvenirs des sessions vocales passées |
+| `request_screenshot` | Capture un screenshot haute qualité de l'écran partagé (si partage actif) |
+| `pause_screen_share` | Met en pause l'envoi de frames vidéo sans fermer le MediaStream |
+| `resume_screen_share` | Reprend l'envoi de frames après une pause |
 
 Quand Gemini appelle un outil, le main envoie un `gemini-live:command` event au renderer. Le `CruchotCommandHandler` (renderer, `cruchot-command-handler.ts`) dispatch des `CustomEvent` DOM (`cruchot:navigate`, `cruchot:toggle-ui`, etc.) écoutés par les stores Zustand et les composants React. Le résultat est renvoyé au main via `gemini-live:respond-command`, et le main appelle `session.sendToolResponse()`.
 
@@ -272,6 +275,59 @@ Le `LiveMemoryService` (singleton `liveMemoryService`) offre une mémoire persis
 | `gemini-live:audio` | push → renderer | Chunk audio PCM base64 depuis Gemini |
 | `gemini-live:command` | push → renderer | Tool call à exécuter |
 | `gemini-live:clear-playback` | push → renderer | Interruption utilisateur — vider le buffer |
+| `gemini-live:screen-sources` | invoke | Liste les sources disponibles (écrans + fenêtres) → `ScreenSource[]` |
+| `gemini-live:screen-frame` | send (R→M) | Fire-and-forget — JPEG base64 depuis le hook renderer |
+| `gemini-live:screen-sharing:set` | send (R→M) | Toggle `isScreenSharing` dans le service |
+| `gemini-live:screen-sharing:status` | push → renderer | Broadcast du nouvel état isScreenSharing |
+| `gemini-live:screen-select-source` | invoke | Transmet le sourceId avant appel `getDisplayMedia()` |
+| `gemini-live:request-screenshot` | push → renderer | Déclenche une capture haute qualité côté renderer |
+| `gemini-live:screen-permission` | invoke | Check `systemPreferences.getMediaAccessStatus('screen')` |
+
+### 6.7 Screen Sharing (`useScreenCapture.ts`, `ScreenSourcePicker.tsx`)
+
+Le screen sharing est un sous-état de la session Live — toujours déclenché explicitement par l'utilisateur, jamais automatiquement.
+
+**Architecture :**
+
+```
+Renderer                                    Main
+────────                                    ────
+Click icône Monitor (NotchBar)
+  │
+  ├─ IPC: screen-permission          →  systemPreferences.getMediaAccessStatus('screen')
+  │  ← 'granted' | 'denied'
+  │
+  ├─ IPC: screen-sources             →  desktopCapturer.getSources({types:['screen','window']})
+  │  ← ScreenSource[] (thumbnails data URL)
+  │
+  ├─ ScreenSourcePicker (user choisit)
+  │
+  ├─ IPC: screen-select-source(id)   →  pendingSourceId = id
+  │
+  ├─ getDisplayMedia()               →  setDisplayMediaRequestHandler callback
+  │  ← MediaStream                      (sources via desktopCapturer)
+  │
+  └─ useScreenCapture hook
+     - Canvas offscreen max 1280×720
+     - drawImage(video) toutes les 500ms
+     - Diff 4×4 pixels grid — delta moyen RGB
+     - Si delta >= 10 → JPEG 0.7 → IPC: screen-frame →  sendScreenFrame()
+                                                          session.sendRealtimeInput({ video })
+```
+
+**`GeminiLiveService` — champs et méthodes ajoutés :**
+
+- `isScreenSharing: boolean` — guard pour `sendScreenFrame()`
+- `sendScreenFrame(jpegBase64)` — forward vers `session.sendRealtimeInput()` + `resetIdleTimer()`
+- `setScreenSharing(active)` — toggle + broadcast `screen-sharing:status`
+- `requestScreenshot()` — broadcast `request-screenshot` au renderer
+- `disconnect()` — reset `isScreenSharing = false` + broadcast
+
+**`setDisplayMediaRequestHandler`** est configuré une seule fois dans `src/main/index.ts` au startup, via un `pendingSourceId` string qui sert de rendez-vous entre l'IPC `screen-select-source` et l'appel `getDisplayMedia()` du renderer.
+
+**Cadence adaptative :** 0 FPS si écran statique (delta < 10), ~2 FPS en activité, burst sur changements majeurs. Screenshot haute qualité via le tool `request_screenshot` (résolution native, JPEG 0.9).
+
+**Privacy :** frames en RAM uniquement — aucune écriture disque, aucun log de contenu visuel. Au stop : `MediaStream.getTracks().forEach(t => t.stop())`, canvas GC.
 
 ## 7. Gestion du Contexte (CompactService) (`compact.service.ts`, `compact.ipc.ts`)
 

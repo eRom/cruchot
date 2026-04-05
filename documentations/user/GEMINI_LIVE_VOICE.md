@@ -91,6 +91,46 @@ Vous pouvez configurer le comportement de l'assistant dans **Personnaliser > Aud
 - **Modèle Live** : sélectionner le modèle vocal actif (Gemini 3.1 Flash Live, d'autres à venir).
 - **Prompt Identité** : personnaliser la langue, le ton et la personnalité de l'agent vocal. Ce texte est injecté au début du system prompt à chaque connexion.
 
+## 6.2 Partager votre écran pendant une session vocale
+
+Cruchot permet à Gemini de **voir votre écran en temps réel** pendant une conversation vocale. L'agent peut ainsi commenter, analyser ou vous assister sur ce qui est affiché — une fenêtre, une application, ou l'intégralité de l'écran.
+
+### Activer le partage d'écran
+
+1. Démarrez une session vocale (la NotchBar doit être en état **Connected**, **Listening** ou **Speaking**).
+2. Une **icône écran** (moniteur) apparaît à droite du label dans la NotchBar.
+3. Cliquez dessus — un sélecteur de source s'affiche.
+4. Choisissez un **écran entier** ou une **fenêtre applicative**.
+5. Le partage démarre. L'icône passe en vert avec un point pulsant.
+
+> La première utilisation du partage d'écran affiche un avertissement "macOS Screen Recording". Accordez la permission dans Préférences Système > Sécurité et confidentialité > Enregistrement d'écran, puis relancez.
+
+### Pendant le partage
+
+- Gemini reçoit des captures de votre écran en temps réel (environ 0–2 images/seconde selon l'activité).
+- Si rien ne bouge à l'écran, **aucune image n'est envoyée** (détection automatique des changements).
+- Vous pouvez demander vocalement à Gemini : "Regarde ce que je fais" ou "Qu'est-ce que tu vois ?"
+- Gemini peut prendre un **screenshot haute qualité** si vous demandez plus de détail.
+
+### Arrêter le partage
+
+- **Cliquez à nouveau** sur l'icône écran (verte) dans la NotchBar.
+- Fermer la fenêtre ou couper la session vocale stoppe également le partage automatiquement.
+
+### Commandes vocales liées au partage
+
+| Ce que vous dites | Ce qui se passe |
+|-------------------|-----------------|
+| "Pause le partage d'écran" | L'envoi de frames est suspendu (stream reste ouvert) |
+| "Reprends le partage" | L'envoi de frames reprend |
+| "Prends un screenshot" | Gemini capture une image haute qualité de l'écran |
+
+### Confidentialité
+
+- Les frames vidéo transitent **uniquement en RAM** — aucune image n'est écrite sur le disque.
+- Le contenu visuel n'est pas loggé ni stocké dans la base de données locale.
+- Le partage est **toujours déclenché explicitement** par l'utilisateur — jamais automatiquement.
+
 ## 7. Inactivité et reconnexion
 
 Si aucune activité audio n'est détectée pendant **5 minutes**, la session est fermée automatiquement (état **Dormant**). La NotchBar affiche une pastille ambrée pour signaler cet état.
@@ -110,3 +150,6 @@ Cliquez sur la NotchBar en état actif (Listening / Speaking / Connected) pour d
 | Gemini ne vous entend pas | Vérifiez les permissions microphone macOS (Préférences Système > Sécurité > Microphone) |
 | La voix de Gemini est robotique / saccadée | Latence réseau élevée — aucune action côté Cruchot |
 | Gemini répète sa propre réponse | Problème résolu en v0.8.2 (anti-écho 3x). Si récurrent, déconnecter/reconnecter |
+| L'icône écran n'apparaît pas | La session doit être connectée (état Connected, Listening ou Speaking) |
+| Le SourcePicker s'ouvre mais rien ne démarre | Permission Screen Recording manquante — vérifier Préférences Système > Sécurité > Enregistrement d'écran |
+| Gemini ne voit pas l'écran alors que le partage est actif | Vérifier que l'écran bouge — 0 frame envoyée si statique. Demander vocalement "prends un screenshot" |
