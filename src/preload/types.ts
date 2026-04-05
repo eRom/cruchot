@@ -1279,6 +1279,23 @@ export interface ElectronAPI {
   vcrStatus: () => Promise<RecordingState>
   onVcrRecordingState: (cb: (state: RecordingState) => void) => void
   offVcrRecordingState: () => void
+
+  // Gemini Live
+  geminiLiveConnect: () => Promise<void>
+  geminiLiveDisconnect: () => Promise<void>
+  geminiLiveGetStatus: () => Promise<GeminiLiveStatusInfo>
+  geminiLiveIsAvailable: () => Promise<boolean>
+  geminiLiveSendAudio: (base64: string) => void
+  geminiLiveSetPlaybackActive: (active: boolean) => void
+  geminiLiveRespondCommand: (id: string, name: string, result: GeminiLiveCommandResult) => Promise<void>
+  onGeminiLiveAudio: (cb: (base64: string) => void) => void
+  offGeminiLiveAudio: () => void
+  onGeminiLiveStatus: (cb: (info: GeminiLiveStatusInfo) => void) => void
+  offGeminiLiveStatus: () => void
+  onGeminiLiveCommand: (cb: (cmd: GeminiLiveCommand) => void) => void
+  offGeminiLiveCommand: () => void
+  onGeminiLiveClearPlayback: (cb: () => void) => void
+  offGeminiLiveClearPlayback: () => void
 }
 
 // ---------------------------------------------------------------------------
@@ -1396,6 +1413,26 @@ export interface SkillAnalyzeResult {
   tokensIn?: number
   tokensOut?: number
   cost?: number
+  error?: string
+}
+
+// ── Gemini Live ─────────────────────────────────────────
+export type GeminiLiveStatus = 'off' | 'connecting' | 'connected' | 'listening' | 'speaking' | 'dormant' | 'error'
+
+export interface GeminiLiveStatusInfo {
+  status: GeminiLiveStatus
+  error?: string
+}
+
+export interface GeminiLiveCommand {
+  id: string
+  name: string
+  args: Record<string, unknown>
+}
+
+export interface GeminiLiveCommandResult {
+  success: boolean
+  data?: unknown
   error?: string
 }
 

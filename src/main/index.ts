@@ -106,6 +106,14 @@ async function lazyInitServices(mainWindow: BrowserWindow): Promise<void> {
   } catch (err) {
     console.error('[OneiricTrigger] Lazy init failed:', err)
   }
+
+  // Gemini Live — register service (connect is on-demand)
+  try {
+    const { geminiLiveService } = await import('./services/gemini-live.service')
+    geminiLiveService.init(mainWindow)
+  } catch (err) {
+    console.error('[GeminiLive] Lazy init failed:', err)
+  }
 }
 
 app.whenReady().then(() => {
@@ -134,9 +142,12 @@ app.whenReady().then(() => {
 
     return net.fetch(pathToFileURL(resolved).href)
   })
-  // Deny all permission requests from the renderer (camera, mic, geolocation, etc.)
-  // This app is a local desktop tool — no web permissions are needed
-  session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
+  // Deny all permission requests except microphone (needed for Gemini Live voice)
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    if (permission === 'media') {
+      callback(true)
+      return
+    }
     callback(false)
   })
 
@@ -235,40 +246,49 @@ app.on('before-quit', async (event) => {
   event.preventDefault()
   isQuitting = true
 
+  // Hide window immediately — user sees instant quit
+  BrowserWindow.getAllWindows().forEach((w) => w.hide())
+
   console.log('[App] Graceful shutdown starting...')
 
-  try {
-    // Flush episodic memory extraction
-    try {
-      const { episodeTriggerService } = await import('./services/episode-trigger.service')
-      await episodeTriggerService.onAppQuitting()
-      episodeTriggerService.dispose()
-    } catch (err) {
-      console.error('[EpisodeTrigger] Quit flush failed:', err)
-    }
+  const SHUTDOWN_TIMEOUT_MS = 20_000
 
-    // Flush oneiric consolidation
-    try {
-      const { oneiricTriggerService } = await import('./services/oneiric-trigger.service')
-      await oneiricTriggerService.onAppQuitting()
-      oneiricTriggerService.stop()
-    } catch (err) {
-      console.error('[OneiricTrigger] Quit flush failed:', err)
-    }
+  const cleanup = async (): Promise<void> => {
+    // Flush episodic + oneiric in parallel (independent tasks)
+    await Promise.allSettled([
+      (async () => {
+        const { episodeTriggerService } = await import('./services/episode-trigger.service')
+        await episodeTriggerService.onAppQuitting()
+        episodeTriggerService.dispose()
+        console.log('[App] Episode flush done')
+      })(),
+      (async () => {
+        const { oneiricTriggerService } = await import('./services/oneiric-trigger.service')
+        await oneiricTriggerService.onAppQuitting()
+        oneiricTriggerService.stop()
+        console.log('[App] Oneiric flush done')
+      })()
+    ])
 
     // Stop all registered services in LIFO order
     await serviceRegistry.stopAll()
 
     // Synchronous stops (not in registry)
     stopAutoUpdater()
-
-    // DB last — everything must be stopped
-    closeDatabase()
-  } catch (err) {
-    console.error('[App] Cleanup error:', err)
   }
 
-  console.log('[App] Graceful shutdown complete')
+  try {
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Shutdown timeout')), SHUTDOWN_TIMEOUT_MS)
+    )
+    await Promise.race([cleanup(), timeout])
+    console.log('[App] Graceful shutdown complete')
+  } catch (err) {
+    console.error('[App] Shutdown forced after timeout:', err)
+  }
+
+  // DB last — always close, even after timeout
+  closeDatabase()
   app.quit()
 })
 

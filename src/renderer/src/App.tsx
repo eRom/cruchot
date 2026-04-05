@@ -24,6 +24,7 @@ import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
 import { useProvidersStore } from '@/stores/providers.store'
 import { useSettingsStore } from '@/stores/settings.store'
+import { useGeminiLiveStore } from '@/stores/gemini-live.store'
 import { useInitApp } from '@/hooks/useInitApp'
 import { useStreaming } from '@/hooks/useStreaming'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -126,6 +127,115 @@ function App(): React.JSX.Element {
     window.api.setSetting('onboarding_completed', 'true')
     setShowOnboarding(false)
   }
+
+  // ── Gemini Live — check availability on startup (retry to handle lazy init race)
+  useEffect(() => {
+    const check = () => useGeminiLiveStore.getState().refreshAvailability()
+    check()
+    // Retry after lazy init completes (lazyInitServices is async, no await)
+    const timer = setTimeout(check, 3000)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // ── Gemini Live — wire CruchotCommandHandler events ──
+  useEffect(() => {
+    const handleNavigate = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail.view) {
+        useUiStore.getState().setCurrentView(detail.view)
+        // Navigate to a specific customize tab if provided
+        if (detail.tab) {
+          useUiStore.getState().setCustomizeTab(detail.tab)
+        }
+      } else if (detail.conversationId) {
+        useConversationsStore.getState().setActiveConversation(detail.conversationId)
+        useUiStore.getState().setCurrentView('chat')
+      }
+    }
+
+    const handleToggleUi = (e: Event) => {
+      const { element, state } = (e as CustomEvent).detail
+      if (element === 'sidebar') {
+        const store = useSettingsStore.getState()
+        if (state === 'on') store.setSidebarCollapsed(false)
+        else if (state === 'off') store.setSidebarCollapsed(true)
+        else store.toggleSidebar()
+      } else if (element === 'right-panel') {
+        const store = useUiStore.getState()
+        if (state === 'on') store.setOpenPanel('right')
+        else if (state === 'off') store.setOpenPanel(null)
+        else store.toggleRightPanel()
+      } else if (element === 'yolo') {
+        const convId = useConversationsStore.getState().activeConversationId
+        if (convId) {
+          const enable = state === 'on' ? true : state === 'off' ? false : true
+          window.api.setYoloMode(convId, enable)
+        }
+      }
+    }
+
+    const handleChangeModel = (e: Event) => {
+      const { modelId } = (e as CustomEvent).detail
+      const [providerId, id] = modelId.split('::')
+      useProvidersStore.getState().selectModel(providerId, id)
+    }
+
+    const handleChangeThinking = (e: Event) => {
+      const { level } = (e as CustomEvent).detail
+      useSettingsStore.getState().setThinkingEffort(level)
+    }
+
+    const handleSendPrompt = (e: Event) => {
+      const { text } = (e as CustomEvent).detail
+      useUiStore.getState().setDraftContent(text)
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('cruchot:submit-draft'))
+      }, 100)
+    }
+
+    const handleSummarize = async () => {
+      const convId = useConversationsStore.getState().activeConversationId
+      if (!convId) return
+      try {
+        const store = useProvidersStore.getState()
+        const modelId = useSettingsStore.getState().summaryModelId || `${store.selectedProviderId}::${store.selectedModelId}`
+        const result = await window.api.summarizeConversation({
+          conversationId: convId,
+          modelId,
+          prompt: useSettingsStore.getState().summaryPrompt
+        })
+        await navigator.clipboard.writeText(result.text)
+      } catch { /* silencieux */ }
+    }
+
+    const handleFork = async () => {
+      const convId = useConversationsStore.getState().activeConversationId
+      if (!convId) return
+      try {
+        const forked = await window.api.forkConversation(convId)
+        useConversationsStore.getState().addConversation(forked)
+        useConversationsStore.getState().setActiveConversation(forked.id)
+      } catch { /* silencieux */ }
+    }
+
+    window.addEventListener('cruchot:navigate', handleNavigate)
+    window.addEventListener('cruchot:toggle-ui', handleToggleUi)
+    window.addEventListener('cruchot:change-model', handleChangeModel)
+    window.addEventListener('cruchot:change-thinking', handleChangeThinking)
+    window.addEventListener('cruchot:send-prompt', handleSendPrompt)
+    window.addEventListener('cruchot:summarize', handleSummarize)
+    window.addEventListener('cruchot:fork', handleFork)
+
+    return () => {
+      window.removeEventListener('cruchot:navigate', handleNavigate)
+      window.removeEventListener('cruchot:toggle-ui', handleToggleUi)
+      window.removeEventListener('cruchot:change-model', handleChangeModel)
+      window.removeEventListener('cruchot:change-thinking', handleChangeThinking)
+      window.removeEventListener('cruchot:send-prompt', handleSendPrompt)
+      window.removeEventListener('cruchot:summarize', handleSummarize)
+      window.removeEventListener('cruchot:fork', handleFork)
+    }
+  }, [])
 
   return (
     <ErrorBoundary>

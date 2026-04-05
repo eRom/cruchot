@@ -798,6 +798,10 @@ export function InputZone({
     }
   }, [isImageMode, handleSendImage, handleSendText])
 
+  // Ref always holds the latest handleSend (avoids stale closure in event listeners)
+  const handleSendRef = useRef(handleSend)
+  handleSendRef.current = handleSend
+
   // ── File mention selection ──────────────────────────────
   const handleMentionSelect = useCallback(
     (index: number) => {
@@ -875,11 +879,21 @@ export function InputZone({
       if (text) setContent(text)
       requestAnimationFrame(() => textareaRef.current?.focus())
     }
+    // Voice agent (Gemini Live) sends a prompt to submit
+    function handleSubmitDraft() {
+      const text = useUiStore.getState().draftContent
+      if (!text) return
+      setContent(text)
+      // Let React re-render with new content, then trigger send via ref
+      setTimeout(() => handleSendRef.current(), 50)
+    }
     window.addEventListener(EVENTS.PROMPT_INSERT, handlePromptInsert)
     window.addEventListener(EVENTS.PROMPT_OPTIMIZED, handlePromptOptimized)
+    window.addEventListener('cruchot:submit-draft', handleSubmitDraft)
     return () => {
       window.removeEventListener(EVENTS.PROMPT_INSERT, handlePromptInsert)
       window.removeEventListener(EVENTS.PROMPT_OPTIMIZED, handlePromptOptimized)
+      window.removeEventListener('cruchot:submit-draft', handleSubmitDraft)
     }
   }, [])
 

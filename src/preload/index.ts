@@ -597,7 +597,47 @@ const api: ElectronAPI = {
   onVcrRecordingState: (cb: (state: RecordingState) => void) => {
     ipcRenderer.on('vcr:recording-state', (_e: Electron.IpcRendererEvent, state: RecordingState) => cb(state))
   },
-  offVcrRecordingState: () => ipcRenderer.removeAllListeners('vcr:recording-state')
+  offVcrRecordingState: () => ipcRenderer.removeAllListeners('vcr:recording-state'),
+
+  // ── Gemini Live (voice agent) ────────────────────────────
+  geminiLiveConnect: () => ipcRenderer.invoke('gemini-live:connect'),
+
+  geminiLiveDisconnect: () => ipcRenderer.invoke('gemini-live:disconnect'),
+
+  geminiLiveGetStatus: () => ipcRenderer.invoke('gemini-live:status'),
+
+  geminiLiveIsAvailable: (): Promise<boolean> => ipcRenderer.invoke('gemini-live:available'),
+
+  geminiLiveSendAudio: (base64: string) => ipcRenderer.send('gemini-live:audio:send', base64),
+
+  geminiLiveSetPlaybackActive: (active: boolean) => ipcRenderer.send('gemini-live:playback-active', active),
+
+  geminiLiveRespondCommand: (id: string, name: string, result: { success: boolean; data?: unknown; error?: string }) =>
+    ipcRenderer.invoke('gemini-live:command-result', { id, name, result }),
+
+  onGeminiLiveAudio: (cb: (base64: string) => void) => {
+    ipcRenderer.on('gemini-live:audio', (_event: Electron.IpcRendererEvent, data: string) => cb(data))
+  },
+
+  offGeminiLiveAudio: () => ipcRenderer.removeAllListeners('gemini-live:audio'),
+
+  onGeminiLiveStatus: (cb: (info: { status: string; error?: string }) => void) => {
+    ipcRenderer.on('gemini-live:status', (_event: Electron.IpcRendererEvent, info: { status: string; error?: string }) => cb(info))
+  },
+
+  offGeminiLiveStatus: () => ipcRenderer.removeAllListeners('gemini-live:status'),
+
+  onGeminiLiveCommand: (cb: (cmd: { id: string; name: string; args: Record<string, unknown> }) => void) => {
+    ipcRenderer.on('gemini-live:command', (_event: Electron.IpcRendererEvent, cmd: { id: string; name: string; args: Record<string, unknown> }) => cb(cmd))
+  },
+
+  offGeminiLiveCommand: () => ipcRenderer.removeAllListeners('gemini-live:command'),
+
+  onGeminiLiveClearPlayback: (cb: () => void) => {
+    ipcRenderer.on('gemini-live:clear-playback', () => cb())
+  },
+
+  offGeminiLiveClearPlayback: () => ipcRenderer.removeAllListeners('gemini-live:clear-playback'),
 }
 
 contextBridge.exposeInMainWorld('api', api)

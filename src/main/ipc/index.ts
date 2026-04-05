@@ -40,6 +40,7 @@ import { registerPermissionsIpc } from './permissions.ipc'
 import { registerVcrIpc } from './vcr.ipc'
 import { registerEpisodeIpc } from './episode.ipc'
 import { registerOneiricIpc } from './oneiric.ipc'
+import { registerGeminiLiveIpc } from './gemini-live.ipc'
 
 
 /**
@@ -159,6 +160,9 @@ export function registerAllIpcHandlers(): void {
   // ── Oneiric (consolidation onirique) ────────────────────
   registerOneiricIpc()
 
+  // ── Gemini Live (voice agent) ─────────────────────────────
+  registerGeminiLiveIpc()
+
   // ── Settings ────────────────────────────────────────
   const ALLOWED_SETTING_KEYS = new Set([
     // User profile
@@ -200,6 +204,9 @@ export function registerAllIpcHandlers(): void {
     // Oneiric consolidation
     'multi-llm:oneiric-model-id',
     'multi-llm:oneiric-schedule',
+    // Live audio
+    'multi-llm:live-model-id',
+    'multi-llm:live-identity-prompt',
     // Legacy (kept for migration)
     'onboarding_completed',
   ])
