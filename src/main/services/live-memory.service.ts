@@ -163,6 +163,24 @@ class LiveMemoryService {
       })
 
       const text = await result.text
+
+      // Track LLM cost
+      const { calculateMessageCost } = await import('../llm/cost-calculator')
+      const { createLlmCost } = await import('../db/queries/llm-costs')
+      const usage = result.usage
+      if (usage) {
+        const extractionCost = calculateMessageCost(modelId, usage.inputTokens, usage.outputTokens)
+        createLlmCost({
+          type: 'live_memory',
+          modelId,
+          providerId,
+          tokensIn: usage.inputTokens,
+          tokensOut: usage.outputTokens,
+          cost: extractionCost,
+          metadata: { transcriptCount: this.transcripts.length }
+        })
+      }
+
       const facts = this.parseFacts(text)
 
       if (facts.length === 0) {
