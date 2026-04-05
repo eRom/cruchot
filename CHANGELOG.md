@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.3] - 2026-04-05
+
+- feat(gemini-live): real-time voice assistant with Gemini Live API
+- fix: graceful shutdown + security hardening (YOLO voice block, HTTPS-only skills)
+- feat(live-memory): semantic memory for voice sessions
+- feat: Audio Live tab in CustomizeView + landing page section
+- docs: Gemini Live Voice guide + security audit + .serena cleanup
+
 ## [0.8.2] - 2026-04-04
 
 - feat(oneiric): add OneiricTab UI + MemoryView 4th tab (Zustand store, IPC handlers, preload bridge, types)
