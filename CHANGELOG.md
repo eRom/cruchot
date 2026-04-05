@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.5] - 2026-04-05
+
+- feat(compact): CompactService with estimation, microcompact, and full compaction
+- feat(compact): IPC handler, chat integration, and preload bridge
+- feat(compact): ContextWindowBar UI + isCompacting store + input blocking
+- fix(compact): double-invocation guard, MODELS registry, openrouter, toast error
+- fix(compact): use real tokensIn from last API response instead of content heuristic
+- fix(compact): align ContextWindowBar width with InputZone (max-w-3xl mx-auto)
+- feat(costs): add llm_costs table, queries, and cleanup integration
+- feat(costs): track episode, summary, prompt optimizer, live memory, image generation costs
+- feat(costs): track compaction and skills analysis LLM cost
+- feat(costs): persist and include background costs in global statistics
+- feat(stats): complete dashboard redesign with cost breakdown and erom design
+- feat(stats): enriched store with background costs, previous period, today filter
+
 ## [0.8.4] - 2026-04-05
 
 - feat: Applications autorisées — CRUD + ouverture via /open et Gemini Live
