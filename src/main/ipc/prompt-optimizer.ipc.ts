@@ -2,6 +2,8 @@ import { ipcMain } from 'electron'
 import { z } from 'zod'
 import { generateText } from 'ai'
 import { getModel } from '../llm/router'
+import { calculateMessageCost } from '../llm/cost-calculator'
+import { createLlmCost } from '../db/queries/llm-costs'
 
 const VALID_PROVIDERS = ['openai', 'anthropic', 'google', 'mistral', 'xai', 'deepseek', 'qwen', 'perplexity', 'lmstudio', 'ollama', 'openrouter'] as const
 
@@ -40,10 +42,27 @@ export function registerPromptOptimizerIpc(): void {
       temperature: 0.3
     })
 
+    const usage = result.usage
+    const tokensIn = usage?.inputTokens ?? 0
+    const tokensOut = usage?.outputTokens ?? 0
+    const cost = calculateMessageCost(actualModelId, tokensIn, tokensOut)
+
+    if (tokensIn > 0 || tokensOut > 0) {
+      createLlmCost({
+        type: 'optimizer',
+        modelId: actualModelId,
+        providerId,
+        tokensIn,
+        tokensOut,
+        cost
+      })
+    }
+
     return {
       optimizedText: result.text.trim(),
-      inputTokens: result.usage?.inputTokens ?? 0,
-      outputTokens: result.usage?.outputTokens ?? 0
+      inputTokens: tokensIn,
+      outputTokens: tokensOut,
+      cost
     }
   })
 
