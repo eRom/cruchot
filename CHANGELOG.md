@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.9.0] - 2026-04-05
+
+- update landing page
+- chore(landing): highlight screen sharing on Gemini Live feature
+- docs: update Live Voice architecture docs for plugin migration
+- fix(live): rename ElectronAPI interface methods geminiLive* → live*
+- chore(live): delete old gemini-live monolith files
+- feat(live): update all renderer components to use live.* imports
+- feat(live): AudioLiveView loads plugins dynamically from registry
+- feat(live): rename renderer store and audio hook to live.*
+- feat(live): rename preload methods geminiLive* → live*
+- feat(live): rename IPC handlers gemini-live → live
+- feat(live): wire LiveEngineService + GeminiLivePlugin in main startup
+- feat(live): create LiveEngineService orchestrator with anti-echo guards
+- feat(live): create GeminiLivePlugin with transport and screen share
+- feat(live): extract core prompt builder from gemini-live-system-prompt
+- feat(live): create LivePluginRegistry with provider resolution
+- feat(live): extract 13 core tools to generic format
+- feat(live): define LivePlugin interface and shared types
+- docs: document Gemini Live screen sharing feature
+- fix(screen-share): don't block on permission check — open picker regardless
+- feat(screen-share): integrate screen share icon and SourcePicker in NotchBar
+- feat(screen-share): create ScreenSourcePicker popover with erom-design tokens
+- feat(screen-share): create useScreenCapture hook with adaptive diff-based capture
+- feat(screen-share): add isScreenSharing state and first-use notice flag
+- feat(screen-share): add request_screenshot, pause/resume tools with inline handlers
+- feat(screen-share): add 7 IPC handlers for screen capture pipeline
+- feat(screen-share): add sendScreenFrame, setScreenSharing, requestScreenshot to GeminiLiveService
+- feat(screen-share): add ScreenSource type and preload bridge methods
+- fix: audit cleanup — async I/O, state cleanup, legacy keys, concurrency
+
 ## [0.8.5] - 2026-04-05
 
 - feat(compact): CompactService with estimation, microcompact, and full compaction
