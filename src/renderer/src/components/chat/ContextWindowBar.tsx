@@ -20,8 +20,17 @@ export function ContextWindowBar() {
   const maxTokens = selectedModel?.contextWindow ?? 0
   const conversationMessages = messages.filter(m => m.conversationId === activeConversationId)
 
-  // Fallback token estimate from messages if no compact:status received yet
-  const fallbackEstimate = conversationMessages.reduce((sum, m) => sum + Math.ceil(m.content.length / 4), 0)
+  // Use real tokensIn from the last assistant message (= actual context size sent to LLM)
+  // Falls back to heuristic content.length/4 if no API response yet
+  const fallbackEstimate = (() => {
+    // Find the last assistant message with real token data
+    for (let i = conversationMessages.length - 1; i >= 0; i--) {
+      const m = conversationMessages[i]
+      if (m.role === 'assistant' && m.tokensIn) return m.tokensIn
+    }
+    // No real data yet — rough heuristic
+    return conversationMessages.reduce((sum, m) => sum + Math.ceil(m.content.length / 4), 0)
+  })()
   const currentTokens = compactStatus?.tokenEstimate ?? fallbackEstimate
   const needsFullCompact = compactStatus?.needsFullCompact ?? false
 
