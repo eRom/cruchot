@@ -1,17 +1,12 @@
 import { useRef, useCallback, useEffect } from 'react'
-import { useGeminiLiveStore } from '@/stores/gemini-live.store'
+import { useLiveStore } from '@/stores/live.store'
 
-const INPUT_RATE = 24000 // Gemini output: 24kHz
+const INPUT_RATE = 24000
 
-/**
- * Resample Float32 from inputRate → outputRate using linear interpolation.
- * Done in the main thread (not worklet) — matches Trinity's approach.
- */
 function resample(input: Float32Array, inputRate: number, outputRate: number): Float32Array {
   const ratio = outputRate / inputRate
   const outputLength = Math.floor(input.length * ratio)
   const output = new Float32Array(outputLength)
-
   for (let i = 0; i < outputLength; i++) {
     const srcPos = i / ratio
     const srcIndex = Math.floor(srcPos)
@@ -19,32 +14,24 @@ function resample(input: Float32Array, inputRate: number, outputRate: number): F
     const nextIndex = Math.min(srcIndex + 1, input.length - 1)
     output[i] = input[srcIndex] * (1 - fraction) + input[nextIndex] * fraction
   }
-
   return output
 }
 
-/**
- * Decode base64 PCM 16-bit → Float32 → resample to outputRate.
- */
 function decodeAndResample(base64: string, outputRate: number): Float32Array {
   const binary = atob(base64)
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i)
   }
-
-  // Int16 PCM → Float32
   const pcm16 = new Int16Array(bytes.buffer)
   const floats = new Float32Array(pcm16.length)
   for (let i = 0; i < pcm16.length; i++) {
     floats[i] = pcm16[i] / 32768.0
   }
-
-  // Resample 24kHz → outputRate (typically 48kHz)
   return resample(floats, INPUT_RATE, outputRate)
 }
 
-export function useGeminiLiveAudio() {
+export function useLiveAudio() {
   const audioContextRef = useRef<AudioContext | null>(null)
   const playbackCtxRef = useRef<AudioContext | null>(null)
   const captureNodeRef = useRef<AudioWorkletNode | null>(null)
@@ -57,23 +44,20 @@ export function useGeminiLiveAudio() {
     if (audioContextRef.current) return
 
     try {
-      console.log('[GeminiLive] Starting audio pipeline...')
+      console.log('[Live] Starting audio pipeline...')
 
-      // Capture context at 16kHz for mic
       const ctx = new AudioContext({ sampleRate: 16000 })
       await ctx.resume()
       audioContextRef.current = ctx
       const captureUrl = new URL('../workers/capture-processor.ts', import.meta.url)
       await ctx.audioWorklet.addModule(captureUrl)
 
-      // Playback context at native rate (48kHz typically)
       const playbackCtx = new AudioContext()
       await playbackCtx.resume()
       playbackCtxRef.current = playbackCtx
       const playbackUrl = new URL('../workers/playback-processor.ts', import.meta.url)
       await playbackCtx.audioWorklet.addModule(playbackUrl)
 
-      // Capture: mic → worklet → IPC
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
       })
@@ -90,57 +74,51 @@ export function useGeminiLiveAudio() {
           for (let i = 0; i < bytes.length; i++) {
             binary += String.fromCharCode(bytes[i])
           }
-          window.api.geminiLiveSendAudio(btoa(binary))
+          window.api.liveSendAudio(btoa(binary))
         }
       }
 
-      // Analyser for mic level
       const analyser = ctx.createAnalyser()
       analyser.fftSize = 256
       analyserRef.current = analyser
       source.connect(analyser)
       analyser.connect(captureNode)
 
-      // Playback: IPC → decode + resample in main thread → worklet ring buffer
       const playbackNode = new AudioWorkletNode(playbackCtx, 'playback-processor', {
         outputChannelCount: [1]
       })
       playbackNodeRef.current = playbackNode
       playbackNode.connect(playbackCtx.destination)
 
-      // Handle worklet messages: started, ended, level
       playbackNode.port.onmessage = (event) => {
         const msg = event.data
         if (msg.type === 'started') {
-          useGeminiLiveStore.getState().setPlaybackActive(true)
-          window.api.geminiLiveSetPlaybackActive(true) // Tell main process
+          useLiveStore.getState().setPlaybackActive(true)
+          window.api.liveSetPlaybackActive(true)
         } else if (msg.type === 'ended') {
-          useGeminiLiveStore.getState().setPlaybackActive(false)
-          useGeminiLiveStore.getState().setSpeakerLevel(0)
-          window.api.geminiLiveSetPlaybackActive(false) // Tell main process
+          useLiveStore.getState().setPlaybackActive(false)
+          useLiveStore.getState().setSpeakerLevel(0)
+          window.api.liveSetPlaybackActive(false)
         } else if (msg.type === 'level') {
-          useGeminiLiveStore.getState().setSpeakerLevel(msg.level)
+          useLiveStore.getState().setSpeakerLevel(msg.level)
         }
       }
 
-      // Listen for audio from Gemini — decode + resample in main thread, send Float32 to worklet
-      window.api.offGeminiLiveAudio()
-      window.api.onGeminiLiveAudio((base64: string) => {
+      window.api.offLiveAudio()
+      window.api.onLiveAudio((base64: string) => {
         const resampled = decodeAndResample(base64, playbackCtx.sampleRate)
         playbackNode.port.postMessage(
           { type: 'chunk', data: resampled },
-          [resampled.buffer] // Transfer ownership (zero-copy)
+          [resampled.buffer]
         )
       })
 
-      // Listen for clear-playback from main process (on interruption)
-      window.api.offGeminiLiveClearPlayback()
-      window.api.onGeminiLiveClearPlayback(() => {
-        console.log('[GeminiLiveAudio] Interrupt (IPC)')
+      window.api.offLiveClearPlayback()
+      window.api.onLiveClearPlayback(() => {
+        console.log('[LiveAudio] Interrupt (IPC)')
         playbackNode.port.postMessage({ type: 'interrupt' })
       })
 
-      // Start mic level animation
       const updateMicLevel = () => {
         if (!analyserRef.current) return
         const data = new Uint8Array(analyserRef.current.frequencyBinCount)
@@ -151,21 +129,21 @@ export function useGeminiLiveAudio() {
           sum += v * v
         }
         const rms = Math.sqrt(sum / data.length)
-        useGeminiLiveStore.getState().setMicLevel(Math.min(1, rms * 3))
+        useLiveStore.getState().setMicLevel(Math.min(1, rms * 3))
         animFrameRef.current = requestAnimationFrame(updateMicLevel)
       }
       updateMicLevel()
 
-      console.log('[GeminiLive] Audio pipeline ready (playback buffer: 10s)')
+      console.log('[Live] Audio pipeline ready (playback buffer: 10s)')
     } catch (err) {
-      console.error('[GeminiLive] Audio pipeline failed:', err)
+      console.error('[Live] Audio pipeline failed:', err)
     }
   }, [])
 
   const stopAudio = useCallback(() => {
     cancelAnimationFrame(animFrameRef.current)
-    window.api.offGeminiLiveAudio()
-    window.api.offGeminiLiveClearPlayback()
+    window.api.offLiveAudio()
+    window.api.offLiveClearPlayback()
 
     if (captureNodeRef.current) {
       captureNodeRef.current.disconnect()
@@ -189,12 +167,11 @@ export function useGeminiLiveAudio() {
       playbackCtxRef.current = null
     }
 
-    useGeminiLiveStore.getState().setMicLevel(0)
-    useGeminiLiveStore.getState().setSpeakerLevel(0)
-    useGeminiLiveStore.getState().setPlaybackActive(false)
+    useLiveStore.getState().setMicLevel(0)
+    useLiveStore.getState().setSpeakerLevel(0)
+    useLiveStore.getState().setPlaybackActive(false)
   }, [])
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => stopAudio()
   }, [stopAudio])

@@ -1,18 +1,20 @@
 import { create } from 'zustand'
-import type { GeminiLiveStatus } from '../../../preload/types'
+import type { LiveStatus } from '../../../preload/types'
 
-interface GeminiLiveState {
+interface LiveState {
   isAvailable: boolean
-  status: GeminiLiveStatus
-  micLevel: number     // 0-1
-  speakerLevel: number // 0-1
-  isPlaybackActive: boolean // true while worklet ring buffer has audio
+  status: LiveStatus
+  micLevel: number
+  speakerLevel: number
+  isPlaybackActive: boolean
   error: string | null
   isScreenSharing: boolean
+  activeProviderId: string | null
+  supportsScreenShare: boolean
 
   // Actions
   setAvailable: (available: boolean) => void
-  setStatus: (status: GeminiLiveStatus, error?: string) => void
+  setStatus: (status: LiveStatus, error?: string) => void
   setMicLevel: (level: number) => void
   setSpeakerLevel: (level: number) => void
   setPlaybackActive: (active: boolean) => void
@@ -22,7 +24,7 @@ interface GeminiLiveState {
   setScreenSharing: (active: boolean) => void
 }
 
-export const useGeminiLiveStore = create<GeminiLiveState>((set, get) => ({
+export const useLiveStore = create<LiveState>((set, get) => ({
   isAvailable: false,
   status: 'off',
   micLevel: 0,
@@ -30,6 +32,8 @@ export const useGeminiLiveStore = create<GeminiLiveState>((set, get) => ({
   isPlaybackActive: false,
   error: null,
   isScreenSharing: false,
+  activeProviderId: null,
+  supportsScreenShare: false,
 
   setAvailable: (available) => set({ isAvailable: available }),
   setStatus: (status, error) => set({ status, error: error ?? null }),
@@ -41,7 +45,7 @@ export const useGeminiLiveStore = create<GeminiLiveState>((set, get) => ({
   connect: async () => {
     try {
       set({ status: 'connecting', error: null })
-      await window.api.geminiLiveConnect()
+      await window.api.liveConnect()
     } catch (err: any) {
       set({ status: 'error', error: err.message || String(err) })
     }
@@ -49,16 +53,16 @@ export const useGeminiLiveStore = create<GeminiLiveState>((set, get) => ({
 
   disconnect: async () => {
     try {
-      await window.api.geminiLiveDisconnect()
+      await window.api.liveDisconnect()
       set({ status: 'off', error: null, micLevel: 0, speakerLevel: 0, isPlaybackActive: false, isScreenSharing: false })
     } catch (err: any) {
-      console.error('[GeminiLive] Disconnect error:', err)
+      console.error('[Live] Disconnect error:', err)
     }
   },
 
   refreshAvailability: async () => {
     try {
-      const available = await window.api.geminiLiveIsAvailable()
+      const available = await window.api.liveIsAvailable()
       set({ isAvailable: available })
     } catch {
       set({ isAvailable: false })
