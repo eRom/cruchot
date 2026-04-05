@@ -107,12 +107,15 @@ async function lazyInitServices(mainWindow: BrowserWindow): Promise<void> {
     console.error('[OneiricTrigger] Lazy init failed:', err)
   }
 
-  // Gemini Live — register service (connect is on-demand)
+  // Live Engine — register plugins and init (connect is on-demand)
   try {
-    const { geminiLiveService } = await import('./services/gemini-live.service')
-    geminiLiveService.init(mainWindow)
+    const { liveEngineService } = await import('./live/live-engine.service')
+    const { livePluginRegistry } = await import('./live/live-plugin-registry')
+    const { geminiLivePlugin } = await import('./live/plugins/gemini/gemini-live.plugin')
+    livePluginRegistry.register(geminiLivePlugin)
+    liveEngineService.init(mainWindow)
   } catch (err) {
-    console.error('[GeminiLive] Lazy init failed:', err)
+    console.error('[LiveEngine] Lazy init failed:', err)
   }
 }
 
