@@ -5,6 +5,8 @@ import { settings } from '../db/schema'
 import { eq } from 'drizzle-orm'
 import { getMessagesForConversation } from '../db/queries/messages'
 import { getConversation } from '../db/queries/conversations'
+import { calculateMessageCost } from '../llm/cost-calculator'
+import { createLlmCost } from '../db/queries/llm-costs'
 import {
   getAllEpisodes,
   createEpisode,
@@ -88,6 +90,21 @@ class EpisodeExtractorService {
       })
 
       const text = await result.text
+
+      // Track LLM cost
+      const usage = result.usage
+      if (usage) {
+        const extractionCost = calculateMessageCost(modelId, usage.inputTokens, usage.outputTokens)
+        createLlmCost({
+          type: 'episode',
+          conversationId,
+          modelId,
+          providerId,
+          tokensIn: usage.inputTokens,
+          tokensOut: usage.outputTokens,
+          cost: extractionCost
+        })
+      }
 
       const actions = this.parseActions(text)
       if (actions.length === 0) {

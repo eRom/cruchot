@@ -5,6 +5,8 @@ import { getMessagesForConversation } from '../db/queries/messages'
 import { getConversation, updateConversationCompact } from '../db/queries/conversations'
 import { compactService } from '../services/compact.service'
 import { MODELS } from '../llm/registry'
+import { calculateMessageCost } from '../llm/cost-calculator'
+import { createLlmCost } from '../db/queries/llm-costs'
 
 const VALID_PROVIDERS = ['openai', 'anthropic', 'google', 'mistral', 'xai', 'deepseek', 'qwen', 'perplexity', 'openrouter', 'lmstudio', 'ollama'] as const
 
@@ -67,6 +69,21 @@ export function registerCompactIpc(): void {
           : conv.compactBoundaryId ?? messages[0]?.id ?? ''
 
         updateConversationCompact(conversationId, result.summary, boundaryId)
+
+        // Track LLM cost
+        if (result.usage) {
+          const cost = calculateMessageCost(actualModelId, result.usage.inputTokens, result.usage.outputTokens)
+          createLlmCost({
+            type: 'compact',
+            conversationId,
+            modelId: actualModelId,
+            providerId,
+            tokensIn: result.usage.inputTokens,
+            tokensOut: result.usage.outputTokens,
+            cost,
+            metadata: { tokensBefore: result.tokensBefore, tokensAfter: result.tokensAfter }
+          })
+        }
 
         if (win) {
           win.webContents.send('compact:status', {
