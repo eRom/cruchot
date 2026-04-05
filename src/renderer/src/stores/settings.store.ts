@@ -28,6 +28,8 @@ interface SettingsState {
   searchEnabled: boolean
   semanticMemoryEnabled: boolean
   yoloMode: boolean
+  liveModelId: string
+  liveIdentityPrompt: string
 
   setDefaultModelId: (modelId: string) => void
   setTheme: (theme: ThemeMode) => void
@@ -51,6 +53,8 @@ interface SettingsState {
   setSearchEnabled: (value: boolean) => void
   setSemanticMemoryEnabled: (value: boolean) => void
   setYoloMode: (value: boolean) => void
+  setLiveModelId: (modelId: string) => void
+  setLiveIdentityPrompt: (prompt: string) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -85,6 +89,8 @@ Format : sections avec titres, bullet points. Sois concis mais complet.`,
       searchEnabled: false,
       semanticMemoryEnabled: true,
       yoloMode: false,
+      liveModelId: 'gemini-3.1-flash-live-preview',
+      liveIdentityPrompt: `- Communication en temps réel via audio (live)\n- Langue : Français par défaut.\n- Personnalité : Concis, efficace, ton chaleureux.`,
 
       setDefaultModelId: (modelId) => {
         set({ defaultModelId: modelId })
@@ -172,6 +178,15 @@ Format : sections avec titres, bullet points. Sois concis mais complet.`,
         window.api.semanticMemoryToggle({ enabled: value }).catch(() => {})
       },
       setYoloMode: (value) => set({ yoloMode: value }),
+      setLiveModelId: (modelId) => {
+        set({ liveModelId: modelId })
+        window.api.setSetting('multi-llm:live-model-id', modelId).catch(() => {})
+      },
+      setLiveIdentityPrompt: (prompt) => {
+        const trimmed = prompt.slice(0, 5_000)
+        set({ liveIdentityPrompt: trimmed })
+        window.api.setSetting('multi-llm:live-identity-prompt', trimmed).catch(() => {})
+      },
       toggleFavoriteModel: (modelId) =>
         set((state) => {
           const updated = state.favoriteModelIds.includes(modelId)
