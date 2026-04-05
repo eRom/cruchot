@@ -24,7 +24,7 @@ import { useConversationsStore } from '@/stores/conversations.store'
 import { useProjectsStore } from '@/stores/projects.store'
 import { useProvidersStore } from '@/stores/providers.store'
 import { useSettingsStore } from '@/stores/settings.store'
-import { useGeminiLiveStore } from '@/stores/gemini-live.store'
+import { useLiveStore } from '@/stores/live.store'
 import { useInitApp } from '@/hooks/useInitApp'
 import { useStreaming } from '@/hooks/useStreaming'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -130,7 +130,7 @@ function App(): React.JSX.Element {
 
   // ── Gemini Live — check availability on startup (retry to handle lazy init race)
   useEffect(() => {
-    const check = () => useGeminiLiveStore.getState().refreshAvailability()
+    const check = () => useLiveStore.getState().refreshAvailability()
     check()
     // Retry after lazy init completes (lazyInitServices is async, no await)
     const timer = setTimeout(check, 3000)

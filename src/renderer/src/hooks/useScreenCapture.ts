@@ -1,5 +1,5 @@
 import { useRef, useCallback, useEffect } from 'react'
-import { useGeminiLiveStore } from '@/stores/gemini-live.store'
+import { useLiveStore } from '@/stores/live.store'
 
 const MAX_WIDTH = 1280
 const MAX_HEIGHT = 720
@@ -35,8 +35,8 @@ export function useScreenCapture() {
     prevPixelsRef.current = null
     isCapturingRef.current = false
 
-    window.api.geminiLiveSetScreenSharing(false)
-    useGeminiLiveStore.getState().setScreenSharing(false)
+    window.api.liveSetScreenSharing(false)
+    useLiveStore.getState().setScreenSharing(false)
   }, [])
 
   const captureFrame = useCallback((quality: number = 0.7, useNativeRes: boolean = false) => {
@@ -99,7 +99,7 @@ export function useScreenCapture() {
   }, [])
 
   const startCapture = useCallback(async (sourceId: string) => {
-    await window.api.geminiLiveSelectScreenSource(sourceId)
+    await window.api.liveSelectScreenSource(sourceId)
 
     const stream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
@@ -123,8 +123,8 @@ export function useScreenCapture() {
     ctxRef.current = canvas.getContext('2d')
 
     isCapturingRef.current = true
-    window.api.geminiLiveSetScreenSharing(true)
-    useGeminiLiveStore.getState().setScreenSharing(true)
+    window.api.liveSetScreenSharing(true)
+    useLiveStore.getState().setScreenSharing(true)
 
     stream.getVideoTracks()[0].onended = () => {
       console.log('[ScreenCapture] Stream ended externally')
@@ -143,32 +143,32 @@ export function useScreenCapture() {
       if (hasChanged()) {
         const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
         const base64 = dataUrl.split(',')[1]
-        window.api.geminiLiveSendScreenFrame(base64)
+        window.api.liveSendScreenFrame(base64)
       }
     }, CAPTURE_INTERVAL_MS)
   }, [stopCapture, hasChanged])
 
   // Listen for screenshot requests from main (tool: request_screenshot)
   useEffect(() => {
-    window.api.offGeminiLiveRequestScreenshot()
-    window.api.onGeminiLiveRequestScreenshot(() => {
+    window.api.offLiveRequestScreenshot()
+    window.api.onLiveRequestScreenshot(() => {
       if (!isCapturingRef.current) return
       const base64 = captureFrame(0.9, true)
       if (base64) {
-        window.api.geminiLiveSendScreenFrame(base64)
+        window.api.liveSendScreenFrame(base64)
         console.log('[ScreenCapture] High quality screenshot sent')
       }
     })
     return () => {
-      window.api.offGeminiLiveRequestScreenshot()
+      window.api.offLiveRequestScreenshot()
     }
   }, [captureFrame])
 
   // Listen for screen sharing status changes from main (pause/resume tools)
   useEffect(() => {
-    window.api.offGeminiLiveScreenSharing()
-    window.api.onGeminiLiveScreenSharing((active) => {
-      useGeminiLiveStore.getState().setScreenSharing(active)
+    window.api.offLiveScreenSharing()
+    window.api.onLiveScreenSharing((active) => {
+      useLiveStore.getState().setScreenSharing(active)
       if (!active && isCapturingRef.current) {
         if (timerRef.current) {
           clearInterval(timerRef.current)
@@ -187,13 +187,13 @@ export function useScreenCapture() {
           if (hasChanged()) {
             const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
             const base64 = dataUrl.split(',')[1]
-            window.api.geminiLiveSendScreenFrame(base64)
+            window.api.liveSendScreenFrame(base64)
           }
         }, CAPTURE_INTERVAL_MS)
       }
     })
     return () => {
-      window.api.offGeminiLiveScreenSharing()
+      window.api.offLiveScreenSharing()
     }
   }, [hasChanged])
 
@@ -205,7 +205,7 @@ export function useScreenCapture() {
   }, [stopCapture])
 
   // Auto-stop when Gemini session disconnects
-  const status = useGeminiLiveStore(s => s.status)
+  const status = useLiveStore(s => s.status)
   useEffect(() => {
     if ((status === 'off' || status === 'error') && isCapturingRef.current) {
       stopCapture()
@@ -215,6 +215,6 @@ export function useScreenCapture() {
   return {
     startCapture,
     stopCapture,
-    isCapturing: useGeminiLiveStore(s => s.isScreenSharing),
+    isCapturing: useLiveStore(s => s.isScreenSharing),
   }
 }

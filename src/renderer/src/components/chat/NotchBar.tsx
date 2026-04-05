@@ -1,12 +1,12 @@
 import { useEffect, useCallback, useState } from 'react'
 import { Monitor } from 'lucide-react'
-import { useGeminiLiveStore } from '@/stores/gemini-live.store'
+import { useLiveStore } from '@/stores/live.store'
 import { useSettingsStore } from '@/stores/settings.store'
-import { useGeminiLiveAudio } from '@/hooks/useGeminiLiveAudio'
+import { useLiveAudio } from '@/hooks/useLiveAudio'
 import { useScreenCapture } from '@/hooks/useScreenCapture'
 import { cruchotCommandHandler } from '@/services/cruchot-command-handler'
 import { ScreenSourcePicker } from './ScreenSourcePicker'
-import type { GeminiLiveStatus } from '../../../../preload/types'
+import type { LiveStatus } from '../../../../preload/types'
 
 const STATUS_STYLES: Record<string, { bg: string; glow: string; label: string; color: string }> = {
   connected: { bg: 'from-slate-800 to-slate-600', glow: '', label: 'LIVE', color: 'text-slate-400' },
@@ -36,29 +36,29 @@ function WaveformBars({ level, color }: { level: number; color: string }) {
 }
 
 export function NotchBar() {
-  const { status, micLevel, speakerLevel, isScreenSharing, connect, disconnect } = useGeminiLiveStore()
-  const { startAudio, stopAudio } = useGeminiLiveAudio()
+  const { status, micLevel, speakerLevel, isScreenSharing, connect, disconnect } = useLiveStore()
+  const { startAudio, stopAudio } = useLiveAudio()
   const { startCapture, stopCapture } = useScreenCapture()
   const [isHovered, setIsHovered] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
 
   // Listen for status changes + commands from main process
   useEffect(() => {
-    window.api.offGeminiLiveStatus()
-    window.api.offGeminiLiveCommand()
+    window.api.offLiveStatus()
+    window.api.offLiveCommand()
 
-    window.api.onGeminiLiveStatus((info) => {
-      useGeminiLiveStore.getState().setStatus(info.status as GeminiLiveStatus, info.error)
+    window.api.onLiveStatus((info) => {
+      useLiveStore.getState().setStatus(info.status as LiveStatus, info.error)
     })
 
-    window.api.onGeminiLiveCommand(async (cmd) => {
+    window.api.onLiveCommand(async (cmd) => {
       const result = await cruchotCommandHandler.execute(cmd.name, cmd.args)
-      await window.api.geminiLiveRespondCommand(cmd.id, cmd.name, result)
+      await window.api.liveRespondCommand(cmd.id, cmd.name, result)
     })
 
     return () => {
-      window.api.offGeminiLiveStatus()
-      window.api.offGeminiLiveCommand()
+      window.api.offLiveStatus()
+      window.api.offLiveCommand()
     }
   }, [])
 
@@ -92,7 +92,7 @@ export function NotchBar() {
     // Check macOS screen recording permission — but don't block on 'not-determined'
     // since Electron may trigger the OS prompt via getDisplayMedia() anyway
     try {
-      const permission = await window.api.geminiLiveCheckScreenPermission()
+      const permission = await window.api.liveCheckScreenPermission()
       if (permission === 'denied') {
         // On macOS, 'denied' means explicitly refused — guide user to settings
         console.warn('[ScreenShare] Permission denied — user must enable in System Preferences')

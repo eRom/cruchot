@@ -13,7 +13,7 @@ export function ScreenSourcePicker({ onSelect, onClose }: ScreenSourcePickerProp
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    window.api.geminiLiveGetScreenSources().then(s => {
+    window.api.liveGetScreenSources().then(s => {
       setSources(s)
       setLoading(false)
     }).catch(() => setLoading(false))
