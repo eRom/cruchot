@@ -4,7 +4,7 @@
  * Invoque via : python3 -m scanner <dir> --format json (CWD = scripts/)
  * Exit codes : 0 (OK), 1 (WARNING), 2 (CRITICAL) — stdout contient JSON dans tous les cas.
  */
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import os from 'node:os'
@@ -93,8 +93,10 @@ class MatonService {
     let stdout: string
 
     try {
-      const result = execSync(
-        `python3 -m scanner ${JSON.stringify(targetDir)} --format json`,
+      // Use execFileSync with array args — NO shell interpretation, immune to injection
+      const result = execFileSync(
+        'python3',
+        ['-m', 'scanner', targetDir, '--format', 'json'],
         {
           cwd,
           env: {

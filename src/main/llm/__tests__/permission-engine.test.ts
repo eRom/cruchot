@@ -115,6 +115,34 @@ describe('isReadOnlyCommand', () => {
     })
   })
 
+  describe('background operator (&) — security regression tests', () => {
+    it('rejects ls & rm (background bypass attempt)', () => {
+      // Critical: must NOT be auto-allowed as readonly. The single `&` was previously
+      // ignored by the splitter, causing the readonly check to only see `ls`.
+      expect(isReadOnlyCommand('ls & rm file.txt')).toBe(false)
+    })
+
+    it('rejects ls & rm -rf workspace/*', () => {
+      expect(isReadOnlyCommand('ls & rm -rf workspace/*')).toBe(false)
+    })
+
+    it('rejects cat file & npm install', () => {
+      expect(isReadOnlyCommand('cat file & npm install')).toBe(false)
+    })
+
+    it('accepts ls & cat (both readonly, even with background)', () => {
+      expect(isReadOnlyCommand('ls & cat file.txt')).toBe(true)
+    })
+
+    it('accepts echo "a & b" (& inside double quotes is literal)', () => {
+      expect(isReadOnlyCommand('echo "a & b"')).toBe(true)
+    })
+
+    it("accepts echo 'a & rm' (& inside single quotes is literal)", () => {
+      expect(isReadOnlyCommand("echo 'a & rm'")).toBe(true)
+    })
+  })
+
   describe('env var prefixes', () => {
     it('accepts LANG=C grep (readonly command with env prefix)', () => {
       expect(isReadOnlyCommand('LANG=C grep pattern file.txt')).toBe(true)

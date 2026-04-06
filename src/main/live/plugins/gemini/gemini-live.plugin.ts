@@ -13,10 +13,11 @@ const GEMINI_VOICES: VoiceOption[] = [
 ]
 
 const SCREEN_SHARE_PROMPT = `
-### Partage d'écran (request_screenshot, pause_screen_share, resume_screen_share)
+### Partage d'écran (request_screenshot, pause_screen_share)
 - Tu recois en temps reel les frames de l'ecran partage par l'utilisateur
 - Utilise request_screenshot pour capturer un screenshot haute qualite quand tu as besoin de details
-- Tu peux mettre en pause (pause_screen_share) et reprendre (resume_screen_share) le partage
+- Tu peux arreter le partage (pause_screen_share) si l'utilisateur le demande ou si du contenu sensible apparait
+- Pour des raisons de securite, tu ne peux PAS reprendre un partage arrete : l'utilisateur doit re-partager manuellement via l'UI
 - Quand l'ecran est partage, commente ce que tu vois et reponds aux questions sur le contenu`
 
 function convertToolsToGemini(coreTools: CoreToolDeclaration[], pluginTools: PluginToolDeclaration[]): any[] {
@@ -206,16 +207,24 @@ class GeminiLivePlugin implements LivePlugin {
         if (fc.name === 'pause_screen_share') {
           console.log('[GeminiPlugin] pause_screen_share')
           this.setScreenSharing(false)
-          this.sendToolResponse(id, fc.name, { success: true })
+          this.sendToolResponse(id, fc.name, {
+            success: true,
+            message: "Partage arrete. L'utilisateur doit re-selectionner une source via l'UI pour partager a nouveau."
+          } as LiveCommandResult)
           this.onToolCall(id, '_plugin:screen_sharing_changed', { active: false })
           continue
         }
 
+        // SECURITY: resume_screen_share has been removed (S65 audit). A
+        // prompt-injected LLM (e.g. via Google Search results) could otherwise
+        // silently re-capture sensitive content the user thought was private
+        // during pause. Resuming requires explicit user action via the UI.
         if (fc.name === 'resume_screen_share') {
-          console.log('[GeminiPlugin] resume_screen_share')
-          this.setScreenSharing(true)
-          this.sendToolResponse(id, fc.name, { success: true })
-          this.onToolCall(id, '_plugin:screen_sharing_changed', { active: true })
+          console.log('[GeminiPlugin] resume_screen_share rejected (security)')
+          this.sendToolResponse(id, fc.name, {
+            success: false,
+            error: "L'utilisateur doit re-partager manuellement via l'UI."
+          } as LiveCommandResult)
           continue
         }
 

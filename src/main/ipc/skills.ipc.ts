@@ -3,7 +3,7 @@
  * Validation Zod, clone git, scan Maton, install, toggle, uninstall.
  */
 import { ipcMain, shell } from 'electron'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { join } from 'path'
 import { z } from 'zod'
 import { generateText, stepCountIs } from 'ai'
@@ -66,7 +66,9 @@ function cleanupTemp(tempDir: string): void {
     // Find the clone root (/tmp/cruchot-skill-<uuid>)
     const cloneRootMatch = tempDir.match(/^(\/tmp\/cruchot-skill-[a-f0-9-]+)/)
     const target = cloneRootMatch ? cloneRootMatch[1] : tempDir
-    execSync(`trash ${JSON.stringify(target)}`, { stdio: 'pipe' })
+    // Defense in depth: only trash safe absolute paths under /tmp
+    if (!/^\/tmp\/[a-zA-Z0-9._-]+/.test(target)) return
+    execFileSync('trash', [target], { stdio: 'pipe' })
   } catch {
     // Best-effort cleanup
   }

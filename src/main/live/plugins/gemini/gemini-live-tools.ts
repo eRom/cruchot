@@ -9,13 +9,7 @@ export const GEMINI_PLUGIN_TOOLS: PluginToolDeclaration[] = [
   },
   {
     name: 'pause_screen_share',
-    description: "Mettre en pause le partage d'ecran. Les frames ne sont plus envoyees mais la source reste selectionnee.",
-    parameters: {},
-    required: []
-  },
-  {
-    name: 'resume_screen_share',
-    description: "Reprendre le partage d'ecran apres une pause.",
+    description: "Arreter le partage d'ecran. Le flux est ferme. L'utilisateur devra re-selectionner une source via l'UI pour partager a nouveau.",
     parameters: {},
     required: []
   },

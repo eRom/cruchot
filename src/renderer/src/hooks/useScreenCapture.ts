@@ -165,37 +165,25 @@ export function useScreenCapture() {
   }, [captureFrame])
 
   // Listen for screen sharing status changes from main (pause/resume tools)
+  // SECURITY: a `pause_screen_share` LLM tool call must FULLY stop the MediaStream,
+  // not just the relay. Otherwise a prompt-injected LLM (e.g. via Google Search results)
+  // could call `resume_screen_share` and silently re-capture sensitive content the
+  // user thought was private during pause. Resuming requires user action via the UI.
   useEffect(() => {
     window.api.offLiveScreenSharing()
     window.api.onLiveScreenSharing((active) => {
-      useLiveStore.getState().setScreenSharing(active)
       if (!active && isCapturingRef.current) {
-        if (timerRef.current) {
-          clearInterval(timerRef.current)
-          timerRef.current = null
-        }
-        isCapturingRef.current = false
-      } else if (active && streamRef.current && !isCapturingRef.current) {
-        isCapturingRef.current = true
-        timerRef.current = setInterval(() => {
-          if (!isCapturingRef.current) return
-          const video = videoRef.current
-          const canvas = canvasRef.current
-          const ctx = ctxRef.current
-          if (!video || !canvas || !ctx || video.readyState < 2) return
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-          if (hasChanged()) {
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
-            const base64 = dataUrl.split(',')[1]
-            window.api.liveSendScreenFrame(base64)
-          }
-        }, CAPTURE_INTERVAL_MS)
+        // Pause from LLM tool — stop the entire stream, not just the relay.
+        // The user must re-share via the UI to resume.
+        stopCapture()
       }
+      // active === true is intentionally ignored: only the user (via startCapture)
+      // can begin a new share. The LLM cannot silently resume a paused stream.
     })
     return () => {
       window.api.offLiveScreenSharing()
     }
-  }, [hasChanged])
+  }, [stopCapture])
 
   // Cleanup on unmount
   useEffect(() => {

@@ -3,7 +3,7 @@
  * Transaction atomique, verification namespace unique, limite fragments.
  */
 import crypto from 'node:crypto'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { eq, sql } from 'drizzle-orm'
 import { getDatabase } from '../db/index'
 import {
@@ -240,7 +240,7 @@ class BardaImportService {
         const validation = skillService.validateSkillDir(sourceDir)
         if (!validation.success) {
           report.warnings.push(`Skill ${skillDef.name}: ${validation.error}`)
-          if (tempDir) try { execSync(`trash "${tempDir}"`, { stdio: 'pipe' }) } catch {}
+          if (tempDir) try { execFileSync('trash', [tempDir], { stdio: 'pipe' }) } catch {}
           continue
         }
 
@@ -248,7 +248,7 @@ class BardaImportService {
         const scanResult = await matonService.scan(sourceDir)
         if (scanResult.success && scanResult.report.verdict === 'CRITICAL') {
           report.warnings.push(`Skill ${skillDef.name}: menaces critiques detectees, non installe`)
-          if (tempDir) try { execSync(`trash "${tempDir}"`, { stdio: 'pipe' }) } catch {}
+          if (tempDir) try { execFileSync('trash', [tempDir], { stdio: 'pipe' }) } catch {}
           continue
         }
 
@@ -274,7 +274,7 @@ class BardaImportService {
 
         report.succes.push(`Skill: ${skillFullName}`)
 
-        if (tempDir) try { execSync(`trash "${tempDir}"`, { stdio: 'pipe' }) } catch {}
+        if (tempDir) try { execFileSync('trash', [tempDir], { stdio: 'pipe' }) } catch {}
       } catch (err) {
         report.warnings.push(`Skill ${skillDef.name}: ${err instanceof Error ? err.message : String(err)}`)
       }

@@ -46,8 +46,11 @@ const READONLY_COMMANDS: Set<string> = new Set([
 ])
 
 /**
- * Splits a shell command on unquoted operators (&&, ||, ;, |).
+ * Splits a shell command on unquoted operators (&&, ||, ;, |, &).
  * Respects single and double quotes — operators inside quotes are ignored.
+ * Note: single `&` (background) is treated as a separator like `;` so that
+ * compound commands like `ls & rm file` are properly evaluated as multiple
+ * subcommands rather than a single readonly `ls`.
  */
 function splitOnUnquotedOperators(command: string): string[] {
   const parts: string[] = []
@@ -75,13 +78,17 @@ function splitOnUnquotedOperators(command: string): string[] {
 
     // Only split on operators when outside quotes
     if (!inSingle && !inDouble) {
+      // Two-char operators: && and ||
       if ((ch === '&' && command[i + 1] === '&') || (ch === '|' && command[i + 1] === '|')) {
         parts.push(current.trim())
         current = ''
         i += 2
         continue
       }
-      if (ch === ';' || ch === '|') {
+      // Single-char operators: ; | &
+      // `&` alone backgrounds the previous command — treat as separator so the
+      // next subcommand is evaluated independently for readonly check.
+      if (ch === ';' || ch === '|' || ch === '&') {
         parts.push(current.trim())
         current = ''
         i++

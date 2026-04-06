@@ -4,7 +4,7 @@
  */
 import path from 'node:path'
 import fs from 'node:fs'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { app } from 'electron'
 
@@ -338,11 +338,25 @@ class SkillService {
       return { success: false, error: 'Seules les URLs HTTPS GitHub sont autorisées (https://github.com/owner/repo)' }
     }
 
+    // Security: validate branch name against safe charset (git ref naming rules subset)
+    // This prevents command injection even though we use spawnSync — defense in depth.
+    if (branch !== undefined && !/^[a-zA-Z0-9._/-]+$/.test(branch)) {
+      return { success: false, error: 'Nom de branche invalide (caracteres autorises : a-z A-Z 0-9 . _ / -)' }
+    }
+
+    // Security: validate subpath against safe charset (no shell metacharacters)
+    if (subpath !== undefined && !/^[a-zA-Z0-9._/-]+$/.test(subpath)) {
+      return { success: false, error: 'Sous-chemin invalide (caracteres autorises : a-z A-Z 0-9 . _ / -)' }
+    }
+
     const tempDir = path.join('/tmp', `cruchot-skill-${randomUUID()}`)
 
     try {
-      const branchArg = branch ? `--branch ${JSON.stringify(branch)}` : ''
-      execSync(`git clone --depth 1 ${branchArg} ${JSON.stringify(repoUrl)} ${JSON.stringify(tempDir)}`, {
+      // Use execFileSync with array args — NO shell interpretation, immune to injection
+      const args = ['clone', '--depth', '1']
+      if (branch) args.push('--branch', branch)
+      args.push(repoUrl, tempDir)
+      execFileSync('git', args, {
         timeout: 60_000,
         stdio: 'pipe'
       })
@@ -350,7 +364,7 @@ class SkillService {
       // If the URL pointed to a subpath, return that subpath as the skill dir
       const skillDir = subpath ? path.join(tempDir, subpath) : tempDir
       if (subpath && !fs.existsSync(skillDir)) {
-        try { execSync(`trash ${JSON.stringify(tempDir)}`, { stdio: 'pipe' }) } catch {}
+        try { execFileSync('trash', [tempDir], { stdio: 'pipe' }) } catch {}
         return { success: false, error: `Sous-dossier "${subpath}" introuvable dans le depot` }
       }
 
@@ -358,7 +372,7 @@ class SkillService {
     } catch (err) {
       // Cleanup failed clone attempt
       try {
-        execSync(`trash ${JSON.stringify(tempDir)}`, { stdio: 'pipe' })
+        execFileSync('trash', [tempDir], { stdio: 'pipe' })
       } catch {
         // Best-effort cleanup
       }
@@ -448,7 +462,7 @@ class SkillService {
       const gitDir = path.join(destDir, '.git')
       if (fs.existsSync(gitDir)) {
         try {
-          execSync(`trash ${JSON.stringify(gitDir)}`, { stdio: 'pipe' })
+          execFileSync('trash', [gitDir], { stdio: 'pipe' })
         } catch {
           // Fallback: rmdir recursive if trash unavailable
           fs.rmSync(gitDir, { recursive: true, force: true })
@@ -482,7 +496,7 @@ class SkillService {
     }
 
     try {
-      execSync(`trash ${JSON.stringify(resolvedDir)}`, { stdio: 'pipe' })
+      execFileSync('trash', [resolvedDir], { stdio: 'pipe' })
       return { success: true, skillName: safeName }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -564,7 +578,7 @@ class SkillService {
       return this.pythonAvailableCache
     }
     try {
-      execSync('which python3', { stdio: 'pipe', timeout: 5_000 })
+      execFileSync('which', ['python3'], { stdio: 'pipe', timeout: 5_000 })
       this.pythonAvailableCache = true
     } catch {
       this.pythonAvailableCache = false

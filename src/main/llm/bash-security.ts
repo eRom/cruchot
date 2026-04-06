@@ -183,9 +183,12 @@ export function runBashSecurityChecks(command: string): SecurityCheckResult {
     }
   }
 
-  // Check 4: Semicolons or newlines followed by dangerous commands
+  // Check 4: Semicolons, newlines, or background (&) followed by dangerous commands
+  // Note: `&&` is matched too — the second `&` followed by whitespace then the command works.
+  // The `&` (background) operator is included to prevent bypasses like `ls & rm -rf workspace/*`
+  // which would otherwise look like a single readonly `ls` to the permission engine.
   const strippedForChaining = command.replace(/'[^']*'|"[^"]*"/g, '') // Remove quoted strings
-  if (/[;\n\r]\s*(rm|chmod|chown|sudo|kill|shutdown|reboot|mkfs)\b/.test(strippedForChaining)) {
+  if (/[;\n\r&]\s*(rm|chmod|chown|sudo|kill|shutdown|reboot|mkfs)\b/.test(strippedForChaining)) {
     return { pass: false, failedCheck: 4, reason: 'Commande dangereuse chainee detectee' }
   }
 

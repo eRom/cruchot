@@ -91,6 +91,26 @@ describe('runBashSecurityChecks', () => {
       // should pass check 4 (no semicolon/newline before rm)
       expect(result.failedCheck).not.toBe(4)
     })
+
+    it('blocks rm after & (background) — security regression', () => {
+      // Critical: `&` was previously not in check 4. An attacker could bypass
+      // the readonly check via `ls & rm -rf workspace/*`.
+      const result = runBashSecurityChecks('ls & rm -rf /tmp/test')
+      expect(result.pass).toBe(false)
+      expect(result.failedCheck).toBe(4)
+    })
+
+    it('blocks sudo after &', () => {
+      const result = runBashSecurityChecks('echo hi & sudo something')
+      expect(result.pass).toBe(false)
+      expect(result.failedCheck).toBe(4)
+    })
+
+    it('blocks chmod after &', () => {
+      const result = runBashSecurityChecks('cat file & chmod 777 secret')
+      expect(result.pass).toBe(false)
+      expect(result.failedCheck).toBe(4)
+    })
   })
 
   describe('Check 5: dangerous variable assignments', () => {
