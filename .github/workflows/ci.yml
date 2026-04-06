@@ -24,8 +24,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Audit dependencies
-        run: npm audit --audit-level=critical --omit=dev
+      - name: Audit dependencies (block on high+)
+        run: npm audit --audit-level=high --omit=dev
+
+      - name: Lockfile lint (registry + integrity + HTTPS)
+        run: npm run lint:lockfile
 
       - name: Lint
         run: npm run lint

@@ -7,9 +7,61 @@ on:
 
 permissions:
   contents: write
+  security-events: read
 
 jobs:
+  # ── Security gate ──────────────────────────────────────────
+  # Block the release if any open Dependabot security alert with severity
+  # >= high exists, OR if npm audit signals high+ in production deps,
+  # OR if lockfile-lint detects untrusted dep sources.
+  # See audit/security/POLICY.md for the SLA backing this gate.
+  security-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies (block on high+)
+        run: npm audit --audit-level=high --omit=dev
+
+      - name: Lockfile lint (registry + integrity + HTTPS)
+        run: npm run lint:lockfile
+
+      - name: Block on open Dependabot security alerts (high+)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          OPEN_HIGH=$(gh api \
+            "/repos/${{ github.repository }}/dependabot/alerts?state=open&severity=high" \
+            --jq 'length' 2>/dev/null || echo "0")
+          OPEN_CRIT=$(gh api \
+            "/repos/${{ github.repository }}/dependabot/alerts?state=open&severity=critical" \
+            --jq 'length' 2>/dev/null || echo "0")
+          TOTAL=$((OPEN_HIGH + OPEN_CRIT))
+          echo "Open Dependabot alerts: high=$OPEN_HIGH critical=$OPEN_CRIT"
+          if [ "$TOTAL" -gt 0 ]; then
+            echo "::error::Release blocked — $TOTAL open Dependabot security alerts (severity >= high)"
+            echo "::error::Resolve them or document an exception in audit/security/POLICY.md"
+            gh api "/repos/${{ github.repository }}/dependabot/alerts?state=open&severity=high,critical" \
+              --jq '.[] | "  - " + .security_advisory.summary + " (" + .security_advisory.severity + ") in " + .dependency.package.name'
+            exit 1
+          fi
+
+  # ── Build & publish (per OS) ───────────────────────────────
+  # Only runs if security-gate passes.
   release:
+    needs: security-gate
     strategy:
       fail-fast: false
       matrix:
@@ -44,9 +96,6 @@ jobs:
         run: npx tsc --noEmit -p tsconfig.node.json
         continue-on-error: true
 
-      - name: Audit dependencies
-        run: npm audit --audit-level=critical --omit=dev
-
       - name: Build & Package (macOS)
         if: matrix.platform == 'mac'
         env:
@@ -64,3 +113,38 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run dist:linux -- --publish always
+
+      # ── Post-build audit: scan the actual packaged bundle ──
+      - name: Audit packaged bundle (macOS)
+        if: matrix.platform == 'mac'
+        run: |
+          APP=$(find dist -name "Cruchot.app" -maxdepth 3 | head -1)
+          if [ -z "$APP" ]; then
+            echo "::warning::No .app bundle found, skipping bundle audit"
+            exit 0
+          fi
+          echo "Auditing: $APP"
+          npm run audit:bundle -- "$APP"
+
+      - name: Audit packaged bundle (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          ASAR=$(find dist -name "app.asar" -path "*/linux-unpacked/*" | head -1)
+          if [ -z "$ASAR" ]; then
+            echo "::warning::No app.asar found, skipping bundle audit"
+            exit 0
+          fi
+          echo "Auditing: $ASAR"
+          npm run audit:bundle -- "$ASAR"
+
+      # ── Verify @electron/fuses were flipped on the binary ──
+      - name: Verify Electron fuses (macOS)
+        if: matrix.platform == 'mac'
+        run: |
+          APP=$(find dist -name "Cruchot.app" -maxdepth 3 | head -1)
+          if [ -z "$APP" ]; then
+            echo "::warning::No .app bundle found, skipping fuse verification"
+            exit 0
+          fi
+          echo "Reading fuses on: $APP"
+          npx --yes @electron/fuses read --app "$APP" || true
