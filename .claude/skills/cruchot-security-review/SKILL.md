@@ -225,29 +225,44 @@ npx lockfile-lint \
 
 ### Tool 10: audit-bundle (Packaged Bundle Inspection)
 
-**Purpose**: After building the .app/.asar, inspects the **actual shipped bundle** for things that should never be there. Static SAST + CodeQL audit the source, but the bundler can introduce new leaks (sourcemaps, .env files, transitive deps unfiltered). This is the **last line of defense before users**. **Already wired into Cruchot**: see `scripts/audit-bundle.js` and `npm run audit:bundle`.
+**Purpose**: Inspects the **actual shipped bundle** for things that should never be there. Static SAST + CodeQL audit the source, but the bundler can introduce new leaks (sourcemaps, .env files, transitive deps unfiltered). This is the **last line of defense before users**. **Already wired into Cruchot**: see `scripts/audit-bundle.js` and `npm run audit:bundle`.
+
+**3 input modes** (script auto-detects):
 
 ```bash
-# Audit a built .app bundle
+# Mode A — electron-vite output dir (LOCAL, FAST)
+# Best for pre-release audits. Same content as the asar but without packaging.
+# Build is ~7 sec, audit is ~0.5 sec. Run `npm run build` first to refresh.
+npm run audit:bundle -- out/
+
+# Mode B — packaged .app bundle (CI, COMPLETE)
+# Used by release.yml after `npm run dist:mac`. Full audit including
+# packaging-level concerns.
 npm run audit:bundle -- dist/mac-arm64/Cruchot.app
 
-# Or directly the asar
-node scripts/audit-bundle.js dist/mac-arm64/Cruchot.app/Contents/Resources/app.asar
+# Mode C — standalone .asar archive
+node scripts/audit-bundle.js dist/.../app.asar
 ```
 
-**What it catches** (10 patterns):
+**Freshness check**: in mode A, the script compares `mtime(out/)` vs `mtime(src/)`
+and prints a `⚠ STALE BUILD` warning if source files are newer. The audit still
+runs but the user is told to rebuild for accurate results.
+
+**What it catches** (12 patterns):
 - Sourcemap references (`//# sourceMappingURL=...`)
 - Standalone `.map` files
 - `.env*` files in the bundle
 - Cryptographic key files (`.pem`, `.key`, `.p12`, `.pfx`, `.jks`, `.keystore`)
 - SSH private keys (`id_rsa`, `id_ed25519`, `id_ecdsa`)
+- Shell history files (`.bash_history`, `.zsh_history`)
 - Hardcoded credentials (api_key, password, token patterns ≥ 24 chars)
 - Private key blocks (`-----BEGIN ... PRIVATE KEY-----`)
 - AWS Access Key IDs (`AKIA...`)
 - JWT tokens (`eyJ...eyJ...`)
-- Internal/localhost URLs in HTTP(S)
+- Internal/localhost URLs in HTTP(S) — with allowlist for legitimate Cruchot
+  endpoints (LM Studio :1234, Ollama :11434, Qdrant :6333, Vite dev server)
 - `devTools: true` literals
-- Multiple preload scripts (should be exactly 1)
+- Multiple/missing preload scripts (Cruchot expects exactly 1)
 
 **Output**: JSON report on stdout, human summary on stderr. **Exit code 1** if any critical or high finding (CI release gate uses this).
 
@@ -326,16 +341,54 @@ fi
 npm run lint:lockfile 2>&1 | tail -10 \
   || npx --yes lockfile-lint --path package-lock.json --type npm --validate-https --validate-integrity --allowed-hosts npm 2>&1 | tail -10
 
-# 11. audit-bundle — only if a packaged build exists in dist/
-# This is THE last line of defense before users — catches sourcemaps, .env leaks,
-# hardcoded secrets, multiple preload scripts, etc. in the actual shipped binary.
-APP=$(find dist -name "Cruchot.app" -maxdepth 4 2>/dev/null | head -1)
+# 11. audit-bundle — fresh local audit via the electron-vite output dir
+# This is the LAST LINE OF DEFENSE before users. The script audits the actual
+# bundle content (everything that will be packed into the asar) for sourcemaps,
+# .env leaks, hardcoded secrets, multiple preload scripts, etc.
+#
+# Strategy: prefer auditing `out/` (rebuilds in ~7 sec) over `dist/.../Cruchot.app`
+# (which requires `npm run dist:mac`, ~15 min). The script supports both modes
+# and warns if the build is stale relative to src/.
+#
+# 11a. Build freshness check — rebuild if stale
+if [ ! -d out/main ] || [ ! -d out/preload ] || [ ! -d out/renderer ]; then
+  echo "[audit-bundle] No build found, running \`npm run build\`..."
+  npm run build 2>&1 | tail -5
+elif [ -n "$(find src -newer out/main/index.js -type f -print -quit 2>/dev/null)" ]; then
+  echo "[audit-bundle] Stale build detected (src/ newer than out/), rebuilding..."
+  npm run build 2>&1 | tail -5
+fi
+
+# 11b. Audit the fresh build
+npm run audit:bundle -- out/ 2>&1 | tail -30
+
+# 11c. (optional) If a fully packaged build exists in dist/, also audit it.
+# This validates the asar packaging step (which `out/` cannot — only the
+# release.yml CI workflow does this on every release).
+APP=$(find dist -name "Cruchot.app" -maxdepth 4 -type d 2>/dev/null | head -1)
 if [ -n "$APP" ]; then
-  npm run audit:bundle -- "$APP" 2>&1 | tail -30
-else
-  echo "[audit-bundle] No dist/.../Cruchot.app found — skip (run \`npm run dist:mac\` first to enable)"
+  echo ""
+  echo "[audit-bundle] Bonus — packaged .app found, auditing it too:"
+  npm run audit:bundle -- "$APP" 2>&1 | tail -20
 fi
 ```
+
+**Local audit vs CI audit — what each catches**:
+
+| Check | `out/` audit (local, ~7s + 0.5s) | `.app` audit (CI release, ~15min build + 0.5s) |
+|-------|----------------------------------|-------------------------------------------------|
+| Sourcemaps | ✓ | ✓ |
+| `.env` leaks | ✓ | ✓ |
+| Hardcoded secrets | ✓ | ✓ |
+| Internal URLs | ✓ | ✓ |
+| Preload count | ✓ | ✓ |
+| `devTools: true` | ✓ | ✓ |
+| asar packaging integrity | — | ✓ (electron-builder) |
+| `@electron/fuses` flipped | — | ✓ (`npx @electron/fuses read --app`) |
+| macOS code signing | — | ✓ if cert present |
+
+The local `out/` audit covers the source-level patterns; the CI `.app` audit
+adds the packaging-level checks. Both run via `npm run audit:bundle`.
 
 Parse the output of each tool and classify findings by severity. This becomes the **Baseline** referenced throughout the audit.
 
