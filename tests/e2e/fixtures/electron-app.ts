@@ -74,16 +74,6 @@ export const test = base.extend<Fixtures>({
       timeout: 20_000,
     })
 
-    // DEBUG: pipe Electron stderr/stdout to the Playwright report so we can
-    // see why the renderer hangs in CI. Remove once root cause is fixed.
-    const proc = app.process()
-    proc.stderr?.on('data', (chunk: Buffer) => {
-      process.stderr.write(`[electron stderr] ${chunk.toString()}`)
-    })
-    proc.stdout?.on('data', (chunk: Buffer) => {
-      process.stdout.write(`[electron stdout] ${chunk.toString()}`)
-    })
-
     await use(app)
     try {
       await app.close()
@@ -94,18 +84,8 @@ export const test = base.extend<Fixtures>({
 
   /** First BrowserWindow of the TEST_MODE app, awaited until DOM is loaded. */
   window: async ({ electronApp }, use) => {
-    // DEBUG: shorter timeout with explicit error for CI investigation.
-    // Restore default once root cause is fixed.
-    const win = await electronApp.firstWindow({ timeout: 15_000 })
-    console.log('[fixture] firstWindow resolved, awaiting domcontentloaded')
-    try {
-      await win.waitForLoadState('domcontentloaded', { timeout: 15_000 })
-      console.log('[fixture] domcontentloaded received')
-    } catch (err) {
-      const url = win.url()
-      console.error(`[fixture] domcontentloaded TIMEOUT — current URL: ${url}`)
-      throw err
-    }
+    const win = await electronApp.firstWindow()
+    await win.waitForLoadState('domcontentloaded')
     await use(win)
   },
 
