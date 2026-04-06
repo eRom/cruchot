@@ -13,7 +13,9 @@ test.describe('preload allowlist', () => {
     // Note: Playwright appends the OS name automatically (e.g.
     // window-api-keys-darwin.txt). Commit all platform snapshots as they
     // are generated in CI.
-    expect(exposedKeys.join('\n')).toMatchSnapshot('window-api-keys.txt')
+    // Append trailing '\n' so the committed snapshot file ends with a newline
+    // (POSIX convention; avoids noisy diffs from tools that auto-add it).
+    expect(exposedKeys.join('\n') + '\n').toMatchSnapshot('window-api-keys.txt')
   })
 
   test('ipcRenderer is NOT directly exposed on window', async ({ window }) => {
