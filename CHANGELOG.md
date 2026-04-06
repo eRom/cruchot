@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.9.2] - 2026-04-06
+
+- feat(security): audit-bundle out/ mode + cruchot-release skill + cleanup
+- security: fix 3 new CodeQL findings on second pass (S67/2)
+- security: fix 5 CodeQL findings on first scan (S67)
+- feat(skill): expand cruchot-security-review with Tools 9-10
+- docs(security): add audit/security/POLICY.md with SLA + accepted exceptions
+- ci(security): release security gate + bundle audit + fuses verification
+- chore(security): add lockfile-lint + audit-bundle + dependabot config
+- security: wire @electron/fuses via afterPack hook (audit S66 gap)
+- security: fix 4 defense-in-depth findings (audit S66)
+- feat(skill): add cruchot-security-review skill (3-tour audit pipeline)
+
 ## [0.9.1] - 2026-04-06
 
 - security: fix critical command injection + bash bypass + screen share resume (audit S65)
