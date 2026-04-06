@@ -177,6 +177,21 @@ app.whenReady().then(() => {
 
   registerAllIpcHandlers()
 
+  // E2E test helpers — registered ONLY when CRUCHOT_TEST_MODE=1.
+  // Dynamic import so the module is tree-shaken out of production builds.
+  // Fire-and-forget: the registration is fast, no need to block startup.
+  // See src/main/ipc/test-helpers.ipc.ts for the security model.
+  if (TEST_MODE) {
+    import('./ipc/test-helpers.ipc')
+      .then(({ registerTestHelpers }) => {
+        registerTestHelpers()
+        console.log('[TEST_MODE] test-helpers IPC registered')
+      })
+      .catch((err) => {
+        console.error('[TEST_MODE] Failed to register test-helpers IPC:', err)
+      })
+  }
+
   mainWindow = createMainWindow()
 
   // Set mainWindow ref for oneiric progress events
