@@ -10,6 +10,9 @@ test.describe('preload allowlist', () => {
     // Snapshot pattern: the first run generates the .snap file. Commit it.
     // On subsequent runs, any added/removed key fails the test until the
     // snapshot is intentionally updated via `--update-snapshots`.
+    // Note: Playwright appends the OS name automatically (e.g.
+    // window-api-keys-darwin.txt). Commit all platform snapshots as they
+    // are generated in CI.
     expect(exposedKeys.join('\n')).toMatchSnapshot('window-api-keys.txt')
   })
 
@@ -24,6 +27,6 @@ test.describe('preload allowlist', () => {
     const count = await window.evaluate(
       () => Object.keys((window as { api?: Record<string, unknown> }).api ?? {}).length
     )
-    expect(count).toBeGreaterThan(50) // ~150 methods, sanity floor
+    expect(count).toBeGreaterThan(200) // currently 295; floor catches catastrophic preload wipe-out
   })
 })
