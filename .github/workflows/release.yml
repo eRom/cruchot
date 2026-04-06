@@ -42,19 +42,26 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          OPEN_HIGH=$(gh api \
+          # Fetch alerts — capture full response to handle 403 gracefully
+          RESPONSE_HIGH=$(gh api \
             "/repos/${{ github.repository }}/dependabot/alerts?state=open&severity=high" \
-            --jq 'length' 2>/dev/null || echo "0")
-          OPEN_CRIT=$(gh api \
+            2>&1 || true)
+          RESPONSE_CRIT=$(gh api \
             "/repos/${{ github.repository }}/dependabot/alerts?state=open&severity=critical" \
-            --jq 'length' 2>/dev/null || echo "0")
+            2>&1 || true)
+          # Check for API access error (403) — treat as "skip, assume 0"
+          if echo "$RESPONSE_HIGH" | grep -q '"status":"403"'; then
+            echo "::warning::Dependabot alerts API not accessible (403) — skipping check. Verify manually."
+            exit 0
+          fi
+          OPEN_HIGH=$(echo "$RESPONSE_HIGH" | jq 'length' 2>/dev/null || echo "0")
+          OPEN_CRIT=$(echo "$RESPONSE_CRIT" | jq 'length' 2>/dev/null || echo "0")
           TOTAL=$((OPEN_HIGH + OPEN_CRIT))
           echo "Open Dependabot alerts: high=$OPEN_HIGH critical=$OPEN_CRIT"
           if [ "$TOTAL" -gt 0 ]; then
             echo "::error::Release blocked — $TOTAL open Dependabot security alerts (severity >= high)"
             echo "::error::Resolve them or document an exception in audit/security/POLICY.md"
-            gh api "/repos/${{ github.repository }}/dependabot/alerts?state=open&severity=high,critical" \
-              --jq '.[] | "  - " + .security_advisory.summary + " (" + .security_advisory.severity + ") in " + .dependency.package.name'
+            echo "$RESPONSE_HIGH" "$RESPONSE_CRIT" | jq -r '.[] | "  - " + .security_advisory.summary + " (" + .security_advisory.severity + ") in " + .dependency.package.name' 2>/dev/null || true
             exit 1
           fi
 
