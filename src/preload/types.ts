@@ -916,6 +916,13 @@ export interface TestApi {
    */
   triggerCompact: (payload: {
     conversationId: string
+    /**
+     * Phase 2b1 Task 6: force a small context window so the compact
+     * threshold (25% recent budget) fires deterministically with a small
+     * seeded conversation. Production compact:run handler does not accept
+     * this parameter — it is a test-only override.
+     */
+    contextWindowOverride?: number
   }) => Promise<{ tokensBefore: number; tokensAfter: number }>
 }
 

@@ -148,7 +148,13 @@ export function registerTestHelpers(): void {
   // responsible (e.g. via test:seed-default-model on Ollama).
   // -------------------------------------------------------------------------
   const triggerCompactSchema = z.object({
-    conversationId: z.string().min(1).max(100)
+    conversationId: z.string().min(1).max(100),
+    // Phase 2b1 Task 6: allow tests to force a small context window so the
+    // compact threshold (25% of contextWindow for the recent budget) fires
+    // deterministically with a small seeded conversation. Production
+    // compact:run handler does NOT accept this parameter — this is a
+    // test-only override.
+    contextWindowOverride: z.number().int().min(100).max(1_000_000).optional()
   })
 
   const VALID_PROVIDERS = [
@@ -159,7 +165,7 @@ export function registerTestHelpers(): void {
   ipcMain.handle('test:trigger-compact', async (_event, payload: unknown) => {
     assertTestMode()
 
-    const { conversationId } = triggerCompactSchema.parse(payload)
+    const { conversationId, contextWindowOverride } = triggerCompactSchema.parse(payload)
 
     // Lazy imports for the same reason as test:seed-messages.
     const { getConversation, updateConversationCompact } = await import('../db/queries/conversations')
@@ -192,7 +198,12 @@ export function registerTestHelpers(): void {
     const messages = getMessagesForConversation(conversationId)
 
     const modelInfo = MODELS.find((m) => m.id === actualModelId)
-    const contextWindow = modelInfo?.contextWindow ?? 200_000
+    // Phase 2b1 Task 6: allow tests to force a small context window so the
+    // compact threshold (25% of contextWindow for the recent budget) fires
+    // deterministically with a small seeded conversation. Production
+    // compact:run handler does NOT accept this parameter — this is a
+    // test-only override.
+    const contextWindow = contextWindowOverride ?? modelInfo?.contextWindow ?? 200_000
 
     const result = await compactService.fullCompact(
       conversationId,
