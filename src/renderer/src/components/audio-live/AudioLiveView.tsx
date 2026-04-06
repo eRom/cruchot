@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AudioLines, KeyRound } from 'lucide-react'
+import { AudioLines, KeyRound, MicVocal } from 'lucide-react'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useUiStore } from '@/stores/ui.store'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
 import { toast } from 'sonner'
 import type { AvailablePlugin } from '../../../../preload/types'
 
@@ -139,18 +146,36 @@ export function AudioLiveView() {
               Voix de l'agent vocal pour {selectedPlugin.modelName}
             </p>
           </div>
-          <select
+          <Select
             value={selectedVoiceId}
-            onChange={(e) => handleVoiceChange(e.target.value)}
+            onValueChange={handleVoiceChange}
             disabled={!selectedPlugin.available}
-            className="w-full rounded-lg border border-border/40 bg-background px-3 py-2 text-sm text-foreground focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/30 disabled:opacity-50"
           >
-            {selectedPlugin.voices.map((voice) => (
-              <option key={voice.id} value={voice.id}>
-                {voice.name} — {voice.description}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-auto py-2.5 rounded-lg">
+              <MicVocal className="size-4 shrink-0 text-primary" />
+              <SelectValue>
+                {(() => {
+                  const v = selectedPlugin.voices.find(x => x.id === selectedVoiceId)
+                  return v ? (
+                    <span className="flex flex-col items-start text-left min-w-0">
+                      <span className="text-sm font-medium text-foreground truncate">{v.name}</span>
+                      <span className="text-[11px] text-muted-foreground truncate">{v.description}</span>
+                    </span>
+                  ) : null
+                })()}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent className="max-h-[320px]">
+              {selectedPlugin.voices.map((voice) => (
+                <SelectItem key={voice.id} value={voice.id} className="py-2">
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="text-sm font-medium">{voice.name}</span>
+                    <span className="text-[11px] text-muted-foreground">{voice.description}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <p className="text-[11px] text-muted-foreground">
             Le changement de voix s'applique a la prochaine connexion Live.
           </p>
