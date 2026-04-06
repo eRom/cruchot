@@ -44,19 +44,19 @@ export function ToolApprovalBanner() {
   }
 
   return (
-    <div className="mx-4 mb-2 flex items-start gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3">
+    <div data-testid="tool-approval-banner" className="mx-4 mb-2 flex items-start gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3">
       <AlertTriangle className="mt-0.5 size-5 shrink-0 text-yellow-500" />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-foreground">{label}</p>
         <p className="truncate text-xs text-muted-foreground font-mono mt-0.5">{detail}</p>
         <div className="mt-2 flex items-center gap-2">
-          <button onClick={() => handleDecision('allow')} className="inline-flex items-center gap-1.5 rounded-md bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700">
+          <button data-testid="tool-approval-allow" onClick={() => handleDecision('allow')} className="inline-flex items-center gap-1.5 rounded-md bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700">
             <Check className="size-3" /> Autoriser
           </button>
-          <button onClick={() => handleDecision('allow-session')} className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700">
+          <button data-testid="tool-approval-allow-session" onClick={() => handleDecision('allow-session')} className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700">
             <Clock className="size-3" /> Session
           </button>
-          <button onClick={() => handleDecision('deny')} className="inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700">
+          <button data-testid="tool-approval-deny" onClick={() => handleDecision('deny')} className="inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700">
             <X className="size-3" /> Refuser
           </button>
           <span className="ml-auto text-xs text-muted-foreground">{countdown}s</span>
