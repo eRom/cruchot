@@ -4,7 +4,7 @@ import { test, expect } from '../fixtures/electron-app'
 test.describe('CSP and navigation hardening', () => {
   /**
    * window.open() with a non-http(s) URL hits the early-return deny branch
-   * in window.ts:48-51 (setWindowOpenHandler). The handler returns
+   * in window.ts:49-51 (setWindowOpenHandler). The handler returns
    * { action: 'deny' }, so window.open returns null in the renderer.
    *
    * IMPORTANT: this test uses 'javascript:void(0)' specifically to AVOID
@@ -25,6 +25,9 @@ test.describe('CSP and navigation hardening', () => {
    * Even when window.open is called, NO new BrowserWindow appears in the
    * Electron app's window list. Validates the deny is honored at the
    * Chromium/Electron level, not just the renderer.
+   *
+   * Uses javascript:void(0) for the same reason as Test 1 — avoids
+   * dialog.showMessageBox and shell.openExternal side effects.
    */
   test('no new BrowserWindow created when window.open is called', async ({
     window,
@@ -32,13 +35,12 @@ test.describe('CSP and navigation hardening', () => {
   }) => {
     const before = electronApp.windows().length
     await window.evaluate(() => {
-      try {
-        // Same safe URL as Test 1 — non-http(s) to avoid dialog/shell side effects
-        window.open('javascript:void(0)', '_blank')
-      } catch {
-        // ignored
-      }
+      // Same safe URL as Test 1 — non-http(s) to avoid dialog/shell side effects.
+      // window.open() returns null when denied; it does NOT throw, so no try/catch needed.
+      window.open('javascript:void(0)', '_blank')
     })
+    // Allow one event-loop cycle for Electron to process the deny decision
+    // (no deterministic event to await — increase if CI proves flaky)
     await window.waitForTimeout(500)
     const after = electronApp.windows().length
     expect(after).toBe(before)
@@ -55,12 +57,12 @@ test.describe('CSP and navigation hardening', () => {
   test('will-navigate guard blocks external URL changes', async ({ window }) => {
     const initialURL = window.url()
     await window.evaluate(() => {
-      try {
-        window.location.href = 'https://example.com'
-      } catch {
-        // ignored
-      }
+      // Assigning to location.href does NOT throw when blocked by will-navigate;
+      // the prevention happens asynchronously in the main process.
+      window.location.href = 'https://example.com'
     })
+    // Allow one event-loop cycle for the will-navigate guard to fire
+    // (no deterministic event to await — increase if CI proves flaky)
     await window.waitForTimeout(500)
     // The URL should not have changed to example.com — the navigation is blocked
     expect(window.url()).not.toContain('example.com')
@@ -87,5 +89,8 @@ test.describe('CSP and navigation hardening', () => {
     })
     expect(cspContent).not.toBeNull()
     expect(cspContent).toContain('default-src')
+    // Sanity floor: a real CSP has multiple directives, so the content
+    // should be substantially longer than just "default-src 'none'" (~19 chars)
+    expect(cspContent!.length).toBeGreaterThan(50)
   })
 })
