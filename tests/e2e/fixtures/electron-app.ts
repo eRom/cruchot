@@ -32,14 +32,20 @@ export const test = base.extend<Fixtures>({
    */
   electronApp: async ({ userDataDir }, use) => {
     const isPackaged = process.env.CRUCHOT_TEST_PACKAGED === '1'
+    // No named ElectronLaunchOptions export from @playwright/test — Parameters<> is the right approach.
     let launchOptions: Parameters<typeof electron.launch>[0]
 
     if (isPackaged) {
+      const distDir = path.join(process.cwd(), 'dist')
+      if (!existsSync(distDir)) {
+        throw new Error('dist/ not found. Run `npm run dist:mac` first.')
+      }
       const latestBuild = findLatestBuild('dist/')
       const appInfo = parseElectronApp(latestBuild)
       launchOptions = {
         args: [appInfo.main],
-        executablePath: appInfo.executable, // required on macOS arm64
+        // required in packaged mode — Playwright cannot find the executable inside .app on its own
+        executablePath: appInfo.executable,
       }
     } else {
       const mainPath = path.join(process.cwd(), 'out/main/index.js')
@@ -55,6 +61,10 @@ export const test = base.extend<Fixtures>({
 
     const app = await electron.launch({
       ...launchOptions,
+      // NOTE: spreads process.env to inherit PATH/HOME/LANG/etc. needed by Electron.
+      // This also leaks dev API keys (OPENAI_API_KEY, etc.) into the subprocess —
+      // harmless for Phase 1 security specs, but Phase 2 (LLM tests) should consider
+      // an env allowlist if any spec might log or persist env contents.
       env: {
         ...process.env,
         NODE_ENV: 'production',
@@ -65,7 +75,12 @@ export const test = base.extend<Fixtures>({
     })
 
     await use(app)
-    await app.close()
+    try {
+      await app.close()
+    } catch {
+      // Electron may have already exited (e.g. test called app.quit()).
+      // Swallow to ensure userDataDir teardown still runs.
+    }
   },
 
   /**
