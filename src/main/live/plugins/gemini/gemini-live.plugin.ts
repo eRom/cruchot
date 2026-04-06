@@ -1,4 +1,5 @@
 import type { LivePlugin, LivePluginConfig, LiveCommandResult, LiveStatus, PluginToolDeclaration, CoreToolDeclaration, VoiceOption } from '../../live-plugin.interface'
+import { sanitizeForLog } from '../../log-utils'
 import { GEMINI_PLUGIN_TOOLS } from './gemini-live-tools'
 
 const GEMINI_VOICES: VoiceOption[] = [
@@ -138,9 +139,10 @@ class GeminiLivePlugin implements LivePlugin {
       this.session.sendToolResponse({
         functionResponses: [{ id, name, response }]
       })
-      console.log(`[GeminiPlugin] Tool response sent for ${name} (${id})`)
+      // Sanitize SDK-supplied strings before logging (S67 defence in depth).
+      console.log(`[GeminiPlugin] Tool response sent for ${sanitizeForLog(name)} (${sanitizeForLog(id)})`)
     } catch (err: any) {
-      console.error(`[GeminiPlugin] Tool response error for ${name}:`, err.message)
+      console.error(`[GeminiPlugin] Tool response error for ${sanitizeForLog(name)}:`, sanitizeForLog(err?.message))
     }
   }
 
@@ -229,7 +231,8 @@ class GeminiLivePlugin implements LivePlugin {
         }
 
         // Core tools — delegate to Engine
-        console.log('[GeminiPlugin] Tool call:', fc.name, JSON.stringify(fc.args))
+        // Sanitize SDK-supplied tool name + args before logging (S67 defence in depth).
+        console.log('[GeminiPlugin] Tool call:', sanitizeForLog(fc.name), sanitizeForLog(fc.args, 300))
         this.onToolCall(id, fc.name, fc.args || {})
       }
     }

@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# Minimal token permissions — CI only needs to read repo contents.
+# CodeQL flagged the absence of an explicit `permissions:` block (alert #1).
+permissions:
+  contents: read
+
 jobs:
   ci:
     runs-on: macos-latest

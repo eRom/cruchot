@@ -7,6 +7,7 @@ import type {
   PluginToolDeclaration,
   VoiceOption,
 } from '../../live-plugin.interface'
+import { sanitizeForLog } from '../../log-utils'
 
 const OPENAI_VOICES: VoiceOption[] = [
   { id: 'marin', name: 'Marin', description: 'Naturelle, haute qualite, recommandee pour production' },
@@ -118,7 +119,7 @@ class OpenAILivePlugin implements LivePlugin {
       })
 
       this.ws.on('close', (code: number, reason: Buffer) => {
-        console.log(`[OpenAIPlugin] WebSocket closed (${code}: ${reason.toString()})`)
+        console.log(`[OpenAIPlugin] WebSocket closed (${code}: ${sanitizeForLog(reason.toString())})`)
         this.ws = null
         this.onStatusChange('dormant')
       })
@@ -161,7 +162,7 @@ class OpenAILivePlugin implements LivePlugin {
     // OBLIGATOIRE: OpenAI ne repond pas automatiquement apres un tool output
     this.send({ type: 'response.create' })
 
-    console.log(`[OpenAIPlugin] Tool response sent for ${name} (${id})`)
+    console.log(`[OpenAIPlugin] Tool response sent for ${sanitizeForLog(name)} (${sanitizeForLog(id)})`)
   }
 
   supportsScreenShare(): boolean {
@@ -209,13 +210,16 @@ class OpenAILivePlugin implements LivePlugin {
         const callId = event.call_id as string
         const name = event.name as string
         const argsStr = (event.arguments as string) || '{}'
+        // CodeQL alerts #4, #5: sanitize WS-controlled `name` before logging
+        // to prevent log injection (newlines, ANSI escapes, control chars).
+        const safeName = sanitizeForLog(name)
         try {
           const args = JSON.parse(argsStr)
-          console.log(`[OpenAIPlugin] Tool call: ${name}`, JSON.stringify(args))
+          console.log(`[OpenAIPlugin] Tool call: ${safeName}`, JSON.stringify(args))
           this.onToolCall(callId, name, args)
         } catch (err) {
-          console.error(`[OpenAIPlugin] Failed to parse tool args for ${name}:`, err)
-          this.onError(`Invalid tool call arguments for ${name}`)
+          console.error(`[OpenAIPlugin] Failed to parse tool args for ${safeName}:`, err)
+          this.onError(`Invalid tool call arguments for ${safeName}`)
         }
         break
       }
@@ -243,7 +247,7 @@ class OpenAILivePlugin implements LivePlugin {
 
       case 'session.created':
       case 'session.updated': {
-        console.log(`[OpenAIPlugin] ${type}`)
+        console.log(`[OpenAIPlugin] ${sanitizeForLog(type)}`)
         break
       }
 
@@ -256,7 +260,7 @@ class OpenAILivePlugin implements LivePlugin {
           console.log('[OpenAIPlugin] Cancel ignored (no active response)')
           break
         }
-        console.error(`[OpenAIPlugin] Error [${code}]: ${message}`)
+        console.error(`[OpenAIPlugin] Error [${sanitizeForLog(code)}]: ${sanitizeForLog(message)}`)
         this.onError(message)
         break
       }
@@ -279,7 +283,7 @@ class OpenAILivePlugin implements LivePlugin {
         break
 
       default:
-        console.log(`[OpenAIPlugin] Unhandled event: ${type}`)
+        console.log(`[OpenAIPlugin] Unhandled event: ${sanitizeForLog(type)}`)
     }
   }
 

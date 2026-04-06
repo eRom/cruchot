@@ -42,7 +42,13 @@ function createConfigFile(storagePath: string): string {
   fs.mkdirSync(configDir, { recursive: true })
 
   const configPath = path.join(configDir, 'config.yaml')
-  const escapedPath = storagePath.replace(/"/g, '\\"')
+  // Escape backslashes FIRST, then double quotes, for safe inclusion in a
+  // YAML double-quoted string. Order is critical: escaping " first would
+  // double-escape the backslashes added by the first replace.
+  // CodeQL alert #2: incomplete string escaping (S67).
+  const escapedPath = storagePath
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
   const configContent = `
 storage:
   storage_path: "${escapedPath}"
