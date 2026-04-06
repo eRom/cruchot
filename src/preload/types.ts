@@ -923,6 +923,19 @@ export interface TestApi {
      * this parameter — it is a test-only override.
      */
     contextWindowOverride?: number
+    /**
+     * Phase 2b1 Task 6: bypass the LLM call entirely and use this string
+     * as the compact_summary. Required for E2E flow specs running on
+     * Ollama qwen3.5:4b — it is a reasoning-only model that spends ALL
+     * of maxTokens=4096 in <think> tokens for the compact prompt and
+     * never produces a final answer (~4 minute hang). With this override,
+     * the handler still walks the rounds, computes the boundary id,
+     * persists the summary, and writes a fake llm_costs row — proving
+     * the persistence path while keeping the spec deterministic.
+     * In CI (CRUCHOT_TEST_PROVIDER=google) gemini-2.5-flash is fast
+     * enough that this override is not needed.
+     */
+    summaryOverride?: string
   }) => Promise<{ tokensBefore: number; tokensAfter: number }>
 }
 

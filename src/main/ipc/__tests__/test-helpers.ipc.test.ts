@@ -213,6 +213,12 @@ describe('test-helpers.ipc — test:trigger-compact handler', () => {
       handler!(null, { conversationId: 'c1', contextWindowOverride: -1 })
     ).rejects.toThrow()
   })
+
+  it('rejects empty summaryOverride', async () => {
+    await expect(
+      handler!(null, { conversationId: 'c1', summaryOverride: '' })
+    ).rejects.toThrow()
+  })
 })
 
 describe('test-helpers.ipc — assertTestMode guard', () => {

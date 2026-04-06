@@ -154,7 +154,18 @@ export function registerTestHelpers(): void {
     // deterministically with a small seeded conversation. Production
     // compact:run handler does NOT accept this parameter — this is a
     // test-only override.
-    contextWindowOverride: z.number().int().min(100).max(1_000_000).optional()
+    contextWindowOverride: z.number().int().min(100).max(1_000_000).optional(),
+    // Phase 2b1 Task 6: bypass the LLM call entirely and write the given
+    // string as the compact_summary. This is necessary for E2E flow specs
+    // running on Ollama qwen3.5:4b, which is a reasoning-only model that
+    // spends ALL of maxTokens=4096 in <think> tokens for the compact
+    // prompt — `result.text` ends up empty and the call takes ~4 minutes.
+    // With summaryOverride set, the handler skips fullCompact() and writes
+    // the override + a fake llm_costs row directly, proving the
+    // persistence path while keeping the spec deterministic and fast.
+    // CI runs with gemini-2.5-flash (CRUCHOT_TEST_PROVIDER=google) where
+    // the real LLM call IS fast and the override is not needed.
+    summaryOverride: z.string().min(1).max(10_000).optional()
   })
 
   const VALID_PROVIDERS = [
@@ -165,7 +176,7 @@ export function registerTestHelpers(): void {
   ipcMain.handle('test:trigger-compact', async (_event, payload: unknown) => {
     assertTestMode()
 
-    const { conversationId, contextWindowOverride } = triggerCompactSchema.parse(payload)
+    const { conversationId, contextWindowOverride, summaryOverride } = triggerCompactSchema.parse(payload)
 
     // Lazy imports for the same reason as test:seed-messages.
     const { getConversation, updateConversationCompact } = await import('../db/queries/conversations')
@@ -194,7 +205,6 @@ export function registerTestHelpers(): void {
       throw new Error(`[test:trigger-compact] invalid provider: ${providerId}`)
     }
 
-    const model = getModel(providerId, actualModelId)
     const messages = getMessagesForConversation(conversationId)
 
     const modelInfo = MODELS.find((m) => m.id === actualModelId)
@@ -205,6 +215,62 @@ export function registerTestHelpers(): void {
     // test-only override.
     const contextWindow = contextWindowOverride ?? modelInfo?.contextWindow ?? 200_000
 
+    // Phase 2b1 Task 6: when summaryOverride is set, bypass the LLM call
+    // entirely. We still mirror the rest of the orchestration (boundary
+    // computation, updateConversationCompact, createLlmCost) so the spec
+    // can assert on every persistence side-effect. The fake usage figures
+    // are derived from the seeded messages so the llm_costs row carries
+    // realistic-ish numbers.
+    if (summaryOverride !== undefined) {
+      const tokensBefore = compactService.estimateTokens(messages)
+
+      // Mirror fullCompact()'s rounds-walk to compute keptRounds and
+      // boundaryId so the persisted state matches what the real path
+      // would have produced.
+      const rounds = compactService.groupByApiRound(messages)
+      const recentBudget = contextWindow * 0.25
+      const keptRounds: typeof rounds = []
+      let keptTokens = 0
+      for (let i = rounds.length - 1; i >= 0; i--) {
+        if (keptTokens + rounds[i].estimatedTokens > recentBudget) break
+        keptRounds.unshift(rounds[i])
+        keptTokens += rounds[i].estimatedTokens
+      }
+      const keptMessages = keptRounds.flatMap((r) => r.messages)
+      const summarizedMessages = messages.filter(
+        (m) => !keptMessages.some((km) => km.id === m.id)
+      )
+      const boundaryId = summarizedMessages.length > 0
+        ? summarizedMessages[summarizedMessages.length - 1].id
+        : conv.compactBoundaryId ?? messages[0]?.id ?? ''
+
+      updateConversationCompact(conversationId, summaryOverride, boundaryId)
+
+      const fakeInputTokens = compactService.estimateTokens(summarizedMessages)
+      const fakeOutputTokens = Math.ceil(summaryOverride.length / 4)
+      const cost = calculateMessageCost(actualModelId, fakeInputTokens, fakeOutputTokens)
+      createLlmCost({
+        type: 'compact',
+        conversationId,
+        modelId: actualModelId,
+        providerId,
+        tokensIn: fakeInputTokens,
+        tokensOut: fakeOutputTokens,
+        cost,
+        metadata: {
+          tokensBefore,
+          tokensAfter: fakeOutputTokens + keptTokens,
+          summaryOverride: true
+        }
+      })
+
+      return {
+        tokensBefore,
+        tokensAfter: fakeOutputTokens + keptTokens
+      }
+    }
+
+    const model = getModel(providerId, actualModelId)
     const result = await compactService.fullCompact(
       conversationId,
       messages,
