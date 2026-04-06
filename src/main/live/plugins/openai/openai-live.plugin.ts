@@ -65,7 +65,7 @@ class OpenAILivePlugin implements LivePlugin {
           type: 'session.update',
           session: {
             type: 'realtime',
-            output_modalities: ['audio', 'text'],
+            output_modalities: ['audio'],
             instructions: finalPrompt,
             audio: {
               input: {
