@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { ElectronAPI, SendMessagePayload, StreamChunk, PermissionRuleInfo, RecordingState, LiveStatus } from './types'
+import type { ElectronAPI, SendMessagePayload, StreamChunk, PermissionRuleInfo, RecordingState, LiveStatus, TestApi } from './types'
+
+// E2E test mode: read directly from process.env (do NOT import from src/main/
+// — preload and main are bundled separately by electron-vite, and pulling
+// src/main/test-mode.ts here would drag main code into the preload bundle).
+const TEST_MODE = process.env.CRUCHOT_TEST_MODE === '1'
 
 // Expose une API securisee au renderer — JAMAIS ipcRenderer directement
 const api: ElectronAPI = {
@@ -698,4 +703,21 @@ const api: ElectronAPI = {
   },
 }
 
-contextBridge.exposeInMainWorld('api', api)
+// Test-only API, exposed on window.api.test ONLY when CRUCHOT_TEST_MODE=1.
+// In production builds, this entire block is dead code (TEST_MODE is false)
+// and the `test` key is absent from the exposed object. The dynamic check
+// is also enforced in the main process (see src/main/index.ts conditional
+// dynamic import of test-helpers.ipc) — defense in depth.
+const testApi: TestApi | undefined = TEST_MODE
+  ? {
+      dbSelect: (sql: string): Promise<unknown[]> =>
+        ipcRenderer.invoke('test:db-select', sql),
+    }
+  : undefined
+
+const exposedApi: ElectronAPI = {
+  ...api,
+  ...(testApi !== undefined ? { test: testApi } : {}),
+}
+
+contextBridge.exposeInMainWorld('api', exposedApi)

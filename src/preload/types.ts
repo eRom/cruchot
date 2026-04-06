@@ -876,6 +876,23 @@ export interface CompactStatus {
   tokenEstimate?: number
 }
 
+/**
+ * Test-only API surface, exposed on `window.api.test` ONLY when the main
+ * process is running with CRUCHOT_TEST_MODE=1. In production builds the
+ * `test` key is undefined.
+ *
+ * Phase 2a exposes only `dbSelect`. Phase 2b will add seed-messages,
+ * trigger-compact, get-system-prompt.
+ */
+export interface TestApi {
+  /**
+   * Run a strictly-validated SELECT query against the SQLite database.
+   * Throws if not in TEST_MODE, if sql is malformed, or if the target
+   * table is not in the READABLE_TABLES whitelist (see test-helpers.ipc.ts).
+   */
+  dbSelect: (sql: string) => Promise<unknown[]>
+}
+
 // L'API exposee au renderer via contextBridge
 export interface ElectronAPI {
   // Chat
@@ -1342,6 +1359,9 @@ export interface ElectronAPI {
   runCompact: (conversationId: string) => Promise<{ tokensBefore: number; tokensAfter: number }>
   onCompactStatus: (callback: (status: CompactStatus) => void) => void
   offCompactStatus: () => void
+
+  // ── Test-only (CRUCHOT_TEST_MODE=1, undefined in prod) ──
+  test?: TestApi
 }
 
 // ---------------------------------------------------------------------------
