@@ -262,9 +262,17 @@ function walkDir(dir, callback, base = dir) {
   }
 }
 
+// Returns true if the file is inside a node_modules directory.
+// Sourcemaps and sourcemap references are expected in third-party deps
+// and should not trigger audit findings — only our own app code matters.
+function isInNodeModules(relPath) {
+  return relPath.includes('node_modules/')
+}
+
 function scanFile(fullPath, relPath, findings) {
-  // Filename pattern checks
+  // Filename pattern checks (skip sourcemap-file inside node_modules)
   for (const pat of FILENAME_PATTERNS) {
+    if (pat.id === 'sourcemap-file' && isInNodeModules(relPath)) continue
     if (pat.regex.test(relPath)) {
       findings.push({
         rule: pat.id,
@@ -293,6 +301,10 @@ function scanFile(fullPath, relPath, findings) {
   }
 
   for (const pat of TEXT_PATTERNS) {
+    // Skip sourcemap content scan inside node_modules — third-party deps
+    // legitimately include sourcemap references, only our code matters.
+    if (pat.id === 'sourcemap' && isInNodeModules(relPath)) continue
+
     pat.regex.lastIndex = 0
     let m
     let count = 0
