@@ -46,6 +46,16 @@ export const useLiveStore = create<LiveState>((set, get) => ({
     try {
       set({ status: 'connecting', error: null })
       await window.api.liveConnect()
+      // Resolve which plugin is active to know its capabilities
+      const activeId = await window.api.liveGetActiveProvider()
+      if (activeId) {
+        const plugins = await window.api.liveGetPlugins()
+        const active = plugins.find(p => p.providerId === activeId)
+        set({
+          activeProviderId: activeId,
+          supportsScreenShare: active?.supportsScreenShare ?? false,
+        })
+      }
     } catch (err: any) {
       set({ status: 'error', error: err.message || String(err) })
     }
@@ -54,7 +64,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   disconnect: async () => {
     try {
       await window.api.liveDisconnect()
-      set({ status: 'off', error: null, micLevel: 0, speakerLevel: 0, isPlaybackActive: false, isScreenSharing: false })
+      set({ status: 'off', error: null, micLevel: 0, speakerLevel: 0, isPlaybackActive: false, isScreenSharing: false, activeProviderId: null, supportsScreenShare: false })
     } catch (err: any) {
       console.error('[Live] Disconnect error:', err)
     }

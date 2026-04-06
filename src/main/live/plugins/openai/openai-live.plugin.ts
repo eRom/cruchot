@@ -35,6 +35,7 @@ class OpenAILivePlugin implements LivePlugin {
   readonly displayName = 'OpenAI Realtime'
 
   private ws: WebSocket | null = null
+  private isResponseActive = false
 
   // Callbacks — injected by Engine before connect()
   onAudio: (base64: string) => void = () => {}
@@ -119,6 +120,7 @@ class OpenAILivePlugin implements LivePlugin {
       } catch { /* ignore */ }
       this.ws = null
     }
+    this.isResponseActive = false
   }
 
   sendAudio(base64: string): void {
@@ -174,10 +176,14 @@ class OpenAILivePlugin implements LivePlugin {
       }
 
       case 'input_audio_buffer.speech_started': {
-        console.log('[OpenAIPlugin] User interrupted (speech_started)')
-        this.send({ type: 'response.cancel' })
-        this.send({ type: 'input_audio_buffer.clear' })
-        this.onStatusChange('interrupted')
+        // speech_started fires at every turn start (not just interruptions).
+        // Only cancel/clear if a response is actually in progress.
+        if (this.isResponseActive) {
+          console.log('[OpenAIPlugin] User interrupted (speech_started)')
+          this.send({ type: 'response.cancel' })
+          this.send({ type: 'input_audio_buffer.clear' })
+          this.onStatusChange('interrupted')
+        }
         break
       }
 
@@ -212,6 +218,7 @@ class OpenAILivePlugin implements LivePlugin {
       }
 
       case 'response.done': {
+        this.isResponseActive = false
         this.onStatusChange('connected')
         break
       }
@@ -237,6 +244,9 @@ class OpenAILivePlugin implements LivePlugin {
       }
 
       case 'response.created':
+        this.isResponseActive = true
+        break
+
       case 'response.output_item.added':
       case 'response.output_item.done':
       case 'response.output_audio.done':

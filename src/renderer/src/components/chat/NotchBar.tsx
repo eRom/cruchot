@@ -36,7 +36,7 @@ function WaveformBars({ level, color }: { level: number; color: string }) {
 }
 
 export function NotchBar() {
-  const { status, micLevel, speakerLevel, isScreenSharing, connect, disconnect } = useLiveStore()
+  const { status, micLevel, speakerLevel, isScreenSharing, supportsScreenShare, connect, disconnect } = useLiveStore()
   const { startAudio, stopAudio } = useLiveAudio()
   const { startCapture, stopCapture } = useScreenCapture()
   const [isHovered, setIsHovered] = useState(false)
@@ -166,8 +166,8 @@ export function NotchBar() {
           {style.label}
         </span>
 
-        {/* Screen share icon — only when session is active */}
-        {isActive && (
+        {/* Screen share icon — only when session is active and plugin supports it */}
+        {isActive && supportsScreenShare && (
           <div
             className={`ml-1.5 p-0.5 rounded cursor-pointer relative transition-all duration-150
               ${isScreenSharing
