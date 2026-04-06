@@ -11,6 +11,10 @@
  * IMPORTANT: this module must NEVER import from outside `src/main/`.
  * It is also imported elsewhere (e.g. test-helpers.ipc.ts in Phase 2),
  * so keep it tiny and side-effect free.
+ *
+ * NOTE: values are captured at module load time. Mutating `process.env`
+ * after import has no effect on the exported constants. Tests that need
+ * fresh values must call `vi.resetModules()` and re-import.
  */
 export const TEST_MODE = process.env.CRUCHOT_TEST_MODE === '1'
 export const TEST_USERDATA = process.env.CRUCHOT_TEST_USERDATA

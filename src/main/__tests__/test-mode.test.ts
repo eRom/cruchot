@@ -1,6 +1,3 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { vi } from 'vitest'
-
 describe('test-mode module', () => {
   const originalEnv = process.env
 
@@ -27,6 +24,12 @@ describe('test-mode module', () => {
 
   it('TEST_MODE is false for any value other than "1"', async () => {
     process.env.CRUCHOT_TEST_MODE = 'true'
+    const { TEST_MODE } = await import('../test-mode')
+    expect(TEST_MODE).toBe(false)
+  })
+
+  it('TEST_MODE is false when CRUCHOT_TEST_MODE is empty string', async () => {
+    process.env.CRUCHOT_TEST_MODE = ''
     const { TEST_MODE } = await import('../test-mode')
     expect(TEST_MODE).toBe(false)
   })
