@@ -14,9 +14,8 @@ import { test, expect } from '../fixtures/electron-app'
  *
  * Any of these being defined indicates a serious sandbox bypass.
  *
- * The test loops over a const array via test.describe.parallel-friendly
- * for-loop, generating one test per global. This makes the test report
- * show 6 individual passes/failures, not 1 aggregate.
+ * The test loops over a const array, generating one test per global. This
+ * makes the test report show 6 individual passes/failures, not 1 aggregate.
  */
 
 const FORBIDDEN_GLOBALS = [
