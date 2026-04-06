@@ -93,14 +93,19 @@ class MatonService {
     let stdout: string
 
     try {
-      // Use execFileSync with array args — NO shell interpretation, immune to injection
+      // Use execFileSync with array args — NO shell interpretation, immune to injection.
+      // Minimal env — DO NOT inherit process.env (may contain API keys/tokens).
+      // Maton is a third-party skill binary; a compromised Maton must not leak secrets.
       const result = execFileSync(
         'python3',
-        ['-m', 'scanner', targetDir, '--format', 'json'],
+        ['-m', 'scanner', '--', targetDir, '--format', 'json'],
         {
           cwd,
           env: {
-            ...process.env,
+            PATH: process.env.PATH ?? '/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin',
+            HOME: process.env.HOME ?? '',
+            TMPDIR: process.env.TMPDIR ?? '/tmp',
+            LANG: process.env.LANG ?? 'en_US.UTF-8',
             PYTHONDONTWRITEBYTECODE: '1',
             PYTHONPATH: cwd
           },

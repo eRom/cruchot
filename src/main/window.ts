@@ -30,6 +30,10 @@ export function createMainWindow(): BrowserWindow {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
+      // Disable middle-click (auxclick) navigation — prevents bypass of
+      // setWindowOpenHandler/will-navigate via Blink's Auxclick feature.
+      // See: Electronegativity AUXCLICK_JS_CHECK
+      disableBlinkFeatures: 'Auxclick',
       devTools: !app.isPackaged
     }
   })
