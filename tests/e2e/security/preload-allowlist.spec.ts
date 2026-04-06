@@ -2,20 +2,30 @@
 import { test, expect } from '../fixtures/electron-app'
 
 test.describe('preload allowlist', () => {
-  test('window.api exposes the locked-down list of methods', async ({ window: page }) => {
+  test('window.api exposes the locked-down list (TEST_MODE — includes test helpers)', async ({ window: page }) => {
     const exposedKeys = await page.evaluate(() =>
       Object.keys((window as { api?: Record<string, unknown> }).api ?? {}).sort()
     )
 
-    // Snapshot pattern: the first run generates the .snap file. Commit it.
-    // On subsequent runs, any added/removed key fails the test until the
+    // Snapshot pattern: any added/removed key fails the test until the
     // snapshot is intentionally updated via `--update-snapshots`.
-    // Note: Playwright appends the OS name automatically (e.g.
-    // window-api-keys-darwin.txt). Commit all platform snapshots as they
-    // are generated in CI.
-    // Append trailing '\n' so the committed snapshot file ends with a newline
-    // (POSIX convention; avoids noisy diffs from tools that auto-add it).
+    // This snapshot represents TEST_MODE: it includes the `test` key.
+    expect(exposedKeys.join('\n') + '\n').toMatchSnapshot('window-api-keys-with-test.txt')
+
+    // Sentinel: in TEST_MODE the `test` namespace MUST be present.
+    expect(exposedKeys).toContain('test')
+  })
+
+  test('window.api exposes the prod posture (no test helpers)', async ({ windowProd }) => {
+    const exposedKeys = await windowProd.evaluate(() =>
+      Object.keys((window as { api?: Record<string, unknown> }).api ?? {}).sort()
+    )
+
+    // Prod-base snapshot: same as TEST_MODE minus the `test` key.
     expect(exposedKeys.join('\n') + '\n').toMatchSnapshot('window-api-keys.txt')
+
+    // Sentinel: in prod posture the `test` namespace MUST be absent.
+    expect(exposedKeys).not.toContain('test')
   })
 
   test('ipcRenderer is NOT directly exposed on window', async ({ window: page }) => {
@@ -29,6 +39,7 @@ test.describe('preload allowlist', () => {
     const count = await page.evaluate(
       () => Object.keys((window as { api?: Record<string, unknown> }).api ?? {}).length
     )
-    expect(count).toBeGreaterThan(200) // currently 295; floor catches catastrophic preload wipe-out
+    // currently 296 in TEST_MODE (295 base + `test`); floor catches catastrophic preload wipe-out
+    expect(count).toBeGreaterThan(200)
   })
 })
