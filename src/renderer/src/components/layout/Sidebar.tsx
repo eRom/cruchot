@@ -158,7 +158,7 @@ export function Sidebar(): React.JSX.Element {
                   variant="ghost"
                   size="icon"
                   onClick={handleNewConversation}
-                  data-testid="new-conversation"
+                  data-testid="new-conversation-collapsed"
                   className={cn(
                     'size-8 shrink-0 text-sidebar-foreground/50 hover:text-sidebar-primary hover:bg-sidebar-accent/60',
                     currentView === 'chat' && 'text-sidebar-primary bg-sidebar-accent/60'
@@ -206,7 +206,7 @@ export function Sidebar(): React.JSX.Element {
           <div className="flex flex-1 gap-1">
             <button
               onClick={handleNewConversation}
-              data-testid="new-conversation"
+              data-testid="new-conversation-expanded"
               className={cn(
                 'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5',
                 'text-[13px] font-medium text-sidebar-foreground/70',

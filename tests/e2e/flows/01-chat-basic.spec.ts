@@ -66,10 +66,15 @@ test.describe('chat basic — TEST_MODEL_ID', () => {
 
     // ── Step 3: click "new conversation" in the sidebar ──
     //
-    // Two nodes carry data-testid="new-conversation" (collapsed icon +
-    // expanded button variant). Only one is rendered at a time but we
-    // use .first() to stay defensive against strict-mode violations.
-    await page.locator('[data-testid="new-conversation"]').first().click()
+    // Sidebar can be collapsed or expanded — click whichever button is visible.
+    // Both have the same handler (handleNewConversation) so the user-facing
+    // behavior is identical. We use .first() defensively in case both
+    // selectors briefly match during a transition state — Playwright resolves
+    // them in DOM order.
+    const newConvButton = page
+      .locator('[data-testid="new-conversation-collapsed"], [data-testid="new-conversation-expanded"]')
+      .first()
+    await newConvButton.click()
 
     // Wait until the conversation row actually lands in the DB.
     await dbHelper.waitFor(
