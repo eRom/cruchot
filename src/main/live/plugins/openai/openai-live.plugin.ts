@@ -226,6 +226,11 @@ class OpenAILivePlugin implements LivePlugin {
         const error = event.error as Record<string, unknown> | undefined
         const message = (error?.message as string) || 'Unknown OpenAI error'
         const code = error?.code as string | undefined
+        // response_cancel_not_active is benign — user spoke before model responded
+        if (code === 'response_cancel_not_active') {
+          console.log('[OpenAIPlugin] Cancel ignored (no active response)')
+          break
+        }
         console.error(`[OpenAIPlugin] Error [${code}]: ${message}`)
         this.onError(message)
         break
@@ -241,6 +246,7 @@ class OpenAILivePlugin implements LivePlugin {
       case 'conversation.item.input_audio_transcription.delta':
       case 'input_audio_buffer.speech_stopped':
       case 'input_audio_buffer.committed':
+      case 'input_audio_buffer.cleared':
       case 'rate_limits.updated':
         break
 
