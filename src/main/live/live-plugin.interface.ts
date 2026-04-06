@@ -1,4 +1,4 @@
-export type LiveStatus = 'off' | 'connecting' | 'connected' | 'listening' | 'speaking' | 'dormant' | 'error'
+export type LiveStatus = 'off' | 'connecting' | 'connected' | 'listening' | 'speaking' | 'dormant' | 'error' | 'interrupted'
 
 export interface LiveStatusInfo {
   status: LiveStatus

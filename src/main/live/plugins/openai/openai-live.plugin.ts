@@ -173,7 +173,7 @@ class OpenAILivePlugin implements LivePlugin {
         console.log('[OpenAIPlugin] User interrupted (speech_started)')
         this.send({ type: 'response.cancel' })
         this.send({ type: 'input_audio_buffer.clear' })
-        this.onStatusChange('interrupted' as LiveStatus)
+        this.onStatusChange('interrupted')
         break
       }
 

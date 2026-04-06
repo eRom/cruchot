@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { ElectronAPI, SendMessagePayload, StreamChunk, PermissionRuleInfo, RecordingState } from './types'
+import type { ElectronAPI, SendMessagePayload, StreamChunk, PermissionRuleInfo, RecordingState, LiveStatus } from './types'
 
 // Expose une API securisee au renderer — JAMAIS ipcRenderer directement
 const api: ElectronAPI = {
@@ -639,8 +639,8 @@ const api: ElectronAPI = {
 
   offLiveAudio: () => ipcRenderer.removeAllListeners('live:audio'),
 
-  onLiveStatus: (cb: (info: { status: string; error?: string }) => void) => {
-    ipcRenderer.on('live:status', (_event: Electron.IpcRendererEvent, info: { status: string; error?: string }) => cb(info))
+  onLiveStatus: (cb: (info: { status: LiveStatus; error?: string }) => void) => {
+    ipcRenderer.on('live:status', (_event: Electron.IpcRendererEvent, info: { status: LiveStatus; error?: string }) => cb(info))
   },
 
   offLiveStatus: () => ipcRenderer.removeAllListeners('live:status'),
