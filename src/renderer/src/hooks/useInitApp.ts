@@ -98,7 +98,9 @@ export function useInitApp() {
               'multi-llm:summary-model-id',
               'multi-llm:summary-prompt',
               'multi-llm:tts-provider',
-              'multi-llm:favorite-model-ids'
+              'multi-llm:favorite-model-ids',
+              'multi-llm:live-model-id',
+              'multi-llm:live-identity-prompt'
             ] as const
 
             const values = await Promise.all(keys.map((k) => window.api.getSetting(k)))
@@ -126,6 +128,26 @@ export function useInitApp() {
             if (map['multi-llm:favorite-model-ids'] !== null) {
               try { patch.favoriteModelIds = JSON.parse(map['multi-llm:favorite-model-ids']!) } catch { /* ignore */ }
             }
+            if (map['multi-llm:live-model-id'] !== null) patch.liveModelId = map['multi-llm:live-model-id']
+            if (map['multi-llm:live-identity-prompt'] !== null) patch.liveIdentityPrompt = map['multi-llm:live-identity-prompt']
+
+            // Live voices — hydrate per-plugin from DB
+            try {
+              const plugins = await window.api.liveGetPlugins()
+              const voiceEntries = await Promise.all(
+                plugins.map(async (p) => {
+                  const v = await window.api.getSetting(`multi-llm:live-voice-${p.providerId}`)
+                  return [p.providerId, v] as const
+                })
+              )
+              const liveVoices: Record<string, string> = {}
+              for (const [providerId, voice] of voiceEntries) {
+                if (voice) liveVoices[providerId] = voice
+              }
+              if (Object.keys(liveVoices).length > 0) {
+                patch.liveVoices = liveVoices
+              }
+            } catch { /* ignore — plugins may not be loaded yet */ }
 
             if (Object.keys(patch).length > 0) {
               useSettingsStore.setState(patch)

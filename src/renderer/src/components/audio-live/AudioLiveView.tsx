@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AudioLines } from 'lucide-react'
+import { AudioLines, KeyRound } from 'lucide-react'
 import { useSettingsStore } from '@/stores/settings.store'
+import { useUiStore } from '@/stores/ui.store'
 import { toast } from 'sonner'
 import type { AvailablePlugin } from '../../../../preload/types'
 
@@ -13,11 +14,20 @@ export function AudioLiveView() {
   const setLiveModelId = useSettingsStore((s) => s.setLiveModelId)
   const setLiveIdentityPrompt = useSettingsStore((s) => s.setLiveIdentityPrompt)
   const setLiveVoice = useSettingsStore((s) => s.setLiveVoice)
+  const setCurrentView = useUiStore((s) => s.setCurrentView)
+  const setSettingsTab = useUiStore((s) => s.setSettingsTab)
   const [plugins, setPlugins] = useState<AvailablePlugin[]>([])
 
   useEffect(() => {
     window.api.liveGetPlugins().then(setPlugins).catch(() => {})
   }, [])
+
+  const hasAnyAvailable = plugins.some((p) => p.available)
+
+  const goToApiKeys = useCallback(() => {
+    setCurrentView('settings')
+    setSettingsTab('apikeys')
+  }, [setCurrentView, setSettingsTab])
 
   // Plugin currently selected as the active Live model
   const selectedPlugin = useMemo(
@@ -56,6 +66,29 @@ export function AudioLiveView() {
           <p className="text-xs text-muted-foreground">Configuration de l'assistant vocal en temps reel</p>
         </div>
       </div>
+
+      {/* Empty state — no plugin has an API key */}
+      {plugins.length > 0 && !hasAnyAvailable && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-amber-500/10 shrink-0">
+              <KeyRound className="size-4 text-amber-500" />
+            </div>
+            <div className="flex-1 space-y-1">
+              <p className="text-sm font-medium text-foreground">Aucune cle API configuree</p>
+              <p className="text-xs text-muted-foreground">
+                L'agent vocal Live necessite une cle API Google (Gemini) ou OpenAI.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={goToApiKeys}
+            className="w-full rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-500 hover:bg-amber-500/20 transition-colors"
+          >
+            Configurer une cle API
+          </button>
+        </div>
+      )}
 
       {/* Model selector */}
       <div className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
