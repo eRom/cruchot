@@ -14,19 +14,24 @@ import { skillService } from './services/skill.service'
 import { serviceRegistry } from './services/registry'
 import { vcrHtmlExporterService } from './services/vcr-html-exporter.service'
 import { listSkills, createSkill, deleteSkill } from './db/queries/skills'
+import { TEST_MODE, TEST_USERDATA } from './test-mode'
 
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
 
-import { TEST_MODE, TEST_USERDATA } from './test-mode'
-
 // E2E test isolation: when TEST_MODE is set, redirect userData to a temp dir
 // so the test run gets its own SQLite DB, Qdrant storage, settings, etc.
 // Must run BEFORE protocol.registerSchemesAsPrivileged() and any code that
 // reads app.getPath('userData').
-if (TEST_MODE && TEST_USERDATA) {
+// app.setPath() is one of the few Electron APIs callable before app.whenReady().
+// Do NOT move this block inside whenReady() — the DB path is resolved before that.
+if (TEST_MODE) {
+  if (!TEST_USERDATA) {
+    throw new Error('[TEST_MODE] CRUCHOT_TEST_USERDATA is required when TEST_MODE=1')
+  }
   app.setPath('userData', TEST_USERDATA)
+  console.log(`[TEST_MODE] userData redirected → ${TEST_USERDATA}`)
 }
 
 process.on('unhandledRejection', (reason) => {
