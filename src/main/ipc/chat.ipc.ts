@@ -27,6 +27,7 @@ import { episodeTriggerService } from '../services/episode-trigger.service'
 import { buildLibraryContextBlock, type LibraryChunkForPrompt } from '../llm/library-prompt'
 import { buildSkillContextBlock } from '../llm/skill-prompt'
 import { DEFAULT_SYSTEM_PROMPT } from '../llm/system-prompt'
+import { buildSystemPrompt } from '../llm/system-prompt-builder'
 import { compactService } from '../services/compact.service'
 import { vcrEventBus } from '../services/vcr-event-bus'
 import { getSkillByName } from '../db/queries/skills'
@@ -438,50 +439,36 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
 
   const aiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<{ type: string; text?: string; image?: string; mimeType?: string }> }> = []
 
-  // Build combined system prompt: base + library-context + semantic memory + memory fragments + role prompt
+  // Build combined system prompt via the dedicated builder (extracted Phase 2b1).
+  // Caller (this function) is responsible for computing each block;
+  // the builder handles the fixed-order concatenation only.
   const memoryBlock = buildMemoryBlock()
-  let combinedSystemPrompt = DEFAULT_SYSTEM_PROMPT
-
-  if (libraryContextBlock) {
-    if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
-    combinedSystemPrompt += libraryContextBlock
-  }
-  if (semanticMemoryBlock) {
-    if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
-    combinedSystemPrompt += semanticMemoryBlock
-  }
   const episodeProfileBlock = buildEpisodeProfileBlock(conv?.projectId)
-  if (episodeProfileBlock) {
-    if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
-    combinedSystemPrompt += episodeProfileBlock
-  }
-  if (memoryBlock) {
-    if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
-    combinedSystemPrompt += memoryBlock
-  }
-  if (systemPrompt) {
-    if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
-    combinedSystemPrompt += systemPrompt
-  }
-  // Plan instructions injection — ONLY when explicitly activated (switch ON or /plan)
+  let planBlock: string | null = null
   {
     const isForced = forcedPlanMode.get(conversationId) || planMode
     if (isForced) {
-      const planPromptBlock = buildPlanPromptBlock('forced')
-      if (planPromptBlock) {
-        if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
-        combinedSystemPrompt += planPromptBlock
-      }
+      planBlock = buildPlanPromptBlock('forced')
     }
     // Reset one-shot forced mode after use
     if (forcedPlanMode.get(conversationId)) {
       forcedPlanMode.delete(conversationId)
     }
   }
-  if (skillContextBlock) {
-    if (combinedSystemPrompt) combinedSystemPrompt += '\n\n'
-    combinedSystemPrompt += skillContextBlock
-  }
+
+  const promptResult = buildSystemPrompt({
+    base: DEFAULT_SYSTEM_PROMPT,
+    blocks: {
+      library: libraryContextBlock,
+      semantic: semanticMemoryBlock,
+      profile: episodeProfileBlock,
+      memory: memoryBlock,
+      custom: systemPrompt,
+      plan: planBlock,
+      skill: skillContextBlock,
+    },
+  })
+  const combinedSystemPrompt = promptResult.final
   if (combinedSystemPrompt) {
     aiMessages.push({ role: 'system', content: combinedSystemPrompt })
   }
