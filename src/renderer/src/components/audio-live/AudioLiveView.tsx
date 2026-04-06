@@ -151,15 +151,15 @@ export function AudioLiveView() {
             onValueChange={handleVoiceChange}
             disabled={!selectedPlugin.available}
           >
-            <SelectTrigger className="w-full h-auto py-2.5 rounded-lg">
+            <SelectTrigger className="w-full rounded-lg">
               <MicVocal className="size-4 shrink-0 text-primary" />
               <SelectValue>
                 {(() => {
                   const v = selectedPlugin.voices.find(x => x.id === selectedVoiceId)
                   return v ? (
-                    <span className="flex flex-col items-start text-left min-w-0">
-                      <span className="text-sm font-medium text-foreground truncate">{v.name}</span>
-                      <span className="text-[11px] text-muted-foreground truncate">{v.description}</span>
+                    <span className="truncate text-left">
+                      <span className="text-sm font-semibold text-foreground">{v.name}</span>
+                      <span className="text-xs text-muted-foreground ml-2">{v.description}</span>
                     </span>
                   ) : null
                 })()}
@@ -167,11 +167,9 @@ export function AudioLiveView() {
             </SelectTrigger>
             <SelectContent className="max-h-[320px]">
               {selectedPlugin.voices.map((voice) => (
-                <SelectItem key={voice.id} value={voice.id} className="py-2">
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="text-sm font-medium">{voice.name}</span>
-                    <span className="text-[11px] text-muted-foreground">{voice.description}</span>
-                  </div>
+                <SelectItem key={voice.id} value={voice.id}>
+                  <span className="text-sm font-semibold text-foreground">{voice.name}</span>
+                  <span className="text-xs text-muted-foreground ml-2">{voice.description}</span>
                 </SelectItem>
               ))}
             </SelectContent>
