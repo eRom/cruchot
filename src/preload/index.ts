@@ -712,6 +712,8 @@ const testApi: TestApi | undefined = TEST_MODE
   ? {
       dbSelect: (sql: string): Promise<unknown[]> =>
         ipcRenderer.invoke('test:db-select', sql),
+      seedMessages: (payload) => ipcRenderer.invoke('test:seed-messages', payload),
+      triggerCompact: (payload) => ipcRenderer.invoke('test:trigger-compact', payload),
     }
   : undefined
 

@@ -891,6 +891,32 @@ export interface TestApi {
    * table is not in the READABLE_TABLES whitelist (see test-helpers.ipc.ts).
    */
   dbSelect: (sql: string) => Promise<unknown[]>
+
+  /**
+   * Insert N synthetic messages into a conversation. Used by E2E flow specs
+   * to seed a conversation past the compact threshold without invoking the
+   * LLM. Phase 2b1 Task 5.
+   *
+   * - count is bounded to 1..500 (Zod-validated server-side)
+   * - role is restricted to 'user' | 'assistant'
+   * - content is generated as `Test message N (role)`
+   */
+  seedMessages: (payload: {
+    conversationId: string
+    count: number
+    role: 'user' | 'assistant'
+  }) => Promise<{ inserted: number; ids: string[] }>
+
+  /**
+   * Trigger compactService.fullCompact() directly, bypassing the UI
+   * "Compacter" button. Mirrors the orchestration of compact:run (model
+   * resolution, persistence, llm_costs tracking). The conversation MUST
+   * already have a valid modelId set. Used by 03-compact.spec.ts.
+   * Phase 2b1 Task 5.
+   */
+  triggerCompact: (payload: {
+    conversationId: string
+  }) => Promise<{ tokensBefore: number; tokensAfter: number }>
 }
 
 // L'API exposee au renderer via contextBridge

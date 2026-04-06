@@ -29,6 +29,7 @@
  * `test:get-system-prompt` — each in the commit of the spec that needs it.
  */
 import { ipcMain } from 'electron'
+import { z } from 'zod'
 import { assertTestMode } from '../test-mode'
 import { getSqliteDatabase } from '../db'
 
@@ -88,5 +89,146 @@ export function registerTestHelpers(): void {
     // Stage g: execute the prepared statement (raw better-sqlite3 for ad-hoc SQL)
     const sqlite = getSqliteDatabase()
     return sqlite.prepare(sql).all()
+  })
+
+  // -------------------------------------------------------------------------
+  // test:seed-messages — bulk-insert N synthetic messages into a conversation
+  //
+  // Phase 2b1 Task 5. Used by 03-compact.spec.ts to seed a conversation past
+  // the compact threshold without invoking the LLM.
+  //
+  // Validation: Zod (count 1..500, role enum, conversationId non-empty).
+  // Heavy modules (db queries, schema) are lazy-imported AFTER Zod parsing
+  // so the validation tests don't pull in better-sqlite3 natives.
+  // -------------------------------------------------------------------------
+  const seedMessagesSchema = z.object({
+    conversationId: z.string().min(1).max(100),
+    count: z.number().int().min(1).max(500),
+    role: z.enum(['user', 'assistant'])
+  })
+
+  ipcMain.handle('test:seed-messages', async (_event, payload: unknown) => {
+    assertTestMode()
+
+    const { conversationId, count, role } = seedMessagesSchema.parse(payload)
+
+    // Lazy imports — keep the unit test (which only mocks electron + ../db)
+    // free from native better-sqlite3 / AI SDK transitive loads.
+    const { getConversation } = await import('../db/queries/conversations')
+    const { createMessage } = await import('../db/queries/messages')
+
+    const conv = getConversation(conversationId)
+    if (!conv) {
+      throw new Error(`[test:seed-messages] conversation "${conversationId}" not found`)
+    }
+
+    const insertedIds: string[] = []
+    for (let i = 0; i < count; i++) {
+      const msg = createMessage({
+        conversationId,
+        role,
+        content: `Test message ${i + 1} (${role})`
+      })
+      insertedIds.push(msg.id)
+    }
+
+    return { inserted: count, ids: insertedIds }
+  })
+
+  // -------------------------------------------------------------------------
+  // test:trigger-compact — direct full-compact, bypassing the UI button
+  //
+  // Phase 2b1 Task 5. Mirrors the orchestration of compact:run in
+  // src/main/ipc/compact.ipc.ts (resolve model from conv.modelId, fetch
+  // messages, call compactService.fullCompact, persist boundary + summary,
+  // record llm_costs). Returns { tokensBefore, tokensAfter }.
+  //
+  // The conversation MUST already have a valid modelId set (provider::model),
+  // otherwise this throws — we do not auto-seed a model here, the caller is
+  // responsible (e.g. via test:seed-default-model on Ollama).
+  // -------------------------------------------------------------------------
+  const triggerCompactSchema = z.object({
+    conversationId: z.string().min(1).max(100)
+  })
+
+  const VALID_PROVIDERS = [
+    'openai', 'anthropic', 'google', 'mistral', 'xai', 'deepseek',
+    'qwen', 'perplexity', 'openrouter', 'lmstudio', 'ollama'
+  ] as const
+
+  ipcMain.handle('test:trigger-compact', async (_event, payload: unknown) => {
+    assertTestMode()
+
+    const { conversationId } = triggerCompactSchema.parse(payload)
+
+    // Lazy imports for the same reason as test:seed-messages.
+    const { getConversation, updateConversationCompact } = await import('../db/queries/conversations')
+    const { getMessagesForConversation } = await import('../db/queries/messages')
+    const { compactService } = await import('../services/compact.service')
+    const { getModel } = await import('../llm/router')
+    const { MODELS } = await import('../llm/registry')
+    const { calculateMessageCost } = await import('../llm/cost-calculator')
+    const { createLlmCost } = await import('../db/queries/llm-costs')
+
+    const conv = getConversation(conversationId)
+    if (!conv) {
+      throw new Error(`[test:trigger-compact] conversation "${conversationId}" not found`)
+    }
+    if (!conv.modelId) {
+      throw new Error(`[test:trigger-compact] conversation "${conversationId}" has no modelId set`)
+    }
+
+    const parts = conv.modelId.split('::')
+    if (parts.length !== 2) {
+      throw new Error(`[test:trigger-compact] invalid modelId format: ${conv.modelId}`)
+    }
+    const [providerId, actualModelId] = parts
+
+    if (!VALID_PROVIDERS.includes(providerId as (typeof VALID_PROVIDERS)[number])) {
+      throw new Error(`[test:trigger-compact] invalid provider: ${providerId}`)
+    }
+
+    const model = getModel(providerId, actualModelId)
+    const messages = getMessagesForConversation(conversationId)
+
+    const modelInfo = MODELS.find((m) => m.id === actualModelId)
+    const contextWindow = modelInfo?.contextWindow ?? 200_000
+
+    const result = await compactService.fullCompact(
+      conversationId,
+      messages,
+      model,
+      contextWindow,
+      conv.compactSummary
+    )
+
+    // Find boundary: last summarized message
+    const summarizedMessages = messages.filter(
+      (m) => !result.keptMessages.some((km) => km.id === m.id)
+    )
+    const boundaryId = summarizedMessages.length > 0
+      ? summarizedMessages[summarizedMessages.length - 1].id
+      : conv.compactBoundaryId ?? messages[0]?.id ?? ''
+
+    updateConversationCompact(conversationId, result.summary, boundaryId)
+
+    if (result.usage) {
+      const cost = calculateMessageCost(actualModelId, result.usage.inputTokens, result.usage.outputTokens)
+      createLlmCost({
+        type: 'compact',
+        conversationId,
+        modelId: actualModelId,
+        providerId,
+        tokensIn: result.usage.inputTokens,
+        tokensOut: result.usage.outputTokens,
+        cost,
+        metadata: { tokensBefore: result.tokensBefore, tokensAfter: result.tokensAfter }
+      })
+    }
+
+    return {
+      tokensBefore: result.tokensBefore,
+      tokensAfter: result.tokensAfter
+    }
   })
 }

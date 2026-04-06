@@ -145,6 +145,70 @@ describe('test-helpers.ipc — test:db-select pipeline', () => {
   })
 })
 
+describe('test-helpers.ipc — test:seed-messages handler', () => {
+  let handler: ((event: unknown, payload: unknown) => Promise<unknown>) | undefined
+
+  beforeAll(() => {
+    // The handler was registered by the test:db-select beforeAll above.
+    // Re-grab it from the mocked ipcMain map.
+    handler = _invokeHandlers.get('test:seed-messages') as typeof handler
+  })
+
+  afterAll(() => {
+    _invokeHandlers.delete('test:seed-messages')
+  })
+
+  it('handler is registered', () => {
+    expect(handler).toBeDefined()
+  })
+
+  it('rejects invalid count (negative)', async () => {
+    await expect(
+      handler!(null, { conversationId: 'c1', count: -1, role: 'user' })
+    ).rejects.toThrow()
+  })
+
+  it('rejects invalid count (over 500)', async () => {
+    await expect(
+      handler!(null, { conversationId: 'c1', count: 501, role: 'user' })
+    ).rejects.toThrow()
+  })
+
+  it('rejects invalid role', async () => {
+    await expect(
+      handler!(null, { conversationId: 'c1', count: 5, role: 'system' })
+    ).rejects.toThrow()
+  })
+
+  it('rejects missing conversationId', async () => {
+    await expect(handler!(null, { count: 5, role: 'user' })).rejects.toThrow()
+  })
+})
+
+describe('test-helpers.ipc — test:trigger-compact handler', () => {
+  let handler: ((event: unknown, payload: unknown) => Promise<unknown>) | undefined
+
+  beforeAll(() => {
+    handler = _invokeHandlers.get('test:trigger-compact') as typeof handler
+  })
+
+  afterAll(() => {
+    _invokeHandlers.delete('test:trigger-compact')
+  })
+
+  it('handler is registered', () => {
+    expect(handler).toBeDefined()
+  })
+
+  it('rejects missing conversationId', async () => {
+    await expect(handler!(null, {})).rejects.toThrow()
+  })
+
+  it('rejects non-string conversationId', async () => {
+    await expect(handler!(null, { conversationId: 42 })).rejects.toThrow()
+  })
+})
+
 describe('test-helpers.ipc — assertTestMode guard', () => {
   // Note: vi.resetModules() voids module cache but vitest preserves the
   // vi.mock() registrations from the top of the file across resets, so the
