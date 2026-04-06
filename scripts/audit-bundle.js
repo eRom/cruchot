@@ -125,6 +125,11 @@ const FILENAME_PATTERNS = [
   { id: 'sourcemap-file', severity: 'high', regex: /\.(js|css|html)\.map$/, desc: 'Standalone sourcemap file' },
   { id: 'private-id', severity: 'critical', regex: /(^|\/)id_(rsa|ed25519|ecdsa|dsa)(\.|$)/, desc: 'SSH private key' },
   { id: 'history-file', severity: 'high', regex: /(^|\/)\.(bash_history|zsh_history)$/, desc: 'Shell history file' },
+  // Phase 2a — must NEVER appear in prod bundles. It is dynamic-imported
+  // from index.ts behind a CRUCHOT_TEST_MODE gate; in prod the gate is
+  // false and the chunk should be tree-shaken away by electron-vite.
+  // If this rule fires, the gate broke and tests can be run against prod.
+  { id: 'test-helpers-leak', severity: 'critical', regex: /test-helpers\.ipc(?:[-.][\w-]+)?\.js$/, desc: 'Test-only IPC handler leaked into the bundle' },
 ]
 
 // Extensions whose CONTENT we scan with TEXT_PATTERNS
@@ -269,10 +274,14 @@ function isInNodeModules(relPath) {
   return relPath.includes('node_modules/')
 }
 
-function scanFile(fullPath, relPath, findings) {
+function scanFile(fullPath, relPath, findings, mode) {
   // Filename pattern checks (skip sourcemap-file inside node_modules)
   for (const pat of FILENAME_PATTERNS) {
     if (pat.id === 'sourcemap-file' && isInNodeModules(relPath)) continue
+    // test-helpers-leak fires only when auditing a packaged bundle
+    // (asar mode). Local dev builds (dir mode) legitimately contain the
+    // chunk because electron-vite emits it from the dynamic import.
+    if (pat.id === 'test-helpers-leak' && mode === 'dir') continue
     if (pat.regex.test(relPath)) {
       findings.push({
         rule: pat.id,
@@ -415,7 +424,7 @@ function main() {
     let fileCount = 0
     walkDir(walkRoot, (fullPath, relPath) => {
       fileCount++
-      scanFile(fullPath, relPath, findings)
+      scanFile(fullPath, relPath, findings, resolved.type)
     })
 
     checkStructure(walkRoot, findings, resolved.preloadPrefix)
