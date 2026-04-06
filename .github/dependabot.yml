@@ -1,0 +1,66 @@
+# Dependabot configuration — version updates planifies
+# Note: les SECURITY updates (CVE GHSA) sont actives separement dans
+# Settings > Code security > Dependabot security updates (toggle 1-click).
+# Ce fichier ne configure que les version updates routiniers.
+#
+# Voir audit/security/POLICY.md pour les SLA par severite.
+
+version: 2
+updates:
+  # ── npm dependencies ─────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "automated"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    # Group updates to avoid PR spam — patch/minor go in one PR each
+    groups:
+      patch-updates:
+        update-types:
+          - "patch"
+      minor-updates:
+        update-types:
+          - "minor"
+      # Dev tooling grouped together
+      dev-tooling:
+        dependency-type: "development"
+        update-types:
+          - "patch"
+          - "minor"
+      # Major updates stay individual (need manual review per dep)
+    ignore:
+      # lodash@4.17.23 via electron-builder -> @malept/flatpak-bundler.
+      # Dev-only, not bundled in shipped app. Accepted in S65 audit.
+      # Watch for @malept/flatpak-bundler successor or alternative.
+      - dependency-name: "lodash"
+      # esbuild via drizzle-kit -> @esbuild-kit/esm-loader.
+      # Dev-only dev server CSRF (not exposed in our build pipeline).
+      # Accepted in S65 audit. Re-evaluate if drizzle-kit bumps esbuild >= 0.25.
+      - dependency-name: "esbuild"
+        versions: ["<0.25.0"]
+      - dependency-name: "@esbuild-kit/core-utils"
+      - dependency-name: "@esbuild-kit/esm-loader"
+
+  # ── GitHub Actions ───────────────────────────────────────
+  # Keep CI/CD workflows up to date (action versions like actions/checkout@v4)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    labels:
+      - "ci"
+      - "automated"
+    commit-message:
+      prefix: "ci"
