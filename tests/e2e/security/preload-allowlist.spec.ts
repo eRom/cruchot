@@ -2,8 +2,8 @@
 import { test, expect } from '../fixtures/electron-app'
 
 test.describe('preload allowlist', () => {
-  test('window.api exposes the locked-down list of methods', async ({ window }) => {
-    const exposedKeys = await window.evaluate(() =>
+  test('window.api exposes the locked-down list of methods', async ({ window: page }) => {
+    const exposedKeys = await page.evaluate(() =>
       Object.keys((window as { api?: Record<string, unknown> }).api ?? {}).sort()
     )
 
@@ -18,15 +18,15 @@ test.describe('preload allowlist', () => {
     expect(exposedKeys.join('\n') + '\n').toMatchSnapshot('window-api-keys.txt')
   })
 
-  test('ipcRenderer is NOT directly exposed on window', async ({ window }) => {
-    const hasIpcRenderer = await window.evaluate(
+  test('ipcRenderer is NOT directly exposed on window', async ({ window: page }) => {
+    const hasIpcRenderer = await page.evaluate(
       () => 'ipcRenderer' in window
     )
     expect(hasIpcRenderer).toBe(false)
   })
 
-  test('window.api has at least one method (sanity)', async ({ window }) => {
-    const count = await window.evaluate(
+  test('window.api has at least one method (sanity)', async ({ window: page }) => {
+    const count = await page.evaluate(
       () => Object.keys((window as { api?: Record<string, unknown> }).api ?? {}).length
     )
     expect(count).toBeGreaterThan(200) // currently 295; floor catches catastrophic preload wipe-out

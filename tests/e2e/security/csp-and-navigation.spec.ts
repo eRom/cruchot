@@ -12,9 +12,9 @@ test.describe('CSP and navigation hardening', () => {
    * and the shell.openExternal path (which fires for trusted domains).
    */
   test('window.open with non-http URL returns null (setWindowOpenHandler deny)', async ({
-    window,
+    window: page,
   }) => {
-    const isDenied = await window.evaluate(() => {
+    const isDenied = await page.evaluate(() => {
       const opened = window.open('javascript:void(0)', '_blank')
       return opened === null
     })
@@ -30,18 +30,18 @@ test.describe('CSP and navigation hardening', () => {
    * dialog.showMessageBox and shell.openExternal side effects.
    */
   test('no new BrowserWindow created when window.open is called', async ({
-    window,
+    window: page,
     electronApp,
   }) => {
     const before = electronApp.windows().length
-    await window.evaluate(() => {
+    await page.evaluate(() => {
       // Same safe URL as Test 1 — non-http(s) to avoid dialog/shell side effects.
       // window.open() returns null when denied; it does NOT throw, so no try/catch needed.
       window.open('javascript:void(0)', '_blank')
     })
     // Allow one event-loop cycle for Electron to process the deny decision
     // (no deterministic event to await — increase if CI proves flaky)
-    await window.waitForTimeout(500)
+    await page.waitForTimeout(500)
     const after = electronApp.windows().length
     expect(after).toBe(before)
   })
@@ -54,20 +54,20 @@ test.describe('CSP and navigation hardening', () => {
    * Note: window.ts will-navigate does NOT call dialog.showMessageBox, so
    * https://example.com is safe to use here (unlike for window.open above).
    */
-  test('will-navigate guard blocks external URL changes', async ({ window }) => {
-    const initialURL = window.url()
-    await window.evaluate(() => {
+  test('will-navigate guard blocks external URL changes', async ({ window: page }) => {
+    const initialURL = page.url()
+    await page.evaluate(() => {
       // Assigning to location.href does NOT throw when blocked by will-navigate;
       // the prevention happens asynchronously in the main process.
       window.location.href = 'https://example.com'
     })
     // Allow one event-loop cycle for the will-navigate guard to fire
     // (no deterministic event to await — increase if CI proves flaky)
-    await window.waitForTimeout(500)
+    await page.waitForTimeout(500)
     // The URL should not have changed to example.com — the navigation is blocked
-    expect(window.url()).not.toContain('example.com')
+    expect(page.url()).not.toContain('example.com')
     // Sanity: the URL is still the initial (file:// or dev URL)
-    expect(window.url()).toBe(initialURL)
+    expect(page.url()).toBe(initialURL)
   })
 
   /**
@@ -80,8 +80,8 @@ test.describe('CSP and navigation hardening', () => {
    * but is currently skipped due to the meta-vs-header limitation. See
    * _internal/specs/2026-04-06-csp-header-hardening.md.)
    */
-  test('CSP meta tag is present in the renderer document', async ({ window }) => {
-    const cspContent = await window.evaluate(() => {
+  test('CSP meta tag is present in the renderer document', async ({ window: page }) => {
+    const cspContent = await page.evaluate(() => {
       const meta = document.querySelector(
         'meta[http-equiv="Content-Security-Policy"]'
       )

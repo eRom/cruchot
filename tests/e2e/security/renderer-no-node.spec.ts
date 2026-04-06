@@ -29,8 +29,8 @@ const FORBIDDEN_GLOBALS = [
 
 test.describe('renderer process has NO Node.js access', () => {
   for (const name of FORBIDDEN_GLOBALS) {
-    test(`global "${name}" is undefined in renderer`, async ({ window }) => {
-      const typeofValue = await window.evaluate((g) => {
+    test(`global "${name}" is undefined in renderer`, async ({ window: page }) => {
+      const typeofValue = await page.evaluate((g) => {
         return typeof (window as unknown as Record<string, unknown>)[g]
       }, name)
       expect(typeofValue).toBe('undefined')

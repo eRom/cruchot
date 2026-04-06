@@ -33,8 +33,8 @@ test.describe('custom protocols', () => {
    * See _internal/specs/2026-04-06-csp-header-hardening.md for the
    * eval-specific limitation.
    */
-  test('fetch to external HTTPS URL is rejected by CSP', async ({ window }) => {
-    const result = await window.evaluate(async () => {
+  test('fetch to external HTTPS URL is rejected by CSP', async ({ window: page }) => {
+    const result = await page.evaluate(async () => {
       try {
         const res = await fetch('https://external.evil.com/data.json', {
           // 5s timeout to avoid hanging if the URL somehow resolves slowly

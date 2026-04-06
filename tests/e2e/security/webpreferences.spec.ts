@@ -8,9 +8,9 @@ test.describe('webPreferences hardening (behavioral)', () => {
    * three core hardening flags simultaneously.
    */
   test('renderer has no require (sandbox + nodeIntegration:false + contextIsolation)', async ({
-    window,
+    window: page,
   }) => {
-    const t = await window.evaluate(() => typeof (window as { require?: unknown }).require)
+    const t = await page.evaluate(() => typeof (window as { require?: unknown }).require)
     expect(t).toBe('undefined')
   })
 
@@ -37,12 +37,12 @@ test.describe('webPreferences hardening (behavioral)', () => {
    * <a target="_blank"> and verify that no new BrowserWindow appears.
    */
   test('middle-click on a link does not open a new window (Auxclick disabled, audit S66)', async ({
-    window,
+    window: page,
     electronApp,
   }) => {
     const before = electronApp.windows().length
 
-    await window.evaluate(() => {
+    await page.evaluate(() => {
       const a = document.createElement('a')
       a.href = 'https://example.com'
       a.target = '_blank'
@@ -58,7 +58,7 @@ test.describe('webPreferences hardening (behavioral)', () => {
       a.dispatchEvent(evt)
     })
 
-    await window.waitForTimeout(500)
+    await page.waitForTimeout(500)
     expect(electronApp.windows().length).toBe(before)
   })
 
@@ -68,8 +68,8 @@ test.describe('webPreferences hardening (behavioral)', () => {
    * with the parent), so contentDocument is non-null — that's NOT a useful check.
    * Instead, we verify the iframe's location.href did NOT become example.com.
    */
-  test('cross-origin iframe is blocked (CSP frame-src none)', async ({ window }) => {
-    const result = await window.evaluate(async () => {
+  test('cross-origin iframe is blocked (CSP frame-src none)', async ({ window: page }) => {
+    const result = await page.evaluate(async () => {
       return new Promise<{ navigated: boolean; href: string }>((resolve) => {
         const iframe = document.createElement('iframe')
         iframe.src = 'https://example.com'
@@ -118,8 +118,8 @@ test.describe('webPreferences hardening (behavioral)', () => {
    *      may be affected)
    *   3. Remove the test.skip() below and re-run the suite
    */
-  test.skip('eval() is blocked by CSP (no unsafe-eval)', async ({ window }) => {
-    const blocked = await window.evaluate(() => {
+  test.skip('eval() is blocked by CSP (no unsafe-eval)', async ({ window: page }) => {
+    const blocked = await page.evaluate(() => {
       try {
         // eslint-disable-next-line no-eval
         eval('1 + 1')
