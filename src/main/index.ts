@@ -19,6 +19,16 @@ import { pathToFileURL } from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
 
+import { TEST_MODE, TEST_USERDATA } from './test-mode'
+
+// E2E test isolation: when TEST_MODE is set, redirect userData to a temp dir
+// so the test run gets its own SQLite DB, Qdrant storage, settings, etc.
+// Must run BEFORE protocol.registerSchemesAsPrivileged() and any code that
+// reads app.getPath('userData').
+if (TEST_MODE && TEST_USERDATA) {
+  app.setPath('userData', TEST_USERDATA)
+}
+
 process.on('unhandledRejection', (reason) => {
   console.error('[UnhandledRejection]', reason)
 })
