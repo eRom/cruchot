@@ -15,7 +15,7 @@ Specificites Cruchot vs `/release` global :
 - `npm audit --audit-level=high` (pas critical) + tolere les exceptions dev-only documentees dans `audit/security/POLICY.md`
 - Lance `npm run lint:lockfile` en pre-check
 - Filtre le RUN_ID GitHub Actions par `headSha` (fiable) au lieu de `--limit=1` (fragile si plusieurs releases s'enchainent)
-- `gh run watch --interval 30 --exit-status` (15x moins de polls qu'avec le defaut 2s)
+- `gh run watch --interval 60 --exit-status` (30x moins de polls qu'avec le defaut 2s, ~7 polls pour un workflow de 7 min)
 - **Publie le draft via `gh release edit --draft=false`** : malgre `--publish always`, electron-builder cree TOUJOURS la release en mode draft sur GitHub. Sans cette etape, la release reste invisible aux utilisateurs et l'auto-updater ne la voit pas.
 
 ---
@@ -208,17 +208,17 @@ RUN_ID=$(gh run list --workflow=release.yml \
 
 Si toujours vide apres le retry : STOP avec message "Le run n'est pas apparu dans gh run list. Verifier manuellement : https://github.com/eRom/cruchot/actions"
 
-### 6.3 Watch avec polling 30s (15x moins de requetes qu'au defaut)
+### 6.3 Watch avec polling 60s (30x moins de requetes qu'au defaut)
 ```bash
 echo ""
 echo "Workflow release.yml en cours (RUN_ID=$RUN_ID)..."
 echo "Suivre en direct : https://github.com/eRom/cruchot/actions/runs/$RUN_ID"
 echo ""
 
-gh run watch "$RUN_ID" --interval 30 --exit-status
+gh run watch "$RUN_ID" --interval 60 --exit-status
 ```
 
-**Pourquoi 30s** : `gh run watch` poll par defaut toutes les **2 secondes**. Pour un workflow Cruchot qui prend ~15-30 min sur 3 OS en matrix + le job security-gate, c'est ~900 requetes pour rien. A 30s on tombe a ~60 polls — meme experience utilisateur, ~15x moins de rate limit consume.
+**Pourquoi 60s** : `gh run watch` poll par defaut toutes les **2 secondes**. Pour un workflow Cruchot qui prend ~7 min en matrix 3 OS + security-gate (release v0.9.2 mesuree : 6m51s), c'est ~210 requetes au defaut. A 60s on tombe a ~7 polls — meme experience utilisateur (l'utilisateur ne percoit pas la difference entre 2s et 60s en regardant un spinner), ~30x moins de rate limit consume. Si la CI grossit a 15 min un jour (gros refactor + plus de tests E2E), ca donnera ~15 polls — toujours raisonnable.
 
 **`--exit-status`** : fait que `gh run watch` retourne un exit code non-zero si la CI echoue, ce qui simplifie le branchement OK/KO de l'etape 8.
 
