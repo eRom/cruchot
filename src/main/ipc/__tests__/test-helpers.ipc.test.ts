@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { vi } from 'vitest'
 
 // We must set TEST_MODE BEFORE importing the module under test, so that
 // assertTestMode() inside the handler doesn't throw on every call.
@@ -86,13 +85,30 @@ describe('test-helpers.ipc — test:db-select pipeline', () => {
     expect(handler).toBeDefined()
   })
 
-  it('rejects non-string sql with TypeError', async () => {
+  it('rejects non-string sql', async () => {
     await expect(handler!(null, 42)).rejects.toThrow(/string/)
   })
 
   it('rejects sql longer than 1000 chars', async () => {
     const long = 'SELECT * FROM conversations WHERE title = "' + 'a'.repeat(1000) + '"'
     await expect(handler!(null, long)).rejects.toThrow(/length/)
+  })
+
+  it('accepts sql exactly at the 1000-char boundary (passes length check)', async () => {
+    // Build a query that has exactly 1000 chars and is structurally valid.
+    // We pad the WHERE clause with a long but legal LIKE pattern.
+    // We assert that the length stage does NOT reject — but the query itself
+    // may still fail on whitelist or downstream stages depending on padding.
+    // Goal: pin the contract that 1000 chars is valid, 1001 is not.
+    const base = 'SELECT id FROM conversations WHERE id LIKE "'
+    const closing = '"'
+    const padLen = 1000 - base.length - closing.length
+    const sql = base + 'a'.repeat(padLen) + closing
+    expect(sql.length).toBe(1000)
+    // Should NOT throw for length reasons. The query reaches the fake DB,
+    // which returns the conversations array (no rows match the LIKE in real
+    // SQL, but the fake doesn't filter — we only care about no throw here).
+    await expect(handler!(null, sql)).resolves.toBeDefined()
   })
 
   it('rejects sql containing forbidden token: semicolon', async () => {
@@ -130,6 +146,11 @@ describe('test-helpers.ipc — test:db-select pipeline', () => {
 })
 
 describe('test-helpers.ipc — assertTestMode guard', () => {
+  // Note: vi.resetModules() voids module cache but vitest preserves the
+  // vi.mock() registrations from the top of the file across resets, so the
+  // fresh import below still resolves 'electron' against our mock. If you
+  // expand this test to verify any code path AFTER assertTestMode() throws,
+  // you may need to re-establish the mocks explicitly.
   it('throws if registered without TEST_MODE', async () => {
     // Remove TEST_MODE, force module re-import, register handler, then call it
     delete process.env.CRUCHOT_TEST_MODE

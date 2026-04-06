@@ -15,7 +15,7 @@
  *    7-stage validation pipeline:
  *      a. assertTestMode()
  *      b. typeof sql === 'string'
- *      c. sql.length < MAX_SQL_LENGTH
+ *      c. 0 < sql.length <= MAX_SQL_LENGTH
  *      d. !FORBIDDEN_TOKENS.test(sql)
  *      e. SAFE_SELECT_RE matches and extracts table name
  *      f. table is in READABLE_TABLES whitelist
