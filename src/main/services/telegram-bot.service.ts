@@ -840,11 +840,15 @@ class TelegramBotService extends EventEmitter {
         return part
       }
       // Regular text — escape MarkdownV2 special chars per Telegram spec:
-      // _ * [ ] ( ) ~ ` > # + - = | { } . !
-      // CodeQL alert #3: backtick was missing — orphan backticks in regular
-      // text (not balanced as a code block) would not be escaped, causing
-      // partial code-block rendering or formatting bypass (S67).
-      return part.replace(/([_*\[\]()~`>#+=|{}.!-])/g, '\\$1')
+      // \ _ * [ ] ( ) ~ ` > # + - = | { } . !
+      // The backslash MUST be escaped FIRST, otherwise the escape characters
+      // we add for the other chars would themselves get re-escaped on a
+      // second pass and double up.
+      // History: alert #3 added the backtick (S67 first CodeQL pass);
+      // alert #6 added the backslash (S67 second CodeQL pass).
+      return part
+        .replace(/\\/g, '\\\\')
+        .replace(/([_*\[\]()~`>#+=|{}.!-])/g, '\\$1')
     }).join('')
   }
 

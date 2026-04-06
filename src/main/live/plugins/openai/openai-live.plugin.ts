@@ -210,16 +210,20 @@ class OpenAILivePlugin implements LivePlugin {
         const callId = event.call_id as string
         const name = event.name as string
         const argsStr = (event.arguments as string) || '{}'
-        // CodeQL alerts #4, #5: sanitize WS-controlled `name` before logging
-        // to prevent log injection (newlines, ANSI escapes, control chars).
+        // CodeQL alerts #4, #5 (S67/1st pass) + #7, #8 (S67/2nd pass):
+        // sanitize WS-controlled `name` before logging to prevent log
+        // injection. Pass `safeName` as a SEPARATE console.log arg rather
+        // than interpolating it into a template literal — this avoids
+        // CodeQL's `js/format-string-injection` taint propagation through
+        // template literals (which it cannot model around our sanitizer).
         const safeName = sanitizeForLog(name)
         try {
           const args = JSON.parse(argsStr)
-          console.log(`[OpenAIPlugin] Tool call: ${safeName}`, JSON.stringify(args))
+          console.log('[OpenAIPlugin] Tool call:', safeName, JSON.stringify(args))
           this.onToolCall(callId, name, args)
         } catch (err) {
-          console.error(`[OpenAIPlugin] Failed to parse tool args for ${safeName}:`, err)
-          this.onError(`Invalid tool call arguments for ${safeName}`)
+          console.error('[OpenAIPlugin] Failed to parse tool args for', safeName, err)
+          this.onError('Invalid tool call arguments for ' + safeName)
         }
         break
       }
