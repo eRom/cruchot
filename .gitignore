@@ -45,3 +45,7 @@ pop.txt
 feature-research-*.md
 docs/
 improvement-research-s52.md
+
+# Playwright
+playwright-report/
+test-results/

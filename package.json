@@ -16,6 +16,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:security": "playwright test tests/e2e/security/",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "dist": "electron-vite build && electron-builder",
@@ -92,6 +95,7 @@
     "lodash-es": "^4.18.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/better-sqlite3": "^7.6.12",
     "@types/dompurify": "^3.0.5",
     "@types/katex": "^0.16.8",
@@ -106,6 +110,7 @@
     "drizzle-kit": "^0.31.9",
     "electron": "^40.8.5",
     "electron-builder": "^26.8.1",
+    "electron-playwright-helpers": "^2.1.0",
     "electron-vite": "^5.0.0",
     "lockfile-lint": "^5.0.0",
     "react": "^19.0.0",
