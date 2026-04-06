@@ -5,7 +5,21 @@ import type {
   LiveCommandResult,
   LiveStatus,
   PluginToolDeclaration,
+  VoiceOption,
 } from '../../live-plugin.interface'
+
+const OPENAI_VOICES: VoiceOption[] = [
+  { id: 'marin', name: 'Marin', description: 'Naturelle, haute qualite, recommandee pour production' },
+  { id: 'cedar', name: 'Cedar', description: 'Ton naturel et professionnel, recommandee' },
+  { id: 'alloy', name: 'Alloy', description: 'Neutre et equilibree, polyvalente' },
+  { id: 'ash', name: 'Ash', description: 'Claire et precise, ideale pour l\'expressivite' },
+  { id: 'ballad', name: 'Ballad', description: 'Melodique et fluide, touche emotive' },
+  { id: 'coral', name: 'Coral', description: 'Chaleureuse et amicale' },
+  { id: 'echo', name: 'Echo', description: 'Resonante et profonde' },
+  { id: 'sage', name: 'Sage', description: 'Calme et reflechie' },
+  { id: 'shimmer', name: 'Shimmer', description: 'Lumineuse et energique' },
+  { id: 'verse', name: 'Verse', description: 'Versatile et expressive' },
+]
 import { convertToolsToOpenAI, OPENAI_PLUGIN_TOOLS } from './openai-live-tools'
 
 // Audio resampling 16kHz -> 24kHz
@@ -160,6 +174,10 @@ class OpenAILivePlugin implements LivePlugin {
 
   getPluginTools(): PluginToolDeclaration[] {
     return OPENAI_PLUGIN_TOOLS
+  }
+
+  getAvailableVoices(): VoiceOption[] {
+    return OPENAI_VOICES
   }
 
   private handleMessage(event: Record<string, unknown>): void {

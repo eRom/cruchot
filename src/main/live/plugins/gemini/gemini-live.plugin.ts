@@ -1,5 +1,16 @@
-import type { LivePlugin, LivePluginConfig, LiveCommandResult, LiveStatus, PluginToolDeclaration, CoreToolDeclaration } from '../../live-plugin.interface'
+import type { LivePlugin, LivePluginConfig, LiveCommandResult, LiveStatus, PluginToolDeclaration, CoreToolDeclaration, VoiceOption } from '../../live-plugin.interface'
 import { GEMINI_PLUGIN_TOOLS } from './gemini-live-tools'
+
+const GEMINI_VOICES: VoiceOption[] = [
+  { id: 'Aoede', name: 'Aoede', description: 'Melodieuse et poetique, inspiree de la muse grecque' },
+  { id: 'Puck', name: 'Puck', description: 'Energique et ludique, ideale pour interactions dynamiques' },
+  { id: 'Charon', name: 'Charon', description: 'Grave et serieuse, ton profond pour sujets formels' },
+  { id: 'Kore', name: 'Kore', description: 'Douce et feminine, naturelle pour conversations fluides' },
+  { id: 'Fenrir', name: 'Fenrir', description: 'Puissante et intense, presence marquee' },
+  { id: 'Leda', name: 'Leda', description: 'Claire et engageante, polyvalente' },
+  { id: 'Orus', name: 'Orus', description: 'Neutre et professionnelle, adaptee aux agents vocaux' },
+  { id: 'Zephyr', name: 'Zephyr', description: 'Legere et aerienne, fluide pour dialogues naturels' },
+]
 
 const SCREEN_SHARE_PROMPT = `
 ### Partage d'écran (request_screenshot, pause_screen_share, resume_screen_share)
@@ -160,6 +171,10 @@ class GeminiLivePlugin implements LivePlugin {
 
   getPluginTools(): PluginToolDeclaration[] {
     return GEMINI_PLUGIN_TOOLS
+  }
+
+  getAvailableVoices(): VoiceOption[] {
+    return GEMINI_VOICES
   }
 
   private handleMessage(message: any) {

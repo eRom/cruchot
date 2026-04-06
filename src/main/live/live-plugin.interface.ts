@@ -40,6 +40,12 @@ export interface CoreToolDeclaration {
 
 export type PluginToolDeclaration = CoreToolDeclaration
 
+export interface VoiceOption {
+  id: string
+  name: string
+  description: string
+}
+
 export interface LivePluginConfig {
   apiKey: string
   systemPrompt: string
@@ -73,6 +79,9 @@ export interface LivePlugin {
   // Plugin-specific tools
   getPluginTools(): PluginToolDeclaration[]
 
+  // Voices supported by this plugin's TTS engine
+  getAvailableVoices(): VoiceOption[]
+
   // Callbacks — injected by Engine before connect()
   onAudio: (base64: string) => void
   onToolCall: (id: string, name: string, args: Record<string, unknown>) => void
@@ -87,4 +96,5 @@ export interface AvailablePlugin {
   modelName: string
   available: boolean
   supportsScreenShare: boolean
+  voices: VoiceOption[]
 }

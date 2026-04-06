@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AudioLines } from 'lucide-react'
 import { useSettingsStore } from '@/stores/settings.store'
 import { toast } from 'sonner'
@@ -9,13 +9,25 @@ const DEFAULT_PROMPT = `- Communication en temps réel via audio (live)\n- Langu
 export function AudioLiveView() {
   const liveModelId = useSettingsStore((s) => s.liveModelId) ?? 'gemini-3.1-flash-live-preview'
   const liveIdentityPrompt = useSettingsStore((s) => s.liveIdentityPrompt) ?? DEFAULT_PROMPT
+  const liveVoices = useSettingsStore((s) => s.liveVoices)
   const setLiveModelId = useSettingsStore((s) => s.setLiveModelId)
   const setLiveIdentityPrompt = useSettingsStore((s) => s.setLiveIdentityPrompt)
+  const setLiveVoice = useSettingsStore((s) => s.setLiveVoice)
   const [plugins, setPlugins] = useState<AvailablePlugin[]>([])
 
   useEffect(() => {
     window.api.liveGetPlugins().then(setPlugins).catch(() => {})
   }, [])
+
+  // Plugin currently selected as the active Live model
+  const selectedPlugin = useMemo(
+    () => plugins.find((p) => liveModelId?.startsWith(p.providerId)) ?? null,
+    [plugins, liveModelId]
+  )
+
+  const selectedVoiceId = selectedPlugin
+    ? (liveVoices[selectedPlugin.providerId] ?? selectedPlugin.voices[0]?.id ?? '')
+    : ''
 
   const handleModelChange = useCallback((providerId: string) => {
     setLiveModelId(`${providerId}::live`)
@@ -25,6 +37,12 @@ export function AudioLiveView() {
   const handlePromptChange = useCallback((value: string) => {
     setLiveIdentityPrompt(value)
   }, [setLiveIdentityPrompt])
+
+  const handleVoiceChange = useCallback((voiceId: string) => {
+    if (!selectedPlugin) return
+    setLiveVoice(selectedPlugin.providerId, voiceId)
+    toast.success('Voix mise a jour — effet a la prochaine connexion')
+  }, [selectedPlugin, setLiveVoice])
 
   return (
     <div className="mx-auto max-w-2xl p-6 space-y-6">
@@ -78,6 +96,33 @@ export function AudioLiveView() {
           ))}
         </div>
       </div>
+
+      {/* Voice selector */}
+      {selectedPlugin && selectedPlugin.voices.length > 0 && (
+        <div className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
+          <div>
+            <p className="text-sm font-medium text-foreground">Voix</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Voix de l'agent vocal pour {selectedPlugin.modelName}
+            </p>
+          </div>
+          <select
+            value={selectedVoiceId}
+            onChange={(e) => handleVoiceChange(e.target.value)}
+            disabled={!selectedPlugin.available}
+            className="w-full rounded-lg border border-border/40 bg-background px-3 py-2 text-sm text-foreground focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/30 disabled:opacity-50"
+          >
+            {selectedPlugin.voices.map((voice) => (
+              <option key={voice.id} value={voice.id}>
+                {voice.name} — {voice.description}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-muted-foreground">
+            Le changement de voix s'applique a la prochaine connexion Live.
+          </p>
+        </div>
+      )}
 
       {/* Identity prompt */}
       <div className="rounded-xl border border-border/60 bg-card p-4 space-y-3">

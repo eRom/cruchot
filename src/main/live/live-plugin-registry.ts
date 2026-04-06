@@ -30,6 +30,7 @@ class LivePluginRegistry {
         modelName: this.getModelName(plugin.providerId),
         available,
         supportsScreenShare: plugin.supportsScreenShare(),
+        voices: plugin.getAvailableVoices(),
       })
     }
     return result

@@ -215,6 +215,8 @@ export function registerAllIpcHandlers(): void {
     // Live audio
     'multi-llm:live-model-id',
     'multi-llm:live-identity-prompt',
+    'multi-llm:live-voice-gemini',
+    'multi-llm:live-voice-openai',
   ])
 
   function isSettingKeyAllowed(key: string): boolean {

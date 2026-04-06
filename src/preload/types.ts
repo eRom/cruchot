@@ -1502,11 +1502,18 @@ export interface ScreenSource {
   type: 'screen' | 'window'
 }
 
+export interface VoiceOption {
+  id: string
+  name: string
+  description: string
+}
+
 export interface AvailablePlugin {
   providerId: string
   displayName: string
   modelName: string
   available: boolean
   supportsScreenShare: boolean
+  voices: VoiceOption[]
 }
 

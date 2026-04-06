@@ -1,9 +1,12 @@
 import { type BrowserWindow } from 'electron'
+import { eq } from 'drizzle-orm'
 import type { LivePlugin, LiveStatus, LiveCommandResult, LiveCommand } from './live-plugin.interface'
 import { livePluginRegistry } from './live-plugin-registry'
 import { buildCorePrompt } from './live-core-prompt'
 import { CORE_LIVE_TOOLS } from './live-core-tools'
 import { liveMemoryService } from '../services/live-memory.service'
+import { getDatabase } from '../db'
+import { settings } from '../db/schema'
 
 class LiveEngineService {
   private activePlugin: LivePlugin | null = null
@@ -108,6 +111,9 @@ class LiveEngineService {
     // Build system prompt
     const systemPrompt = await buildCorePrompt()
 
+    // Read user-selected voice for this plugin
+    const voice = this.readVoiceSetting(plugin.providerId)
+
     try {
       liveMemoryService.startSession(plugin.providerId)
       this.turnCounter = 0
@@ -118,6 +124,7 @@ class LiveEngineService {
         apiKey,
         systemPrompt,
         coreTools: CORE_LIVE_TOOLS,
+        voice,
       })
 
       this.resetIdleTimer()
@@ -282,6 +289,18 @@ class LiveEngineService {
     } catch (err: any) {
       console.error('[LiveEngine] recall_memory error:', err.message)
       this.activePlugin?.sendToolResponse(id, name, { success: false, error: 'Erreur de recherche memoire' })
+    }
+  }
+
+  // ── Settings ─────────────────────────────────
+  private readVoiceSetting(providerId: string): string | undefined {
+    try {
+      const db = getDatabase()
+      const row = db.select().from(settings)
+        .where(eq(settings.key, `multi-llm:live-voice-${providerId}`)).get()
+      return row?.value || undefined
+    } catch {
+      return undefined
     }
   }
 

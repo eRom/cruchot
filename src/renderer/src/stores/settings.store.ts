@@ -30,6 +30,7 @@ interface SettingsState {
   yoloMode: boolean
   liveModelId: string
   liveIdentityPrompt: string
+  liveVoices: Record<string, string>
   hasShownScreenShareNotice: boolean
 
   setDefaultModelId: (modelId: string) => void
@@ -56,6 +57,7 @@ interface SettingsState {
   setYoloMode: (value: boolean) => void
   setLiveModelId: (modelId: string) => void
   setLiveIdentityPrompt: (prompt: string) => void
+  setLiveVoice: (providerId: string, voiceId: string) => void
   setHasShownScreenShareNotice: (shown: boolean) => void
 }
 
@@ -93,6 +95,7 @@ Format : sections avec titres, bullet points. Sois concis mais complet.`,
       yoloMode: false,
       liveModelId: 'gemini-3.1-flash-live-preview',
       liveIdentityPrompt: `- Communication en temps réel via audio (live)\n- Langue : Français par défaut.\n- Personnalité : Concis, efficace, ton chaleureux.`,
+      liveVoices: {},
       hasShownScreenShareNotice: false,
 
       setDefaultModelId: (modelId) => {
@@ -189,6 +192,12 @@ Format : sections avec titres, bullet points. Sois concis mais complet.`,
         const trimmed = prompt.slice(0, 5_000)
         set({ liveIdentityPrompt: trimmed })
         window.api.setSetting('multi-llm:live-identity-prompt', trimmed).catch(() => {})
+      },
+      setLiveVoice: (providerId, voiceId) => {
+        set((state) => ({
+          liveVoices: { ...state.liveVoices, [providerId]: voiceId }
+        }))
+        window.api.setSetting(`multi-llm:live-voice-${providerId}`, voiceId).catch(() => {})
       },
       setHasShownScreenShareNotice: (shown) => set({ hasShownScreenShareNotice: shown }),
       toggleFavoriteModel: (modelId) =>
