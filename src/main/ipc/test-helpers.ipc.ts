@@ -308,4 +308,60 @@ export function registerTestHelpers(): void {
       tokensAfter: result.tokensAfter
     }
   })
+
+  // -------------------------------------------------------------------------
+  // test:get-system-prompt — build the system prompt chat.ipc.ts would use
+  //
+  // Phase 2b1 Task 8. Used by 05-memory-layers.spec.ts to assert that a
+  // memory fragment is correctly injected into the system prompt via the
+  // <user-memory> block. Mirrors the production path in chat.ipc.ts via
+  // the dedicated buildSystemPrompt module extracted in Task 1.
+  //
+  // Scope: only memory + profile blocks are computed. The other blocks
+  // (library, semantic, custom, plan, skill) require additional context
+  // (workspace files, Qdrant recall, role config, forced plan mode flags)
+  // that are out of scope for the current memory-layers test. Phase 2c
+  // can extend this if needed.
+  //
+  // Validation: Zod (conversationId + userMessage both required, userMessage
+  // bounded to avoid DoS). Heavy modules are lazy-imported for the same
+  // reason as test:seed-messages and test:trigger-compact.
+  // -------------------------------------------------------------------------
+  const getSystemPromptSchema = z.object({
+    conversationId: z.string().min(1).max(100),
+    userMessage: z.string().min(1).max(10_000)
+  })
+
+  ipcMain.handle('test:get-system-prompt', async (_event, payload: unknown) => {
+    assertTestMode()
+
+    const { conversationId } = getSystemPromptSchema.parse(payload)
+
+    // Lazy imports — keep the unit test free from native better-sqlite3 / AI
+    // SDK transitive loads. Same pattern as test:seed-messages and
+    // test:trigger-compact.
+    const { getConversation } = await import('../db/queries/conversations')
+    const { buildSystemPrompt } = await import('../llm/system-prompt-builder')
+    const { DEFAULT_SYSTEM_PROMPT } = await import('../llm/system-prompt')
+    const { buildMemoryBlock } = await import('../db/queries/memory-fragments')
+    const { buildEpisodeProfileBlock } = await import('../llm/episode-prompt')
+
+    const conv = getConversation(conversationId)
+    if (!conv) {
+      throw new Error(`[test:get-system-prompt] conversation "${conversationId}" not found`)
+    }
+
+    const memoryBlock = buildMemoryBlock()
+    const episodeProfileBlock = buildEpisodeProfileBlock(conv.projectId)
+
+    const result = buildSystemPrompt({
+      base: DEFAULT_SYSTEM_PROMPT,
+      blocks: {
+        memory: memoryBlock,
+        profile: episodeProfileBlock
+      }
+    })
+
+    return result.final
+  })
 }

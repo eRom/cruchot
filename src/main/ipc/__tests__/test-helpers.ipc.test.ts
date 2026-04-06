@@ -221,6 +221,36 @@ describe('test-helpers.ipc — test:trigger-compact handler', () => {
   })
 })
 
+describe('test-helpers.ipc — test:get-system-prompt handler', () => {
+  let handler: ((event: unknown, payload: unknown) => Promise<unknown>) | undefined
+
+  beforeAll(() => {
+    handler = _invokeHandlers.get('test:get-system-prompt') as typeof handler
+  })
+
+  afterAll(() => {
+    _invokeHandlers.delete('test:get-system-prompt')
+  })
+
+  it('handler is registered', () => {
+    expect(handler).toBeDefined()
+  })
+
+  it('rejects missing conversationId', async () => {
+    await expect(handler!(null, { userMessage: 'hello' })).rejects.toThrow()
+  })
+
+  it('rejects missing userMessage', async () => {
+    await expect(handler!(null, { conversationId: 'c1' })).rejects.toThrow()
+  })
+
+  it('rejects userMessage longer than 10000 chars', async () => {
+    await expect(
+      handler!(null, { conversationId: 'c1', userMessage: 'a'.repeat(10_001) })
+    ).rejects.toThrow()
+  })
+})
+
 describe('test-helpers.ipc — assertTestMode guard', () => {
   // Note: vi.resetModules() voids module cache but vitest preserves the
   // vi.mock() registrations from the top of the file across resets, so the

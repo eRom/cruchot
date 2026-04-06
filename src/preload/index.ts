@@ -714,6 +714,7 @@ const testApi: TestApi | undefined = TEST_MODE
         ipcRenderer.invoke('test:db-select', sql),
       seedMessages: (payload) => ipcRenderer.invoke('test:seed-messages', payload),
       triggerCompact: (payload) => ipcRenderer.invoke('test:trigger-compact', payload),
+      getSystemPrompt: (payload) => ipcRenderer.invoke('test:get-system-prompt', payload),
     }
   : undefined
 

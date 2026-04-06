@@ -937,6 +937,17 @@ export interface TestApi {
      */
     summaryOverride?: string
   }) => Promise<{ tokensBefore: number; tokensAfter: number }>
+
+  /**
+   * Build the system prompt that chat.ipc.ts would use for this conversation,
+   * via the dedicated buildSystemPrompt module. Phase 2b1 Task 8 — currently
+   * computes memory + profile blocks only (other blocks need extra context).
+   * Used by 05-memory-layers.spec.ts to assert <user-memory> presence.
+   */
+  getSystemPrompt: (payload: {
+    conversationId: string
+    userMessage: string
+  }) => Promise<string>
 }
 
 // L'API exposee au renderer via contextBridge
