@@ -200,6 +200,57 @@ diff <(jq '.components[].name' sbom-prev.json | sort) \
 - Components flagged by Socket as suspicious
 - Unmaintained packages (last publish > 2 years)
 
+### Tool 9: lockfile-lint (Registry & Integrity Validation)
+
+**Purpose**: Validates that **every entry in `package-lock.json`** comes from a trusted registry, uses HTTPS, and has an integrity hash. Complements Socket: Socket inspects package *behavior*, lockfile-lint inspects package *origin*. A dep can be 100% clean per Socket but pulled from a compromised mirror — lockfile-lint catches that. **Already wired into Cruchot**: see `npm run lint:lockfile` (config in `.lockfile-lintrc.json`).
+
+```bash
+# Quick run via the npm script
+npm run lint:lockfile
+
+# Manual run with explicit options
+npx lockfile-lint \
+  --path package-lock.json \
+  --type npm \
+  --validate-https \
+  --validate-integrity \
+  --allowed-hosts npm
+```
+
+**What it catches**:
+- Deps via `http://` (downgrade attack)
+- Deps via `git+ssh://`, `file://`, `git://` (out-of-registry sources)
+- Deps from non-allowed hosts (private mirror, custom registry)
+- Missing `integrity:` hash (no SHA-512 verification on install)
+
+### Tool 10: audit-bundle (Packaged Bundle Inspection)
+
+**Purpose**: After building the .app/.asar, inspects the **actual shipped bundle** for things that should never be there. Static SAST + CodeQL audit the source, but the bundler can introduce new leaks (sourcemaps, .env files, transitive deps unfiltered). This is the **last line of defense before users**. **Already wired into Cruchot**: see `scripts/audit-bundle.js` and `npm run audit:bundle`.
+
+```bash
+# Audit a built .app bundle
+npm run audit:bundle -- dist/mac-arm64/Cruchot.app
+
+# Or directly the asar
+node scripts/audit-bundle.js dist/mac-arm64/Cruchot.app/Contents/Resources/app.asar
+```
+
+**What it catches** (10 patterns):
+- Sourcemap references (`//# sourceMappingURL=...`)
+- Standalone `.map` files
+- `.env*` files in the bundle
+- Cryptographic key files (`.pem`, `.key`, `.p12`, `.pfx`, `.jks`, `.keystore`)
+- SSH private keys (`id_rsa`, `id_ed25519`, `id_ecdsa`)
+- Hardcoded credentials (api_key, password, token patterns ≥ 24 chars)
+- Private key blocks (`-----BEGIN ... PRIVATE KEY-----`)
+- AWS Access Key IDs (`AKIA...`)
+- JWT tokens (`eyJ...eyJ...`)
+- Internal/localhost URLs in HTTP(S)
+- `devTools: true` literals
+- Multiple preload scripts (should be exactly 1)
+
+**Output**: JSON report on stdout, human summary on stderr. **Exit code 1** if any critical or high finding (CI release gate uses this).
+
 ## EXECUTION MODE
 
 **FULLY AUTONOMOUS** — Execute the entire audit end-to-end without stopping for user confirmation between phases or tours. Chain Phase 0 → Tour 1 → Tour 2 → Tour 3 → Final Report in a single uninterrupted flow. Apply all P0/P1 fixes automatically. Only stop if a fix would break the build (typecheck failure) and you cannot resolve it.
@@ -270,11 +321,25 @@ if [ -f sbom-prev.json ] && [ -f sbom.cyclonedx.json ]; then
   diff <(jq -r '.components[].name' sbom-prev.json | sort) \
        <(jq -r '.components[].name' sbom.cyclonedx.json | sort) | tee sbom-diff.txt
 fi
+
+# 10. lockfile-lint — registry + integrity + HTTPS validation
+npm run lint:lockfile 2>&1 | tail -10 \
+  || npx --yes lockfile-lint --path package-lock.json --type npm --validate-https --validate-integrity --allowed-hosts npm 2>&1 | tail -10
+
+# 11. audit-bundle — only if a packaged build exists in dist/
+# This is THE last line of defense before users — catches sourcemaps, .env leaks,
+# hardcoded secrets, multiple preload scripts, etc. in the actual shipped binary.
+APP=$(find dist -name "Cruchot.app" -maxdepth 4 2>/dev/null | head -1)
+if [ -n "$APP" ]; then
+  npm run audit:bundle -- "$APP" 2>&1 | tail -30
+else
+  echo "[audit-bundle] No dist/.../Cruchot.app found — skip (run \`npm run dist:mac\` first to enable)"
+fi
 ```
 
 Parse the output of each tool and classify findings by severity. This becomes the **Baseline** referenced throughout the audit.
 
-**Availability note**: Tools 4-9 may not be installed. Run what is available — Semgrep + npm audit are the minimum required. **CodeQL is the highest-value addition** (it catches dataflow vulnerabilities that pattern-only SAST cannot, including the `JSON.stringify-as-shell-escape` class). Add `[TOOL-UNAVAILABLE]` tag for skipped tools in the report.
+**Availability note**: Tools 4-9 may not be installed. Run what is available — Semgrep + npm audit are the minimum required. **CodeQL is the highest-value addition** (it catches dataflow vulnerabilities that pattern-only SAST cannot, including the `JSON.stringify-as-shell-escape` class). Tools 10-11 (lockfile-lint and audit-bundle) are wired into Cruchot via npm scripts and should always be runnable. Add `[TOOL-UNAVAILABLE]` tag for skipped tools in the report.
 
 Record in your report:
 - Semgrep: total findings by severity (ERROR / WARNING / INFO) + by ruleset + hotspot files
@@ -285,6 +350,8 @@ Record in your report:
 - npm audit: vulnerabilities by severity
 - **CodeQL**: tainted flows by query rule + source → sink chain depth (highlight any cross-file path)
 - **SBOM**: total components, new components vs previous release, unmaintained / unlicensed entries
+- **lockfile-lint**: pass/fail + any flagged dep (host, scheme, integrity)
+- **audit-bundle** (if dist build exists): findings by severity + asar size + file count + sourcemap leaks + structural issues (preload count)
 
 ### TOUR 1: Initial Analysis
 
@@ -729,11 +796,13 @@ After Tour 3, provide:
 - [ ] Semgrep secrets scan clean (`p/secrets`)
 - [ ] **CodeQL: zero `error`-level results in `javascript-security-extended.qls`**
 - [ ] **CodeQL: every `codeFlow` (source → sink) reviewed and either fixed or justified as false positive**
-- [ ] npm audit clean (no high/critical, production deps)
+- [ ] npm audit clean (no high/critical, production deps) — `npm audit --audit-level=high --omit=dev`
+- [ ] **lockfile-lint clean** — `npm run lint:lockfile` (registry, integrity, HTTPS)
 - [ ] Electronegativity: zero critical Electron misconfigurations
 - [ ] Gitleaks: zero secrets in git history
 - [ ] Trivy: no HIGH/CRITICAL vulnerabilities (if available)
 - [ ] Socket: no critical supply chain alerts (if available)
+- [ ] **audit-bundle clean** on the last built bundle (if `dist/` exists) — `npm run audit:bundle -- dist/mac-arm64/Cruchot.app`
 
 ## Threat Model (STRIDE per Surface)
 - [ ] All ~10 attack surfaces enumerated (Renderer, Preload, IPC, LLM tools, MCP, Remote, Live Voice, Auto-updater, Custom protocols, Build/Distribution)
@@ -829,10 +898,16 @@ After Tour 3, provide:
 ## Continuous Security
 - [ ] Semgrep scan integrated in CI/CD pipeline
 - [ ] **CodeQL workflow** in CI (`github/codeql-action/init` + `analyze` on every push to main + PRs)
-- [ ] npm audit gate in CI AND release pipeline
+- [ ] **npm audit gate** at `--audit-level=high` (NOT critical) in CI AND release pipeline
+- [ ] **lockfile-lint** in CI AND release pipeline (`npm run lint:lockfile`)
+- [ ] **audit-bundle** runs after every release build, fails the release on findings
+- [ ] **Dependabot security updates** enabled in GitHub Settings → Code security
+- [ ] **`.github/dependabot.yml`** configured for weekly version updates
+- [ ] **Release security gate**: `release.yml` `security-gate` job blocks publish if Dependabot has open alerts at severity ≥ high (via `gh api dependabot/alerts`)
+- [ ] **`audit/security/POLICY.md`** present and up to date with current SLA + accepted exceptions
 - [ ] Gitleaks in CI (pre-push or PR check)
 - [ ] **SBOM generated and attached to every GitHub release**
-- [ ] **`@electron/fuses` validation** runs on the built binary in the release workflow
+- [ ] **`@electron/fuses` validation** runs on the built binary in the release workflow (`npx @electron/fuses read --app ...`)
 - [ ] Security-focused code review checklist
 ```
 
