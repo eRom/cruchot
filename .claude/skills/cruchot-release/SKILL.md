@@ -16,7 +16,7 @@ Specificites Cruchot vs `/release` global :
 - Lance `npm run lint:lockfile` en pre-check
 - Filtre le RUN_ID GitHub Actions par `headSha` (fiable) au lieu de `--limit=1` (fragile si plusieurs releases s'enchainent)
 - `gh run watch --interval 30 --exit-status` (15x moins de polls qu'avec le defaut 2s)
-- Pas de publier-draft (le workflow Cruchot fait `--publish always`)
+- **Publie le draft via `gh release edit --draft=false`** : malgre `--publish always`, electron-builder cree TOUJOURS la release en mode draft sur GitHub. Sans cette etape, la release reste invisible aux utilisateurs et l'auto-updater ne la voit pas.
 
 ---
 
@@ -220,20 +220,37 @@ gh run watch "$RUN_ID" --interval 30 --exit-status
 
 **Pourquoi 30s** : `gh run watch` poll par defaut toutes les **2 secondes**. Pour un workflow Cruchot qui prend ~15-30 min sur 3 OS en matrix + le job security-gate, c'est ~900 requetes pour rien. A 30s on tombe a ~60 polls — meme experience utilisateur, ~15x moins de rate limit consume.
 
-**`--exit-status`** : fait que `gh run watch` retourne un exit code non-zero si la CI echoue, ce qui simplifie le branchement OK/KO de l'etape 7.
+**`--exit-status`** : fait que `gh run watch` retourne un exit code non-zero si la CI echoue, ce qui simplifie le branchement OK/KO de l'etape 8.
 
-## Etape 7 : Resume final
+## Etape 7 : Publier le draft (CRITIQUE — ne pas oublier)
 
-Verifier le exit code de l'etape 6.3 :
+`electron-builder --publish always` publie les artefacts (DMG, ZIP, blockmaps, latest-mac.yml, etc.) sur GitHub Releases mais cree la release en **mode draft**. Sans cette etape, la release reste invisible aux utilisateurs ET l'auto-updater (`electron-updater`) ne la voit pas — donc personne ne recoit l'update, malgre une CI verte.
 
-### Si succes (`gh run watch` exit 0)
+```bash
+# Verifier d'abord que la release est bien en draft (sanity check)
+gh release view "vX.Y.Z" --json isDraft,name 2>/dev/null
+
+# Publier le draft
+gh release edit "vX.Y.Z" --draft=false
+```
+
+Si `gh release view` echoue avec "release not found" : c'est que l'URL temporaire generee par electron-builder est encore `untagged-<sha>` (pas encore renommee). Attendre 5-10 sec et retry.
+
+Si `gh release edit` echoue : ne pas blocker la release — afficher le lien GitHub et demander a l'utilisateur de cliquer "Publish release" manuellement dans l'UI.
+
+## Etape 8 : Resume final
+
+Verifier le exit code de l'etape 6.3 ET que la release est bien publiee :
+
+### Si succes (`gh run watch` exit 0 + draft publie)
 ```
 Release vX.Y.Z publiee !
   Version : X.Y.Z
   Tag : vX.Y.Z
   Release : https://github.com/eRom/cruchot/releases/tag/vX.Y.Z
   CI : OK (security-gate + Mac + Win + Linux + audit-bundle + fuses verification)
-  Tests locaux : 211/211
+  Tests locaux : <NN>/<NN>
+  Draft : publie via `gh release edit --draft=false`
 ```
 
 ### Si echec (`gh run watch` exit non-zero)
