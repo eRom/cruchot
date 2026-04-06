@@ -48,3 +48,19 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E Security tests
+        run: npm run test:e2e:security
+        env:
+          NODE_ENV: production
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-security-report
+          path: playwright-report/
+          retention-days: 7
