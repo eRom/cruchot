@@ -19,12 +19,10 @@ test.describe('webPreferences hardening (behavioral)', () => {
    * `devTools: !app.isPackaged`, but the test launches the app with
    * NODE_ENV=production AND no devtools auto-open trigger.
    */
-  test('devTools are not opened on startup', async ({ electronApp, window }) => {
-    // window is in the fixture list to force the BrowserWindow to be created
-    // before electronApp.evaluate runs (otherwise getAllWindows() returns []).
-    // We don't use `window` directly — its presence as a fixture is the dependency.
-    void window
-
+  test('devTools are not opened on startup', async ({ electronApp, window: _window }) => {
+    // _window forces the BrowserWindow fixture to resolve before electronApp.evaluate
+    // runs — without it, getAllWindows() returns [] because the window doesn't exist yet.
+    // The underscore prefix signals intentional non-use (TypeScript convention).
     const isOpen = await electronApp.evaluate(({ BrowserWindow }) => {
       const [win] = BrowserWindow.getAllWindows()
       return win.webContents.isDevToolsOpened()
@@ -120,7 +118,7 @@ test.describe('webPreferences hardening (behavioral)', () => {
    *      may be affected)
    *   3. Remove the test.skip() below and re-run the suite
    */
-  test.skip('eval() is blocked by CSP (no unsafe-eval) — TODO: see csp-header-hardening spec', async ({ window }) => {
+  test.skip('eval() is blocked by CSP (no unsafe-eval)', async ({ window }) => {
     const blocked = await window.evaluate(() => {
       try {
         // eslint-disable-next-line no-eval
