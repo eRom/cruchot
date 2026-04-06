@@ -1,14 +1,21 @@
-# Gemini Live Voice — Conversation vocale temps-réel
+# Live Voice — Conversation vocale temps-réel
 
-Cruchot intègre une conversation vocale bidirectionnelle basée sur l'API **Gemini Live** de Google. Parlez directement à l'IA, elle vous répond à voix haute en temps réel — sans délai de frappe, sans attente de génération texte.
+Cruchot intègre une conversation vocale bidirectionnelle. Parlez directement à l'IA, elle vous répond à voix haute en temps réel — sans délai de frappe, sans attente de génération texte.
+
+Deux providers sont disponibles :
+
+| Provider | API | Prérequis |
+|----------|-----|-----------|
+| **Gemini Live** (Google) | Gemini Live API `v1alpha` — modèle `gemini-3.1-flash-live-preview` | Clé API Google |
+| **OpenAI Realtime** | Realtime API WebSocket — modèle `gpt-realtime` | Clé API OpenAI |
+
+Le provider actif se configure dans **Personnaliser > Audio Live**.
 
 ## 1. Prérequis
 
-- Une clé API **Google** (Gemini) configurée dans les Paramètres > Providers.
+- Une clé API du provider choisi configurée dans les Paramètres > Providers.
 - Un microphone fonctionnel (autorisé par le système d'exploitation).
-- Connexion internet (l'API Gemini Live est une API cloud).
-
-> Gemini Live utilise le modèle `gemini-3.1-flash-live-preview` via l'API `v1alpha`. Ce modèle est distinct des modèles Gemini disponibles dans le chat texte.
+- Connexion internet (les APIs Live sont des APIs cloud).
 
 ## 2. Démarrer une conversation vocale
 
@@ -88,10 +95,15 @@ Cruchot retient les faits importants évoqués pendant vos sessions vocales. À 
 
 Vous pouvez configurer le comportement de l'assistant dans **Personnaliser > Audio Live** :
 
-- **Modèle Live** : sélectionner le modèle vocal actif (Gemini 3.1 Flash Live, d'autres à venir).
+- **Provider Live** : sélectionner le provider actif (Gemini Live ou OpenAI Realtime). Le sélecteur n'affiche que les providers pour lesquels une clé API est configurée.
+- **Voix** : chaque provider expose ses propres voix TTS. Le sélecteur de voix se met à jour automatiquement en fonction du provider choisi. Votre sélection est mémorisée séparément par provider.
+  - Gemini : Aoede, Charon, Fenrir, Kore, Puck, Zephyr…
+  - OpenAI Realtime : Marin, Cedar, Alloy, Ash, Ballad, Coral, Echo, Sage, Shimmer, Verse.
 - **Prompt Identité** : personnaliser la langue, le ton et la personnalité de l'agent vocal. Ce texte est injecté au début du system prompt à chaque connexion.
 
 ## 6.2 Partager votre écran pendant une session vocale
+
+> Le partage d'écran est disponible **uniquement avec le provider Gemini Live**. Avec OpenAI Realtime, l'icône écran n'apparaît pas dans la NotchBar.
 
 Cruchot permet à Gemini de **voir votre écran en temps réel** pendant une conversation vocale. L'agent peut ainsi commenter, analyser ou vous assister sur ce qui est affiché — une fenêtre, une application, ou l'intégralité de l'écran.
 
@@ -145,11 +157,13 @@ Cliquez sur la NotchBar en état actif (Listening / Speaking / Connected) pour d
 
 | Problème | Solution |
 |----------|----------|
-| La NotchBar reste en "CONNECTING..." | Vérifiez votre clé API Google dans Paramètres > Providers |
+| La NotchBar reste en "CONNECTING..." | Vérifiez votre clé API (Google ou OpenAI selon le provider actif) dans Paramètres > Providers |
 | L'état passe en "ERROR" | Clé API invalide ou pas de réseau — relancer après correction |
-| Gemini ne vous entend pas | Vérifiez les permissions microphone macOS (Préférences Système > Sécurité > Microphone) |
-| La voix de Gemini est robotique / saccadée | Latence réseau élevée — aucune action côté Cruchot |
-| Gemini répète sa propre réponse | Problème résolu en v0.8.2 (anti-écho 3x). Si récurrent, déconnecter/reconnecter |
-| L'icône écran n'apparaît pas | La session doit être connectée (état Connected, Listening ou Speaking) |
+| L'assistant ne vous entend pas | Vérifiez les permissions microphone macOS (Préférences Système > Sécurité > Microphone) |
+| La voix est robotique / saccadée | Latence réseau élevée — aucune action côté Cruchot |
+| L'assistant répète sa propre réponse | Problème résolu en v0.8.2 (anti-écho 3x). Si récurrent, déconnecter/reconnecter |
+| L'icône écran n'apparaît pas | Le partage d'écran est uniquement disponible avec Gemini Live. Avec OpenAI Realtime, l'icône n'est pas affichée |
+| L'icône écran n'apparaît pas (Gemini) | La session doit être connectée (état Connected, Listening ou Speaking) |
 | Le SourcePicker s'ouvre mais rien ne démarre | Permission Screen Recording manquante — vérifier Préférences Système > Sécurité > Enregistrement d'écran |
 | Gemini ne voit pas l'écran alors que le partage est actif | Vérifier que l'écran bouge — 0 frame envoyée si statique. Demander vocalement "prends un screenshot" |
+| Le sélecteur de voix ne se met pas à jour | Changer de provider dans Personnaliser > Audio Live — le sélecteur de voix se recharge automatiquement |
