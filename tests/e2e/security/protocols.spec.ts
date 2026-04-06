@@ -4,8 +4,8 @@ import { test, expect } from '../fixtures/electron-app'
 test.describe('custom protocols', () => {
   /**
    * Cruchot registers a `local-image://` scheme via
-   * protocol.registerSchemesAsPrivileged() in src/main/index.ts:34-36
-   * and protocol.handle() in src/main/index.ts:132-149.
+   * protocol.registerSchemesAsPrivileged() in src/main/index.ts:49-51
+   * and protocol.handle() in src/main/index.ts:147-164.
    *
    * This test verifies the handler is actually attached at runtime.
    * If protocol.handle() were missing or removed, isProtocolHandled
