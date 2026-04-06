@@ -19,6 +19,8 @@
     "test:e2e:security": "playwright test tests/e2e/security/",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
+    "test:e2e:flows": "scripts/test-e2e-setup.sh && playwright test tests/e2e/flows/",
+    "test:all": "npm test && npm run test:e2e:security && npm run test:e2e:flows",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "dist": "electron-vite build && electron-builder",
