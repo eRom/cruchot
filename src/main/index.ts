@@ -113,6 +113,8 @@ async function lazyInitServices(mainWindow: BrowserWindow): Promise<void> {
     const { livePluginRegistry } = await import('./live/live-plugin-registry')
     const { geminiLivePlugin } = await import('./live/plugins/gemini/gemini-live.plugin')
     livePluginRegistry.register(geminiLivePlugin)
+    const { openaiLivePlugin } = await import('./live/plugins/openai/openai-live.plugin')
+    livePluginRegistry.register(openaiLivePlugin)
     liveEngineService.init(mainWindow)
   } catch (err) {
     console.error('[LiveEngine] Lazy init failed:', err)
