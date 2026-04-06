@@ -14,8 +14,8 @@
  * so keep it tiny and side-effect free.
  *
  * NOTE: values are captured at module load time. Mutating `process.env`
- * after import has no effect on the exported constants. Tests that need
- * fresh values must call `vi.resetModules()` and re-import.
+ * after import has no effect on the exported constants. In tests, use
+ * `vi.resetModules()` + `await import('../test-mode')` to get fresh values.
  */
 export const TEST_MODE = process.env.CRUCHOT_TEST_MODE === '1'
 export const TEST_USERDATA = process.env.CRUCHOT_TEST_USERDATA

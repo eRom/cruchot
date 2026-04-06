@@ -70,6 +70,18 @@ describe('test-mode module', () => {
     expect(TEST_API_KEY).toBe('fake-key-for-test')
   })
 
+  it('TEST_MODEL is undefined when env var is not set', async () => {
+    delete process.env.CRUCHOT_TEST_MODEL
+    const { TEST_MODEL } = await import('../test-mode')
+    expect(TEST_MODEL).toBeUndefined()
+  })
+
+  it('TEST_API_KEY is undefined when env var is not set', async () => {
+    delete process.env.CRUCHOT_TEST_API_KEY
+    const { TEST_API_KEY } = await import('../test-mode')
+    expect(TEST_API_KEY).toBeUndefined()
+  })
+
   it('assertTestMode() throws when TEST_MODE is false', async () => {
     delete process.env.CRUCHOT_TEST_MODE
     const { assertTestMode } = await import('../test-mode')
