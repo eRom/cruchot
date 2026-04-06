@@ -1120,6 +1120,7 @@ export function InputZone({
             {/* Textarea */}
             <textarea
               ref={textareaRef}
+              data-testid="chat-input"
               value={content}
               onChange={(e) => {
                 setContent(e.target.value)
@@ -1230,6 +1231,7 @@ export function InputZone({
                       variant="default"
                       size="icon"
                       onClick={handleSend}
+                      data-testid="chat-send"
                       disabled={!canSend}
                       className={cn(
                         'size-8 rounded-full',
