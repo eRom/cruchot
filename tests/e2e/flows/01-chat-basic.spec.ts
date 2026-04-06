@@ -28,19 +28,21 @@
 //     for background operations (compact/episode/summary/oneiric/...).
 //     Chat token counts and cost live in the `messages` row directly.
 
-import { test, expect } from '../fixtures/flow-fixtures'
-import { assertOllamaReady, warmUpModel, isOllamaSkipped } from '../fixtures/ollama'
+import { test, expect, TEST_MODEL_ID, seedDefaultModel } from '../fixtures/flow-fixtures'
+import { assertOllamaReady, warmUpModel } from '../fixtures/ollama'
 
-const MODEL = 'qwen3.5:4b'
-const PROVIDER = 'ollama'
-const DEFAULT_MODEL_SETTING = `${PROVIDER}::${MODEL}`
+// Extract the provider/model parts from TEST_MODEL_ID. Used by Ollama
+// helpers below — they only run when TEST_MODEL_ID starts with 'ollama::'.
+const [PROVIDER, MODEL] = TEST_MODEL_ID.split('::') as [string, string]
 
-test.describe('chat basic — Ollama qwen3.5:4b', () => {
-  test.skip(isOllamaSkipped(), 'Ollama-only spec, skipped under CI/google provider')
-
+test.describe('chat basic — TEST_MODEL_ID', () => {
+  // Portable across Ollama (local) and gemini-2.5-flash (CI). The Ollama
+  // health check + warm-up only runs when TEST_MODEL_ID starts with 'ollama::'.
   test.beforeAll(async () => {
-    await assertOllamaReady(MODEL)
-    await warmUpModel(MODEL)
+    if (TEST_MODEL_ID.startsWith('ollama::')) {
+      await assertOllamaReady(MODEL)
+      await warmUpModel(MODEL)
+    }
   })
 
   // Cold Ollama generations + chat IPC roundtrip can exceed the 60s global
@@ -53,36 +55,10 @@ test.describe('chat basic — Ollama qwen3.5:4b', () => {
   }) => {
     // ── Step 1: configure the default model in localStorage + DB ──
     //
-    // useInitApp.ts:71 reads `useSettingsStore.getState().defaultModelId`
-    // from the zustand-persist localStorage slot `multi-llm-settings`
-    // BEFORE the DB settings fetch lands (that's a fire-and-forget block
-    // further down). If localStorage is empty, the providers store never
-    // gets `selectModel(...)` called and `canSend` stays false forever.
-    //
-    // The cleanest fix is to seed localStorage directly so that on the
-    // very next reload, useInitApp sees the persisted value and calls
-    // useProvidersStore.selectModel('ollama', 'qwen3.5:4b'). We also
-    // mirror the value into the DB via window.api.setSetting so the
-    // state is consistent with what a real user would persist.
-    await page.evaluate((modelKey) => {
-      const raw = localStorage.getItem('multi-llm-settings')
-      const parsed = raw
-        ? (JSON.parse(raw) as { state?: Record<string, unknown>; version?: number })
-        : { state: {}, version: 0 }
-      parsed.state = { ...(parsed.state ?? {}), defaultModelId: modelKey }
-      localStorage.setItem('multi-llm-settings', JSON.stringify(parsed))
-    }, DEFAULT_MODEL_SETTING)
-
-    await page.evaluate(async (modelKey) => {
-      const api = (window as unknown as {
-        api: { setSetting: (k: string, v: string) => Promise<void> }
-      }).api
-      await api.setSetting('multi-llm:default-model-id', modelKey)
-    }, DEFAULT_MODEL_SETTING)
-
-    // Reload so useInitApp re-runs against the now-populated localStorage.
-    await page.reload()
-    await page.waitForLoadState('domcontentloaded')
+    // seedDefaultModel() handles the localStorage seed + IPC mirror + reload.
+    // See its JSDoc in flow-fixtures.ts for why localStorage seeding is
+    // mandatory (useInitApp.ts:71 reads it BEFORE the DB settings fetch).
+    await seedDefaultModel(page, TEST_MODEL_ID)
 
     // ── Step 2: assert initial DB state is empty ──
     expect(await dbHelper.count('conversations')).toBe(0)

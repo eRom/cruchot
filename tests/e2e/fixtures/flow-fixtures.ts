@@ -10,6 +10,50 @@
 import { test as baseTest, expect as baseExpect } from './electron-app'
 import type { Page } from '@playwright/test'
 
+/**
+ * The model ID used by E2E flow specs. Picks Ollama in local dev (default)
+ * or gemini-2.5-flash when CRUCHOT_TEST_PROVIDER=google (CI release).
+ *
+ * Format: `${providerId}::${modelId}` (Cruchot canonical form, see
+ * useInitApp.ts:71-77 for the hydration path that consumes this setting).
+ */
+export const TEST_MODEL_ID =
+  process.env.CRUCHOT_TEST_PROVIDER === 'google'
+    ? 'google::gemini-2.5-flash'
+    : 'ollama::qwen3.5:4b'
+
+/**
+ * Seeds the default model setting and reloads the window so the providers
+ * store is hydrated by useInitApp on next render.
+ *
+ * IMPORTANT: useInitApp.ts:71 reads `defaultModelId` from localStorage
+ * (zustand persist slot) BEFORE the DB settings fetch lands. So just
+ * calling setSetting via IPC + reload is NOT enough — we MUST also seed
+ * localStorage directly. We mirror to the DB via IPC for consistency.
+ *
+ * After this helper returns, useProvidersStore.getState().getSelectedModel()
+ * returns the requested model, ready for chat sends.
+ */
+export async function seedDefaultModel(page: Page, modelId: string): Promise<void> {
+  await page.evaluate((id) => {
+    const raw = localStorage.getItem('multi-llm-settings') ?? '{"state":{},"version":0}'
+    const settings = JSON.parse(raw) as { state: Record<string, unknown>; version: number }
+    settings.state.defaultModelId = id
+    localStorage.setItem('multi-llm-settings', JSON.stringify(settings))
+  }, modelId)
+
+  await page.evaluate(
+    (id) =>
+      (
+        window as { api: { setSetting: (k: string, v: string) => Promise<void> } }
+      ).api.setSetting('multi-llm:default-model-id', id),
+    modelId
+  )
+
+  await page.reload()
+  await page.waitForLoadState('domcontentloaded')
+}
+
 export interface DbHelper {
   /** Count rows. `tableExpr` may be 'messages' or 'messages WHERE role = "assistant"'. */
   count(tableExpr: string): Promise<number>
