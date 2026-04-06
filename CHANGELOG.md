@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.9.1] - 2026-04-06
+
+- security: fix critical command injection + bash bypass + screen share resume (audit S65)
+- ui(live): voice selector single-line with weight contrast
+- ui(live): polish voice selector with shadcn Select component
+- docs: add OpenAI Realtime plugin + voice selector documentation
+- fix(live): persist live model and voice settings across restarts
+- feat(live): voice selector per plugin
+- fix(live): only cancel response on real interruptions, gate screen share icon
+- fix(live): handle benign cancel error and cleared event
+- fix(live): set output_modalities to ['audio'] only
+- fix(live): add rate to OpenAI audio output format
+- fix(live): update OpenAI session.update to GA API format
+- fix(ui): replace 'bientot' with 'cle API requise' in AudioLiveView
+- fix(live): add 'interrupted' to LiveStatus type union
+- feat(live): add OpenAI Realtime plugin
+
 ## [0.9.0] - 2026-04-05
 
 - update landing page
