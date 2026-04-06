@@ -3,6 +3,12 @@ productName: Cruchot
 copyright: Copyright (c) 2026 Romain
 forceCodeSigning: false
 
+# @electron/fuses hardening — flips runtime fuses on the packaged binary.
+# Critical when forceCodeSigning is false: this is our only defense against
+# asar tampering and ELECTRON_RUN_AS_NODE / NODE_OPTIONS abuse.
+# See scripts/afterPack.js for the list of fuses and their rationale.
+afterPack: scripts/afterPack.js
+
 directories:
   buildResources: resources
   output: dist
