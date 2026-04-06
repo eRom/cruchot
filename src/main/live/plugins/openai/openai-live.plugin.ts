@@ -75,7 +75,7 @@ class OpenAILivePlugin implements LivePlugin {
                 },
               },
               output: {
-                format: { type: 'audio/pcm' },
+                format: { type: 'audio/pcm', rate: 24000 },
                 voice: config.voice ?? 'ash',
               },
             },
