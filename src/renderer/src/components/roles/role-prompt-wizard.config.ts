@@ -25,7 +25,7 @@ export interface WizardSelections {
   subDomainOther?: string
   expertise: ExpertiseLevel | null
   formality: Formality | null
-  energy: Energy | null
+  energy: Energy[]
   responseFormat: ResponseFormat | null
   lengthTarget: LengthTarget | null
   guardrails: GuardrailId[]
@@ -99,6 +99,7 @@ export const GUARDRAILS: Guardrail[] = [
 ]
 
 export const MAX_GUARDRAILS = 5
+export const MAX_ENERGIES = 2
 export const MAX_PERSONAL_CONTEXT_CHARS = 500
 
 export const DOMAIN_PERSONAS: Record<DomainId, string> = {
@@ -255,7 +256,7 @@ export function createEmptySelections(): WizardSelections {
     subDomain: null,
     expertise: null,
     formality: null,
-    energy: null,
+    energy: [],
     responseFormat: null,
     lengthTarget: null,
     guardrails: [],
@@ -286,7 +287,7 @@ function buildPersona(selections: WizardSelections): string {
 function buildStyleLines(selections: WizardSelections): string[] {
   const lines: string[] = []
   if (selections.formality) lines.push(`- ${FORMALITY_LABELS[selections.formality].sentence}`)
-  if (selections.energy) lines.push(`- ${ENERGY_LABELS[selections.energy].sentence}`)
+  for (const e of selections.energy) lines.push(`- ${ENERGY_LABELS[e].sentence}`)
   if (selections.responseFormat) lines.push(`- ${FORMAT_LABELS[selections.responseFormat].sentence}`)
   if (selections.lengthTarget) lines.push(`- ${LENGTH_LABELS[selections.lengthTarget].sentence}`)
   return lines

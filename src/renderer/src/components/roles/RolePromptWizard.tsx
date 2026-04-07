@@ -20,6 +20,7 @@ import {
   type LengthTarget,
   GUARDRAILS,
   MAX_GUARDRAILS,
+  MAX_ENERGIES,
   MAX_PERSONAL_CONTEXT_CHARS,
   type GuardrailId,
   type OutputFormat
@@ -82,7 +83,7 @@ export function RolePromptWizard({ open, onClose, onInsert, hasExistingPrompt }:
       selections.subDomain !== null ||
       selections.expertise !== null ||
       selections.formality !== null ||
-      selections.energy !== null ||
+      selections.energy.length > 0 ||
       selections.responseFormat !== null ||
       selections.lengthTarget !== null ||
       selections.guardrails.length > 0 ||
@@ -143,8 +144,8 @@ export function RolePromptWizard({ open, onClose, onInsert, hasExistingPrompt }:
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose() }}>
-      <DialogContent className="max-w-[900px] w-[900px] p-0 overflow-hidden">
-        <div className="flex flex-col h-[600px]">
+      <DialogContent className="max-w-[1100px] w-[1100px] p-0 overflow-hidden">
+        <div className="flex flex-col h-[720px]">
           <div className="px-6 py-4 border-b border-border">
             <h2 className="text-lg font-semibold">Configurateur de rôle</h2>
             <div className="w-full bg-muted h-1.5 mt-3 rounded-full overflow-hidden">
@@ -230,7 +231,7 @@ function stepHasAnswer(step: StepId, sel: WizardSelections): boolean {
   switch (step) {
     case 'expertise': return sel.expertise !== null
     case 'formality': return sel.formality !== null
-    case 'energy': return sel.energy !== null
+    case 'energy': return sel.energy.length > 0
     case 'formatLength': return sel.responseFormat !== null || sel.lengthTarget !== null
     case 'guardrails': return sel.guardrails.length > 0
     case 'personalContext': return sel.personalContext.trim().length > 0
@@ -385,21 +386,38 @@ function StepContent({
   }
 
   if (step === 'energy') {
+    function toggleEnergy(id: Energy) {
+      const isSelected = selections.energy.includes(id)
+      if (isSelected) {
+        setSelections({ ...selections, energy: selections.energy.filter((e) => e !== id) })
+      } else {
+        if (selections.energy.length >= MAX_ENERGIES) return
+        setSelections({ ...selections, energy: [...selections.energy, id] })
+      }
+    }
     return (
       <div>
-        <h3 className="text-base font-medium mb-4">Quelle énergie / ton ?</h3>
+        <h3 className="text-base font-medium mb-1">Quelle énergie / ton ? (jusqu&apos;à {MAX_ENERGIES})</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          {selections.energy.length} / {MAX_ENERGIES} sélectionnés
+        </p>
         <div className="grid grid-cols-1 gap-2">
-          {(Object.keys(ENERGY_LABELS) as Energy[]).map((id) => (
-            <button
-              key={id}
-              onClick={() => setSelections({ ...selections, energy: id })}
-              className={`text-left px-4 py-3 rounded-md border transition-colors ${
-                selections.energy === id ? 'border-primary bg-primary/10' : 'border-border hover:bg-accent'
-              }`}
-            >
-              {ENERGY_LABELS[id].label}
-            </button>
-          ))}
+          {(Object.keys(ENERGY_LABELS) as Energy[]).map((id) => {
+            const checked = selections.energy.includes(id)
+            const disabled = !checked && selections.energy.length >= MAX_ENERGIES
+            return (
+              <button
+                key={id}
+                onClick={() => toggleEnergy(id)}
+                disabled={disabled}
+                className={`text-left px-4 py-3 rounded-md border transition-colors ${
+                  checked ? 'border-primary bg-primary/10' : 'border-border hover:bg-accent'
+                } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+              >
+                {ENERGY_LABELS[id].label}
+              </button>
+            )
+          })}
         </div>
       </div>
     )
