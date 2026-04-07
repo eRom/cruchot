@@ -13,6 +13,7 @@ import {
   Plus,
   Search,
   Shield,
+  Sparkles,
   Trash2,
   Upload,
   UserCircle,
@@ -21,6 +22,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useBardaStore } from '@/stores/barda.store'
+import { RolePromptWizard, type InsertMode } from './RolePromptWizard'
 
 type SortMode = 'activity' | 'name' | 'created'
 type SubView = 'grid' | 'create' | 'edit'
@@ -595,8 +597,18 @@ function RoleForm({ role, onSave, onCancel }: RoleFormProps) {
   })
   const [tagInput, setTagInput] = useState('')
   const [saving, setSaving] = useState(false)
+  const [wizardOpen, setWizardOpen] = useState(false)
 
   const canSave = form.name.trim().length > 0
+
+  const handleWizardInsert = (prompt: string, mode: InsertMode) => {
+    setForm((f) => {
+      if (mode === 'replace' || f.systemPrompt.trim().length === 0) {
+        return { ...f, systemPrompt: prompt }
+      }
+      return { ...f, systemPrompt: f.systemPrompt + '\n\n---\n\n' + prompt }
+    })
+  }
 
   const handleSave = async () => {
     if (!canSave || saving) return
@@ -675,7 +687,19 @@ function RoleForm({ role, onSave, onCancel }: RoleFormProps) {
 
           {/* System Prompt */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Prompt systeme</label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-foreground">Prompt systeme</label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setWizardOpen(true)}
+                className="gap-1.5"
+              >
+                <Sparkles className="size-3.5" />
+                Generer
+              </Button>
+            </div>
             <textarea
               value={form.systemPrompt}
               onChange={(e) => setForm((f) => ({ ...f, systemPrompt: e.target.value }))}
@@ -787,6 +811,13 @@ function RoleForm({ role, onSave, onCancel }: RoleFormProps) {
           </Button>
         </div>
       </div>
+
+      <RolePromptWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onInsert={handleWizardInsert}
+        hasExistingPrompt={form.systemPrompt.trim().length > 0}
+      />
     </div>
   )
 }
