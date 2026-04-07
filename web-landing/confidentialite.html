@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fr" class="dark">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Politique de Confidentialité — Cruchot</title>
+        <meta name="robots" content="noindex, follow" />
+        <link rel="icon" type="image/png" href="logo-cruchot-icon.png" />
+        <style>
+            :root {
+                --brand: #ffaf5f;
+                --brand-soft: rgba(255, 175, 95, 0.12);
+                --bg: #1a1a1e;
+                --bg-card: #2a2a2e;
+                --fg: #fafafa;
+                --fg-muted: #a0a0a8;
+                --border: rgba(255, 255, 255, 0.08);
+                --max-w: 800px;
+                --emerald: #10b981;
+            }
+            body {
+                font-family: system-ui, -apple-system, sans-serif;
+                background: var(--bg);
+                color: var(--fg);
+                line-height: 1.6;
+                padding: 40px 24px;
+            }
+            .container { max-width: var(--max-w); margin: 0 auto; }
+            nav { margin-bottom: 60px; }
+            nav a { color: var(--brand); text-decoration: none; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+            h1 { font-size: 32px; font-weight: 800; margin-bottom: 40px; letter-spacing: -0.02em; }
+            h2 { font-size: 20px; font-weight: 700; margin: 32px 0 16px; color: var(--brand); }
+            p { margin-bottom: 16px; color: var(--fg-muted); }
+            .card { background: var(--bg-card); border: 1px solid var(--border); padding: 24px; border-radius: 12px; margin-bottom: 24px; }
+            .badge { display: inline-block; background: rgba(16, 185, 129, 0.1); color: var(--emerald); padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 600; margin-bottom: 16px; }
+            footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--fg-muted); }
+            ul { margin-bottom: 16px; padding-left: 20px; color: var(--fg-muted); }
+            li { margin-bottom: 8px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <nav>
+                <a href="index.html">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    Retour à l'accueil
+                </a>
+            </nav>
+
+            <h1>Politique de Confidentialité</h1>
+
+            <div class="badge">Architecture Local-First Stricte</div>
+
+            <div class="card">
+                <h2>1. Absence de collecte de données</h2>
+                <p>
+                    Cruchot est conçu pour être <strong>100% local</strong>. L'application ne possède aucun serveur backend et n'utilise aucun outil de télémétrie ou d'analyse comportementale. 
+                </p>
+                <ul>
+                    <li>Vos conversations ne sont jamais envoyées à l'éditeur.</li>
+                    <li>Votre historique reste sur votre disque dur.</li>
+                    <li>Aucune statistique d'usage n'est collectée.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2>2. Stockage des clés d'API</h2>
+                <p>
+                    Pour fonctionner, Cruchot utilise les clés d'API que vous fournissez (OpenAI, Anthropic, Google, etc.). 
+                </p>
+                <ul>
+                    <li>Vos clés sont chiffrées au repos via le trousseau sécurisé de votre système d'exploitation (Keychain sur macOS, DPAPI sur Windows).</li>
+                    <li>Elles transitent uniquement entre votre machine et les serveurs officiels des providers d'IA via des connexions HTTPS sécurisées.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2>3. Stockage local (SQLite & Qdrant)</h2>
+                <p>
+                    Toutes les données de l'application sont stockées dans le dossier utilisateur de votre machine :
+                </p>
+                <ul>
+                    <li><strong>SQLite</strong> : Stocke vos conversations, réglages et préférences.</li>
+                    <li><strong>Qdrant (Embedded)</strong> : Stocke les vecteurs de votre mémoire sémantique pour le RAG local.</li>
+                </ul>
+                <p>Le binaire Qdrant n'écoute que sur l'interface locale (127.0.0.1) et n'est pas accessible depuis l'extérieur.</p>
+            </div>
+
+            <div class="card">
+                <h2>4. Accès Distant (Telegram & Web)</h2>
+                <p>
+                    Si vous activez le contrôle à distance, une session WebSocket ou une connexion Telegram est établie. 
+                    Le chiffrement est assuré de bout en bout et l'authentification repose sur un système de pairing par code à 6 chiffres. 
+                    Aucune donnée de session n'est persistée sur un serveur tiers.
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>5. Providers Tiers</h2>
+                <p>
+                    En utilisant Cruchot avec des services comme OpenAI ou Anthropic, vos messages leur sont transmis selon leurs propres politiques de confidentialité. Nous vous recommandons de consulter les conditions d'utilisation de chaque provider que vous configurez.
+                </p>
+            </div>
+
+            <footer>
+                Dernière mise à jour : Avril 2026 — Cruchot
+            </footer>
+        </div>
+    </body>
+</html>

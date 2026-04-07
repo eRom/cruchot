@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fr" class="dark">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Conditions d'Utilisation — Cruchot</title>
+        <meta name="robots" content="noindex, follow" />
+        <link rel="icon" type="image/png" href="logo-cruchot-icon.png" />
+        <style>
+            :root {
+                --brand: #ffaf5f;
+                --brand-soft: rgba(255, 175, 95, 0.12);
+                --bg: #1a1a1e;
+                --bg-card: #2a2a2e;
+                --fg: #fafafa;
+                --fg-muted: #a0a0a8;
+                --border: rgba(255, 255, 255, 0.08);
+                --max-w: 800px;
+            }
+            body {
+                font-family: system-ui, -apple-system, sans-serif;
+                background: var(--bg);
+                color: var(--fg);
+                line-height: 1.6;
+                padding: 40px 24px;
+            }
+            .container { max-width: var(--max-w); margin: 0 auto; }
+            nav { margin-bottom: 60px; }
+            nav a { color: var(--brand); text-decoration: none; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+            h1 { font-size: 32px; font-weight: 800; margin-bottom: 40px; letter-spacing: -0.02em; }
+            h2 { font-size: 20px; font-weight: 700; margin: 32px 0 16px; color: var(--brand); }
+            p { margin-bottom: 16px; color: var(--fg-muted); }
+            .card { background: var(--bg-card); border: 1px solid var(--border); padding: 24px; border-radius: 12px; margin-bottom: 24px; }
+            footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--fg-muted); }
+            code { font-family: monospace; background: rgba(255,255,255,0.05); padding: 2px 4px; border-radius: 4px; color: var(--brand); }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <nav>
+                <a href="index.html">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    Retour à l'accueil
+                </a>
+            </nav>
+
+            <h1>Conditions d'Utilisation</h1>
+
+            <div class="card">
+                <h2>1. Nature du logiciel</h2>
+                <p>
+                    Cruchot est une application desktop open source fournie "en l'état" (AS IS), sans garantie d'aucune sorte. 
+                    Le logiciel est distribué sous <strong>licence MIT</strong>.
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>2. Clés d'API et Coûts</h2>
+                <p>
+                    Cruchot est un client "Bring Your Own Key". L'utilisateur doit fournir ses propres clés d'API pour les services tiers (OpenAI, Anthropic, Google, etc.). 
+                </p>
+                <p>
+                    L'utilisateur est seul responsable de la gestion de ses quotas, de la confidentialité de ses clés et des frais financiers engendrés par ses appels API auprès des différents providers.
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>3. Usage des Outils (Bash & Filesystem)</h2>
+                <p>
+                    Cruchot permet à des modèles d'IA d'exécuter des commandes sur votre machine via l'outil <code>bash</code> et de manipuler des fichiers. 
+                </p>
+                <p>
+                    Bien que des mesures de sécurité soient en place (Sandbox Seatbelt sur macOS, pipeline de permissions), l'utilisateur accepte les risques liés à l'exécution de code généré par IA. L'éditeur ne peut être tenu responsable de toute perte de données ou dommage système résultant de l'utilisation de ces outils.
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>4. Contenus générés</h2>
+                <p>
+                    L'éditeur n'exerce aucun contrôle sur les réponses générées par les modèles d'Intelligence Artificielle. 
+                    L'utilisateur assume l'entière responsabilité de l'usage qu'il fait de ces contenus et de leur véracité.
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>5. Accès distant</h2>
+                <p>
+                    L'activation des fonctionnalités de "Remote Control" (Telegram ou Web) est optionnelle. L'utilisateur est responsable de la sécurisation physique et logique de l'accès à son instance locale.
+                </p>
+            </div>
+
+            <footer>
+                Dernière mise à jour : Avril 2026 — Cruchot
+            </footer>
+        </div>
+    </body>
+</html>

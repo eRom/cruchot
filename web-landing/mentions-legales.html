@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="fr" class="dark">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Mentions Légales — Cruchot</title>
+        <meta name="robots" content="noindex, follow" />
+        <link rel="icon" type="image/png" href="logo-cruchot-icon.png" />
+        <style>
+            :root {
+                --brand: #ffaf5f;
+                --brand-soft: rgba(255, 175, 95, 0.12);
+                --bg: #1a1a1e;
+                --bg-card: #2a2a2e;
+                --fg: #fafafa;
+                --fg-muted: #a0a0a8;
+                --border: rgba(255, 255, 255, 0.08);
+                --max-w: 800px;
+            }
+            body {
+                font-family: system-ui, -apple-system, sans-serif;
+                background: var(--bg);
+                color: var(--fg);
+                line-height: 1.6;
+                padding: 40px 24px;
+            }
+            .container { max-width: var(--max-w); margin: 0 auto; }
+            nav { margin-bottom: 60px; }
+            nav a { color: var(--brand); text-decoration: none; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+            h1 { font-size: 32px; font-weight: 800; margin-bottom: 40px; letter-spacing: -0.02em; }
+            h2 { font-size: 20px; font-weight: 700; margin: 32px 0 16px; color: var(--brand); }
+            p { margin-bottom: 16px; color: var(--fg-muted); }
+            .card { background: var(--bg-card); border: 1px solid var(--border); padding: 24px; border-radius: 12px; margin-bottom: 24px; }
+            footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--fg-muted); }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <nav>
+                <a href="index.html">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    Retour à l'accueil
+                </a>
+            </nav>
+
+            <h1>Mentions Légales</h1>
+
+            <div class="card">
+                <h2>Édition du site et du logiciel</h2>
+                <p>
+                    Le projet <strong>Cruchot</strong> est développé et édité par :<br>
+                    <strong>Romain Ecarnot</strong><br>
+                    Localisation : Nantes (44), France<br>
+                    Contact : romain.ecarnot@gmail.com
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>Hébergement</h2>
+                <p>
+                    Ce site vitrine est hébergé par :<br>
+                    <strong>Vercel Inc.</strong><br>
+                    440 N Barranca Ave #4133, Covina, CA 91723<br>
+                    https://vercel.com
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>Propriété intellectuelle</h2>
+                <p>
+                    Cruchot est un logiciel <strong>Open Source</strong> distribué sous licence MIT. 
+                    Le code source est disponible publiquement sur GitHub. Les logos et éléments 
+                    graphiques originaux restent la propriété de l'éditeur.
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>Responsabilité</h2>
+                <p>
+                    Cruchot est un client permettant de se connecter à des services tiers (OpenAI, Anthropic, etc.). 
+                    L'éditeur ne peut être tenu responsable des contenus générés par ces modèles d'intelligence artificielle 
+                    ou de l'utilisation faite du logiciel par l'utilisateur final.
+                </p>
+            </div>
+
+            <footer>
+                &copy; 2026 Romain Ecarnot — Cruchot
+            </footer>
+        </div>
+    </body>
+</html>

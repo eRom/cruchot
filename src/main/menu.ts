@@ -181,7 +181,28 @@ export function buildAppMenu(): Menu {
         click: () => {
           shell.openExternal('https://github.com/eRom/cruchot/issues/new')
         }
-      }
+      },
+      { type: 'separator' },
+      {
+        label: 'Mentions légales',
+        click: () => {
+          shell.openExternal('https://cruchot.romain-ecarnot.com/mentions-legales.html')
+        }
+      },
+      {
+        label: 'Politique de confidentialité',
+        click: () => {
+          shell.openExternal('https://cruchot.romain-ecarnot.com/confidentialite.html')
+        }
+      },
+      {
+        label: 'Conditions d\'utilisation',
+        click: () => {
+          shell.openExternal('https://cruchot.romain-ecarnot.com/conditions.html')
+        }
+      },
+
+
     ]
   })
 
