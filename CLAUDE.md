@@ -234,20 +234,24 @@ const PRICING: Record<string, { input: number; output: number }> = { /* fourni p
 ## Commandes
 
 ```bash
-npm run dev          # Demarrer en mode dev (HMR)
-npm run build        # Build production
-npm run preview      # Preview du build
-npm run lint         # ESLint
-npm run typecheck    # tsc --noEmit
-npm run test         # Vitest
-npm run test:e2e     # Playwright
-npm run db:generate  # Generer migrations Drizzle
-npm run db:migrate   # Appliquer migrations
-npm run dist         # Build + package (electron-builder)
-npm run dist:mac     # Package macOS (DMG + ZIP)
-npm run dist:win     # Package Windows (NSIS)
-npm run dist:linux   # Package Linux (AppImage + deb)
+npm run dev                # Demarrer en mode dev (HMR)
+npm run build              # Build production
+npm run preview            # Preview du build
+npm run lint               # ESLint
+npm run typecheck          # tsc --noEmit
+npm run test               # Vitest (251 tests, ~1.5s)
+npm run test:e2e:security  # Playwright security suite (22 + 2 skipped, ~12s)
+npm run test:e2e:flows     # Playwright flow specs (6 specs, ~1.4 min, Ollama qwen3.5:4b uniquement)
+npm run test:all           # vitest + security + flows = 279 passing + 2 skipped (~2 min)
+npm run db:generate        # Generer migrations Drizzle
+npm run db:migrate         # Appliquer migrations
+npm run dist               # Build + package (electron-builder)
+npm run dist:mac           # Package macOS (DMG + ZIP)
+npm run dist:win           # Package Windows (NSIS)
+npm run dist:linux         # Package Linux (AppImage + deb)
 ```
+
+**Tests** : strategie sablier 3-tier (S68-S70). Vitest + E2E security tournent en local + CI sur chaque PR. **Les E2E flows tournent UNIQUEMENT en local** (Ollama qwen3.5:4b), gates par le skill `cruchot-release` etape 2.6 pre-tag. Pas de job CI `e2e-flows` (decision Phase 2b2 PIVOT 2026-04-06 : ~1.4 min en local vs ~20 min en CI, et les specs sont over-fittees a qwen3.5:4b). Voir `tests/e2e/README.md` pour le detail des 6 specs et `_internal/specs/2026-04-06-test-strategy-design.md` pour le design global.
 
 ## Specifications
 
