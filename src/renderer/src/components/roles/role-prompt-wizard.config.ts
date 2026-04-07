@@ -326,3 +326,31 @@ export function renderMarkdown(selections: WizardSelections): string {
 
   return sections.join('\n\n')
 }
+
+export function renderXml(selections: WizardSelections): string {
+  const sections: string[] = []
+
+  const persona = buildPersona(selections)
+  if (persona) {
+    sections.push(`<role>Tu es ${persona}.</role>`)
+  }
+
+  const audienceLines: string[] = []
+  if (selections.expertise) audienceLines.push(EXPERTISE_LABELS[selections.expertise].sentence)
+  if (selections.personalContext.trim()) audienceLines.push(selections.personalContext.trim())
+  if (audienceLines.length > 0) {
+    sections.push(`<audience>\n${audienceLines.join('\n')}\n</audience>`)
+  }
+
+  const styleLines = buildStyleLines(selections)
+  if (styleLines.length > 0) {
+    sections.push(`<style>\n${styleLines.join('\n')}\n</style>`)
+  }
+
+  const guardrailLines = buildGuardrailLines(selections)
+  if (guardrailLines.length > 0) {
+    sections.push(`<rules>\n${guardrailLines.join('\n')}\n</rules>`)
+  }
+
+  return sections.join('\n\n')
+}

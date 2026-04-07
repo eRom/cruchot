@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { renderMarkdown, createEmptySelections, type WizardSelections } from './role-prompt-wizard.config'
+import { renderMarkdown, renderXml, createEmptySelections, type WizardSelections } from './role-prompt-wizard.config'
 
 describe('renderMarkdown', () => {
   it('renders empty selections as empty string', () => {
@@ -100,5 +100,61 @@ describe('renderMarkdown', () => {
     expect(renderMarkdown(sel)).toBe(
       '# Rôle\nTu es un expert en développement logiciel et architecture, spécialisé en compilateurs LLVM.'
     )
+  })
+})
+
+describe('renderXml', () => {
+  it('renders empty selections as empty string', () => {
+    expect(renderXml(createEmptySelections())).toBe('')
+  })
+
+  it('renders only role tag when domain alone is set', () => {
+    const sel: WizardSelections = {
+      ...createEmptySelections(),
+      domain: 'tech',
+      subDomain: 'frontend'
+    }
+    expect(renderXml(sel)).toBe(
+      '<role>Tu es un expert en développement logiciel et architecture, spécialisé en développement frontend.</role>'
+    )
+  })
+
+  it('renders all tags with full selections', () => {
+    const sel: WizardSelections = {
+      domain: 'tech',
+      subDomain: 'frontend',
+      expertise: 'expert',
+      formality: 'tu',
+      energy: 'direct',
+      responseFormat: 'code-first',
+      lengthTarget: 'medium',
+      guardrails: ['no-disclaimers'],
+      personalContext: 'Je code en TypeScript.',
+      outputFormat: 'xml'
+    }
+    const result = renderXml(sel)
+    expect(result).toContain('<role>Tu es un expert en développement logiciel et architecture, spécialisé en développement frontend.</role>')
+    expect(result).toContain('<audience>')
+    expect(result).toContain('Tu t\'adresses à un pair expert')
+    expect(result).toContain('Je code en TypeScript.')
+    expect(result).toContain('</audience>')
+    expect(result).toContain('<style>')
+    expect(result).toContain('- Tutoie l\'utilisateur.')
+    expect(result).toContain('</style>')
+    expect(result).toContain('<rules>')
+    expect(result).toContain('- Ne t\'excuse jamais')
+    expect(result).toContain('</rules>')
+  })
+
+  it('omits empty tags', () => {
+    const sel: WizardSelections = {
+      ...createEmptySelections(),
+      domain: 'tech',
+      subDomain: 'backend'
+    }
+    const result = renderXml(sel)
+    expect(result).not.toContain('<audience>')
+    expect(result).not.toContain('<style>')
+    expect(result).not.toContain('<rules>')
   })
 })
