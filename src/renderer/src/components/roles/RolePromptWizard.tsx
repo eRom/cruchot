@@ -7,7 +7,17 @@ import {
   renderXml,
   DOMAIN_LABELS,
   SUB_DOMAINS,
-  type DomainId
+  EXPERTISE_LABELS,
+  FORMALITY_LABELS,
+  ENERGY_LABELS,
+  FORMAT_LABELS,
+  LENGTH_LABELS,
+  type DomainId,
+  type ExpertiseLevel,
+  type Formality,
+  type Energy,
+  type ResponseFormat,
+  type LengthTarget
 } from './role-prompt-wizard.config'
 
 export type InsertMode = 'replace' | 'append'
@@ -323,6 +333,106 @@ function StepContent({
             />
           </div>
         )}
+      </div>
+    )
+  }
+
+  if (step === 'expertise') {
+    return (
+      <div>
+        <h3 className="text-base font-medium mb-4">Comment l&apos;IA doit-elle calibrer ses explications ?</h3>
+        <div className="grid grid-cols-1 gap-2">
+          {(Object.keys(EXPERTISE_LABELS) as ExpertiseLevel[]).map((id) => (
+            <button
+              key={id}
+              onClick={() => setSelections({ ...selections, expertise: id })}
+              className={`text-left px-4 py-3 rounded-md border transition-colors ${
+                selections.expertise === id ? 'border-primary bg-primary/10' : 'border-border hover:bg-accent'
+              }`}
+            >
+              {EXPERTISE_LABELS[id].label}
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (step === 'formality') {
+    return (
+      <div>
+        <h3 className="text-base font-medium mb-4">Quelle formalité ?</h3>
+        <div className="grid grid-cols-1 gap-2">
+          {(Object.keys(FORMALITY_LABELS) as Formality[]).map((id) => (
+            <button
+              key={id}
+              onClick={() => setSelections({ ...selections, formality: id })}
+              className={`text-left px-4 py-3 rounded-md border transition-colors ${
+                selections.formality === id ? 'border-primary bg-primary/10' : 'border-border hover:bg-accent'
+              }`}
+            >
+              {FORMALITY_LABELS[id].label}
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (step === 'energy') {
+    return (
+      <div>
+        <h3 className="text-base font-medium mb-4">Quelle énergie / ton ?</h3>
+        <div className="grid grid-cols-1 gap-2">
+          {(Object.keys(ENERGY_LABELS) as Energy[]).map((id) => (
+            <button
+              key={id}
+              onClick={() => setSelections({ ...selections, energy: id })}
+              className={`text-left px-4 py-3 rounded-md border transition-colors ${
+                selections.energy === id ? 'border-primary bg-primary/10' : 'border-border hover:bg-accent'
+              }`}
+            >
+              {ENERGY_LABELS[id].label}
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (step === 'formatLength') {
+    return (
+      <div>
+        <h3 className="text-base font-medium mb-4">Quel format de réponse préfères-tu ?</h3>
+        <div className="grid grid-cols-1 gap-2">
+          {(Object.keys(FORMAT_LABELS) as ResponseFormat[]).map((id) => (
+            <button
+              key={id}
+              onClick={() => setSelections({ ...selections, responseFormat: id })}
+              className={`text-left px-4 py-3 rounded-md border transition-colors ${
+                selections.responseFormat === id ? 'border-primary bg-primary/10' : 'border-border hover:bg-accent'
+              }`}
+            >
+              {FORMAT_LABELS[id].label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-6">
+          <h4 className="text-sm font-medium mb-2">Longueur cible</h4>
+          <div className="flex gap-2">
+            {(Object.keys(LENGTH_LABELS) as LengthTarget[]).map((id) => (
+              <button
+                key={id}
+                onClick={() => setSelections({ ...selections, lengthTarget: id })}
+                className={`flex-1 px-4 py-2 rounded-md border text-sm transition-colors ${
+                  selections.lengthTarget === id ? 'border-primary bg-primary/10' : 'border-border hover:bg-accent'
+                }`}
+              >
+                {LENGTH_LABELS[id].label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
