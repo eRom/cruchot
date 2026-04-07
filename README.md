@@ -166,7 +166,7 @@ Providers supportes : OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek, Alibaba
 
 ```mermaid
 graph LR
-  R[Renderer<br/>React 19 sandbox] -->|contextBridge<br/>295 methodes| P[Preload]
+  R[Renderer<br/>React 19 sandbox] -->|contextBridge<br/>297 methodes| P[Preload]
   P -->|ipcMain.handle<br/>Zod validation| M[Main Process<br/>Node.js]
   M --> DB[(SQLite WAL<br/>30 tables)]
   M --> Q[(Qdrant<br/>embedded)]
@@ -189,7 +189,7 @@ Equivalent texte :
 
 ```
 Renderer (React UI)  -->  contextBridge IPC  -->  Main (Node.js)
-     sandbox              295 methodes               DB, APIs, secrets
+     sandbox              297 methodes               DB, APIs, secrets
 ```
 
 L'app suit le modele de securite Electron strict : le renderer est sandbox, n'a aucun acces Node.js, et communique exclusivement via des methodes typees exposees par le preload.
@@ -329,7 +329,7 @@ L'architecture de securite repose sur l'isolation stricte des 3 couches Electron
 - Liens Markdown : whitelist de schemas (https, http, mailto, #)
 
 ### Preload (bridge)
-- 295 methodes typees via `contextBridge`, jamais `ipcRenderer` directement
+- 297 methodes typees via `contextBridge`, jamais `ipcRenderer` directement
 - Cleanup des listeners via `removeAllListeners`
 
 ### Main (Node.js)
