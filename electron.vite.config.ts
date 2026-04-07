@@ -8,8 +8,24 @@ const isProd =
   process.env.NODE_ENV_ELECTRON_VITE === 'production' ||
   process.env.NODE_ENV === 'production'
 
+// Hard "shipping" flag: ONLY set in release.yml CI before electron-builder
+// runs. It activates aggressive tree-shaking of TEST_MODE-only branches
+// (notably the test-helpers IPC dynamic import, see src/main/index.ts
+// `if (TEST_MODE && !__PROD_BUILD__)`). Local `npm run build` doesn't set
+// it so the e2e:flows can still register their helpers via TEST_MODE.
+const isShippingBuild = process.env.CRUCHOT_SHIPPING_BUILD === '1'
+
 export default defineConfig({
   main: {
+    // Compile-time constant replaced by Vite's define. Used to tree-shake
+    // TEST_MODE-only branches in shipping builds (notably the dynamic
+    // import of src/main/ipc/test-helpers.ipc which would otherwise leak
+    // as a chunk and trip the audit-bundle.js test-helpers-leak rule).
+    // Pinned to CRUCHOT_SHIPPING_BUILD=1, set only by release.yml — so
+    // local `npm run build` keeps the helpers chunk for E2E flow specs.
+    define: {
+      __PROD_BUILD__: JSON.stringify(isShippingBuild)
+    },
     plugins: [
       externalizeDepsPlugin({
         exclude: [

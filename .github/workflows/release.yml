@@ -108,18 +108,21 @@ jobs:
         if: matrix.platform == 'mac'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CRUCHOT_SHIPPING_BUILD: '1'
         run: npm run dist:mac -- --publish always
 
       - name: Build & Package (Windows)
         if: matrix.platform == 'win'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CRUCHOT_SHIPPING_BUILD: '1'
         run: npm run dist:win -- --publish always
 
       - name: Build & Package (Linux)
         if: matrix.platform == 'linux'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CRUCHOT_SHIPPING_BUILD: '1'
         run: npm run dist:linux -- --publish always
 
       # ── Post-build audit: scan the actual packaged bundle ──

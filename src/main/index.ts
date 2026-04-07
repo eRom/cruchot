@@ -17,6 +17,13 @@ import { vcrHtmlExporterService } from './services/vcr-html-exporter.service'
 import { listSkills, createSkill, deleteSkill } from './db/queries/skills'
 import { TEST_MODE, TEST_USERDATA } from './test-mode'
 
+// Compile-time constant injected by electron.vite.config.ts via `define`.
+// Always `true` in production builds, `false` in dev. Used together with
+// the runtime TEST_MODE flag to tree-shake the test-helpers IPC dynamic
+// import out of prod bundles — otherwise the chunk leaks into the .app
+// and trips the audit-bundle.js `test-helpers-leak` critical rule.
+declare const __PROD_BUILD__: boolean
+
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
@@ -196,10 +203,14 @@ app.whenReady().then(() => {
   registerAllIpcHandlers()
 
   // E2E test helpers — registered ONLY when CRUCHOT_TEST_MODE=1.
-  // Dynamic import so the module is tree-shaken out of production builds.
-  // Fire-and-forget: the registration is fast, no need to block startup.
-  // See src/main/ipc/test-helpers.ipc.ts for the security model.
-  if (TEST_MODE) {
+  // The `&& !__PROD_BUILD__` guard is REQUIRED for tree-shaking: the
+  // dynamic import below would otherwise be emitted as an `out/main/chunks/
+  // test-helpers.ipc-*.js` file even in prod builds, which trips the
+  // audit-bundle.js `test-helpers-leak` critical rule. With __PROD_BUILD__
+  // replaced by `true` at compile time, the whole `if` becomes dead code
+  // and Rollup drops it. Fire-and-forget — see test-helpers.ipc.ts for
+  // the security model.
+  if (TEST_MODE && !__PROD_BUILD__) {
     import('./ipc/test-helpers.ipc')
       .then(({ registerTestHelpers }) => {
         registerTestHelpers()
