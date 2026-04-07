@@ -118,13 +118,13 @@ function App(): React.JSX.Element {
   const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
-    window.api.getSetting('onboarding_completed').then((val) => {
+    window.api.getSetting('multi-llm:onboarding_completed').then((val) => {
       if (val !== 'true') setShowOnboarding(true)
     })
   }, [])
 
   const handleOnboardingComplete = () => {
-    window.api.setSetting('onboarding_completed', 'true')
+    window.api.setSetting('multi-llm:onboarding_completed', 'true')
     setShowOnboarding(false)
   }
 

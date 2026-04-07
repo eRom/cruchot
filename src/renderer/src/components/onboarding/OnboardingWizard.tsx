@@ -15,7 +15,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
   const handleFinish = async () => {
     try {
-      await window.api.setSetting('onboarding_completed', 'true')
+      await window.api.setSetting('multi-llm:onboarding_completed', 'true')
     } catch {
       // Settings IPC may not be available yet — continue anyway
     }
