@@ -5,7 +5,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['src/main/**/__tests__/**/*.test.ts'],
+    include: [
+      'src/main/**/__tests__/**/*.test.ts',
+      'src/renderer/src/components/**/*.config.test.ts'
+    ],
     exclude: ['node_modules', 'out', 'dist'],
   },
   resolve: {

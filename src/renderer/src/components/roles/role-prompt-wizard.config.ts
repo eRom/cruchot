@@ -263,3 +263,66 @@ export function createEmptySelections(): WizardSelections {
     outputFormat: 'markdown'
   }
 }
+
+function buildPersona(selections: WizardSelections): string {
+  if (selections.domain === 'custom') {
+    const label = selections.domainCustomLabel?.trim() ?? ''
+    const angle = selections.domainCustomAngle?.trim() ?? ''
+    if (!label) return ''
+    return angle ? `${label}, ${angle}` : label
+  }
+  if (!selections.domain) return ''
+  const root = DOMAIN_PERSONAS[selections.domain]
+  if (selections.subDomain === 'other' && selections.subDomainOther?.trim()) {
+    return `${root}, ${selections.subDomainOther.trim()}`
+  }
+  if (selections.subDomain) {
+    const sub = SUB_DOMAINS[selections.domain as Exclude<DomainId, 'custom'>]?.options.find(o => o.value === selections.subDomain)
+    return root + (sub?.persona ?? '')
+  }
+  return root
+}
+
+function buildStyleLines(selections: WizardSelections): string[] {
+  const lines: string[] = []
+  if (selections.formality) lines.push(`- ${FORMALITY_LABELS[selections.formality].sentence}`)
+  if (selections.energy) lines.push(`- ${ENERGY_LABELS[selections.energy].sentence}`)
+  if (selections.responseFormat) lines.push(`- ${FORMAT_LABELS[selections.responseFormat].sentence}`)
+  if (selections.lengthTarget) lines.push(`- ${LENGTH_LABELS[selections.lengthTarget].sentence}`)
+  return lines
+}
+
+function buildGuardrailLines(selections: WizardSelections): string[] {
+  return selections.guardrails
+    .map(id => GUARDRAILS.find(g => g.id === id))
+    .filter((g): g is Guardrail => g !== undefined)
+    .map(g => `- ${g.rendered}`)
+}
+
+export function renderMarkdown(selections: WizardSelections): string {
+  const sections: string[] = []
+
+  const persona = buildPersona(selections)
+  if (persona) {
+    sections.push(`# Rôle\nTu es ${persona}.`)
+  }
+
+  const publicLines: string[] = []
+  if (selections.expertise) publicLines.push(EXPERTISE_LABELS[selections.expertise].sentence)
+  if (selections.personalContext.trim()) publicLines.push(selections.personalContext.trim())
+  if (publicLines.length > 0) {
+    sections.push(`# Public\n${publicLines.join('\n')}`)
+  }
+
+  const styleLines = buildStyleLines(selections)
+  if (styleLines.length > 0) {
+    sections.push(`# Style\n${styleLines.join('\n')}`)
+  }
+
+  const guardrailLines = buildGuardrailLines(selections)
+  if (guardrailLines.length > 0) {
+    sections.push(`# Règles\n${guardrailLines.join('\n')}`)
+  }
+
+  return sections.join('\n\n')
+}
