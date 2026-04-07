@@ -17,7 +17,7 @@
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/eRom/cruchot?style=flat-square" alt="License" /></a>
   <img src="https://img.shields.io/badge/Electron-41-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron 41" />
   <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript 5.7" />
-  <img src="https://img.shields.io/badge/Security-97%2F100-brightgreen?style=flat-square" alt="Security Score 97/100" />
+  <img src="https://img.shields.io/badge/Security-98%2F100-brightgreen?style=flat-square" alt="Security Score 98/100" />
   <a href="https://cruchot.romain-ecarnot.com"><img src="https://img.shields.io/badge/website-cruchot.romain--ecarnot.com-blue?style=flat-square" alt="Website" /></a>
 </p>
 
@@ -56,7 +56,7 @@ Les apps multi-LLM cloud (Poe, ChatHub, Msty) exposent tes conversations a des s
 
 - **11 providers** (OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek, Alibaba, Perplexity, OpenRouter, Ollama, LM Studio)
 - **100% local** : SQLite + Qdrant embedded, cles API chiffrees via Keychain macOS, zero telemetrie
-- **Security score 97/100** : sandbox renderer, Seatbelt macOS, pipeline permissions 5 etages, `@electron/fuses`
+- **Security score 98/100** : sandbox renderer, Seatbelt macOS, pipeline permissions 5 etages, `@electron/fuses`
 - **Fonctionnalites avancees uniques** : Arena (LLM vs LLM), memoire episodique auto-extraite, RAG custom Qdrant, Conversation Tools (8 outils LLM), Remote Telegram/Web, Live Voice, export `.mlx` chiffre AES-256-GCM
 
 Pour la visite complete avec captures d'ecran et explications detaillees, rendez-vous sur **[cruchot.romain-ecarnot.com](https://cruchot.romain-ecarnot.com)**.
@@ -73,7 +73,7 @@ Pour la visite complete avec captures d'ecran et explications detaillees, rendez
 | Arena (LLM vs LLM side-by-side) | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Remote mobile (Telegram/Web) | ✅ | ❌ | ❌ | ❌ | ⚠️ web only |
 | Export chiffre cross-machine | ✅ `.mlx` AES-256-GCM | ❌ | ❌ | ❌ | ❌ |
-| Audit securite public | ✅ **97/100** | ❌ | ❌ | ❌ | ❌ |
+| Audit securite public | ✅ **98/100** | ❌ | ❌ | ❌ | ❌ |
 | Open source | ✅ MIT | ❌ proprio | ✅ AGPL | ✅ | ✅ MIT |
 
 Cruchot est la seule app qui combine **local-first strict** + **feature set pro** + **securite auditee**. Les chiffres par provider sont indicatifs (derniere verification : avril 2026).
@@ -168,7 +168,7 @@ Providers supportes : OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek, Alibaba
 graph LR
   R[Renderer<br/>React 19 sandbox] -->|contextBridge<br/>295 methodes| P[Preload]
   P -->|ipcMain.handle<br/>Zod validation| M[Main Process<br/>Node.js]
-  M --> DB[(SQLite WAL<br/>31 tables)]
+  M --> DB[(SQLite WAL<br/>30 tables)]
   M --> Q[(Qdrant<br/>embedded)]
   M --> LLM[11 providers LLM<br/>via AI SDK 6]
   M --> SEC[safeStorage<br/>Keychain macOS]
@@ -199,7 +199,7 @@ src/
   main/           # Electron main process
     ipc/          #   Handlers IPC par domaine (Zod validation)
     llm/          #   Routeur AI SDK, cost-calculator, tools, prompts
-    db/           #   Schema Drizzle (31 tables), queries
+    db/           #   Schema Drizzle (30 tables), queries
     services/     #   Singletons metier (library, qdrant, git, mcp, remote...)
   preload/        # Bridge IPC securise (contextBridge)
   renderer/src/   # React app
@@ -347,7 +347,7 @@ L'architecture de securite repose sur l'isolation stricte des 3 couches Electron
 - **Export .mlx** : AES-256-GCM, IV unique par export, token hors whitelist renderer
 
 ### Donnees
-- SQLite WAL + 31 tables Drizzle, donnees 100% locales
+- SQLite WAL + 30 tables Drizzle, donnees 100% locales
 - Qdrant vector DB embedded (127.0.0.1 uniquement)
 - Zero telemetrie, zero serveur backend
 
