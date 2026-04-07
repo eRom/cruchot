@@ -144,8 +144,8 @@ export function RolePromptWizard({ open, onClose, onInsert, hasExistingPrompt }:
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose() }}>
-      <DialogContent className="max-w-[1100px] w-[1100px] p-0 overflow-hidden">
-        <div className="flex flex-col h-[720px]">
+      <DialogContent className="sm:max-w-[1100px] w-[1100px] p-0 overflow-hidden">
+        <div className="flex flex-col h-[820px]">
           <div className="px-6 py-4 border-b border-border">
             <h2 className="text-lg font-semibold">Configurateur de rôle</h2>
             <div className="w-full bg-muted h-1.5 mt-3 rounded-full overflow-hidden">
