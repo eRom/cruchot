@@ -122,7 +122,16 @@ async function lazyInitServices(mainWindow: BrowserWindow): Promise<void> {
     console.error('[OneiricTrigger] Lazy init failed:', err)
   }
 
-  // Live Engine — register plugins and init (connect is on-demand)
+}
+
+// Live plugins must be registered BEFORE the renderer probes liveIsAvailable.
+// The renderer's App.tsx useEffect runs at T=0 and T=3000ms only — if plugins
+// are not registered by then, isAvailable() returns false and stays false until
+// a manual reload. Previously this lived inside lazyInitServices() AFTER Qdrant
+// init (~3-8s on slower machines), causing a race where the Notch never appeared
+// on cold start. The register itself is purely synchronous (Map.set), so we run
+// it eagerly here. liveEngineService.init() just stores the BrowserWindow ref.
+async function initLiveEngineEarly(mainWindow: BrowserWindow): Promise<void> {
   try {
     const { liveEngineService } = await import('./live/live-engine.service')
     const { livePluginRegistry } = await import('./live/live-plugin-registry')
@@ -132,7 +141,7 @@ async function lazyInitServices(mainWindow: BrowserWindow): Promise<void> {
     livePluginRegistry.register(openaiLivePlugin)
     liveEngineService.init(mainWindow)
   } catch (err) {
-    console.error('[LiveEngine] Lazy init failed:', err)
+    console.error('[LiveEngine] Early init failed:', err)
   }
 }
 
@@ -262,6 +271,11 @@ app.whenReady().then(() => {
 
   // Scheduler — always active (lightweight)
   schedulerService.init(mainWindow)
+
+  // Live plugins — eager init (must beat the renderer's first probe at T=0)
+  initLiveEngineEarly(mainWindow).catch((err) => {
+    console.error('[LiveEngine] Early init unexpected error:', err)
+  })
 
   // Lazy-load non-critical services
   lazyInitServices(mainWindow).catch((err) => {
