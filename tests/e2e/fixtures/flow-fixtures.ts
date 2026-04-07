@@ -31,6 +31,13 @@ export const TEST_MODEL_ID =
  * calling setSetting via IPC + reload is NOT enough — we MUST also seed
  * localStorage directly. We mirror to the DB via IPC for consistency.
  *
+ * Also marks the onboarding as completed: since S71's `c5b7218`
+ * (`fix(onboarding): use multi-llm: prefix for onboarding_completed`),
+ * the wizard correctly persists — but in TEST_MODE the userData dir is
+ * fresh per spec, so without seeding the wizard appears as a fixed
+ * inset-0 z-50 overlay that intercepts all pointer events and blocks
+ * the entire spec. Seeding the setting bypasses the wizard cleanly.
+ *
  * After this helper returns, useProvidersStore.getState().getSelectedModel()
  * returns the requested model, ready for chat sends.
  */
@@ -48,6 +55,13 @@ export async function seedDefaultModel(page: Page, modelId: string): Promise<voi
         window as { api: { setSetting: (k: string, v: string) => Promise<void> } }
       ).api.setSetting('multi-llm:default-model-id', id),
     modelId
+  )
+
+  // Skip the onboarding wizard — see header comment for context.
+  await page.evaluate(() =>
+    (
+      window as { api: { setSetting: (k: string, v: string) => Promise<void> } }
+    ).api.setSetting('multi-llm:onboarding_completed', 'true')
   )
 
   await page.reload()

@@ -212,7 +212,7 @@ src/
 ## Fonctionnalites
 
 ### Chat Multi-Provider
-- **11 providers** : OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek, Alibaba, Perplexity, Ollama, LM Studio
+- **11 providers** : OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek, Alibaba, Perplexity, OpenRouter, Ollama, LM Studio
 - Streaming temps reel, historique illimite avec recherche full-text (FTS5)
 - Mode Thinking/Reasoning (Anthropic, OpenAI, Google, xAI, DeepSeek)
 - Annulation de stream en cours

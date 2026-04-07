@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.9.3] - 2026-04-07
+
+- feat(menu): add native macOS application menu (Cruchot/Fichier/Édition/Affichage/Fenêtre/Aide) with Personnaliser, Sauvegarder, Importer/Exporter .mlx
+- feat(menu): customise native About panel with Cruchot icon, version, copyright
+- feat(test): full E2E flow suite — 6 Playwright specs running locally on Ollama qwen3.5:4b (Phase 2b1)
+- feat(test): add 4 test-mode IPC helpers (db-select, seed-messages, trigger-compact, get-system-prompt)
+- feat(llm): extract pure-function buildSystemPrompt module from chat.ipc.ts
+- fix(live): register plugins eagerly to avoid Notch race on cold start
+- fix(main): move ensureInstanceToken before IPC handler registration (fix export:bulk race)
+- fix(csp): allow wasm-unsafe-eval for Shiki Oniguruma engine
+- fix(onboarding): use multi-llm: prefix for onboarding_completed setting
+- fix(live): replace 1-shot retry with exponential backoff polling (defense in depth)
+- deps: bump electron 40.8.5 → 41.1.1 (Chromium 146 + Node 24 + V8 14.6)
+- deps: bump react-markdown 9 → 10, i18next 25 → 26, react-i18next 16 → 17, vite 6.4.1 → 6.4.2
+- docs(tech): add 09-TESTING_STRATEGY.md documenting the 3-tier sablier strategy
+- docs(skill): cruchot-release skill now runs 3 test layers locally before tagging (Phase 2b2 PIVOT)
+- chore(git): ignore *.tsbuildinfo and untrack stale tsconfig.node.tsbuildinfo
+
 ## [0.9.2] - 2026-04-06
 
 - feat(security): audit-bundle out/ mode + cruchot-release skill + cleanup
