@@ -1,0 +1,119 @@
+name: Bug report
+description: Signaler un bug rencontre dans Cruchot
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de prendre le temps de signaler ce bug. Plus les informations sont precises, plus vite il sera corrige.
+
+        **Pour une vulnerabilite de securite**, ne pas ouvrir d'issue publique — voir [SECURITY.md](../blob/main/SECURITY.md).
+
+  - type: input
+    id: version
+    attributes:
+      label: Version de Cruchot
+      description: Visible dans le menu "A propos" ou via `cat package.json | grep version`
+      placeholder: "0.9.2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Systeme d'exploitation
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Windows
+        - Linux
+        - Autre
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: Version de l'OS
+      placeholder: "macOS 14.3 Sonoma"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Provider LLM impacte (si applicable)
+      options:
+        - N/A
+        - OpenAI
+        - Anthropic
+        - Google (Gemini)
+        - Mistral
+        - xAI (Grok)
+        - DeepSeek
+        - Alibaba Qwen
+        - Perplexity
+        - OpenRouter
+        - Ollama
+        - LM Studio
+        - Plusieurs
+    validations:
+      required: false
+
+  - type: textarea
+    id: describe
+    attributes:
+      label: Description du bug
+      description: Que s'est-il passe ? Que t'attendais-tu a voir ?
+      placeholder: "Quand je clique sur X, l'app freeze pendant Y secondes au lieu de Z..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Etapes pour reproduire
+      description: Liste des etapes precises pour declencher le bug
+      placeholder: |
+        1. Ouvrir Cruchot
+        2. Aller dans Settings > Providers
+        3. Cliquer sur ...
+        4. Le bug apparait
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportement attendu
+      placeholder: "Je m'attendais a ce que ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs ou messages d'erreur
+      description: Logs de la console DevTools (Cmd+Alt+I) ou messages d'erreur
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexte additionnel
+      description: Screenshots, configuration particuliere, conversations qui declenchent le bug, etc.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      options:
+        - label: J'ai cherche dans les [issues existantes](https://github.com/eRom/cruchot/issues) avant d'ouvrir celle-ci
+          required: true
+        - label: Je confirme que ce n'est pas une vulnerabilite de securite (sinon voir SECURITY.md)
+          required: true

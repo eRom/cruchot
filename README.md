@@ -1,24 +1,113 @@
 <p align="center">
-  <img src="resources/logo-cruchot.png" alt="Cruchot" width="200" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="resources/logo-cruchot-transparent.png" />
+    <source media="(prefers-color-scheme: light)" srcset="resources/logo-cruchot.png" />
+    <img src="resources/logo-cruchot.png" alt="Cruchot" width="200" />
+  </picture>
 </p>
 
-> **Cruchot** : Tous vos LLMs, une seule interface. **Open source**, **gratuit** et **App 100% locale**.
+<p align="center">
+  <strong>Cruchot</strong> — Le client desktop multi-LLM qui respecte ta vie privee.<br />
+  <em>11 providers IA dans une seule app. 100% local. Open source.</em>
+</p>
 
-App desktop locale de chat multi-LLM construite avec Electron. 11 providers, generation d'images, RAG custom, memoire semantique, workspace co-work, integration Git, controle a distance, et bien plus. Zero serveur backend, donnees 100% locales.
+<p align="center">
+  <a href="https://github.com/eRom/cruchot/releases/latest"><img src="https://img.shields.io/github/v/release/eRom/cruchot?style=flat-square&color=6F42C1&label=release" alt="Release" /></a>
+  <a href="https://github.com/eRom/cruchot/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/eRom/cruchot/ci.yml?branch=main&style=flat-square&label=CI" alt="CI" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/eRom/cruchot?style=flat-square" alt="License" /></a>
+  <img src="https://img.shields.io/badge/Electron-41-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron 41" />
+  <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript 5.7" />
+  <img src="https://img.shields.io/badge/Security-97%2F100-brightgreen?style=flat-square" alt="Security Score 97/100" />
+  <a href="https://cruchot.romain-ecarnot.com"><img src="https://img.shields.io/badge/website-cruchot.romain--ecarnot.com-blue?style=flat-square" alt="Website" /></a>
+</p>
+
+<p align="center">
+  <a href="https://cruchot.romain-ecarnot.com"><strong>Site web →</strong></a>
+  ·
+  <a href="https://github.com/eRom/cruchot/releases/latest"><strong>Telecharger pour macOS</strong></a>
+  ·
+  <a href="#fonctionnalites">Fonctionnalites</a>
+  ·
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
 
 <p align="center">
   <img src="resources/infographie.png" alt="Infographie Cruchot" width="800" />
 </p>
 
-## Changelog
+---
 
-Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet des versions.
+## Table des matieres
+
+- [Pourquoi Cruchot ?](#pourquoi-cruchot-)
+- [Quick Start](#quick-start)
+- [Stack](#stack)
+- [Installation & Init](#installation--init)
+- [Architecture](#architecture)
+- [Fonctionnalites](#fonctionnalites)
+- [Securite](#securite)
+- [Distribution](#distribution)
+- [Contribuer](#contribuer)
+- [Licence](#licence)
+
+## Pourquoi Cruchot ?
+
+Les apps multi-LLM cloud (Poe, ChatHub, Msty) exposent tes conversations a des serveurs tiers. Les apps 100% locales (ChatBox, Jan.ai) sont limitees en fonctionnalites avancees. **Cruchot comble le trou** : toute la puissance d'un client pro, sans jamais quitter ta machine.
+
+- **11 providers** (OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek, Alibaba, Perplexity, OpenRouter, Ollama, LM Studio)
+- **100% local** : SQLite + Qdrant embedded, cles API chiffrees via Keychain macOS, zero telemetrie
+- **Security score 97/100** : sandbox renderer, Seatbelt macOS, pipeline permissions 5 etages, `@electron/fuses`
+- **Fonctionnalites avancees uniques** : Arena (LLM vs LLM), memoire episodique auto-extraite, RAG custom Qdrant, Conversation Tools (8 outils LLM), Remote Telegram/Web, Live Voice, export `.mlx` chiffre AES-256-GCM
+
+Pour la visite complete avec captures d'ecran et explications detaillees, rendez-vous sur **[cruchot.romain-ecarnot.com](https://cruchot.romain-ecarnot.com)**.
+
+### Comparaison avec les alternatives
+
+| Fonctionnalite | **Cruchot** | Msty | Jan.ai | ChatBox | LibreChat |
+|---|---|---|---|---|---|
+| 100% local (aucun serveur) | ✅ | ✅ | ✅ | ⚠️ partiel | ❌ serveur |
+| Nombre de providers cloud | **11** | ~8 | ~4 | ~6 | ~10 |
+| RAG custom (docs locaux) | ✅ Qdrant embedded | ⚠️ basique | ❌ | ❌ | ✅ |
+| Conversation Tools (bash, file, web) | ✅ **8 tools + sandbox** | ❌ | ❌ | ❌ | ⚠️ limite |
+| Memoire episodique auto | ✅ extraction LLM | ❌ | ❌ | ❌ | ❌ |
+| Arena (LLM vs LLM side-by-side) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Remote mobile (Telegram/Web) | ✅ | ❌ | ❌ | ❌ | ⚠️ web only |
+| Export chiffre cross-machine | ✅ `.mlx` AES-256-GCM | ❌ | ❌ | ❌ | ❌ |
+| Audit securite public | ✅ **97/100** | ❌ | ❌ | ❌ | ❌ |
+| Open source | ✅ MIT | ❌ proprio | ✅ AGPL | ✅ | ✅ MIT |
+
+Cruchot est la seule app qui combine **local-first strict** + **feature set pro** + **securite auditee**. Les chiffres par provider sont indicatifs (derniere verification : avril 2026).
+
+### Apercu
+
+<p align="center">
+  <a href="https://cruchot.romain-ecarnot.com"><img src="resources/screenshots/chat-main.png" alt="Vue principale du chat Cruchot" width="800" /></a>
+</p>
+
+<p align="center">
+  <a href="https://cruchot.romain-ecarnot.com"><img src="resources/screenshots/arena.png" alt="Arena — LLM vs LLM side-by-side" width="49%" />&nbsp;<img src="resources/screenshots/memory.png" alt="Memoire semantique et fragments" width="49%" /></a>
+</p>
+
+<p align="center">
+  <em>Plus de captures et demo complete sur <a href="https://cruchot.romain-ecarnot.com"><strong>cruchot.romain-ecarnot.com</strong></a></em>
+</p>
+
+## Quick Start
+
+```bash
+# Telecharger la derniere release macOS (DMG)
+curl -L https://github.com/eRom/cruchot/releases/latest/download/Cruchot-arm64.dmg -o Cruchot.dmg && open Cruchot.dmg
+```
+
+Ou telecharge directement depuis la [**page Releases**](https://github.com/eRom/cruchot/releases/latest).
+
+Au premier lancement, l'assistant de bienvenue te guide pour configurer tes cles API (chiffrees via `safeStorage`). Pour developper localement, voir [Installation & Init](#installation--init).
 
 ## Stack
 
 | Couche | Technologies |
 |--------|-------------|
-| Runtime | Electron 40 + Node.js 24 |
+| Runtime | Electron 41 + Node.js 24 |
 | Frontend | React 19 + TypeScript 5.7 + Tailwind CSS 4 + shadcn/ui |
 | LLM | Vercel AI SDK 6 (`ai@^6`) |
 | Database | SQLite (better-sqlite3) + Drizzle ORM + Qdrant (embedded) |
@@ -75,9 +164,32 @@ Providers supportes : OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek, Alibaba
 
 ## Architecture
 
+```mermaid
+graph LR
+  R[Renderer<br/>React 19 sandbox] -->|contextBridge<br/>295 methodes| P[Preload]
+  P -->|ipcMain.handle<br/>Zod validation| M[Main Process<br/>Node.js]
+  M --> DB[(SQLite WAL<br/>31 tables)]
+  M --> Q[(Qdrant<br/>embedded)]
+  M --> LLM[11 providers LLM<br/>via AI SDK 6]
+  M --> SEC[safeStorage<br/>Keychain macOS]
+  M --> SB[Seatbelt<br/>sandbox tools]
+
+  classDef client fill:#7CC1FF,stroke:#2563EB,color:#0B1220
+  classDef bridge fill:#C4B5FD,stroke:#6D28D9,color:#0B1220
+  classDef server fill:#6EE7B7,stroke:#047857,color:#0B1220
+  classDef storage fill:#FDE68A,stroke:#B45309,color:#0B1220
+  class R client
+  class P bridge
+  class M server
+  class DB,Q storage
+  class LLM,SEC,SB server
+```
+
+Equivalent texte :
+
 ```
 Renderer (React UI)  -->  contextBridge IPC  -->  Main (Node.js)
-     sandbox              ~140 methodes              DB, APIs, secrets
+     sandbox              295 methodes               DB, APIs, secrets
 ```
 
 L'app suit le modele de securite Electron strict : le renderer est sandbox, n'a aucun acces Node.js, et communique exclusivement via des methodes typees exposees par le preload.
@@ -87,7 +199,7 @@ src/
   main/           # Electron main process
     ipc/          #   Handlers IPC par domaine (Zod validation)
     llm/          #   Routeur AI SDK, cost-calculator, tools, prompts
-    db/           #   Schema Drizzle (26 tables), queries
+    db/           #   Schema Drizzle (31 tables), queries
     services/     #   Singletons metier (library, qdrant, git, mcp, remote...)
   preload/        # Bridge IPC securise (contextBridge)
   renderer/src/   # React app
@@ -124,7 +236,7 @@ src/
 ### Workspace Co-Work
 - Arborescence de fichiers interactive avec indicateurs Git (M/A/D/?)
 - **8 outils IA** : bash, readFile, writeFile, FileEdit, listFiles, GrepTool, GlobTool, WebFetchTool
-- **Pipeline securite 4 etages** : security checks → permission rules → approval → execution
+- **Pipeline securite 5 etages** : security checks → deny rules → readonly → allow rules → approval (ou YOLO) → execution
 - **Seatbelt macOS** : confinement sandbox (allow default + deny cible), stdout/stderr fonctionnels
 - **Mode YOLO** : bypass les prompts d'approbation (security checks hard restent actifs)
 - **READONLY_COMMANDS** : ~60 commandes auto-allow sans approbation (ls, grep, cat, head, etc.)
@@ -217,7 +329,7 @@ L'architecture de securite repose sur l'isolation stricte des 3 couches Electron
 - Liens Markdown : whitelist de schemas (https, http, mailto, #)
 
 ### Preload (bridge)
-- ~150 methodes typees via `contextBridge`, jamais `ipcRenderer` directement
+- 295 methodes typees via `contextBridge`, jamais `ipcRenderer` directement
 - Cleanup des listeners via `removeAllListeners`
 
 ### Main (Node.js)
@@ -235,7 +347,7 @@ L'architecture de securite repose sur l'isolation stricte des 3 couches Electron
 - **Export .mlx** : AES-256-GCM, IV unique par export, token hors whitelist renderer
 
 ### Donnees
-- SQLite WAL + 27 tables Drizzle, donnees 100% locales
+- SQLite WAL + 31 tables Drizzle, donnees 100% locales
 - Qdrant vector DB embedded (127.0.0.1 uniquement)
 - Zero telemetrie, zero serveur backend
 
@@ -249,6 +361,16 @@ npm run dist:linux    # AppImage + deb
 
 Auto-updater integre via `electron-updater` (GitHub Releases).
 
+## Contribuer
+
+Les contributions sont les bienvenues ! Pour demarrer :
+
+- **Guide de contribution** : voir [CONTRIBUTING.md](CONTRIBUTING.md) (workflow, standards, tests, conventions de commit)
+- **Code de conduite** : voir [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) (Contributor Covenant 2.1)
+- **Politique de securite** : voir [SECURITY.md](SECURITY.md) pour signaler une vulnerabilite (ne pas ouvrir d'issue publique)
+- **Good First Issues** : [parcours tes premieres contributions](https://github.com/eRom/cruchot/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
+- **Changelog** : voir [CHANGELOG.md](CHANGELOG.md) pour l'historique des versions
+
 ## Licence
 
-MIT
+[MIT](LICENSE) © [Romain Ecarnot](https://www.romain-ecarnot.com)

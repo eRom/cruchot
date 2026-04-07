@@ -44,6 +44,15 @@ Version actuelle : 0.9.1
 Bump : patch -> 0.9.2
 ```
 
+## Etape 1.5 : README audit (bloquant)
+
+Invoquer `/cruchot-readme-check` avant les pre-checks techniques. Une release rend le README public sur la page Releases GitHub et pour l'auto-updater — il DOIT etre aux standards du notebook `f082fb0c`.
+
+**Regles de decision** :
+- **FAIL** (section obligatoire manquante, drift majeur de version, badge critique absent) → **STOP** avec message "README non-conforme. Lance /cruchot-readme-check en standalone, fix, puis relance /cruchot-release."
+- **WARN** (drift mineur de chiffres entre README/landing/sources) → afficher les warnings et **demander confirmation explicite** a Romain avant de continuer. Les releases sont visibles, il vaut mieux rater 2 min qu'avoir un README drifte public.
+- **PASS** → continuer vers l'etape 2.
+
 ## Etape 2 : Pre-checks
 
 Executer ces verifications dans l'ordre. Si l'une echoue, STOP avec message clair.

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Vulnerabilite de securite
+    url: https://github.com/eRom/cruchot/blob/main/SECURITY.md
+    about: NE PAS ouvrir d'issue publique. Voir SECURITY.md pour le processus de divulgation responsable.
+  - name: Discussions et questions
+    url: https://github.com/eRom/cruchot/discussions
+    about: Pour les questions generales, partage de configs, idees en cours de maturation, ou entraide.
+  - name: Site web Cruchot
+    url: https://cruchot.romain-ecarnot.com
+    about: Documentation visuelle, captures d'ecran, roadmap fonctionnelle.

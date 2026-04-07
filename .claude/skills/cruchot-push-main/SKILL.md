@@ -49,6 +49,19 @@ Fichiers de documentation a verifier :
 
 ---
 
+## Etape 1.5 : Verifier le README contre les standards GitHub 2026
+
+Invoquer le skill `/cruchot-readme-check` comme sous-processus (ou simuler son execution via les checks qu'il documente).
+
+**Regles de decision** :
+- **FAIL** (section obligatoire manquante OU drift majeur de version) → **STOP**. Afficher le rapport complet. Demander a Romain de fixer avant de re-push. NE PAS committer.
+- **WARN** (drift mineur de chiffres) → afficher les warnings mais continuer. Les warnings seront corriges soit par la mise a jour doc de l'etape 1, soit laisses comme dette si non-critiques.
+- **PASS** → continuer silencieusement vers l'etape 2.
+
+Cette etape garantit que chaque push sur main maintient le README aux standards du notebook `f082fb0c` (10 piliers + coherence cross-channels avec la landing page et les sources de verite).
+
+---
+
 ## Etape 2 : Commit + Push
 
 ### 2.1 Commit

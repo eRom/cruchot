@@ -1,0 +1,86 @@
+name: Feature request
+description: Proposer une nouvelle fonctionnalite ou amelioration
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de proposer une idee ! Prends quelques minutes pour detailler le contexte — ca aide a prioriser.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Quel probleme cette feature resout-elle ?
+      description: Explique le "pourquoi" avant le "quoi". Exemple — "Je veux pouvoir X parce que actuellement je dois Y qui est lent / penible / manquant."
+      placeholder: "Actuellement, quand je fais X, je dois..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solution proposee
+      description: Ton idee de solution. Comment cela fonctionnerait-il concretement ?
+      placeholder: "J'aimerais un bouton qui..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considerees
+      description: As-tu envisage d'autres solutions ? Comment le resolvent les autres apps (Msty, Jan, ChatGPT desktop...) ?
+      placeholder: "J'ai aussi pense a ..., mais ..."
+    validations:
+      required: false
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Domaine fonctionnel
+      options:
+        - Chat / Streaming
+        - Arena (LLM vs LLM)
+        - Memoire (semantique / episodique / fragments)
+        - RAG / Referentiels
+        - Conversation Tools (bash, file, web...)
+        - Workspace / Git integration
+        - Remote (Telegram / Web)
+        - Live Voice
+        - Skills / Bardas / Slash commands
+        - MCP
+        - Settings / UI / UX
+        - Securite
+        - Statistiques / Stats
+        - Providers (ajouter un provider LLM)
+        - Autre
+    validations:
+      required: true
+
+  - type: dropdown
+    id: importance
+    attributes:
+      label: Importance pour toi
+      options:
+        - Nice to have (confort)
+        - Important (ca ameliorerait beaucoup mon workflow)
+        - Bloquant (je ne peux pas utiliser Cruchot efficacement sans)
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexte additionnel
+      description: Mockups, screenshots, references vers d'autres apps, liens vers specs, etc.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      options:
+        - label: J'ai cherche dans les [issues existantes](https://github.com/eRom/cruchot/issues) et [discussions](https://github.com/eRom/cruchot/discussions) avant d'ouvrir celle-ci
+          required: true
