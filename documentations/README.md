@@ -15,6 +15,7 @@ Ces documents détaillent le fonctionnement interne de Cruchot, destinés aux d�
 6.  [`06-BACKGROUND_SERVICES.md`](./tech/06-BACKGROUND_SERVICES.md) : Telegram Bot, Task Scheduler, Gemini Live Voice, Text-to-Speech.
 7.  [`07-FRONTEND_STACK.md`](./tech/07-FRONTEND_STACK.md) : React 19, Zustand, TailwindCSS v4, Markdown/Maths rendering.
 8.  [`08-OPERATIONS_AND_DEPLOYMENT.md`](./tech/08-OPERATIONS_AND_DEPLOYMENT.md) : Build, CI/CD, Binaires Qdrant, Auto-Updater.
+9.  [`09-TESTING_STRATEGY.md`](./tech/09-TESTING_STRATEGY.md) : Stratégie sablier 3-tier (Vitest, E2E security, E2E flows), conventions side-effects-only, plomberie test-mode, enforcement par `cruchot-release` skill.
 
 ### 👥 Guide Utilisateur (L'Utilisation)
 Ces documents sont destinés aux utilisateurs finaux pour comprendre et exploiter Cruchot au maximum.
