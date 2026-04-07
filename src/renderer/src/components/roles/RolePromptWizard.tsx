@@ -1,29 +1,29 @@
 import { useState } from 'react'
 import { Dialog, DialogContent } from '../ui/dialog'
 import {
+  DOMAIN_LABELS,
+  ENERGY_LABELS,
+  EXPERTISE_LABELS,
+  FORMALITY_LABELS,
+  FORMAT_LABELS,
+  GUARDRAILS,
+  LENGTH_LABELS,
+  MAX_ENERGIES,
+  MAX_GUARDRAILS,
+  MAX_PERSONAL_CONTEXT_CHARS,
+  SUB_DOMAINS,
   WizardSelections,
   createEmptySelections,
   renderMarkdown,
   renderXml,
-  DOMAIN_LABELS,
-  SUB_DOMAINS,
-  EXPERTISE_LABELS,
-  FORMALITY_LABELS,
-  ENERGY_LABELS,
-  FORMAT_LABELS,
-  LENGTH_LABELS,
   type DomainId,
+  type Energy,
   type ExpertiseLevel,
   type Formality,
-  type Energy,
-  type ResponseFormat,
-  type LengthTarget,
-  GUARDRAILS,
-  MAX_GUARDRAILS,
-  MAX_ENERGIES,
-  MAX_PERSONAL_CONTEXT_CHARS,
   type GuardrailId,
-  type OutputFormat
+  type LengthTarget,
+  type OutputFormat,
+  type ResponseFormat
 } from './role-prompt-wizard.config'
 
 export type InsertMode = 'replace' | 'append'
@@ -144,8 +144,8 @@ export function RolePromptWizard({ open, onClose, onInsert, hasExistingPrompt }:
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose() }}>
-      <DialogContent className="sm:max-w-[1100px] w-[1100px] p-0 overflow-hidden">
-        <div className="flex flex-col h-[820px]">
+      <DialogContent className="sm:max-w-[900px] w-[900px] p-0 overflow-hidden">
+        <div className="flex flex-col h-[720px]">
           <div className="px-6 py-4 border-b border-border">
             <h2 className="text-lg font-semibold">Configurateur de rôle</h2>
             <div className="w-full bg-muted h-1.5 mt-3 rounded-full overflow-hidden">
