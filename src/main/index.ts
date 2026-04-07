@@ -175,6 +175,14 @@ app.whenReady().then(() => {
   initDatabase(getDbPath())
   runMigrations()
 
+  // Ensure the instance token exists BEFORE registering IPC handlers,
+  // so handlers like export:bulk and import:bulk that read the token
+  // never see an empty `settings` table. Synchronous, ~1ms, no impact
+  // on cold start. Was previously deferred (~line 250) and caused a race
+  // observed in CI E2E flow run 24067368479 where the renderer sent
+  // export:bulk before the deferred init had executed.
+  ensureInstanceToken()
+
   registerAllIpcHandlers()
 
   // E2E test helpers — registered ONLY when CRUCHOT_TEST_MODE=1.
@@ -246,8 +254,10 @@ app.whenReady().then(() => {
     console.warn('[Skills] Startup sync failed:', err)
   }
 
-  // Defer non-critical init to after window creation (improves cold start)
-  ensureInstanceToken()
+  // Defer non-critical init to after window creation (improves cold start).
+  // Note: ensureInstanceToken() was moved above (before registerAllIpcHandlers)
+  // to fix a race with export:bulk / import:bulk handlers — see the comment
+  // there for context.
   seedBuiltinCommands(BUILTIN_COMMANDS)
 
   // Scheduler — always active (lightweight)
