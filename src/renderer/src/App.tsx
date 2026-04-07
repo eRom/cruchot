@@ -128,13 +128,31 @@ function App(): React.JSX.Element {
     setShowOnboarding(false)
   }
 
-  // ── Gemini Live — check availability on startup (retry to handle lazy init race)
+  // ── Gemini Live — poll availability on startup with exponential backoff.
+  // Eager init in main/index.ts (initLiveEngineEarly) makes the T=0 probe
+  // succeed in the normal case, but we keep a backoff fallback so that any
+  // future regression in main init order does not silently leave the Notch
+  // hidden until a manual reload (the original S71 bug). 6 probes total over
+  // ~15.5s, stopping immediately on success.
   useEffect(() => {
-    const check = () => useLiveStore.getState().refreshAvailability()
-    check()
-    // Retry after lazy init completes (lazyInitServices is async, no await)
-    const timer = setTimeout(check, 3000)
-    return () => clearTimeout(timer)
+    let cancelled = false
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+    const backoffMs = [500, 1000, 2000, 4000, 8000] // 5 retries after the first probe
+
+    const attempt = async (index: number): Promise<void> => {
+      if (cancelled) return
+      await useLiveStore.getState().refreshAvailability()
+      if (cancelled || useLiveStore.getState().isAvailable) return
+      if (index >= backoffMs.length) return // gave up
+      timeoutId = setTimeout(() => attempt(index + 1), backoffMs[index])
+    }
+
+    attempt(0)
+
+    return () => {
+      cancelled = true
+      if (timeoutId) clearTimeout(timeoutId)
+    }
   }, [])
 
   // ── Gemini Live — wire CruchotCommandHandler events ──
