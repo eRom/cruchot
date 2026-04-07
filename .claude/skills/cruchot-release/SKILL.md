@@ -81,11 +81,29 @@ gh auth status
 ```
 Si echec : "gh CLI non authentifie. Lance `gh auth login` d'abord."
 
-### 2.6 Tests
+### 2.6 Tests : 3 layers (vitest + E2E security + E2E flows)
+
 ```bash
 npm test
+npm run test:e2e:security
+npm run test:e2e:flows
 ```
-Cruchot a actuellement ~211 tests. Si echec : "Les tests ne passent pas. Corrige-les avant de release." Afficher le resume.
+
+Cruchot a 3 couches de tests qui doivent toutes passer avant de tagger une release :
+
+1. **`npm test`** : 251 tests vitest (10 suites, ~1.5s)
+2. **`npm run test:e2e:security`** : 22 tests Playwright Electron security + 2 skipped (~12s)
+3. **`npm run test:e2e:flows`** : 6 specs Playwright Electron flows sur Ollama qwen3.5:4b (~1.4 min)
+
+**Total : ~2 min de pre-check pour 279 tests + 2 skipped.** Si l'un des 3 layers echoue : STOP. Afficher le resume des echecs et le message :
+
+> "Les tests pre-release ne passent pas. Corrige les regressions avant de tagger."
+
+**Pre-requis** : Ollama doit etre running avec qwen3.5:4b installe. Si Ollama est down, le script `scripts/test-e2e-setup.sh` (invoque par `test:e2e:flows`) detecte l'erreur et fail clean. Dans ce cas, STOP avec le message :
+
+> "Ollama n'est pas demarre. Lance `ollama serve` (et verifie que `qwen3.5:4b` est installe via `ollama list`) avant de relancer la release."
+
+**Pourquoi local-first et pas en CI** : un job CI `e2e-flows` aurait ajoute ~20 min d'attente sur chaque release et aurait coute ~$0.05 d'API gemini par run, sans valeur ajoutee mesurable (les meme tests tournent en local en 1.4 min sur Ollama). Le pre-check local du skill `cruchot-release` est la garantie que les flows passent avant chaque tag — meme protection, beaucoup plus rapide. Voir `_internal/plans/2026-04-06-test-strategy-phase2b2-ci-release.md` pour l'historique de la decision (Phase 2b2 PIVOT 2026-04-06).
 
 ### 2.7 Audit dependances (block sur high+)
 ```bash
@@ -102,8 +120,14 @@ npm run lint:lockfile
 ```
 Verifie que toutes les deps viennent du registry npm officiel, en HTTPS, avec integrity hashes. Si echec : "Lockfile compromise — une dep vient d'un mirror non-officiel ou en HTTP. Investigue avant de release."
 
-### 2.9 (Note) Le workflow CI re-fera tout
-Le workflow `release.yml` a un job `security-gate` qui re-execute `npm audit`, `lockfile-lint`, et verifie les Dependabot security alerts ouvertes via `gh api`. Si l'un de ces checks echoue cote CI, le build est bloque. Donc les pre-checks locaux sont une **safety net** pour ne pas pousser un tag qui sera de toute facon rejete.
+### 2.9 (Note) Le workflow CI re-fait la securite + builde
+
+Le workflow `release.yml` a 2 jobs sequentiels :
+
+1. **`security-gate`** : re-execute `npm audit --audit-level=high --omit=dev`, `lockfile-lint`, et verifie les Dependabot security PRs ouvertes via `gh pr list --jq 'test("^\\[Security\\]")'`
+2. **`release`** matrix 3 OS (mac/win/linux) qui depend de `security-gate`
+
+Donc une regression en securite cote CI bloque le build. Les pre-checks locaux (`npm test` + `npm run test:e2e:security` + `npm run test:e2e:flows` a l'etape 2.6) sont une **safety net** pour ne pas pousser un tag qui sera rejete par security-gate, ET pour ne pas pousser un tag avec une regression flow non detectee (les flows ne tournent QUE en local, pas en CI — voir etape 2.6 pour la rationale).
 
 ## Etape 3 : CHANGELOG.md
 
