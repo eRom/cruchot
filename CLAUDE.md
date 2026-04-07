@@ -258,7 +258,7 @@ npm run dist:linux         # Package Linux (AppImage + deb)
 Les specs du projet sont organisees dans `specs/` :
 - `specs/phase-setup/` — Specs de la phase initiale (ARCH, FEATURES, PLAN, PRICING, STACK, TASKS, TEAM)
 
-Les nouvelles specs de fonctionnalites vont directement dans `specs/` (un fichier par feature).
+Les nouvelles specs de fonctionnalites vont directement dans `_internal/specs/` (un fichier par feature).
 
 ## Contexte projet (.memory)
 
