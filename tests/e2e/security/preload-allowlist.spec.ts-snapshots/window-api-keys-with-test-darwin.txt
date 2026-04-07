@@ -154,6 +154,7 @@ offLiveRequestScreenshot
 offLiveScreenSharing
 offLiveStatus
 offMcpStatusChanged
+offMenuAction
 offNetworkChanged
 offOneiricProgress
 offRemoteServerClientConnected
@@ -178,6 +179,7 @@ onLiveRequestScreenshot
 onLiveScreenSharing
 onLiveStatus
 onMcpStatusChanged
+onMenuAction
 onNetworkChanged
 onOneiricProgress
 onRemoteServerClientConnected

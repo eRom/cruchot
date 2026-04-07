@@ -1,6 +1,7 @@
-import { app, BrowserWindow, net, protocol, session } from 'electron'
+import { app, BrowserWindow, Menu, net, protocol, session } from 'electron'
 import * as fs from 'fs'
 import { createMainWindow } from './window'
+import { buildAppMenu } from './menu'
 import { registerAllIpcHandlers } from './ipc'
 import { initDatabase, closeDatabase } from './db'
 import { runMigrations } from './db/migrate'
@@ -208,6 +209,34 @@ app.whenReady().then(() => {
         console.error('[TEST_MODE] Failed to register test-helpers IPC:', err)
       })
   }
+
+  // Override the app name BEFORE building the menu — otherwise the menu
+  // labels (À propos de X / Masquer X / Quitter X) and the macOS About
+  // panel display "Electron" in dev mode (the binary's intrinsic name).
+  // In packaged builds Electron uses productName from electron-builder.yml,
+  // but in `npm run dev` we run the upstream Electron binary so we must
+  // force-name ourselves.
+  app.setName('Cruchot')
+
+  // Customise the macOS native About panel (shown when user clicks
+  // "À propos de Cruchot" in the app menu). In dev we also point to the
+  // PNG icon since the .app bundle icon doesn't exist yet; in packaged
+  // builds macOS picks up the .icns from the .app bundle automatically.
+  const aboutOptions: Electron.AboutPanelOptionsOptions = {
+    applicationName: 'Cruchot',
+    applicationVersion: app.getVersion(),
+    copyright: 'Copyright © 2026 Romain Carnot',
+    version: '' // suppress the secondary build-version line
+  }
+  if (!app.isPackaged) {
+    aboutOptions.iconPath = path.join(app.getAppPath(), 'resources/icon-1024.png')
+  }
+  app.setAboutPanelOptions(aboutOptions)
+
+  // Install the application menu BEFORE creating the window so the menu
+  // bar is in place from the very first paint. Menu items send actions
+  // via webContents.send('menu:action', ...) — handled in renderer App.tsx.
+  Menu.setApplicationMenu(buildAppMenu())
 
   mainWindow = createMainWindow()
 

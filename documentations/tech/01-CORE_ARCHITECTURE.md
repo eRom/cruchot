@@ -47,7 +47,8 @@ Au démarrage (`app.whenReady()`), le processus Main orchestre l'initialisation 
 3.  **Handlers IPC** : Enregistrement de tous les écouteurs IPC (`registerAllIpcHandlers()`).
 4.  **Sandbox** : Création du dossier de travail par défaut (`~/.cruchot/sandbox/`).
 5.  **Synchronisation des Skills** : Découverte des fichiers de compétences sur le disque et synchronisation avec la DB (`skillService`).
-6.  **Background Services** :
+6.  **Application Menu** : `app.setName('Cruchot')` force le nom de l'app (essentiel en mode dev où le binaire Electron s'appelle "Electron"), puis `Menu.setApplicationMenu(buildAppMenu())` installe le menu natif macOS (défini dans `src/main/menu.ts`) avant la création de la fenêtre.
+7.  **Background Services** :
     *   `schedulerService` : Tâches planifiées.
     *   `mcpManagerService` : Démarrage des serveurs MCP activés.
     *   `telegramBotService` : Initialisation du bot Telegram (si configuré).
@@ -67,7 +68,32 @@ La génération de texte LLM étant asynchrone (Server-Sent Events), Cruchot uti
 - Le Main émet des événements IPC `chunk` contenant les tokens (texte, thinking, tool calls).
 - Le Renderer peut invoquer un `cancel-stream` à tout moment pour interrompre le LLM.
 
-## 4. Extension : Remote Web et Serveur WebSocket
+## 4. Menu Applicatif Natif (`src/main/menu.ts`)
+
+Le menu natif macOS (Cruchot / Fichier / Édition / Affichage / Fenêtre / Aide) est construit par `buildAppMenu()` à partir d'un template `MenuItemConstructorOptions[]`.
+
+### Canal IPC `menu:action`
+
+Pour ne pas multiplier les méthodes preload (une par entrée de menu), toutes les actions passent par un canal unique `menu:action` avec une union de chaînes discriminantes :
+
+```typescript
+// preload/types.ts
+type MenuAction = 'customize' | 'settings' | 'new-conversation' | 'backup-now' | 'import-bulk' | 'export-bulk'
+
+// main/menu.ts — send side
+win.webContents.send('menu:action', 'new-conversation')
+
+// renderer App.tsx — receive side
+window.api.onMenuAction((action) => { /* router switch */ })
+```
+
+Le renderer écoute dans un `useEffect` et route chaque action vers son handler existant (même chemin que le raccourci clavier ou le bouton équivalent). Le preload expose deux méthodes : `onMenuAction(cb)` / `offMenuAction()`.
+
+### About Panel macOS
+
+`app.setAboutPanelOptions()` configure le panneau "À propos de Cruchot" (nom, version, copyright). En mode dev, `iconPath` pointe sur `resources/icon-1024.png` car il n'y a pas encore de `.app` bundle — dans un build packagé, macOS lit l'icône directement depuis le bundle `.app`.
+
+## 5. Extension : Remote Web et Serveur WebSocket
 
 Outre l'application desktop Electron, Cruchot inclut un serveur WebSocket local (`remoteServerService`).
 Cela permet à des clients distants (comme l'application Web PWA hébergée sur Vercel, ou l'application mobile) de se connecter à l'instance locale de Cruchot pour piloter les LLMs, interroger la base de données, ou utiliser les outils MCP, tout en gardant les données (DB, RAG) et les clés sur la machine hôte.

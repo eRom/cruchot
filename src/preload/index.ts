@@ -179,6 +179,15 @@ const api: ElectronAPI = {
     ipcRenderer.removeAllListeners('conversation:updated')
   },
 
+  // Application menu (src/main/menu.ts) → renderer
+  onMenuAction: (callback: (action: import('./types').MenuAction) => void): void => {
+    ipcRenderer.on('menu:action', (_event, action) => callback(action))
+  },
+
+  offMenuAction: (): void => {
+    ipcRenderer.removeAllListeners('menu:action')
+  },
+
   // ── Notifications ─────────────────────────────────────
   showNotification: (data) => ipcRenderer.invoke('notification:show', data),
 

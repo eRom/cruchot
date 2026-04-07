@@ -105,6 +105,32 @@ Le dashboard `StatsView` (`src/renderer/src/components/statistics/StatsView.tsx`
 
 Le `stats.store.ts` Zustand expose `backgroundCosts`, `previousPeriodCost`, et `todayCost` en plus des stats historiques existantes. Le store charge les données en parallèle via `Promise.all` sur les 7 channels IPC.
 
-## 9. Internationalisation (i18n)
+## 9. Réception des Actions Menu Applicatif
+
+Le renderer reçoit les actions du menu natif macOS (voir `01-CORE_ARCHITECTURE.md §4`) via un `useEffect` dans `App.tsx` :
+
+```typescript
+// App.tsx
+import type { MenuAction } from '../../preload/types'
+
+useEffect(() => {
+  const handleMenuAction = async (action: MenuAction) => {
+    switch (action) {
+      case 'new-conversation': handleNewConversation(); break
+      case 'customize': handleCustomize(); break
+      case 'settings': handleSettings(); break
+      case 'backup-now': /* window.api.backupCreate() + toast */ break
+      case 'export-bulk': /* window.api.exportBulk() + toast */ break
+      case 'import-bulk': /* window.api.importBulk() + navigation vers Settings > Data si token requis */ break
+    }
+  }
+  window.api.onMenuAction(handleMenuAction)
+  return () => { window.api.offMenuAction() }
+}, [handleNewConversation, handleCustomize, handleSettings, setSettingsTab, setCurrentView])
+```
+
+Chaque action réutilise le handler existant (même chemin de code que le raccourci clavier ou le bouton équivalent). L'action `import-bulk` gère le cas `needsToken` en naviguant vers l'onglet Data des paramètres, où l'UI existante gère la saisie du token de déchiffrement.
+
+## 10. Internationalisation (i18n)
 
 - **i18next / react-i18next** : L'infrastructure i18n est en place avec les fichiers de traduction dans `src/renderer/src/locales/`. En pratique, l'interface est principalement en français avec un support anglais partiel. L'utilisation de `useTranslation()` dans les composants reste limitée — la majorité des textes UI sont codés en dur en français.

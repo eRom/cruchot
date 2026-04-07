@@ -1,5 +1,5 @@
 import React, { Suspense, useCallback, useEffect, useState } from 'react'
-import { Toaster } from 'sonner'
+import { Toaster, toast } from 'sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { ThemeProvider } from '@/components/common/ThemeProvider'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
@@ -28,6 +28,7 @@ import { useLiveStore } from '@/stores/live.store'
 import { useInitApp } from '@/hooks/useInitApp'
 import { useStreaming } from '@/hooks/useStreaming'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import type { MenuAction } from '../../preload/types'
 
 function App(): React.JSX.Element {
   useInitApp()
@@ -254,6 +255,75 @@ function App(): React.JSX.Element {
       window.removeEventListener('cruchot:fork', handleFork)
     }
   }, [])
+
+  // ── Application menu actions ────────────────────────
+  // The macOS menu (src/main/menu.ts) sends actions via webContents.send,
+  // which we receive here and route to the existing handlers. Each action
+  // reuses the same code path as its keyboard shortcut / button equivalent
+  // so the UX is consistent (toasts, store refreshes, navigation).
+  useEffect(() => {
+    const handleMenuAction = async (action: MenuAction) => {
+      switch (action) {
+        case 'new-conversation':
+          handleNewConversation()
+          break
+        case 'customize':
+          handleCustomize()
+          break
+        case 'settings':
+          handleSettings()
+          break
+        case 'backup-now': {
+          try {
+            const entry = await window.api.backupCreate()
+            toast.success('Sauvegarde creee', { description: entry.filename })
+          } catch {
+            toast.error('Erreur lors de la creation de la sauvegarde')
+          }
+          break
+        }
+        case 'export-bulk': {
+          try {
+            const result = await window.api.exportBulk()
+            if (result.exported) {
+              toast.success('Export termine', { description: result.filePath })
+            }
+          } catch {
+            toast.error("Echec de l'export")
+          }
+          break
+        }
+        case 'import-bulk': {
+          try {
+            const result = await window.api.importBulk()
+            if (result.imported) {
+              toast.success('Import reussi', {
+                description: `${result.projectsImported} projets, ${result.conversationsImported} conversations, ${result.messagesImported} messages`
+              })
+              // Reload to propagate DB changes across all stores (same as DataSettings)
+              setTimeout(() => window.location.reload(), 800)
+            } else if (result.needsToken) {
+              // Token required → bounce the user to Settings > Data, where the
+              // existing UI handles the token prompt + decryption flow.
+              setSettingsTab('data')
+              setCurrentView('settings')
+              toast.info('Token requis', {
+                description: 'Saisissez le token de l\'instance source pour dechiffrer le fichier'
+              })
+            }
+          } catch {
+            toast.error("Echec de l'import")
+          }
+          break
+        }
+      }
+    }
+
+    window.api.onMenuAction(handleMenuAction)
+    return () => {
+      window.api.offMenuAction()
+    }
+  }, [handleNewConversation, handleCustomize, handleSettings, setSettingsTab, setCurrentView])
 
   return (
     <ErrorBoundary>

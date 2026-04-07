@@ -2,6 +2,19 @@
 
 export type ThinkingEffort = 'off' | 'low' | 'medium' | 'high'
 
+/**
+ * Actions emitted by the macOS application menu (src/main/menu.ts) and
+ * received by the renderer via `window.api.onMenuAction(cb)`. The renderer
+ * routes each action to its existing handler — see App.tsx.
+ */
+export type MenuAction =
+  | 'customize'
+  | 'settings'
+  | 'new-conversation'
+  | 'backup-now'
+  | 'import-bulk'
+  | 'export-bulk'
+
 export interface AttachmentRef {
   path: string
   name: string
@@ -1049,6 +1062,8 @@ export interface ElectronAPI {
   // Events
   onConversationUpdated: (callback: (data: { id: string; title: string }) => void) => void
   offConversationUpdated: () => void
+  onMenuAction: (callback: (action: MenuAction) => void) => void
+  offMenuAction: () => void
 
   // Notifications
   showNotification: (data: { title: string; body: string; silent?: boolean }) => Promise<void>
