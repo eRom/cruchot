@@ -17,7 +17,12 @@ import {
   type Formality,
   type Energy,
   type ResponseFormat,
-  type LengthTarget
+  type LengthTarget,
+  GUARDRAILS,
+  MAX_GUARDRAILS,
+  MAX_PERSONAL_CONTEXT_CHARS,
+  type GuardrailId,
+  type OutputFormat
 } from './role-prompt-wizard.config'
 
 export type InsertMode = 'replace' | 'append'
@@ -437,9 +442,113 @@ function StepContent({
     )
   }
 
-  return (
-    <div className="text-sm text-muted-foreground">
-      Étape « {step} » à implémenter.
-    </div>
-  )
+  if (step === 'guardrails') {
+    function toggleGuardrail(id: GuardrailId) {
+      const isChecked = selections.guardrails.includes(id)
+      if (isChecked) {
+        setSelections({ ...selections, guardrails: selections.guardrails.filter((g) => g !== id) })
+      } else {
+        if (selections.guardrails.length >= MAX_GUARDRAILS) return
+        setSelections({ ...selections, guardrails: [...selections.guardrails, id] })
+      }
+    }
+    return (
+      <div>
+        <h3 className="text-base font-medium mb-1">Garde-fous (optionnel, max {MAX_GUARDRAILS})</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          {selections.guardrails.length} / {MAX_GUARDRAILS} sélectionnés
+        </p>
+        <div className="space-y-2">
+          {GUARDRAILS.map((g) => {
+            const checked = selections.guardrails.includes(g.id)
+            const disabled = !checked && selections.guardrails.length >= MAX_GUARDRAILS
+            return (
+              <label
+                key={g.id}
+                className={`flex items-start gap-3 p-3 rounded-md border transition-colors ${
+                  checked ? 'border-primary bg-primary/10' : 'border-border'
+                } ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-accent'}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={disabled}
+                  onChange={() => toggleGuardrail(g.id)}
+                  className="mt-0.5"
+                />
+                <span className="text-sm">{g.label}</span>
+              </label>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  if (step === 'personalContext') {
+    const remaining = MAX_PERSONAL_CONTEXT_CHARS - selections.personalContext.length
+    return (
+      <div>
+        <h3 className="text-base font-medium mb-1">
+          Quelque chose à savoir sur toi ou ton contexte ?
+          <span className="ml-2 text-xs px-2 py-0.5 rounded bg-secondary text-secondary-foreground">Recommandé</span>
+        </h3>
+        <p className="text-xs text-muted-foreground mb-3">
+          Ce champ rend ton prompt vraiment personnel. Optionnel mais conseillé.
+        </p>
+        <textarea
+          value={selections.personalContext}
+          onChange={(e) => {
+            const value = e.target.value.slice(0, MAX_PERSONAL_CONTEXT_CHARS)
+            setSelections({ ...selections, personalContext: value })
+          }}
+          placeholder="Ex: Je suis dev TypeScript sénior, j'aime les explications visuelles, j'évite les frameworks lourds..."
+          rows={6}
+          className="w-full px-3 py-2 text-sm bg-transparent border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring resize-y"
+        />
+        <p className="text-xs text-muted-foreground mt-1 text-right">
+          {remaining} caractères restants
+        </p>
+      </div>
+    )
+  }
+
+  if (step === 'output') {
+    return (
+      <div>
+        <h3 className="text-base font-medium mb-4">Format de sortie</h3>
+        <div className="grid grid-cols-1 gap-2">
+          {(['markdown', 'xml'] as OutputFormat[]).map((id) => (
+            <button
+              key={id}
+              onClick={() => setSelections({ ...selections, outputFormat: id })}
+              className={`text-left px-4 py-3 rounded-md border transition-colors ${
+                selections.outputFormat === id ? 'border-primary bg-primary/10' : 'border-border hover:bg-accent'
+              }`}
+            >
+              <div className="font-medium">
+                {id === 'markdown' ? 'Markdown' : 'XML'}
+                {id === 'markdown' && (
+                  <span className="ml-2 text-xs text-muted-foreground">Recommandé (multi-provider)</span>
+                )}
+                {id === 'xml' && (
+                  <span className="ml-2 text-xs text-muted-foreground">Optimal pour Claude</span>
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {id === 'markdown'
+                  ? 'Sections nommées avec titres # — lisible humain et machine.'
+                  : 'Tags XML — meilleure adhérence sur les modèles Anthropic Claude.'}
+              </div>
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground mt-4">
+          L&apos;aperçu à droite se met à jour en temps réel selon ton choix.
+        </p>
+      </div>
+    )
+  }
+
+  return null
 }
