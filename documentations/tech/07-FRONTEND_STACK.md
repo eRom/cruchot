@@ -131,6 +131,44 @@ useEffect(() => {
 
 Chaque action réutilise le handler existant (même chemin de code que le raccourci clavier ou le bouton équivalent). L'action `import-bulk` gère le cas `needsToken` en naviguant vers l'onglet Data des paramètres, où l'UI existante gère la saisie du token de déchiffrement.
 
-## 10. Internationalisation (i18n)
+## 10. Wizard de Prompt pour les Rôles (`RolePromptWizard`)
+
+Le **RolePromptWizard** est un assistant guidé (Dialog modal) pour générer automatiquement le prompt système d'un rôle LLM. Il remplace la saisie manuelle dans `RoleEditor`.
+
+### Fichiers
+
+- **`src/renderer/src/components/roles/RolePromptWizard.tsx`** : Composant Dialog multi-étapes (900×720 px).
+- **`src/renderer/src/components/roles/role-prompt-wizard.config.ts`** : Configuration, types, constantes et fonctions de rendu (`renderMarkdown`, `renderXml`).
+- **`src/renderer/src/components/roles/RolesView.tsx`** : Intègre le bouton "Générer avec le wizard" et passe `onInsert` au wizard.
+
+### Etapes du wizard (9 steps)
+
+| Step ID | Contenu |
+|---|---|
+| `domain` | Domaine principal (tech, writing, learning, business, research, creation, daily, custom) |
+| `subDomain` | Sous-domaine conditionnel (affiché uniquement si domaine != custom) |
+| `expertise` | Niveau d'expertise cible (beginner / intermediate / expert) |
+| `formality` | Vouvoiement / tutoiement |
+| `energy` | Tonalité (multi-select, max 2 : direct / warm / humor / raw) |
+| `formatLength` | Format de réponse + longueur cible |
+| `guardrails` | Règles de comportement (multi-select, max 5, parmi 9 guardrails prédéfinis) |
+| `personalContext` | Contexte personnel (textarea libre, max 500 chars) |
+| `output` | Format de sortie (Markdown ou XML) + preview du prompt généré + bouton Insérer |
+
+### Rendu du prompt
+
+Deux fonctions pures dans `role-prompt-wizard.config.ts` :
+- `renderMarkdown(selections)` : génère un prompt en Markdown (headers ##, listes `- `).
+- `renderXml(selections)` : génère un prompt avec balises XML (`<persona>`, `<expertise>`, `<style>`, `<guardrails>`, `<context>`, `<format>`).
+
+### Mode d'insertion
+
+Prop `onInsert(prompt: string, mode: InsertMode)` avec deux modes :
+- `'replace'` : remplace le prompt existant dans le champ de texte du rôle.
+- `'append'` : ajoute à la suite du prompt existant.
+
+Le mode `'replace'` est proposé si un prompt existant est détecté (`hasExistingPrompt`), le mode `'append'` est disponible en option.
+
+## 11. Internationalisation (i18n)
 
 - **i18next / react-i18next** : L'infrastructure i18n est en place avec les fichiers de traduction dans `src/renderer/src/locales/`. En pratique, l'interface est principalement en français avec un support anglais partiel. L'utilisation de `useTranslation()` dans les composants reste limitée — la majorité des textes UI sont codés en dur en français.
