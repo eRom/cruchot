@@ -67,7 +67,7 @@
     "drizzle-orm": "^0.45.2",
     "electron-updater": "^6.3.0",
     "hotkeys-js": "^4.0.3",
-    "i18next": "^25.8.16",
+    "i18next": "^26.0.3",
     "katex": "^0.16.45",
     "lucide-react": "^0.577.0",
     "mammoth": "^1.12.0",
