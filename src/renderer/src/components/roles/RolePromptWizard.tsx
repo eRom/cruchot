@@ -1,0 +1,237 @@
+import { useState } from 'react'
+import { Dialog, DialogContent } from '../ui/dialog'
+import {
+  WizardSelections,
+  createEmptySelections,
+  renderMarkdown,
+  renderXml
+} from './role-prompt-wizard.config'
+
+export type InsertMode = 'replace' | 'append'
+
+interface RolePromptWizardProps {
+  open: boolean
+  onClose: () => void
+  onInsert: (prompt: string, mode: InsertMode) => void
+  hasExistingPrompt: boolean
+}
+
+type StepId =
+  | 'domain'
+  | 'subDomain'
+  | 'expertise'
+  | 'formality'
+  | 'energy'
+  | 'formatLength'
+  | 'guardrails'
+  | 'personalContext'
+  | 'output'
+
+const STEP_ORDER: StepId[] = [
+  'domain',
+  'subDomain',
+  'expertise',
+  'formality',
+  'energy',
+  'formatLength',
+  'guardrails',
+  'personalContext',
+  'output'
+]
+
+const SKIPPABLE: Record<StepId, boolean> = {
+  domain: false,
+  subDomain: false,
+  expertise: true,
+  formality: true,
+  energy: true,
+  formatLength: true,
+  guardrails: true,
+  personalContext: true,
+  output: false
+}
+
+export function RolePromptWizard({ open, onClose, onInsert, hasExistingPrompt }: RolePromptWizardProps) {
+  const [selections, setSelections] = useState<WizardSelections>(createEmptySelections)
+  const [stepIndex, setStepIndex] = useState(0)
+
+  const currentStep = STEP_ORDER[stepIndex]
+  const isFirstStep = stepIndex === 0
+
+  function hasAnyAnswer(): boolean {
+    return (
+      selections.domain !== null ||
+      selections.subDomain !== null ||
+      selections.expertise !== null ||
+      selections.formality !== null ||
+      selections.energy !== null ||
+      selections.responseFormat !== null ||
+      selections.lengthTarget !== null ||
+      selections.guardrails.length > 0 ||
+      selections.personalContext.trim().length > 0
+    )
+  }
+
+  function handleClose() {
+    if (hasAnyAnswer()) {
+      const confirmed = window.confirm('Abandonner ce wizard ? Tes réponses seront perdues.')
+      if (!confirmed) return
+    }
+    setSelections(createEmptySelections())
+    setStepIndex(0)
+    onClose()
+  }
+
+  function handleNext() {
+    if (stepIndex < STEP_ORDER.length - 1) setStepIndex(stepIndex + 1)
+  }
+
+  function handlePrev() {
+    if (stepIndex > 0) setStepIndex(stepIndex - 1)
+  }
+
+  function handleInsert(mode: InsertMode) {
+    const prompt =
+      selections.outputFormat === 'markdown'
+        ? renderMarkdown(selections)
+        : renderXml(selections)
+    onInsert(prompt, mode)
+    setSelections(createEmptySelections())
+    setStepIndex(0)
+    onClose()
+  }
+
+  function canAdvance(): boolean {
+    if (SKIPPABLE[currentStep]) return true
+    switch (currentStep) {
+      case 'domain':
+        if (selections.domain === null) return false
+        if (selections.domain === 'custom' && !selections.domainCustomLabel?.trim()) return false
+        return true
+      case 'subDomain':
+        if (selections.domain === 'custom') return !!selections.domainCustomAngle?.trim()
+        if (selections.subDomain === null) return false
+        if (selections.subDomain === 'other' && !selections.subDomainOther?.trim()) return false
+        return true
+      default:
+        return true
+    }
+  }
+
+  const previewText =
+    selections.outputFormat === 'xml'
+      ? renderXml(selections)
+      : renderMarkdown(selections)
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose() }}>
+      <DialogContent className="max-w-[900px] w-[900px] p-0 overflow-hidden">
+        <div className="flex flex-col h-[600px]">
+          <div className="px-6 py-4 border-b border-border">
+            <h2 className="text-lg font-semibold">Configurateur de rôle</h2>
+            <div className="w-full bg-muted h-1.5 mt-3 rounded-full overflow-hidden">
+              <div
+                className="bg-primary h-full transition-all duration-300"
+                style={{ width: `${((stepIndex + 1) / STEP_ORDER.length) * 100}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Étape {stepIndex + 1} sur {STEP_ORDER.length}
+            </p>
+          </div>
+
+          <div className="flex-1 flex overflow-hidden">
+            <div className="w-3/5 p-6 overflow-y-auto">
+              <StepContent
+                step={currentStep}
+                selections={selections}
+                setSelections={setSelections}
+              />
+            </div>
+            <div className="w-2/5 border-l border-border bg-muted/30 p-6 overflow-y-auto">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                Aperçu du prompt
+              </h3>
+              <pre className="text-xs font-mono whitespace-pre-wrap leading-relaxed text-foreground">
+                {previewText || <span className="text-muted-foreground italic">Le prompt s'affichera ici…</span>}
+              </pre>
+            </div>
+          </div>
+
+          <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+            <button
+              onClick={handleClose}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Annuler
+            </button>
+
+            {currentStep === 'output' ? (
+              <div className="flex gap-2">
+                {hasExistingPrompt && (
+                  <button
+                    onClick={() => handleInsert('replace')}
+                    className="px-4 py-2 text-sm border border-border rounded-md hover:bg-accent transition-colors"
+                  >
+                    Remplacer le prompt actuel
+                  </button>
+                )}
+                <button
+                  onClick={() => handleInsert('append')}
+                  className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                >
+                  {hasExistingPrompt ? 'Ajouter à la fin' : 'Insérer'}
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={handlePrev}
+                  disabled={isFirstStep}
+                  className="px-4 py-2 text-sm border border-border rounded-md hover:bg-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Précédent
+                </button>
+                <button
+                  onClick={handleNext}
+                  disabled={!canAdvance()}
+                  className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {SKIPPABLE[currentStep] && !stepHasAnswer(currentStep, selections) ? 'Skip' : 'Suivant'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function stepHasAnswer(step: StepId, sel: WizardSelections): boolean {
+  switch (step) {
+    case 'expertise': return sel.expertise !== null
+    case 'formality': return sel.formality !== null
+    case 'energy': return sel.energy !== null
+    case 'formatLength': return sel.responseFormat !== null || sel.lengthTarget !== null
+    case 'guardrails': return sel.guardrails.length > 0
+    case 'personalContext': return sel.personalContext.trim().length > 0
+    default: return true
+  }
+}
+
+function StepContent({
+  step,
+  selections: _selections,
+  setSelections: _setSelections
+}: {
+  step: StepId
+  selections: WizardSelections
+  setSelections: (s: WizardSelections) => void
+}) {
+  return (
+    <div className="text-sm text-muted-foreground">
+      Étape « {step} » à implémenter.
+    </div>
+  )
+}
