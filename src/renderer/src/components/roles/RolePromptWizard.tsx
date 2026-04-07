@@ -4,7 +4,10 @@ import {
   WizardSelections,
   createEmptySelections,
   renderMarkdown,
-  renderXml
+  renderXml,
+  DOMAIN_LABELS,
+  SUB_DOMAINS,
+  type DomainId
 } from './role-prompt-wizard.config'
 
 export type InsertMode = 'replace' | 'append'
@@ -222,13 +225,108 @@ function stepHasAnswer(step: StepId, sel: WizardSelections): boolean {
 
 function StepContent({
   step,
-  selections: _selections,
-  setSelections: _setSelections
+  selections,
+  setSelections
 }: {
   step: StepId
   selections: WizardSelections
   setSelections: (s: WizardSelections) => void
 }) {
+  if (step === 'domain') {
+    return (
+      <div>
+        <h3 className="text-base font-medium mb-4">Dans quel domaine principal vas-tu utiliser cette IA ?</h3>
+        <div className="grid grid-cols-1 gap-2">
+          {(Object.keys(DOMAIN_LABELS) as DomainId[]).map((id) => (
+            <button
+              key={id}
+              onClick={() => setSelections({
+                ...selections,
+                domain: id,
+                subDomain: null,
+                domainCustomLabel: '',
+                domainCustomAngle: '',
+                subDomainOther: ''
+              })}
+              className={`text-left px-4 py-3 rounded-md border transition-colors ${
+                selections.domain === id
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border hover:bg-accent'
+              }`}
+            >
+              {DOMAIN_LABELS[id]}
+            </button>
+          ))}
+        </div>
+        {selections.domain === 'custom' && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium mb-1">Décris ton domaine</label>
+            <input
+              type="text"
+              value={selections.domainCustomLabel ?? ''}
+              onChange={(e) => setSelections({ ...selections, domainCustomLabel: e.target.value })}
+              placeholder="Ex: un coach de plongée sous-marine"
+              className="w-full px-3 py-2 text-sm bg-transparent border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (step === 'subDomain') {
+    if (selections.domain === 'custom') {
+      return (
+        <div>
+          <h3 className="text-base font-medium mb-4">Quel angle / approche dominante ?</h3>
+          <input
+            type="text"
+            value={selections.domainCustomAngle ?? ''}
+            onChange={(e) => setSelections({ ...selections, domainCustomAngle: e.target.value })}
+            placeholder="Ex: spécialisé en plongée technique au-delà de 40m"
+            className="w-full px-3 py-2 text-sm bg-transparent border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+      )
+    }
+    if (!selections.domain) {
+      return <div className="text-sm text-muted-foreground">Choisis un domaine d&apos;abord.</div>
+    }
+    const config = SUB_DOMAINS[selections.domain as Exclude<DomainId, 'custom'>]
+    return (
+      <div>
+        <h3 className="text-base font-medium mb-4">{config.question}</h3>
+        <div className="grid grid-cols-1 gap-2">
+          {config.options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setSelections({ ...selections, subDomain: opt.value, subDomainOther: '' })}
+              className={`text-left px-4 py-3 rounded-md border transition-colors ${
+                selections.subDomain === opt.value
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border hover:bg-accent'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {selections.subDomain === 'other' && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium mb-1">Précise ta spécialité</label>
+            <input
+              type="text"
+              value={selections.subDomainOther ?? ''}
+              onChange={(e) => setSelections({ ...selections, subDomainOther: e.target.value })}
+              placeholder="Ex: spécialisé en compilateurs LLVM"
+              className="w-full px-3 py-2 text-sm bg-transparent border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="text-sm text-muted-foreground">
       Étape « {step} » à implémenter.
