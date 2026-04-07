@@ -89,9 +89,14 @@
             <div class="card">
                 <h2>4. Accès Distant (Telegram & Web)</h2>
                 <p>
-                    Si vous activez le contrôle à distance, une session WebSocket ou une connexion Telegram est établie. 
-                    Le chiffrement est assuré de bout en bout et l'authentification repose sur un système de pairing par code à 6 chiffres. 
-                    Aucune donnée de session n'est persistée sur un serveur tiers.
+                    L'activation du contrôle à distance est optionnelle et repose sur deux canaux distincts :
+                </p>
+                <ul>
+                    <li><strong>Web local</strong> : un serveur WebSocket démarre uniquement sur votre machine. La connexion est chiffrée de bout en bout entre votre navigateur et l'instance Cruchot, sans transit par un serveur tiers.</li>
+                    <li><strong>Telegram</strong> : les messages transitent par les serveurs Telegram (chiffrés en transit TLS, mais déchiffrés côté serveur Telegram comme tout bot — l'API Bot ne supporte pas le chiffrement de bout en bout). L'authentification repose sur un système de pairing par code à 6 chiffres et seuls les utilisateurs explicitement autorisés peuvent communiquer avec votre instance.</li>
+                </ul>
+                <p>
+                    Aucune donnée de session n'est persistée par l'éditeur. Si vous souhaitez un canal sans tiers, privilégiez le mode Web local.
                 </p>
             </div>
 
