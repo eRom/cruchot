@@ -72,8 +72,9 @@ IMPORTANT : ASCII pur (pas d'emoji, pas d'unicode box-drawing). Utilise uniqueme
   REVERTS ({count})
   - {description avec date}
   
-  REDIRECTIONS ({count} messages < 5 chars apres longue reponse)
-  - Interpretation : {ex: "l'utilisateur coupe court quand la reponse est hors-sujet ou trop longue"}
+  CORRECTIONS ({count} messages negatifs apres longue reponse)
+  - Mots detectes : non, stop, arrete, annule, undo, revert, wrong
+  - Interpretation : {ex: "l'utilisateur corrige une mauvaise direction"}
 
   TOP SESSIONS HIGH-FRICTION
   - {date} : score {N} — {resume du contexte via MEMORY.md}
