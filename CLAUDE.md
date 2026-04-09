@@ -20,6 +20,13 @@
 - Before running shell commands that depend on external tools (git, gh, npm), verify the tool is available and the expected state is correct (e.g. `git status` before `git push`).
 - After implementing a feature or fixing a bug (3+ files modified), run `/cruchot-audit-code` before committing. The pre-commit hook catches typecheck+test failures, but the skill also checks dangerous patterns and IPC coherence.
 
+## Git
+
+- Before `git add`, check .gitignore — `_internal/`, `docs/superpowers/` and `docs/` are ignored. Never `git add` them. The PreToolUse hook blocks this, but avoid triggering it.
+- Before `git pull` or `git merge`, run `git status` to check for uncommitted changes. If the branch has diverged, use `git pull --rebase` (not merge).
+- Before `git branch -d`, check if the branch is used by a worktree (`git worktree list`).
+- Prefer `git add <specific files>` over `git add .` or `git add -A` to avoid accidentally staging ignored or sensitive files.
+
 ## Structure projet (electron-vite)
 
 ```

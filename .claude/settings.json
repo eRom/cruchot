@@ -25,6 +25,15 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "Bash(git add*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '=== GIT-ADD CHECK ===' && cmd=\"$CLAUDE_TOOL_ARG_command\" && paths=$(echo \"$cmd\" | sed 's/git add//;s/--[^ ]* *//g') && for p in $paths; do if git check-ignore -q \"$p\" 2>/dev/null; then echo \"[BLOCKED] $p is in .gitignore\" && exit 1; fi; done && echo 'OK: no ignored files'"
+          }
+        ]
+      },
+      {
         "matcher": "Bash(git commit*)",
         "hooks": [
           {
