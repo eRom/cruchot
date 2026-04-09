@@ -66,8 +66,12 @@ def parse_session(filepath: str) -> dict | None:
     retry_loops = 0
     reverts_detected = 0
     same_file_edits = Counter()
-    interruptions = 0
+    corrections = 0  # negative redirections ("non", "stop", "pas ca")
     last_assistant_length = 0
+
+    # Validation words (not friction) vs correction words (friction)
+    VALIDATION_WORDS = {"ok", "oui", "go", "yes", "c", "b", "a", "d", "y", "n", "yep", "yup", "sure", "done", "next", "bon", "top"}
+    CORRECTION_WORDS = {"non", "no", "stop", "nope", "nah", "pas", "arrete", "annule", "undo", "revert", "wrong"}
 
     for entry in entries:
         etype = entry.get("type")
@@ -143,9 +147,30 @@ def parse_session(filepath: str) -> dict | None:
                     msg_len = len(msg)
                 else:
                     msg_len = 0
-                # Higher threshold: < 5 chars = real interruptions ("ok", "go", "c")
-                if msg_len > 0 and msg_len < 5 and last_assistant_length > 800:
-                    interruptions += 1
+                # Detect corrections (negative short messages after long response)
+                if msg_len > 0 and msg_len < 15 and last_assistant_length > 500:
+                    # Extract the actual text for classification
+                    if isinstance(msg, dict):
+                        raw_content = msg.get("content", "")
+                        if isinstance(raw_content, str):
+                            short_text = raw_content.strip().lower()
+                        elif isinstance(raw_content, list):
+                            short_text = " ".join(
+                                b.get("text", "")
+                                for b in raw_content
+                                if isinstance(b, dict) and b.get("type") == "text"
+                            ).strip().lower()
+                        else:
+                            short_text = ""
+                    elif isinstance(msg, str):
+                        short_text = msg.strip().lower()
+                    else:
+                        short_text = ""
+
+                    # Only count as correction if it matches negative words
+                    words = set(short_text.split())
+                    if words & CORRECTION_WORDS:
+                        corrections += 1
                 last_assistant_length = 0
 
         elif etype == "assistant":
@@ -246,7 +271,7 @@ def parse_session(filepath: str) -> dict | None:
         "friction": {
             "retry_loops": retry_loops,
             "reverts": reverts_detected,
-            "interruptions": interruptions,
+            "corrections": corrections,
             "painful_edits": painful_edits,
         },
     }
@@ -261,7 +286,7 @@ def aggregate(sessions: list[dict]) -> dict:
     total_rejections = 0
     total_retry_loops = 0
     total_reverts = 0
-    total_interruptions = 0
+    total_corrections = 0
     durations = []
     painful_files = Counter()
     sessions_by_date = defaultdict(int)
@@ -277,7 +302,7 @@ def aggregate(sessions: list[dict]) -> dict:
         total_rejections += s["user_rejections"]
         total_retry_loops += s["friction"]["retry_loops"]
         total_reverts += s["friction"]["reverts"]
-        total_interruptions += s["friction"]["interruptions"]
+        total_corrections += s["friction"]["corrections"]
         if s["duration_min"] > 0:
             durations.append(s["duration_min"])
         for f, c in s["friction"]["painful_edits"].items():
@@ -306,7 +331,7 @@ def aggregate(sessions: list[dict]) -> dict:
         "friction_totals": {
             "retry_loops": total_retry_loops,
             "reverts": total_reverts,
-            "interruptions": total_interruptions,
+            "corrections": total_corrections,
             "painful_edit_files": painful_files.most_common(15),
         },
         "sessions_with_high_friction": [
@@ -316,12 +341,12 @@ def aggregate(sessions: list[dict]) -> dict:
                 "score": (
                     s["friction"]["retry_loops"]
                     + s["friction"]["reverts"] * 2
-                    + s["friction"]["interruptions"]
+                    + s["friction"]["corrections"]
                     + len(s["friction"]["painful_edits"]) * 2
                 ),
                 "retry_loops": s["friction"]["retry_loops"],
                 "reverts": s["friction"]["reverts"],
-                "interruptions": s["friction"]["interruptions"],
+                "corrections": s["friction"]["corrections"],
                 "painful_edits_count": len(s["friction"]["painful_edits"]),
             }
             for s in sorted(
@@ -329,7 +354,7 @@ def aggregate(sessions: list[dict]) -> dict:
                 key=lambda x: (
                     x["friction"]["retry_loops"]
                     + x["friction"]["reverts"] * 2
-                    + x["friction"]["interruptions"]
+                    + x["friction"]["corrections"]
                     + len(x["friction"]["painful_edits"]) * 2
                 ),
                 reverse=True,
