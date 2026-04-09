@@ -19,6 +19,7 @@
 - InputZone.tsx and Sidebar.tsx are high-churn files. Before modifying them, read the full file first and plan all changes in one pass to avoid repeated edits.
 - Before running shell commands that depend on external tools (git, gh, npm), verify the tool is available and the expected state is correct (e.g. `git status` before `git push`).
 - After implementing a feature or fixing a bug (3+ files modified), run `/cruchot-audit-code` before committing. The pre-commit hook catches typecheck+test failures, but the skill also checks dangerous patterns and IPC coherence.
+- Before integrating a new API, SDK, or upgrading a major dependency (AI SDK, Electron, Drizzle...), run `/tech-deep-research <sujet>` to get a current brief. Never rely on training data alone for API details.
 
 ## Git
 
@@ -191,9 +192,6 @@ npm run dist:linux         # Package Linux (AppImage + deb)
 **Tests** : strategie sablier 3-tier (S68-S70). Vitest + E2E security tournent en local + CI sur chaque PR. **Les E2E flows tournent UNIQUEMENT en local** (Ollama qwen3.5:4b), gates par le skill `cruchot-release` etape 2.6 pre-tag. Pas de job CI `e2e-flows` (decision Phase 2b2 PIVOT 2026-04-06 : ~1.4 min en local vs ~20 min en CI, et les specs sont over-fittees a qwen3.5:4b). Voir `tests/e2e/README.md` pour le detail des 6 specs et `_internal/specs/2026-04-06-test-strategy-design.md` pour le design global.
 
 ## Specifications
-
-Les specs du projet sont organisees dans `specs/` :
-- `specs/phase-setup/` — Specs de la phase initiale (ARCH, FEATURES, PLAN, PRICING, STACK, TASKS, TEAM)
 
 Les nouvelles specs de fonctionnalites vont directement dans `_internal/specs/` (un fichier par feature).
 
