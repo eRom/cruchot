@@ -18,6 +18,7 @@
 - After modifying any IPC handler, preload method, or ElectronAPI type, verify consistency across all 3 layers (main handler, preload bridge, renderer types) before committing.
 - InputZone.tsx and Sidebar.tsx are high-churn files. Before modifying them, read the full file first and plan all changes in one pass to avoid repeated edits.
 - Before running shell commands that depend on external tools (git, gh, npm), verify the tool is available and the expected state is correct (e.g. `git status` before `git push`).
+- After implementing a feature or fixing a bug (3+ files modified), run `/cruchot-audit-code` before committing. The pre-commit hook catches typecheck+test failures, but the skill also checks dangerous patterns and IPC coherence.
 
 ## Structure projet (electron-vite)
 
@@ -100,6 +101,7 @@ ipcMain.handle('chat:send', async (event, payload) => {
 ## Tailwind CSS 4 + shadcn/ui
 
 ### Patterns
+- La skill `/erom-design` donne la base du Design
 - Tailwind 4 : `@import "tailwindcss"` dans CSS, plus de tailwind.config.js
 - Theme via CSS variables : `--color-primary`, `--color-background`, etc.
 - Dark mode : `dark:` prefix, toggle via `document.documentElement.classList`
