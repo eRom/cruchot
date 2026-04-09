@@ -1,7 +1,6 @@
 # CLAUDE.md — Multi-LLM Desktop
 
-> Auto-genere par /stack le 2026-03-09
-> Stack : Electron 35 + React 19 + TypeScript 5 + SQLite (better-sqlite3) + Drizzle ORM + Vercel AI SDK 5
+> Stack : Electron 41 + React 19 + TypeScript 5.7 + SQLite (better-sqlite3) + Drizzle ORM + Vercel AI SDK 6
 
 ## Regles projet
 
@@ -11,6 +10,14 @@
 - Cles API jamais dans le renderer — uniquement dans le main process via safeStorage
 - Utiliser `trash` au lieu de `rm` pour supprimer des fichiers (macOS corbeille)
 - Langue UI : francais par defaut, anglais supporte
+
+## Code Quality
+
+- Always Read a file before using Write or Edit on it. Never skip this step even if you think you know the content.
+- When editing a file, ensure old_string context is unique. If the edit fails, widen the context rather than retrying the same string.
+- After modifying any IPC handler, preload method, or ElectronAPI type, verify consistency across all 3 layers (main handler, preload bridge, renderer types) before committing.
+- InputZone.tsx and Sidebar.tsx are high-churn files. Before modifying them, read the full file first and plan all changes in one pass to avoid repeated edits.
+- Before running shell commands that depend on external tools (git, gh, npm), verify the tool is available and the expected state is correct (e.g. `git status` before `git push`).
 
 ## Structure projet (electron-vite)
 
@@ -106,24 +113,7 @@ ipcMain.handle('chat:send', async (event, payload) => {
 ## Drizzle ORM + SQLite
 
 ### Patterns
-```typescript
-// schema.ts
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core'
-
-export const messages = sqliteTable('messages', {
-  id: text('id').primaryKey(),
-  conversationId: text('conversation_id').notNull(),
-  role: text('role', { enum: ['user', 'assistant', 'system'] }).notNull(),
-  content: text('content').notNull(),
-  contentData: text('content_data', { mode: 'json' }).$type<Record<string, unknown>>(),
-  modelId: text('model_id'),
-  tokensIn: integer('tokens_in'),
-  tokensOut: integer('tokens_out'),
-  cost: real('cost'),
-  responseTimeMs: integer('response_time_ms'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-})
-```
+- 30 tables Drizzle, ~28 index SQLite (voir `src/main/db/schema.ts`)
 - WAL mode : `db.pragma('journal_mode = WAL')` — meilleures perfs en lecture
 - FTS5 : `CREATE VIRTUAL TABLE messages_fts USING fts5(content, content=messages, content_rowid=rowid)`
 - Prepared statements via Drizzle (automatique)
@@ -135,88 +125,26 @@ export const messages = sqliteTable('messages', {
 - FTS5 : re-indexer apres INSERT/UPDATE/DELETE manuellement si `content=` table externe
 - Ne pas oublier `foreign_keys = ON` via pragma (desactive par defaut dans SQLite)
 
-## Couche LLM — Vercel AI SDK
+## Couche LLM — Vercel AI SDK 6
 
 ### Patterns
-```typescript
-// Routeur — getModel retourne un LanguageModel du AI SDK
-import { openai } from '@ai-sdk/openai'
-import { anthropic } from '@ai-sdk/anthropic'
-import { google } from '@ai-sdk/google'
-import { mistral } from '@ai-sdk/mistral'
-import { xai } from '@ai-sdk/xai'
-import { openrouter } from '@ai-sdk/openrouter'
-import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
-
-function getModel(provider: string, modelId: string) {
-  switch (provider) {
-    case 'openai': return openai(modelId)
-    case 'anthropic': return anthropic(modelId)
-    case 'google': return google(modelId)
-    case 'mistral': return mistral(modelId)
-    case 'xai': return xai(modelId)
-    case 'openrouter': return openrouter(modelId)
-    case 'perplexity': return createOpenAICompatible({ name: 'perplexity', baseURL: '...' })(modelId)
-    case 'lmstudio': return createOpenAICompatible({ name: 'lmstudio', baseURL: '...' })(modelId)
-    // ollama via community provider
-  }
-}
-
-// Streaming — onChunk + onFinish
-import { streamText } from 'ai'
-
-const result = streamText({
-  model: getModel(provider, modelId),
-  messages,
-  abortSignal: controller.signal,
-  providerOptions: { anthropic: { thinking: { type: 'enabled', budgetTokens } } },
-  onChunk({ chunk }) {
-    mainWindow.webContents.send('chat:chunk', chunk)
-  },
-  onFinish({ totalUsage }) {
-    // Sauvegarder en DB, calculer cout
-  },
-})
-
-// Image generation — Gemini uniquement
-import { generateImage } from 'ai'
-
-const { image } = await generateImage({
-  model: google.image('gemini-3.1-flash-image-preview'),
-  prompt,
-  aspectRatio: '1:1',
-})
-
-// Cost calculator — table de pricing par modele
-const PRICING: Record<string, { input: number; output: number }> = { /* fourni par Romain */ }
-```
-- Pas d'adapters custom — le AI SDK fournit l'abstraction multi-provider
-- streamText() pour le chat, generateImage() pour les images
-- onChunk callback pour forward IPC des chunks normalises
-- onFinish callback pour sauvegarde DB + calcul couts
-- abortSignal pour annulation
-- providerOptions pour features specifiques (Anthropic thinking)
-- Couts calcules via table PRICING dans cost-calculator.ts
+- 11 providers (9 cloud + 2 locaux) via `src/main/llm/registry.ts`
+- `streamText()` pour le chat, `generateImage()` pour les images
+- `stopWhen: stepCountIs(N)` obligatoire (default = 1 en AI SDK 6)
+- `await result.text` + `await result.usage` pour recuperer les resultats (pas de `onFinish`)
+- `providerOptions` pour features specifiques (Anthropic thinking, OpenAI reasoning, Google thinkingConfig)
+- Couts calcules via `src/main/llm/cost-calculator.ts` + table `llm_costs` DB
 
 ### Pieges
-- Le AI SDK normalise les chunks mais les providerOptions restent specifiques
-- Gemini : le SDK gere automatiquement l'injection du system message
-- Perplexity : les citations/sources sont dans les metadata de la reponse — a parser manuellement
-- OpenRouter : features avancees (credits, auto-routing, ZDR) a gerer via API directe
+- Voir `.memory/gotchas.md` section "AI SDK v6 — breaking changes" pour les details complets
 - Ollama : verifier que le serveur tourne avant d'appeler (port 11434)
-- Image generation : uniquement 2 modeles Gemini (gemini-3.1-flash-image-preview, gemini-3-pro-image-preview)
 
-## Voix (STT/TTS)
+## Live Voice
 
-### Patterns
-- STT : capture audio dans le renderer (MediaRecorder API), envoi du buffer au main via IPC
-- TTS : main process genere l'audio (buffer), envoie au renderer pour playback
-- Fallback Web Speech API : tout dans le renderer, zero IPC
-
-### Pieges
-- MediaRecorder : format depend du navigateur — forcer `audio/webm;codecs=opus`
-- Web Speech API : pas disponible dans tous les contextes Electron — tester au runtime
-- Deepgram streaming : connexion WebSocket, pas REST — gerer reconnexion
+- Architecture plugin : `src/main/live/` — LiveEngineService + Registry + plugins
+- GeminiLivePlugin : WebSocket v1alpha, 13 tools, screen sharing, memoire semantique
+- OpenAILivePlugin : WebSocket transport, audio 16→24kHz resample
+- Pieges : voir `.memory/gotchas.md` section "Live Voice"
 
 ## electron-vite
 
@@ -262,15 +190,10 @@ Les nouvelles specs de fonctionnalites vont directement dans `_internal/specs/` 
 
 ## Contexte projet (.memory)
 
-Au démarrage de chaque session, lis ces fichiers pour charger le contexte du projet :
-- .memory/architecture.md
-- .memory/key-files.md
-- .memory/patterns.md
-- .memory/gotchas.md
+Le dossier `.memory/` contient la cartographie persistante du projet :
+- `architecture.md` — vue d'ensemble, stack, flux de données
+- `key-files.md` — fichiers critiques et leur rôle
+- `patterns.md` — conventions et patterns récurrents
+- `gotchas.md` — pièges, bugs résolus, workarounds
 
-Après lecture, affiche un résumé compact :
-- Projet : [nom/type]
-- Stack : [technos principales]
-- Fichiers clés : [nombre]
-- Gotchas : [nombre]
-- Prêt à travailler.
+**Ne lis PAS ces fichiers au démarrage.** Lis-les à la demande, uniquement quand la question de l'utilisateur touche au domaine concerné (ex: question archi → `architecture.md`, bug étrange → `gotchas.md`). Pour une question triviale ou sans rapport avec le projet lui-même, ne les lis pas du tout.
