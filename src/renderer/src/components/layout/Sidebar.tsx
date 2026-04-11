@@ -18,7 +18,9 @@ import {
 } from 'lucide-react'
 import { RemoteIndicator } from './RemoteIndicator'
 import { UserMenu } from './UserMenu'
-import React, { useCallback, useEffect, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMeetStore } from '@/stores/meet.store'
+import { MeetInviteModal } from '@/components/meet/MeetInviteModal'
 
 /** Sidebar width constants — keep in sync with AppLayout grid */
 const SIDEBAR_WIDTH_EXPANDED = 300
@@ -31,6 +33,9 @@ export function Sidebar(): React.JSX.Element {
   const { sidebarCollapsed } = useSettingsStore()
   const { currentView, setCurrentView } = useUiStore()
   const loadTasks = useTasksStore((s) => s.loadTasks)
+
+  const [meetModalOpen, setMeetModalOpen] = useState(false)
+  const { session, isConnected } = useMeetStore()
 
 
   // ── Recharger les conversations quand le projet change ────
@@ -271,6 +276,31 @@ export function Sidebar(): React.JSX.Element {
         onDeleteConversation={handleDeleteConversation}
         onToggleFavorite={handleToggleFavorite}
       />
+
+      {/* ── Meet section ────────────────────────────── */}
+      {!collapsed && (
+        <div className="border-t border-border mt-3 pt-3 px-3">
+          <div className="px-2 text-xs uppercase text-muted-foreground mb-2">Meet</div>
+          {isConnected && session ? (
+            <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+              </span>
+              <span className="truncate">{session.guestName ?? 'Invite'}</span>
+            </div>
+          ) : (
+            <button
+              onClick={() => setMeetModalOpen(true)}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/15"
+            >
+              <span>+</span>
+              <span>Inviter quelqu&apos;un</span>
+            </button>
+          )}
+        </div>
+      )}
+      <MeetInviteModal open={meetModalOpen} onClose={() => setMeetModalOpen(false)} />
 
       {/* ── Footer — User Menu ──────────────────────── */}
       <div

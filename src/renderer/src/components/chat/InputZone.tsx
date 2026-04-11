@@ -14,6 +14,7 @@ import { useUiStore } from '@/stores/ui.store'
 import { useRolesStore } from '@/stores/roles.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useLibraryStore } from '@/stores/library.store'
+import { useMeetStore } from '@/stores/meet.store'
 import { cn, EVENTS } from '@/lib/utils'
 import { FileReference } from '@/components/workspace/FileReference'
 import { SlashCommandPicker } from '@/components/chat/SlashCommandPicker'
@@ -124,6 +125,9 @@ export function InputZone({
   const detachWorkspaceFile = useWorkspaceStore((s) => s.detachFile)
   const searchEnabled = useSettingsStore((s) => s.searchEnabled) ?? false
   const activeLibraryId = useLibraryStore((s) => s.activeLibraryId)
+
+  // ── Meet ─────────────────────────────────────────────────
+  const { role: meetRole, isConnected: meetConnected, sendMode: meetSendMode, setSendMode: meetSetSendMode, toggleSendMode: meetToggleSendMode, permissions: meetPermissions } = useMeetStore()
 
   // ── Cursor position for @ mention ──────────────────────────
   const [cursorPos, setCursorPos] = useState(0)
@@ -930,6 +934,13 @@ export function InputZone({
   // ── Keyboard ─────────────────────────────────────────────
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      // Meet: Ctrl+Tab toggle LLM/Chat send mode
+      if (e.ctrlKey && e.key === 'Tab' && meetConnected) {
+        e.preventDefault()
+        meetToggleSendMode()
+        return
+      }
+
       // File mention picker keyboard navigation (priority over slash)
       if (mention.isOpen) {
         if (mention.handleKeyDown(e)) {
@@ -984,7 +995,7 @@ export function InputZone({
         }
       }
     },
-    [canSend, handleSend, slashPickerOpen, slashMatches, slashSelectedIndex, handleSlashSelect, content, mention, handleMentionSelect]
+    [canSend, handleSend, slashPickerOpen, slashMatches, slashSelectedIndex, handleSlashSelect, content, mention, handleMentionSelect, meetConnected, meetToggleSendMode]
   )
 
   return (
@@ -1029,6 +1040,34 @@ export function InputZone({
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-2">
         {/* Top slot */}
         {topSlot}
+
+        {/* Meet: LLM/Chat send mode toggle */}
+        {meetConnected && (
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex rounded-lg overflow-hidden border border-border text-xs">
+              <button
+                onClick={() => meetSetSendMode('llm')}
+                className={cn(
+                  'px-2.5 py-1',
+                  meetSendMode === 'llm' ? 'bg-purple-500/20 text-purple-400' : 'text-muted-foreground'
+                )}
+                disabled={meetRole === 'guest' && !meetPermissions.guestCanLlm}
+              >
+                → LLM
+              </button>
+              <button
+                onClick={() => meetSetSendMode('chat')}
+                className={cn(
+                  'px-2.5 py-1',
+                  meetSendMode === 'chat' ? 'bg-blue-500/20 text-blue-400' : 'text-muted-foreground'
+                )}
+              >
+                → Chat
+              </button>
+            </div>
+            <span className="text-xs text-muted-foreground">Ctrl+Tab</span>
+          </div>
+        )}
 
         {/* Zone de saisie principale */}
         <div
