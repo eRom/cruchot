@@ -7,7 +7,8 @@ export default defineConfig({
     environment: 'node',
     include: [
       'src/main/**/__tests__/**/*.test.ts',
-      'src/renderer/src/components/**/*.config.test.ts'
+      'src/renderer/src/components/**/*.config.test.ts',
+      'tests/unit/**/*.test.ts'
     ],
     exclude: ['node_modules', 'out', 'dist'],
   },
