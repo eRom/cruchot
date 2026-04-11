@@ -127,7 +127,9 @@ export function InputZone({
   const activeLibraryId = useLibraryStore((s) => s.activeLibraryId)
 
   // ── Meet ─────────────────────────────────────────────────
-  const { role: meetRole, isConnected: meetConnected, sendMode: meetSendMode, setSendMode: meetSetSendMode, toggleSendMode: meetToggleSendMode, permissions: meetPermissions } = useMeetStore()
+  const { role: meetRole, isConnected: meetConnected, session: meetSession, sendMode: meetSendMode, setSendMode: meetSetSendMode, toggleSendMode: meetToggleSendMode, permissions: meetPermissions } = useMeetStore()
+  // Meet features only active when viewing the shared conversation
+  const isOnMeetConversation = meetConnected && meetSession?.conversationId === activeConversationId
 
   // ── Cursor position for @ mention ──────────────────────────
   const [cursorPos, setCursorPos] = useState(0)
@@ -191,7 +193,7 @@ export function InputZone({
   const hasAttachments = pendingAttachments.length > 0
   const hasDroppedFiles = droppedFileContexts.size > 0
   // In Meet Chat mode, no model/provider needed (human-to-human only)
-  const isMeetChatMode = meetConnected && meetSendMode === 'chat'
+  const isMeetChatMode = isOnMeetConversation && meetSendMode === 'chat'
   const canSend = (content.trim().length > 0 || hasAttachments || hasDroppedFiles) && !isBusy && (isMeetChatMode || (!!selectedModelId && !!selectedProviderId))
 
   // ── Auto-grow textarea ───────────────────────────────────
@@ -858,7 +860,7 @@ export function InputZone({
   // ── Dispatch send ──────────────────────────────────────
   const handleSend = useCallback(() => {
     // Meet Chat mode: send human-to-human message (no LLM)
-    if (meetConnected && meetSendMode === 'chat') {
+    if (isOnMeetConversation && meetSendMode === 'chat') {
       handleSendMeetChat()
       return
     }
@@ -867,7 +869,7 @@ export function InputZone({
     } else {
       handleSendText()
     }
-  }, [isImageMode, handleSendImage, handleSendText, meetConnected, meetSendMode, handleSendMeetChat])
+  }, [isImageMode, handleSendImage, handleSendText, isOnMeetConversation, meetSendMode, handleSendMeetChat])
 
   // Ref always holds the latest handleSend (avoids stale closure in event listeners)
   const handleSendRef = useRef(handleSend)
@@ -981,7 +983,7 @@ export function InputZone({
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
       // Meet: Ctrl+Tab toggle LLM/Chat send mode
-      if (e.ctrlKey && e.key === 'Tab' && meetConnected) {
+      if (e.ctrlKey && e.key === 'Tab' && isOnMeetConversation) {
         e.preventDefault()
         meetToggleSendMode()
         return
@@ -1041,7 +1043,7 @@ export function InputZone({
         }
       }
     },
-    [canSend, handleSend, slashPickerOpen, slashMatches, slashSelectedIndex, handleSlashSelect, content, mention, handleMentionSelect, meetConnected, meetToggleSendMode]
+    [canSend, handleSend, slashPickerOpen, slashMatches, slashSelectedIndex, handleSlashSelect, content, mention, handleMentionSelect, isOnMeetConversation, meetToggleSendMode]
   )
 
   return (
@@ -1088,7 +1090,7 @@ export function InputZone({
         {topSlot}
 
         {/* Meet: LLM/Chat send mode toggle */}
-        {meetConnected && (
+        {isOnMeetConversation && (
           <div className="flex items-center gap-2 mb-2">
             <div className="flex rounded-lg overflow-hidden border border-border text-xs">
               <button
