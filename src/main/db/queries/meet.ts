@@ -11,10 +11,17 @@ const CODE_LENGTH = 6
 const INVITE_TTL_MS = 15 * 60 * 1000
 
 export function generateInviteCode(): string {
-  const bytes = crypto.randomBytes(CODE_LENGTH)
-  return Array.from(bytes)
-    .map((b) => SAFE_ALPHABET[b % SAFE_ALPHABET.length])
-    .join('')
+  const maxValid = 256 - (256 % SAFE_ALPHABET.length) // rejection sampling threshold
+  const result: string[] = []
+  while (result.length < CODE_LENGTH) {
+    const bytes = crypto.randomBytes(CODE_LENGTH - result.length)
+    for (const b of bytes) {
+      if (b < maxValid && result.length < CODE_LENGTH) {
+        result.push(SAFE_ALPHABET[b % SAFE_ALPHABET.length])
+      }
+    }
+  }
+  return result.join('')
 }
 
 // ── Sessions ─────────────────────────────────────────────

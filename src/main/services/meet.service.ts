@@ -210,10 +210,10 @@ class MeetService extends EventEmitter {
   private handleGuestLeave(): void {
     this.guestWs?.close()
     this.guestWs = null
+    // Session ends but server stays up for potential re-invite
     if (this.activeSessionId) {
       endMeetSession(this.activeSessionId)
       this.activeSessionId = null
-      this.stopServer()
     }
     this.emit('guest-disconnected')
   }

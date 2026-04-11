@@ -8,6 +8,8 @@ import type {
 
 type MeetRole = 'host' | 'guest' | null
 
+let typingTimer: ReturnType<typeof setTimeout> | null = null
+
 interface PendingLlmRequest {
   messageId: string
   content: string
@@ -141,8 +143,9 @@ export const useMeetStore = create<MeetState>((set, get) => ({
         break
       case 'meet:typing':
         if (event.sender !== get().role) {
+          if (typingTimer) clearTimeout(typingTimer)
           set({ isGuestTyping: true })
-          setTimeout(() => set({ isGuestTyping: false }), 3000)
+          typingTimer = setTimeout(() => set({ isGuestTyping: false }), 3000)
         }
         break
       case 'meet:llm-request':

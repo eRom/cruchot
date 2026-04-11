@@ -262,10 +262,22 @@ app.whenReady().then(() => {
   meetService.setMainWindow(mainWindow!)
   meetClientService.setMainWindow(mainWindow!)
   meetService.on('llm-request', async ({ messageId, content, sender }) => {
+    // Notify renderer of approval AND forward the content for LLM execution
     mainWindow!.webContents.send('meet:event', {
       type: 'meet:llm-approved',
       messageId
     })
+    // Forward as a chat message to trigger actual LLM call via renderer
+    mainWindow!.webContents.send('meet:event', {
+      type: 'meet:chat',
+      messageId,
+      content,
+      sender: 'guest'
+    })
+  })
+  meetService.on('llm-request-approved', async ({ messageId }) => {
+    // Manual approval: renderer already has the content from meet:llm-request
+    // Just notify that it was approved — renderer triggers the LLM call
   })
 
   // Ensure default sandbox directory exists

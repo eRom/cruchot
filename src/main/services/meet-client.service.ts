@@ -74,6 +74,10 @@ class MeetClientService extends EventEmitter {
     this.sendToHost({ type: 'meet:typing', sender: 'guest' })
   }
 
+  sendPresence(status: 'online' | 'away'): void {
+    this.sendToHost({ type: 'meet:presence', sender: 'guest', status })
+  }
+
   getState(): MeetClientState {
     return { ...this.state }
   }
