@@ -21,6 +21,7 @@ import { UserMenu } from './UserMenu'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMeetStore } from '@/stores/meet.store'
 import { MeetInviteModal } from '@/components/meet/MeetInviteModal'
+import { MeetJoinModal } from '@/components/meet/MeetJoinModal'
 
 /** Sidebar width constants — keep in sync with AppLayout grid */
 const SIDEBAR_WIDTH_EXPANDED = 300
@@ -35,6 +36,7 @@ export function Sidebar(): React.JSX.Element {
   const loadTasks = useTasksStore((s) => s.loadTasks)
 
   const [meetModalOpen, setMeetModalOpen] = useState(false)
+  const [meetJoinOpen, setMeetJoinOpen] = useState(false)
   const { session, isConnected } = useMeetStore()
 
 
@@ -290,17 +292,26 @@ export function Sidebar(): React.JSX.Element {
               <span className="truncate">{session.guestName ?? 'Invite'}</span>
             </div>
           ) : (
-            <button
-              onClick={() => setMeetModalOpen(true)}
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/15"
-            >
-              <span>+</span>
-              <span>Inviter quelqu&apos;un</span>
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setMeetModalOpen(true)}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/15"
+              >
+                <span>+</span>
+                <span>Inviter</span>
+              </button>
+              <button
+                onClick={() => setMeetJoinOpen(true)}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/15"
+              >
+                <span>Rejoindre</span>
+              </button>
+            </div>
           )}
         </div>
       )}
       <MeetInviteModal open={meetModalOpen} onClose={() => setMeetModalOpen(false)} />
+      <MeetJoinModal open={meetJoinOpen} onClose={() => setMeetJoinOpen(false)} />
 
       {/* ── Footer — User Menu ──────────────────────── */}
       <div
