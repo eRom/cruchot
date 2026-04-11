@@ -2,6 +2,7 @@ import { useEffect, useCallback, useState } from 'react'
 import { Monitor } from 'lucide-react'
 import { useLiveStore } from '@/stores/live.store'
 import { useSettingsStore } from '@/stores/settings.store'
+import { useMeetStore } from '@/stores/meet.store'
 import { useLiveAudio } from '@/hooks/useLiveAudio'
 import { useScreenCapture } from '@/hooks/useScreenCapture'
 import { cruchotCommandHandler } from '@/services/cruchot-command-handler'
@@ -41,6 +42,10 @@ export function NotchBar() {
   const { startCapture, stopCapture } = useScreenCapture()
   const [isHovered, setIsHovered] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
+
+  const { session, isConnected, role, permissions, updatePermissions, endSession, leaveSession } = useMeetStore()
+  const isLiveActive = status !== 'off' && status !== 'dormant'
+  const isMeetActive = isConnected && session !== null
 
   // Listen for status changes + commands from main process
   useEffect(() => {
@@ -119,6 +124,71 @@ export function NotchBar() {
       console.error('[ScreenShare] Failed to start capture:', err.message)
     }
   }, [startCapture])
+
+  // Meet mode — show when Meet is active and Live Audio is not
+  if (isMeetActive && !isLiveActive) {
+    return (
+      <div className="absolute left-1/2 -translate-x-1/2 top-[6px] [-webkit-app-region:no-drag] z-10">
+        <div className="flex items-center justify-center gap-1.5 px-4 h-8 rounded-b-2xl bg-gradient-to-br from-slate-800 to-slate-700 border border-t-0 border-white/10 transition-all duration-300">
+          <div className="flex items-center gap-3">
+            <span className="rounded-full bg-green-500/15 border border-green-500/30 px-2 py-0.5 text-[10px] text-green-400">
+              MEET ACTIF
+            </span>
+            <span className="text-xs text-muted-foreground">
+              avec {session.guestName}
+            </span>
+
+            {role === 'host' && (
+              <div className="flex items-center gap-3 ml-2">
+                <label className="flex items-center gap-1 text-[11px] text-muted-foreground cursor-pointer">
+                  LLM
+                  <input
+                    type="checkbox"
+                    checked={permissions.guestCanLlm}
+                    onChange={(e) => updatePermissions({ guestCanLlm: e.target.checked })}
+                    className="accent-green-500"
+                  />
+                </label>
+                <label className="flex items-center gap-1 text-[11px] text-muted-foreground cursor-pointer">
+                  Auto
+                  <input
+                    type="checkbox"
+                    checked={permissions.guestAutoApprove}
+                    onChange={(e) => updatePermissions({ guestAutoApprove: e.target.checked })}
+                    className="accent-green-500"
+                  />
+                </label>
+                <label className="flex items-center gap-1 text-[11px] text-muted-foreground cursor-pointer">
+                  Full
+                  <input
+                    type="checkbox"
+                    checked={permissions.guestVisibility === 'full'}
+                    onChange={(e) => updatePermissions({ guestVisibility: e.target.checked ? 'full' : 'response-only' })}
+                    className="accent-green-500"
+                  />
+                </label>
+                <button
+                  onClick={endSession}
+                  className="rounded-lg border border-red-500/30 bg-red-500/15 px-2 py-0.5 text-[11px] text-red-400 hover:bg-red-500/25"
+                >
+                  Terminer
+                </button>
+              </div>
+            )}
+
+            {role === 'guest' && (
+              <button
+                onClick={leaveSession}
+                className="rounded-lg border border-red-500/30 bg-red-500/15 px-2 py-0.5 text-[11px] text-red-400 hover:bg-red-500/25 ml-2"
+              >
+                Quitter
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // Off or Dormant — show the pill
   if (status === 'off' || status === 'dormant') {
