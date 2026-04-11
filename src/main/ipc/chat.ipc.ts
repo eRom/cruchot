@@ -13,7 +13,7 @@ import { parseFileOperations } from '../llm/file-operations'
 import { ThinkTagParser } from '../llm/think-tag-parser'
 import { parsePlanMarkers, parseStepMarker, stripPlanMarkers } from '../llm/plan-parser'
 import { buildPlanPromptBlock } from '../llm/plan-prompt'
-import type { PlanData, PlanStep } from '../../preload/types'
+import type { PlanData, PlanStep, StreamChunk } from '../../preload/types'
 import { buildConversationTools, buildWorkspaceContextBlock, WORKSPACE_TOOLS_PROMPT, wrapExternalTool } from '../llm/tools'
 import { getAllPermissionRules } from '../db/queries/permissions'
 import { mcpManagerService } from '../services/mcp-manager.service'
@@ -29,12 +29,20 @@ import { buildSkillContextBlock } from '../llm/skill-prompt'
 import { DEFAULT_SYSTEM_PROMPT } from '../llm/system-prompt'
 import { buildSystemPrompt } from '../llm/system-prompt-builder'
 import { compactService } from '../services/compact.service'
+import { meetService } from '../services/meet.service'
 import { vcrEventBus } from '../services/vcr-event-bus'
 import { getSkillByName } from '../db/queries/skills'
 import { libraryService } from '../services/library.service'
 import { getConversationLibraryId, getLibrary } from '../db/queries/libraries'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
 import { touchConversation, renameConversation, getConversation, updateConversationModel, updateConversationRole } from '../db/queries/conversations'
+
+function emitChunk(win: BrowserWindow, chunk: StreamChunk & Record<string, unknown>): void {
+  win.webContents.send('chat:chunk', chunk)
+  if (meetService.getActiveSessionId()) {
+    meetService.relayChunkToGuest(chunk)
+  }
+}
 
 const attachmentSchema = z.object({
   path: z.string().min(1),
@@ -286,7 +294,7 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
   const model = getModel(providerId, modelId)
 
   // Signal the renderer that processing has started
-  win.webContents.send('chat:chunk', {
+  emitChunk(win, {
     type: 'start',
     modelId,
     providerId
@@ -336,7 +344,7 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
       const libName = lib?.name ?? 'Referentiel'
       const toolCallId = `library-retrieval-${Date.now()}`
 
-      win.webContents.send('chat:chunk', {
+      emitChunk(win, {
         type: 'tool-call',
         toolName: 'librarySearch',
         toolArgs: { query: content.slice(0, 120), library: libName },
@@ -345,7 +353,7 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
 
       try {
         const chunks = await libraryService.retrieveForChat(activeLibraryId, content)
-        win.webContents.send('chat:chunk', {
+        emitChunk(win, {
           type: 'tool-result',
           toolName: 'librarySearch',
           toolCallId,
@@ -357,7 +365,7 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
         return { block: '', sources: [] }
       } catch (err) {
         console.warn('[Chat] Library retrieval failed:', err)
-        win.webContents.send('chat:chunk', {
+        emitChunk(win, {
           type: 'tool-result',
           toolName: 'librarySearch',
           toolCallId,
@@ -374,7 +382,7 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
       if (!dbSkill || !dbSkill.enabled) return { block: '' }
 
       const toolCallId = `skill-invoke-${Date.now()}`
-      win.webContents.send('chat:chunk', {
+      emitChunk(win, {
         type: 'tool-call',
         toolName: 'skill',
         toolArgs: { name: skillName },
@@ -387,7 +395,7 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
           skillArgs ?? '',
           resolvedWorkspacePath
         )
-        win.webContents.send('chat:chunk', {
+        emitChunk(win, {
           type: 'tool-result',
           toolName: 'skill',
           toolCallId,
@@ -396,7 +404,7 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
         return { block: result?.block ?? '' }
       } catch (err) {
         console.warn('[Chat] Skill execution failed:', err)
-        win.webContents.send('chat:chunk', {
+        emitChunk(win, {
           type: 'tool-result',
           toolName: 'skill',
           toolCallId,
@@ -536,7 +544,7 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
       const timeout = setTimeout(() => {
         pendingApprovals.delete(approvalId)
         resolve('deny')
-        win.webContents.send('chat:chunk', {
+        emitChunk(win, {
           type: 'tool-approval-resolved',
           approvalId,
           decision: 'deny'
@@ -566,7 +574,7 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
         resolve('deny')
       } else {
         // Desktop: send approval request via IPC chunk
-        win.webContents.send('chat:chunk', {
+        emitChunk(win, {
           type: 'tool-approval',
           approvalId,
           toolName: request.toolName,
@@ -723,7 +731,7 @@ async function streamChat(
       // Parse step markers from the batch BEFORE stripping (50ms buffer captures complete markers)
       const stepResults = parseStepMarker(batchBuffer)
       for (const sr of stepResults) {
-        win.webContents.send('chat:chunk', {
+        emitChunk(win, {
           type: 'plan-step',
           stepIndex: sr.index,
           stepStatus: sr.status
@@ -733,7 +741,7 @@ async function streamChat(
       // Strip ALL plan/step markers from visible text
       const cleaned = stripPlanMarkers(batchBuffer)
       if (cleaned.length > 0) {
-        win.webContents.send('chat:chunk', { type: 'text-delta', content: cleaned })
+        emitChunk(win, { type: 'text-delta', content: cleaned })
         vcrEventBus.emitVcr('text-delta', { text: cleaned })
         if (isRemoteConnected) telegramBotService.pushChunk(cleaned)
         if (isWsConnected) remoteServerService.pushChunk(cleaned)
@@ -791,7 +799,7 @@ async function streamChat(
                   inPlanBlock = false
                   // Discard buffer (contains plan markers) — don't flush to renderer
                   batchBuffer = ''
-                  win.webContents.send('chat:chunk', { type: 'plan-proposed', plan: planData })
+                  emitChunk(win, { type: 'plan-proposed', plan: planData })
                   vcrEventBus.emitVcr('plan-proposed', { plan: planData as unknown as Record<string, unknown> })
 
                   // Bug 2: Abort stream immediately for full plans (non-YOLO)
@@ -811,7 +819,7 @@ async function streamChat(
             } else {
               flushBatch()
               accumulatedReasoning += seg.content
-              win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: seg.content })
+              emitChunk(win, { type: 'reasoning-delta', content: seg.content })
               vcrEventBus.emitVcr('reasoning-delta', { text: seg.content })
               if (isWsConnected) remoteServerService.pushReasoningChunk(seg.content)
             }
@@ -819,7 +827,7 @@ async function streamChat(
         } else if (chunk.type === 'reasoning-delta') {
           flushBatch() // Flush text buffer before non-text chunk
           accumulatedReasoning += chunk.text
-          win.webContents.send('chat:chunk', {
+          emitChunk(win, {
             type: 'reasoning-delta',
             content: chunk.text
           })
@@ -834,7 +842,7 @@ async function streamChat(
             args: chunk.args as Record<string, unknown>,
             status: 'running'
           })
-          win.webContents.send('chat:chunk', {
+          emitChunk(win, {
             type: 'tool-call',
             toolName: chunk.toolName,
             toolArgs: chunk.args,
@@ -883,7 +891,7 @@ async function streamChat(
             tc.resultMeta = Object.keys(resultMeta).length > 0 ? resultMeta : undefined
           }
           flushBatch() // Flush text buffer before non-text chunk
-          win.webContents.send('chat:chunk', {
+          emitChunk(win, {
             type: 'tool-result',
             toolName: toolResult.toolName,
             toolCallId: toolResult.toolCallId,
@@ -940,7 +948,7 @@ async function streamChat(
           }
         } else {
           accumulatedReasoning += seg.content
-          win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: seg.content })
+          emitChunk(win, { type: 'reasoning-delta', content: seg.content })
           if (isWsConnected) remoteServerService.pushReasoningChunk(seg.content)
         }
       }
@@ -952,7 +960,7 @@ async function streamChat(
           planEmitted = true
           inPlanBlock = false
           flushBatch()
-          win.webContents.send('chat:chunk', { type: 'plan-proposed', plan: planData })
+          emitChunk(win, { type: 'plan-proposed', plan: planData })
           vcrEventBus.emitVcr('plan-proposed', { plan: planData as unknown as Record<string, unknown> })
         }
       }
@@ -998,7 +1006,7 @@ async function streamChat(
           if (approvalResult.decision === 'cancelled') {
             planData.status = 'cancelled'
             // Notify renderer of cancellation
-            win.webContents.send('chat:chunk', { type: 'plan-proposed', plan: { ...planData } })
+            emitChunk(win, { type: 'plan-proposed', plan: { ...planData } })
           } else {
             planData.status = 'approved'
             planData.approvedAt = Math.floor(Date.now() / 1000)
@@ -1007,7 +1015,7 @@ async function streamChat(
             vcrEventBus.emitVcr('plan-approved', { editedSteps: approvalResult.steps.length > 0 ? approvalResult.steps as unknown as Record<string, unknown>[] : undefined })
 
             // Notify renderer that plan was approved (hides Valider/Annuler buttons)
-            win.webContents.send('chat:chunk', { type: 'plan-proposed', plan: { ...planData } })
+            emitChunk(win, { type: 'plan-proposed', plan: { ...planData } })
 
             // C2: Launch execution phase — second streamText with write tools unlocked
             const executionPrompt = buildPlanPromptBlock('execution', planData)
@@ -1045,8 +1053,8 @@ async function streamChat(
 
               // Update plan status to running and notify renderer
               planData.status = 'running'
-              win.webContents.send('chat:chunk', { type: 'plan-proposed', plan: { ...planData } })
-              win.webContents.send('chat:chunk', {
+              emitChunk(win, { type: 'plan-proposed', plan: { ...planData } })
+              emitChunk(win, {
                 type: 'plan-step',
                 stepIndex: planData.steps.filter(s => s.enabled)[0]?.id ?? 1,
                 stepStatus: 'running'
@@ -1086,7 +1094,7 @@ async function streamChat(
                       } else {
                         flushBatch()
                         accumulatedReasoning += seg.content
-                        win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: seg.content })
+                        emitChunk(win, { type: 'reasoning-delta', content: seg.content })
                         vcrEventBus.emitVcr('reasoning-delta', { text: seg.content })
                         if (isWsConnected) remoteServerService.pushReasoningChunk(seg.content)
                       }
@@ -1099,7 +1107,7 @@ async function streamChat(
                       args: execChunk.args as Record<string, unknown>,
                       status: 'running'
                     })
-                    win.webContents.send('chat:chunk', {
+                    emitChunk(win, {
                       type: 'tool-call',
                       toolName: execChunk.toolName,
                       toolArgs: execChunk.args,
@@ -1123,7 +1131,7 @@ async function streamChat(
                       tc.resultMeta = Object.keys(resultMeta).length > 0 ? resultMeta : undefined
                     }
                     flushBatch()
-                    win.webContents.send('chat:chunk', {
+                    emitChunk(win, {
                       type: 'tool-result',
                       toolName: toolResult.toolName,
                       toolCallId: toolResult.toolCallId,
@@ -1154,7 +1162,7 @@ async function streamChat(
                     batchBuffer += seg.content
                   } else {
                     accumulatedReasoning += seg.content
-                    win.webContents.send('chat:chunk', { type: 'reasoning-delta', content: seg.content })
+                    emitChunk(win, { type: 'reasoning-delta', content: seg.content })
                   }
                 }
                 stopBatchTimer()
@@ -1184,7 +1192,7 @@ async function streamChat(
               planData.status = 'done'
               planData.completedAt = Math.floor(Date.now() / 1000)
               approvedPlanData = planData
-              win.webContents.send('chat:chunk', { type: 'plan-done' })
+              emitChunk(win, { type: 'plan-done' })
             }
           }
         } else if (planData) {
@@ -1356,7 +1364,7 @@ async function finalizeChat(
     }).catch(() => {})
   }
 
-  win.webContents.send('chat:chunk', {
+  emitChunk(win, {
     type: 'finish',
     content: fullText,
     messageId: savedMessage.id,
@@ -1412,7 +1420,7 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
 
     // Don't report abort errors
     if (error instanceof Error && error.name === 'AbortError') {
-      win.webContents.send('chat:chunk', {
+      emitChunk(win, {
         type: 'finish',
         content: ''
       })
@@ -1421,7 +1429,7 @@ export async function handleChatMessage(params: HandleChatMessageParams): Promis
 
     const classified = classifyError(error)
     console.error('[Chat] Stream error:', error)
-    win.webContents.send('chat:chunk', {
+    emitChunk(win, {
       type: 'error',
       error: classified.message,
       category: classified.category,
