@@ -12,6 +12,7 @@ export function MeetInviteModal({ open, onClose }: MeetInviteModalProps) {
   const [guestName, setGuestName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const { createSession, inviteCode } = useMeetStore()
   const activeConversationId = useConversationsStore((s) => s.activeConversationId)
   const username = useSettingsStore((s) => s.userName) || 'Hôte'
@@ -35,8 +36,6 @@ export function MeetInviteModal({ open, onClose }: MeetInviteModalProps) {
       setLoading(false)
     }
   }
-
-  const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
     if (!inviteCode) return
