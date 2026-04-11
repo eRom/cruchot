@@ -1671,7 +1671,7 @@ export interface MeetCostSummary {
 }
 
 export type MeetEvent =
-  | { type: 'meet:welcome'; sessionId: string; guestName: string; conversationId: string; permissions: MeetPermissions }
+  | { type: 'meet:welcome'; sessionId: string; hostName: string; guestName: string; conversationId: string; permissions: MeetPermissions }
   | { type: 'meet:rejected'; reason: string }
   | { type: 'meet:chat'; messageId: string; content: string; sender: MeetSender }
   | { type: 'meet:chunk'; chunk: StreamChunk }

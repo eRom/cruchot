@@ -126,15 +126,22 @@ export const useMeetStore = create<MeetState>((set, get) => ({
   handleMeetEvent: (event) => {
     switch (event.type) {
       case 'meet:welcome': {
+        // Guard: skip if already connected (avoid duplicate handling)
+        if (get().isConnected) break
+
         // Create a local mirror conversation for the guest
         const meetConvId = `meet-${event.sessionId}`
         const convStore = useConversationsStore.getState()
-        convStore.addConversation({
-          id: meetConvId,
-          title: `Meet · ${event.guestName}`,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        })
+
+        // Only add if not already present
+        if (!convStore.conversations.find((c) => c.id === meetConvId)) {
+          convStore.addConversation({
+            id: meetConvId,
+            title: `Meet · ${event.guestName}`,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+        }
         convStore.setActiveConversation(meetConvId)
 
         set({
@@ -142,7 +149,7 @@ export const useMeetStore = create<MeetState>((set, get) => ({
           session: {
             id: event.sessionId,
             conversationId: meetConvId,
-            hostName: '',
+            hostName: event.hostName || 'Hôte',
             guestName: event.guestName,
             inviteCode: '',
             status: 'connected',
@@ -165,17 +172,19 @@ export const useMeetStore = create<MeetState>((set, get) => ({
       case 'meet:chat': {
         // Received a chat message from the peer — add to local messages
         const chatConvId = get().session?.conversationId
-        if (chatConvId) {
-          useMessagesStore.getState().addMessage({
-            id: event.messageId,
-            conversationId: chatConvId,
-            role: 'user',
-            content: event.content,
-            meetSender: event.sender,
-            meetTarget: 'chat',
-            createdAt: new Date()
-          })
-        }
+        if (!chatConvId) break
+        // Guard: skip if message already exists (dedup)
+        const msgStore2 = useMessagesStore.getState()
+        if (msgStore2.messages.find((m) => m.id === event.messageId)) break
+        msgStore2.addMessage({
+          id: event.messageId,
+          conversationId: chatConvId,
+          role: 'user',
+          content: event.content,
+          meetSender: event.sender,
+          meetTarget: 'chat',
+          createdAt: new Date()
+        })
         break
       }
       case 'meet:chunk': {

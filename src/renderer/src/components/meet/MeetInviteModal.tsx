@@ -36,10 +36,25 @@ export function MeetInviteModal({ open, onClose }: MeetInviteModalProps) {
     }
   }
 
-  const handleCopy = () => {
-    if (inviteCode) {
-      navigator.clipboard.writeText(inviteCode)
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    if (!inviteCode) return
+    try {
+      await navigator.clipboard.writeText(inviteCode)
+    } catch {
+      // Fallback for Electron sandbox
+      const textarea = document.createElement('textarea')
+      textarea.value = inviteCode
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
     }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
@@ -96,7 +111,7 @@ export function MeetInviteModal({ open, onClose }: MeetInviteModalProps) {
                 onClick={handleCopy}
                 className="rounded-lg bg-muted-foreground/10 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted-foreground/20"
               >
-                Copier
+                {copied ? 'Copié !' : 'Copier'}
               </button>
             </div>
             <p className="mt-3 text-xs text-muted-foreground text-center">

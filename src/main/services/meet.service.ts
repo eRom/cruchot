@@ -159,6 +159,7 @@ class MeetService extends EventEmitter {
       JSON.stringify({
         type: 'meet:welcome',
         sessionId: session.id,
+        hostName: session.hostName,
         guestName: session.guestName,
         conversationId: session.conversationId,
         permissions

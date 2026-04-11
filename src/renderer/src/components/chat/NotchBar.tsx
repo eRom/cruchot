@@ -135,7 +135,7 @@ export function NotchBar() {
               MEET ACTIF
             </span>
             <span className="text-xs text-muted-foreground">
-              avec {session.guestName}
+              avec {role === 'host' ? session.guestName : session.hostName}
             </span>
 
             {role === 'host' && (
