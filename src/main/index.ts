@@ -13,6 +13,8 @@ import { BUILTIN_COMMANDS } from './commands/builtin'
 import { ensureInstanceToken } from './services/instance-token.service'
 import { skillService } from './services/skill.service'
 import { serviceRegistry } from './services/registry'
+import { meetService } from './services/meet.service'
+import { meetClientService } from './services/meet-client.service'
 import { vcrHtmlExporterService } from './services/vcr-html-exporter.service'
 import { listSkills, createSkill, deleteSkill } from './db/queries/skills'
 import { TEST_MODE, TEST_USERDATA } from './test-mode'
@@ -255,6 +257,16 @@ app.whenReady().then(() => {
   import('./services/oneiric.service').then(({ oneiricService }) => {
     oneiricService.setMainWindow(mainWindow!)
   }).catch(() => {})
+
+  // Meet — set mainWindow refs + wire auto-approved LLM requests
+  meetService.setMainWindow(mainWindow!)
+  meetClientService.setMainWindow(mainWindow!)
+  meetService.on('llm-request', async ({ messageId, content, sender }) => {
+    mainWindow!.webContents.send('meet:event', {
+      type: 'meet:llm-approved',
+      messageId
+    })
+  })
 
   // Ensure default sandbox directory exists
   const sandboxDir = path.join(os.homedir(), '.cruchot', 'sandbox')
