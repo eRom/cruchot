@@ -732,6 +732,54 @@ export function runMigrations(): void {
     CREATE INDEX IF NOT EXISTS idx_allowed_apps_enabled ON allowed_apps(is_enabled);
   `)
 
+  // --- Meet Session Sharing ---
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS meet_sessions (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL REFERENCES conversations(id),
+      host_name TEXT NOT NULL,
+      guest_name TEXT NOT NULL,
+      invite_code TEXT NOT NULL,
+      invite_expires_at INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'waiting' CHECK(status IN ('waiting', 'connected', 'ended')),
+      guest_can_llm INTEGER NOT NULL DEFAULT 0,
+      guest_auto_approve INTEGER NOT NULL DEFAULT 0,
+      guest_visibility TEXT NOT NULL DEFAULT 'response-only' CHECK(guest_visibility IN ('response-only', 'full')),
+      started_at INTEGER,
+      ended_at INTEGER,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS meet_costs (
+      id TEXT PRIMARY KEY,
+      meet_session_id TEXT NOT NULL REFERENCES meet_sessions(id),
+      message_id TEXT NOT NULL REFERENCES messages(id),
+      sender TEXT NOT NULL CHECK(sender IN ('host', 'guest')),
+      provider_id TEXT NOT NULL,
+      model_id TEXT NOT NULL,
+      tokens_in INTEGER NOT NULL DEFAULT 0,
+      tokens_out INTEGER NOT NULL DEFAULT 0,
+      cost REAL NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_meet_sessions_conversation ON meet_sessions(conversation_id);
+    CREATE INDEX IF NOT EXISTS idx_meet_sessions_status ON meet_sessions(status);
+    CREATE INDEX IF NOT EXISTS idx_meet_costs_session ON meet_costs(meet_session_id);
+  `)
+
+  // Add meet columns to messages
+  try {
+    sqlite.exec('ALTER TABLE messages ADD COLUMN meet_sender TEXT')
+  } catch {
+    // Column already exists — ignore
+  }
+  try {
+    sqlite.exec('ALTER TABLE messages ADD COLUMN meet_target TEXT')
+  } catch {
+    // Column already exists — ignore
+  }
+
   // --- LLM Costs (universal cost tracking — S60) ---
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS llm_costs (
