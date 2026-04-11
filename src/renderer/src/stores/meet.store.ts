@@ -137,7 +137,7 @@ export const useMeetStore = create<MeetState>((set, get) => ({
         if (!convStore.conversations.find((c) => c.id === meetConvId)) {
           convStore.addConversation({
             id: meetConvId,
-            title: `Meet · ${event.guestName}`,
+            title: `Meet · ${event.hostName || 'Hôte'}`,
             createdAt: new Date(),
             updatedAt: new Date()
           })
@@ -195,7 +195,8 @@ export const useMeetStore = create<MeetState>((set, get) => ({
         const chunk = event.chunk
 
         if (chunk.type === 'start') {
-          // Create a new streaming assistant message
+          // Guard: skip if already streaming (avoid duplicate start)
+          if (msgStore.streamingMessageId) break
           const streamMsgId = `meet-stream-${Date.now()}`
           msgStore.addMessage({
             id: streamMsgId,

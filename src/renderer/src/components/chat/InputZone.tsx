@@ -192,9 +192,9 @@ export function InputZone({
   const isBusy = isStreaming || isGeneratingImage || isCompacting
   const hasAttachments = pendingAttachments.length > 0
   const hasDroppedFiles = droppedFileContexts.size > 0
-  // In Meet Chat mode, no model/provider needed (human-to-human only)
-  const isMeetChatMode = isOnMeetConversation && meetSendMode === 'chat'
-  const canSend = (content.trim().length > 0 || hasAttachments || hasDroppedFiles) && !isBusy && (isMeetChatMode || (!!selectedModelId && !!selectedProviderId))
+  // In Meet mode (Chat or guest LLM), no local model/provider needed
+  const isMeetSendMode = isOnMeetConversation && (meetSendMode === 'chat' || meetRole === 'guest')
+  const canSend = (content.trim().length > 0 || hasAttachments || hasDroppedFiles) && !isBusy && (isMeetSendMode || (!!selectedModelId && !!selectedProviderId))
 
   // ── Auto-grow textarea ───────────────────────────────────
   const adjustHeight = useCallback(() => {
@@ -857,11 +857,49 @@ export function InputZone({
     }
   }, [content, activeConversationId, meetRole, addMessage, setContent])
 
+  // ── Meet LLM send (guest sends LLM request to host) ────
+  const handleSendMeetLlm = useCallback(async () => {
+    const trimmed = content.trim()
+    if (!trimmed) return
+    const conversationId = activeConversationId
+    if (!conversationId) return
+
+    const messageId = crypto.randomUUID()
+
+    // Optimistic: show user message locally
+    addMessage({
+      id: messageId,
+      conversationId,
+      role: 'user',
+      content: trimmed,
+      meetSender: meetRole === 'host' ? 'host' : 'guest',
+      meetTarget: 'llm',
+      createdAt: new Date()
+    })
+
+    setContent('')
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        textareaRef.current.style.height = `${TEXTAREA_MIN_HEIGHT}px`
+      }
+    })
+
+    try {
+      await window.api.meetGuestSendLlm({ messageId, content: trimmed })
+    } catch (err) {
+      console.error('[Meet] LLM request failed:', err)
+    }
+  }, [content, activeConversationId, meetRole, addMessage, setContent])
+
   // ── Dispatch send ──────────────────────────────────────
   const handleSend = useCallback(() => {
-    // Meet Chat mode: send human-to-human message (no LLM)
     if (isOnMeetConversation && meetSendMode === 'chat') {
       handleSendMeetChat()
+      return
+    }
+    // Guest on Meet conversation in LLM mode: route through Meet protocol
+    if (isOnMeetConversation && meetRole === 'guest' && meetSendMode === 'llm') {
+      handleSendMeetLlm()
       return
     }
     if (isImageMode) {
@@ -869,7 +907,7 @@ export function InputZone({
     } else {
       handleSendText()
     }
-  }, [isImageMode, handleSendImage, handleSendText, isOnMeetConversation, meetSendMode, handleSendMeetChat])
+  }, [isImageMode, handleSendImage, handleSendText, isOnMeetConversation, meetSendMode, meetRole, handleSendMeetChat, handleSendMeetLlm])
 
   // Ref always holds the latest handleSend (avoids stale closure in event listeners)
   const handleSendRef = useRef(handleSend)
