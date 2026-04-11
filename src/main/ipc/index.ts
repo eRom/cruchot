@@ -43,6 +43,7 @@ import { registerOneiricIpc } from './oneiric.ipc'
 import { registerLiveIpc } from './live.ipc'
 import { registerApplicationsIpc } from './applications.ipc'
 import { registerCompactIpc } from './compact.ipc'
+import { registerMeetIpc } from './meet.ipc'
 
 
 /**
@@ -170,6 +171,9 @@ export function registerAllIpcHandlers(): void {
 
   // ── Compact (context compression) ────────────────────
   registerCompactIpc()
+
+  // ── Meet (session sharing) ────────────────────────
+  registerMeetIpc()
 
   // ── Settings ────────────────────────────────────────
   const ALLOWED_SETTING_KEYS = new Set([

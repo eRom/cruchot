@@ -1432,6 +1432,25 @@ export interface ElectronAPI {
   onCompactStatus: (callback: (status: CompactStatus) => void) => void
   offCompactStatus: () => void
 
+  // ── Meet ────────────────────────────────────────────
+  meetCreateSession: (data: { conversationId: string; hostName: string; guestName: string }) => Promise<{ sessionId: string; inviteCode: string; expiresAt: number }>
+  meetEndSession: () => Promise<void>
+  meetUpdatePermissions: (permissions: Record<string, unknown>) => Promise<void>
+  meetApproveLlm: (messageId: string) => Promise<void>
+  meetRejectLlm: (messageId: string, reason?: string) => Promise<void>
+  meetSendChat: (data: { messageId: string; content: string }) => Promise<void>
+  meetGetSession: () => Promise<unknown>
+  meetGetCosts: (sessionId: string) => Promise<MeetCostSummary>
+  meetJoin: (data: { hostUrl: string; inviteCode: string }) => Promise<void>
+  meetLeave: () => Promise<void>
+  meetAcceptInvite: () => Promise<unknown>
+  meetRejectInvite: () => Promise<void>
+  meetGuestSendChat: (data: { messageId: string; content: string }) => Promise<void>
+  meetGuestSendLlm: (data: { messageId: string; content: string }) => Promise<void>
+  meetGuestTyping: () => Promise<void>
+  onMeetEvent: (cb: (event: MeetEvent) => void) => void
+  offMeetEvent: () => void
+
   // ── Test-only (CRUCHOT_TEST_MODE=1, undefined in prod) ──
   test?: TestApi
 }

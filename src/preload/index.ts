@@ -710,6 +710,36 @@ const api: ElectronAPI = {
   offCompactStatus: (): void => {
     ipcRenderer.removeAllListeners('compact:status')
   },
+
+  // ── Meet ────────────────────────────────────────────
+  meetCreateSession: (data: { conversationId: string; hostName: string; guestName: string }) =>
+    ipcRenderer.invoke('meet:create-session', data),
+  meetEndSession: () => ipcRenderer.invoke('meet:end-session'),
+  meetUpdatePermissions: (permissions: Record<string, unknown>) =>
+    ipcRenderer.invoke('meet:update-permissions', permissions),
+  meetApproveLlm: (messageId: string) => ipcRenderer.invoke('meet:approve-llm', messageId),
+  meetRejectLlm: (messageId: string, reason?: string) =>
+    ipcRenderer.invoke('meet:reject-llm', messageId, reason),
+  meetSendChat: (data: { messageId: string; content: string }) =>
+    ipcRenderer.invoke('meet:send-chat', data),
+  meetGetSession: () => ipcRenderer.invoke('meet:get-session'),
+  meetGetCosts: (sessionId: string) => ipcRenderer.invoke('meet:get-costs', sessionId),
+  meetJoin: (data: { hostUrl: string; inviteCode: string }) =>
+    ipcRenderer.invoke('meet:join', data),
+  meetLeave: () => ipcRenderer.invoke('meet:leave'),
+  meetAcceptInvite: () => ipcRenderer.invoke('meet:accept-invite'),
+  meetRejectInvite: () => ipcRenderer.invoke('meet:reject-invite'),
+  meetGuestSendChat: (data: { messageId: string; content: string }) =>
+    ipcRenderer.invoke('meet:guest-send-chat', data),
+  meetGuestSendLlm: (data: { messageId: string; content: string }) =>
+    ipcRenderer.invoke('meet:guest-send-llm', data),
+  meetGuestTyping: () => ipcRenderer.invoke('meet:guest-typing'),
+  onMeetEvent: (cb: (event: import('./types').MeetEvent) => void) => {
+    ipcRenderer.on('meet:event', (_ev, event) => cb(event))
+  },
+  offMeetEvent: () => {
+    ipcRenderer.removeAllListeners('meet:event')
+  },
 }
 
 // Test-only API, exposed on window.api.test ONLY when CRUCHOT_TEST_MODE=1.
