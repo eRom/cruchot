@@ -814,14 +814,58 @@ export function InputZone({
     droppedFileContexts
   ])
 
+  // ── Meet Chat send (human-to-human, no LLM) ───────────
+  const handleSendMeetChat = useCallback(async () => {
+    const trimmed = content.trim()
+    if (!trimmed) return
+    const conversationId = activeConversationId
+    if (!conversationId) return
+
+    const messageId = crypto.randomUUID()
+
+    // Optimistic: show message locally
+    addMessage({
+      id: messageId,
+      conversationId,
+      role: 'user',
+      content: trimmed,
+      meetSender: meetRole === 'host' ? 'host' : 'guest',
+      meetTarget: 'chat',
+      createdAt: new Date()
+    })
+
+    setContent('')
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        textareaRef.current.style.height = `${TEXTAREA_MIN_HEIGHT}px`
+      }
+    })
+
+    // Send to peer via Meet
+    try {
+      if (meetRole === 'host') {
+        await window.api.meetSendChat({ messageId, content: trimmed })
+      } else {
+        await window.api.meetGuestSendChat({ messageId, content: trimmed })
+      }
+    } catch (err) {
+      console.error('[Meet] Chat send failed:', err)
+    }
+  }, [content, activeConversationId, meetRole, addMessage, setContent])
+
   // ── Dispatch send ──────────────────────────────────────
   const handleSend = useCallback(() => {
+    // Meet Chat mode: send human-to-human message (no LLM)
+    if (meetConnected && meetSendMode === 'chat') {
+      handleSendMeetChat()
+      return
+    }
     if (isImageMode) {
       handleSendImage()
     } else {
       handleSendText()
     }
-  }, [isImageMode, handleSendImage, handleSendText])
+  }, [isImageMode, handleSendImage, handleSendText, meetConnected, meetSendMode, handleSendMeetChat])
 
   // Ref always holds the latest handleSend (avoids stale closure in event listeners)
   const handleSendRef = useRef(handleSend)
