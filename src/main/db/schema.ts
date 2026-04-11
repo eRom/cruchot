@@ -105,6 +105,8 @@ export const messages = sqliteTable('messages', {
   tokensOut: integer('tokens_out'),
   cost: real('cost'),
   responseTimeMs: integer('response_time_ms'),
+  meetSender: text('meet_sender'),   // null | 'host' | 'guest'
+  meetTarget: text('meet_target'),   // null | 'llm' | 'chat'
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 })
 
@@ -597,5 +599,46 @@ export const llmCosts = sqliteTable('llm_costs', {
   tokensOut: integer('tokens_out').notNull().default(0),
   cost: real('cost').notNull().default(0),
   metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+})
+
+// ---------------------------------------------------------------------------
+// Meet Sessions
+// ---------------------------------------------------------------------------
+export const meetSessions = sqliteTable('meet_sessions', {
+  id: text('id').primaryKey(),
+  conversationId: text('conversation_id')
+    .notNull()
+    .references(() => conversations.id),
+  hostName: text('host_name').notNull(),
+  guestName: text('guest_name').notNull(),
+  inviteCode: text('invite_code').notNull(),
+  inviteExpiresAt: integer('invite_expires_at', { mode: 'timestamp' }).notNull(),
+  status: text('status', { enum: ['waiting', 'connected', 'ended'] }).notNull().default('waiting'),
+  guestCanLlm: integer('guest_can_llm', { mode: 'boolean' }).notNull().default(false),
+  guestAutoApprove: integer('guest_auto_approve', { mode: 'boolean' }).notNull().default(false),
+  guestVisibility: text('guest_visibility', { enum: ['response-only', 'full'] }).notNull().default('response-only'),
+  startedAt: integer('started_at', { mode: 'timestamp' }),
+  endedAt: integer('ended_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+})
+
+// ---------------------------------------------------------------------------
+// Meet Costs
+// ---------------------------------------------------------------------------
+export const meetCosts = sqliteTable('meet_costs', {
+  id: text('id').primaryKey(),
+  meetSessionId: text('meet_session_id')
+    .notNull()
+    .references(() => meetSessions.id),
+  messageId: text('message_id')
+    .notNull()
+    .references(() => messages.id),
+  sender: text('sender', { enum: ['host', 'guest'] }).notNull(),
+  providerId: text('provider_id').notNull(),
+  modelId: text('model_id').notNull(),
+  tokensIn: integer('tokens_in').notNull().default(0),
+  tokensOut: integer('tokens_out').notNull().default(0),
+  cost: real('cost').notNull().default(0),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 })

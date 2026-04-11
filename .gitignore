@@ -8,6 +8,7 @@ dist/
 *.tsbuildinfo
 .env
 .env.local
+.agent-brain-slug
 .env.*
 .DS_Store
 *.log
@@ -22,8 +23,6 @@ electron-builder.env
 .claude/worktrees/*
 .claude/settings.local.json
 
-# Drizzle migrations (non utilisees — tables creees manuellement dans migrate.ts)
-drizzle/
 
 # Vendor binaries (downloaded, not committed)
 vendor/qdrant/darwin-*/
