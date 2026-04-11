@@ -36,6 +36,8 @@ export interface Message {
   contentData?: Record<string, any>
   cost?: number
   responseTimeMs?: number
+  meetSender?: 'host' | 'guest'
+  meetTarget?: 'llm' | 'chat'
   createdAt: Date
   isStreaming?: boolean
   streamPhase?: StreamPhase

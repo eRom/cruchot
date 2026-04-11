@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useConversationsStore } from '@/stores/conversations.store'
 import type { FileOperation } from '../../../../preload/types'
+import { useMeetStore } from '@/stores/meet.store'
 import { AudioPlayer } from './AudioPlayer'
 import { MessageContent } from './MessageContent'
 import { PerplexitySources, type PerplexitySource } from './PerplexitySources'
@@ -449,6 +450,9 @@ function MessageAttachments({ attachments }: { attachments: Array<{ path: string
 function MessageItem({ message, isStreaming = false, conversationId }: MessageItemProps) {
   const [copied, setCopied] = useState(false)
   const isUser = message.role === 'user'
+  const { session: meetSession } = useMeetStore()
+  const hostName = meetSession?.hostName || 'Hote'
+  const guestName = meetSession?.guestName || 'Guest'
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(message.content).catch(() => {
@@ -504,9 +508,24 @@ function MessageItem({ message, isStreaming = false, conversationId }: MessageIt
           'relative',
           isUser
             ? 'max-w-[75%] rounded-2xl px-4 py-3 bg-sidebar text-sidebar-foreground shadow-sm'
-            : 'flex-1 min-w-0 py-2 text-foreground' 
+            : 'flex-1 min-w-0 py-2 text-foreground',
+          message.meetTarget === 'chat' && 'border border-dashed border-muted-foreground/30'
         )}
       >
+        {/* Meet sender label */}
+        {message.meetSender && (
+          <div className={`text-[10px] mb-1 flex items-center gap-1 ${
+            message.meetSender === 'host' ? 'text-amber-400' : 'text-blue-400'
+          }`}>
+            <span>{message.meetSender === 'host' ? hostName : guestName}</span>
+            {message.meetTarget && (
+              <span className="opacity-50">
+                {message.meetTarget === 'llm' ? '\u2192 LLM' : '\u00b7 chat'}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Processing phase — spinner before any content arrives (hidden once toolCalls block takes over) */}
         {isStreaming && message.streamPhase === 'processing' && !(message.toolCalls && message.toolCalls.length > 0) && (
           <div className="flex items-center gap-2 py-1 text-muted-foreground">

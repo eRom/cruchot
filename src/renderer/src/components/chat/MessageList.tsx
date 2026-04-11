@@ -5,6 +5,7 @@ import type { Message } from '@/stores/messages.store'
 import { useMessagesStore } from '@/stores/messages.store'
 import { useConversationsStore } from '@/stores/conversations.store'
 import { useSettingsStore } from '@/stores/settings.store'
+import { useMeetStore } from '@/stores/meet.store'
 import MessageItem from './MessageItem'
 
 interface MessageListProps {
@@ -20,6 +21,7 @@ interface MessageListProps {
  */
 function MessageList({ messages, streamingMessageId }: MessageListProps) {
   const parentRef = useRef<HTMLDivElement>(null)
+  const { isGuestTyping, session: meetSession } = useMeetStore()
   const fontSizePx = useSettingsStore((s) => s.fontSizePx)
   const messageWidth = useSettingsStore((s) => s.messageWidth)
   const density = useSettingsStore((s) => s.density)
@@ -165,6 +167,12 @@ function MessageList({ messages, streamingMessageId }: MessageListProps) {
           )
         })}
       </div>
+      {/* Meet typing indicator */}
+      {isGuestTyping && (
+        <div className="px-4 py-1 text-xs italic text-muted-foreground">
+          {meetSession?.guestName} ecrit...
+        </div>
+      )}
     </div>
   )
 }
