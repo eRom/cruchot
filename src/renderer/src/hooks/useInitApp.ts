@@ -7,6 +7,7 @@ import { useMemoryStore } from '@/stores/memory.store'
 import { useRemoteStore } from '@/stores/remote.store'
 import { useRemoteServerStore } from '@/stores/remote-server.store'
 import { useSlashCommandsStore } from '@/stores/slash-commands.store'
+import { useMeetStore } from '@/stores/meet.store'
 
 const LOCAL_PROVIDERS_POLL_MS = 30_000
 
@@ -179,6 +180,9 @@ export function useInitApp() {
 
         // Listen for remote server status changes
         window.api.onRemoteServerStatusChanged(handleRemoteServerStatusChange)
+
+        // Listen for Meet events
+        window.api.onMeetEvent(useMeetStore.getState().handleMeetEvent)
       } catch (error) {
         console.error('Failed to initialize app:', error)
       }
@@ -189,6 +193,7 @@ export function useInitApp() {
       if (pollRef.current) clearInterval(pollRef.current)
       window.api.offRemoteStatusChanged()
       window.api.offRemoteServerStatusChanged()
+      window.api.offMeetEvent()
     }
   }, [setConversations, setProviders, setModels, pollLocalProviders, loadMcpServers, loadMemoryFragments, loadRemoteConfig, handleRemoteStatusChange, loadRemoteServerConfig, handleRemoteServerStatusChange, loadSlashCommands])
 }
