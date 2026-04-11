@@ -1609,3 +1609,61 @@ export interface AvailablePlugin {
   voices: VoiceOption[]
 }
 
+// ---------------------------------------------------------------------------
+// Meet — Session Sharing
+// ---------------------------------------------------------------------------
+
+export type MeetSessionStatus = 'waiting' | 'connected' | 'ended'
+export type MeetVisibility = 'response-only' | 'full'
+export type MeetSender = 'host' | 'guest'
+export type MeetTarget = 'llm' | 'chat'
+
+export interface MeetPermissions {
+  guestCanLlm: boolean
+  guestAutoApprove: boolean
+  guestVisibility: MeetVisibility
+}
+
+export interface MeetSessionInfo {
+  id: string
+  conversationId: string
+  hostName: string
+  guestName: string
+  inviteCode: string
+  status: MeetSessionStatus
+  permissions: MeetPermissions
+  startedAt?: number
+  endedAt?: number
+}
+
+export interface MeetInviteResult {
+  sessionId: string
+  inviteCode: string
+  expiresAt: number
+}
+
+export interface MeetCostSummary {
+  totalCost: number
+  hostCost: number
+  guestCost: number
+  totalMessages: number
+  durationMs: number
+  byProvider: Array<{ providerId: string; modelId: string; cost: number; count: number }>
+}
+
+export type MeetEvent =
+  | { type: 'meet:welcome'; sessionId: string; guestName: string; conversationId: string; permissions: MeetPermissions }
+  | { type: 'meet:rejected'; reason: string }
+  | { type: 'meet:chat'; messageId: string; content: string; sender: MeetSender }
+  | { type: 'meet:chunk'; chunk: StreamChunk }
+  | { type: 'meet:message'; message: MessageInfo }
+  | { type: 'meet:llm-request'; messageId: string; content: string }
+  | { type: 'meet:llm-approved'; messageId: string }
+  | { type: 'meet:llm-rejected'; messageId: string; reason?: string }
+  | { type: 'meet:permissions'; permissions: MeetPermissions }
+  | { type: 'meet:typing'; sender: MeetSender }
+  | { type: 'meet:presence'; sender: MeetSender; status: 'online' | 'away' }
+  | { type: 'meet:end' }
+  | { type: 'meet:leave' }
+  | { type: 'meet:invite-request'; hostName: string; guestName: string; sessionId: string }
+
