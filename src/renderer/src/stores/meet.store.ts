@@ -5,6 +5,8 @@ import type {
   MeetEvent,
   MeetCostSummary
 } from '../../../preload/types'
+import { useConversationsStore } from './conversations.store'
+import { useMessagesStore } from './messages.store'
 
 type MeetRole = 'host' | 'guest' | null
 
@@ -123,12 +125,23 @@ export const useMeetStore = create<MeetState>((set, get) => ({
 
   handleMeetEvent: (event) => {
     switch (event.type) {
-      case 'meet:welcome':
+      case 'meet:welcome': {
+        // Create a local mirror conversation for the guest
+        const meetConvId = `meet-${event.sessionId}`
+        const convStore = useConversationsStore.getState()
+        convStore.addConversation({
+          id: meetConvId,
+          title: `Meet · ${event.guestName}`,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        convStore.setActiveConversation(meetConvId)
+
         set({
           isConnected: true,
           session: {
             id: event.sessionId,
-            conversationId: event.conversationId,
+            conversationId: meetConvId,
             hostName: '',
             guestName: event.guestName,
             inviteCode: '',
@@ -138,6 +151,7 @@ export const useMeetStore = create<MeetState>((set, get) => ({
           permissions: event.permissions
         })
         break
+      }
       case 'meet:permissions':
         set({ permissions: event.permissions })
         break
@@ -148,6 +162,64 @@ export const useMeetStore = create<MeetState>((set, get) => ({
           typingTimer = setTimeout(() => set({ isGuestTyping: false }), 3000)
         }
         break
+      case 'meet:chat': {
+        // Received a chat message from the peer — add to local messages
+        const chatConvId = get().session?.conversationId
+        if (chatConvId) {
+          useMessagesStore.getState().addMessage({
+            id: event.messageId,
+            conversationId: chatConvId,
+            role: 'user',
+            content: event.content,
+            meetSender: event.sender,
+            meetTarget: 'chat',
+            createdAt: new Date()
+          })
+        }
+        break
+      }
+      case 'meet:chunk': {
+        // Received a LLM stream chunk from the host — relay to messages store
+        const chunkConvId = get().session?.conversationId
+        if (!chunkConvId) break
+        const msgStore = useMessagesStore.getState()
+        const chunk = event.chunk
+
+        if (chunk.type === 'start') {
+          // Create a new streaming assistant message
+          const streamMsgId = `meet-stream-${Date.now()}`
+          msgStore.addMessage({
+            id: streamMsgId,
+            conversationId: chunkConvId,
+            role: 'assistant',
+            content: '',
+            isStreaming: true,
+            createdAt: new Date()
+          })
+          msgStore.setStreamingMessageId(streamMsgId)
+        } else if (chunk.type === 'text-delta' && chunk.content) {
+          const streamId = msgStore.streamingMessageId
+          if (streamId) {
+            msgStore.appendToMessage(streamId, chunk.content)
+          }
+        } else if (chunk.type === 'finish') {
+          const streamId = msgStore.streamingMessageId
+          if (streamId) {
+            msgStore.updateMessage(streamId, { isStreaming: false })
+            msgStore.setStreamingMessageId(null)
+          }
+        } else if (chunk.type === 'error') {
+          const streamId = msgStore.streamingMessageId
+          if (streamId) {
+            msgStore.updateMessage(streamId, {
+              isStreaming: false,
+              content: msgStore.messages.find((m) => m.id === streamId)?.content + '\n\n⚠️ ' + (chunk.error || 'Erreur')
+            })
+            msgStore.setStreamingMessageId(null)
+          }
+        }
+        break
+      }
       case 'meet:llm-request':
         set((s) => ({
           pendingApprovals: [
