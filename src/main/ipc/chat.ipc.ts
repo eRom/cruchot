@@ -37,9 +37,14 @@ import { getConversationLibraryId, getLibrary } from '../db/queries/libraries'
 import { createMessage, getMessagesForConversation } from '../db/queries/messages'
 import { touchConversation, renameConversation, getConversation, updateConversationModel, updateConversationRole } from '../db/queries/conversations'
 
+// Meet relay: cached during stream to avoid DB lookup per chunk
+let currentMeetConvId: string | null = null
+let currentStreamConvId: string | null = null
+
 function emitChunk(win: BrowserWindow, chunk: StreamChunk & Record<string, unknown>): void {
   win.webContents.send('chat:chunk', chunk)
-  if (meetService.getActiveSessionId()) {
+  // Only relay to Meet guest if this stream belongs to the shared conversation
+  if (currentMeetConvId && currentStreamConvId === currentMeetConvId) {
     meetService.relayChunkToGuest(chunk)
   }
 }
@@ -227,6 +232,9 @@ async function prepareChat(params: HandleChatMessageParams, win: BrowserWindow):
     attachments: attachmentRefs, fileContexts,
     searchEnabled, skillName, skillArgs, planMode, source
   } = params
+
+  // Track which conversation this stream belongs to (for Meet relay filtering)
+  currentStreamConvId = conversationId
 
   const isRemoteConnected = telegramBotService.getStatus() === 'connected'
   const isWsConnected = remoteServerService.getStatus() === 'running'
@@ -1390,6 +1398,9 @@ async function finalizeChat(
 
 export async function handleChatMessage(params: HandleChatMessageParams): Promise<void> {
   const win = params.window
+
+  // Cache Meet conversation ID for chunk relay filtering
+  currentMeetConvId = meetService.getActiveConversationId()
 
   // Abort any existing stream
   if (currentAbortController) {

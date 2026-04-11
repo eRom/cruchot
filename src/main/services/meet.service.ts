@@ -321,6 +321,12 @@ class MeetService extends EventEmitter {
     return this.activeSessionId
   }
 
+  getActiveConversationId(): string | null {
+    if (!this.activeSessionId) return null
+    const session = getMeetSessionById(this.activeSessionId)
+    return session?.conversationId ?? null
+  }
+
   isGuestConnected(): boolean {
     return this.guestWs !== null && this.guestWs.readyState === 1
   }
