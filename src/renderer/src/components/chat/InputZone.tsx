@@ -190,7 +190,9 @@ export function InputZone({
   const isBusy = isStreaming || isGeneratingImage || isCompacting
   const hasAttachments = pendingAttachments.length > 0
   const hasDroppedFiles = droppedFileContexts.size > 0
-  const canSend = (content.trim().length > 0 || hasAttachments || hasDroppedFiles) && !isBusy && !!selectedModelId && !!selectedProviderId
+  // In Meet Chat mode, no model/provider needed (human-to-human only)
+  const isMeetChatMode = meetConnected && meetSendMode === 'chat'
+  const canSend = (content.trim().length > 0 || hasAttachments || hasDroppedFiles) && !isBusy && (isMeetChatMode || (!!selectedModelId && !!selectedProviderId))
 
   // ── Auto-grow textarea ───────────────────────────────────
   const adjustHeight = useCallback(() => {

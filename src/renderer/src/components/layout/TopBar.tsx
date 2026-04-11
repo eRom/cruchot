@@ -4,6 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useSettingsStore } from '@/stores/settings.store'
 import { useUiStore } from '@/stores/ui.store'
 import { useLiveStore } from '@/stores/live.store'
+import { useMeetStore } from '@/stores/meet.store'
 import { NotchBar } from '../chat/NotchBar'
 
 export function TopBar() {
@@ -12,14 +13,15 @@ export function TopBar() {
   const openPanel = useUiStore((s) => s.openPanel)
   const rightExpanded = openPanel === 'right'
   const isGeminiAvailable = useLiveStore((s) => s.isAvailable)
+  const isMeetActive = useMeetStore((s) => s.isConnected)
 
   return (
     <div className="relative flex h-[38px] shrink-0 items-center bg-background border-b">
       {/* Drag region — fills all space, traffic lights macOS */}
       <div className="flex-1 h-full [-webkit-app-region:drag]" />
 
-      {/* Gemini Live notch */}
-      {isGeminiAvailable && <NotchBar />}
+      {/* Gemini Live / Meet notch */}
+      {(isGeminiAvailable || isMeetActive) && <NotchBar />}
 
       {/* Toggle buttons — right side, no-drag */}
       <div className="flex items-center gap-0.5 px-1.5 [-webkit-app-region:no-drag]">
