@@ -41,7 +41,8 @@ class MeetService extends EventEmitter {
     port?: number
   }): Promise<{ sessionId: string; inviteCode: string; expiresAt: number }> {
     if (this.activeSessionId) {
-      throw new Error('A Meet session is already active')
+      // Clean up stale session (e.g., after HMR renderer reload)
+      await this.endSession()
     }
     const session = createMeetSession({
       conversationId: data.conversationId,
