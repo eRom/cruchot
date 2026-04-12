@@ -231,6 +231,8 @@ export const useMeetStore = create<MeetState>((set, get) => ({
         break
       }
       case 'meet:llm-request':
+        // Guard: skip if already pending (dedup)
+        if (get().pendingApprovals.find((p) => p.messageId === event.messageId)) break
         set((s) => ({
           pendingApprovals: [
             ...s.pendingApprovals,
