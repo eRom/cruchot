@@ -45,7 +45,12 @@ function emitChunk(win: BrowserWindow, chunk: StreamChunk & Record<string, unkno
   win.webContents.send('chat:chunk', chunk)
   // Only relay to Meet guest if this stream belongs to the shared conversation
   if (currentMeetConvId && currentStreamConvId === currentMeetConvId) {
+    if (chunk.type === 'start' || chunk.type === 'finish') {
+      console.log(`[Meet] Relaying chunk ${chunk.type} to guest (conv: ${currentStreamConvId})`)
+    }
     meetService.relayChunkToGuest(chunk)
+  } else if (currentMeetConvId && chunk.type === 'start') {
+    console.log(`[Meet] NOT relaying: streamConv=${currentStreamConvId} meetConv=${currentMeetConvId}`)
   }
 }
 
