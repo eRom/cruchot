@@ -261,23 +261,36 @@ app.whenReady().then(() => {
   // Meet — set mainWindow refs + wire auto-approved LLM requests
   meetService.setMainWindow(mainWindow!)
   meetClientService.setMainWindow(mainWindow!)
-  meetService.on('llm-request', async ({ messageId, content, sender }) => {
-    // Notify renderer of approval AND forward the content for LLM execution
-    mainWindow!.webContents.send('meet:event', {
-      type: 'meet:llm-approved',
-      messageId
-    })
-    // Forward as a chat message to trigger actual LLM call via renderer
-    mainWindow!.webContents.send('meet:event', {
-      type: 'meet:chat',
-      messageId,
-      content,
-      sender: 'guest'
-    })
-  })
-  meetService.on('llm-request-approved', async ({ messageId }) => {
-    // Manual approval: renderer already has the content from meet:llm-request
-    // Just notify that it was approved — renderer triggers the LLM call
+  meetService.on('llm-request', async ({ messageId, content, sender, conversationId }) => {
+    // Resolve model/provider from conversation
+    let modelId = 'gemini-2.5-flash-preview-04-17'
+    let providerId = 'google'
+    try {
+      const { getConversation } = await import('./db/queries/conversations')
+      const conv = getConversation(conversationId)
+      if (conv?.modelId) {
+        const parts = conv.modelId.split('::')
+        if (parts.length === 2) {
+          providerId = parts[0]
+          modelId = parts[1]
+        }
+      }
+    } catch { /* use defaults */ }
+
+    // Actually call the LLM
+    try {
+      const { handleChatMessage } = await import('./ipc/chat.ipc')
+      await handleChatMessage({
+        conversationId,
+        content,
+        modelId,
+        providerId,
+        source: 'desktop',
+        window: mainWindow!
+      })
+    } catch (err) {
+      console.error('[Meet] Failed to handle guest LLM request:', err)
+    }
   })
 
   // Ensure default sandbox directory exists

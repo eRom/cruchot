@@ -28,6 +28,7 @@ class MeetService extends EventEmitter {
   private activeSessionId: string | null = null
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
   private joinAttempts: Map<string, { count: number; resetAt: number }> = new Map()
+  private pendingLlmRequests: Map<string, { content: string; messageId: string }> = new Map()
 
   setMainWindow(win: BrowserWindow): void {
     this.mainWindow = win
@@ -193,17 +194,29 @@ class MeetService extends EventEmitter {
       })
       return
     }
+
+    const messageId = String(msg.messageId)
+    const content = String(msg.content)
+
+    // Store pending request for manual approval retrieval
+    this.pendingLlmRequests.set(messageId, { content, messageId })
+
     if (session.guestAutoApprove) {
+      // Auto-approve: emit immediately for LLM execution
+      this.sendToGuest({ type: 'meet:llm-approved', messageId })
       this.emit('llm-request', {
-        messageId: String(msg.messageId),
-        content: String(msg.content),
-        sender: 'guest'
+        messageId,
+        content,
+        sender: 'guest',
+        conversationId: session.conversationId
       })
+      this.pendingLlmRequests.delete(messageId)
     } else {
+      // Manual approval: show in host UI
       this.notifyRenderer({
         type: 'meet:llm-request',
-        messageId: String(msg.messageId),
-        content: String(msg.content)
+        messageId,
+        content
       })
     }
   }
@@ -220,8 +233,19 @@ class MeetService extends EventEmitter {
   }
 
   approveLlmRequest(messageId: string): void {
+    const pending = this.pendingLlmRequests.get(messageId)
+    if (!pending) return
+    const session = this.activeSessionId ? getMeetSessionById(this.activeSessionId) : null
+    if (!session) return
+
     this.sendToGuest({ type: 'meet:llm-approved', messageId })
-    this.emit('llm-request-approved', { messageId })
+    this.emit('llm-request', {
+      messageId,
+      content: pending.content,
+      sender: 'guest',
+      conversationId: session.conversationId
+    })
+    this.pendingLlmRequests.delete(messageId)
   }
 
   rejectLlmRequest(messageId: string, reason?: string): void {
