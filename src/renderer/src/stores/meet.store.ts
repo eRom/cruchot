@@ -244,11 +244,14 @@ export const useMeetStore = create<MeetState>((set, get) => ({
         }))
         break
       case 'meet:llm-rejected': {
-        // Host rejected the LLM request — show feedback as a system message
+        // Guard: dedup by messageId
+        const rejMsgId = `meet-rejected-${event.messageId}`
+        const rejStore = useMessagesStore.getState()
+        if (rejStore.messages.find((m) => m.id === rejMsgId)) break
         const rejConvId = get().session?.conversationId
         if (rejConvId) {
-          useMessagesStore.getState().addMessage({
-            id: `meet-rejected-${Date.now()}`,
+          rejStore.addMessage({
+            id: rejMsgId,
             conversationId: rejConvId,
             role: 'system',
             content: `⚠️ Demande LLM refusée${event.reason ? ' : ' + event.reason : ''}`,
