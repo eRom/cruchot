@@ -65,6 +65,7 @@ class MeetClientService extends EventEmitter {
 
   sendLlmRequest(messageId: string, content: string): void {
     // Let the host decide — don't block client-side, the host validates permissions
+    console.log('[MeetClient] Sending LLM request:', messageId, 'connected:', this.isConnected())
     this.sendToHost({ type: 'meet:llm-request', messageId, content })
   }
 

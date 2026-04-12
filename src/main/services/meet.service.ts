@@ -198,6 +198,8 @@ class MeetService extends EventEmitter {
     const messageId = String(msg.messageId)
     const content = String(msg.content)
 
+    console.log('[MeetService] LLM request received:', messageId, 'guestCanLlm:', session.guestCanLlm, 'autoApprove:', session.guestAutoApprove)
+
     // Store pending request for manual approval retrieval
     this.pendingLlmRequests.set(messageId, { content, messageId })
 

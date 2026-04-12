@@ -241,6 +241,20 @@ export const useMeetStore = create<MeetState>((set, get) => ({
           ]
         }))
         break
+      case 'meet:llm-rejected': {
+        // Host rejected the LLM request — show feedback as a system message
+        const rejConvId = get().session?.conversationId
+        if (rejConvId) {
+          useMessagesStore.getState().addMessage({
+            id: `meet-rejected-${Date.now()}`,
+            conversationId: rejConvId,
+            role: 'system',
+            content: `⚠️ Demande LLM refusée${event.reason ? ' : ' + event.reason : ''}`,
+            createdAt: new Date()
+          })
+        }
+        break
+      }
       case 'meet:end':
       case 'meet:leave':
         get().reset()
