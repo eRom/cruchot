@@ -64,9 +64,7 @@ class MeetClientService extends EventEmitter {
   }
 
   sendLlmRequest(messageId: string, content: string): void {
-    if (!this.state.permissions.guestCanLlm) {
-      throw new Error('LLM access disabled')
-    }
+    // Let the host decide — don't block client-side, the host validates permissions
     this.sendToHost({ type: 'meet:llm-request', messageId, content })
   }
 
