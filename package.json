@@ -69,7 +69,7 @@
     "hotkeys-js": "^4.0.3",
     "i18next": "^26.0.3",
     "katex": "^0.16.45",
-    "lucide-react": "^0.577.0",
+    "lucide-react": "^1.8.0",
     "mammoth": "^1.12.0",
     "mermaid": "^11.14.0",
     "minimatch": "^10.2.5",
