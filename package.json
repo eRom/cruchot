@@ -119,7 +119,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "terser": "^5.46.1",
-    "typescript": "^5.7.0",
+    "typescript": "^6.0.2",
     "vite": "^6.4.2",
     "vitest": "^3.0.0"
   }
