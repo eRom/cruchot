@@ -9,7 +9,7 @@ const TTS_CONFIG: Record<TtsProvider, { model: string; voice: string | null; end
     endpoint: 'https://api.openai.com/v1/audio/speech'
   },
   google: {
-    model: 'gemini-2.5-flash-preview-tts',
+    model: 'gemini-3.1-flash-tts-preview',
     voice: 'Aoede'
   }
 }
