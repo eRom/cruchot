@@ -177,10 +177,10 @@ npm run build              # Build production
 npm run preview            # Preview du build
 npm run lint               # ESLint
 npm run typecheck          # tsc --noEmit
-npm run test               # Vitest (251 tests, ~1.5s)
+npm run test               # Vitest (267 tests, ~1.5s)
 npm run test:e2e:security  # Playwright security suite (22 + 2 skipped, ~12s)
 npm run test:e2e:flows     # Playwright flow specs (6 specs, ~1.4 min, Ollama qwen3.5:4b uniquement)
-npm run test:all           # vitest + security + flows = 279 passing + 2 skipped (~2 min)
+npm run test:all           # vitest + security + flows = 295 passing + 2 skipped (~2 min)
 npm run db:generate        # Generer migrations Drizzle
 npm run db:migrate         # Appliquer migrations
 npm run dist               # Build + package (electron-builder)
