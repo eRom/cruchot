@@ -43,6 +43,7 @@ _internal/
 .serena/
 pop.txt
 .memory/
+.cave/
 feature-research-*.md
 docs/
 improvement-research-s52.md

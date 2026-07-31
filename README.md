@@ -144,6 +144,19 @@ npm install --legacy-peer-deps
 npm run dev
 ```
 
+### Mac : Suppression rapide de la quarantaine
+
+```
+# Pour une application .app
+sudo xattr -r -d com.apple.quarantine /path/to/MyApp.app
+
+# Pour un binaire simple
+xattr -d com.apple.quarantine /path/to/binary
+
+# Pour vérifier les attributs présents
+xattr /path/to/MyApp.app
+```
+
 ### Commandes
 
 ```bash
